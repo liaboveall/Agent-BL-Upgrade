@@ -42,7 +42,7 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 | Area 模块 | State 状态 |
 |---|---|
 | Pricing, risk, RAG, MCP tools, dashboard / 定价、风险、RAG、MCP 工具、前端 | Working. Deterministic fallback keeps the demo running without any key. / 可用，没有任何 Key 也能完整演示 |
-| x402 paid intelligence / x402 付费情报 | **Demo:** simulated locally (no real funds). **Live:** x402 V2 (EIP-3009) through a facilitator, exercised end-to-end with a mock facilitator, the official `@injectivelabs/x402` client and the browser wallet flow; it needs a facilitator, a payee address and a funded wallet. / Demo 为本地模拟；Live 走 x402 V2，需要 Facilitator、收款地址和有余额的钱包 |
+| x402 paid intelligence / x402 付费情报 | **Demo:** simulated locally (no real funds). **Live:** x402 V2 (EIP-3009) through a facilitator, exercised end-to-end with a mock facilitator, the official `@injectivelabs/x402` client and the browser wallet flow; it needs a facilitator that lists `eip155:1439`, a payee address and a funded wallet; a real testnet payment and its on-chain attestation were re-verified on 2026-10-12 ([`docs/x402-integration.md`](docs/x402-integration.md)). / Demo 为本地模拟；Live 走 x402 V2，需要支持 `eip155:1439` 的 Facilitator、收款地址和有余额的钱包；2026-10-12 已用真实测试网付款和链上证明复验 |
 | Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The Injective testnet contracts were **redeployed as v2 on 2026-10-12**: `npm run verify:bytecode` confirms the on-chain code matches the source. / 源码已加固为 v2，测试网已于 2026-10-12 重新部署；`npm run verify:bytecode` 可确认链上代码与源码一致 |
 | Investor payments for RWA shares / 投资者认购的真实付款 | **Not implemented.** Subscriptions mint share receipts and record the amount owed; no stablecoin is escrowed. / **未实现**，认购只铸造份额凭证并记录应付金额 |
 

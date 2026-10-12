@@ -30,9 +30,17 @@ function loadEnvFallback() {
   }
 }
 
-try {
-  if (typeof process.loadEnvFile === 'function') process.loadEnvFile(envPath);
-  else loadEnvFallback();
-} catch {
-  loadEnvFallback();
+// `node --test` runs every test file in a child process that sets NODE_TEST_CONTEXT. Tests assume a clean
+// environment, so a developer's own .env (a Live x402 setup, an admin token, wallet keys) must not leak into them.
+export function shouldLoadDotEnv(env = process.env) {
+  return !env.NODE_TEST_CONTEXT;
+}
+
+if (shouldLoadDotEnv()) {
+  try {
+    if (typeof process.loadEnvFile === 'function') process.loadEnvFile(envPath);
+    else loadEnvFallback();
+  } catch {
+    loadEnvFallback();
+  }
 }

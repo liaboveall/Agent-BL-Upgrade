@@ -1,6 +1,6 @@
 {
   "schema": "agentbl-wave-b-gate-v1",
-  "verified_at": "2026-06-29T14:20:01.766Z",
+  "verified_at": "2026-10-12T03:03:28.603Z",
   "network": "eip155:1439",
   "trace": [
     "USDC payment transaction",
@@ -10,45 +10,45 @@
     "RWA offering quote"
   ],
   "payment": {
-    "tx": "0x6d796d39de0de3becd57f2c8b0ff72e6baf33e570259530cb294ff819d1a0b49",
-    "explorer": "https://testnet.blockscout.injective.network/tx/0x6d796d39de0de3becd57f2c8b0ff72e6baf33e570259530cb294ff819d1a0b49",
+    "tx": "0xb8968f4803c3a68525e183bd70596715004e5b498c44a172d7fbb0423a41ae90",
+    "explorer": "https://testnet.blockscout.injective.network/tx/0xb8968f4803c3a68525e183bd70596715004e5b498c44a172d7fbb0423a41ae90",
     "asset": "0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d",
     "amount_atomic": "1000",
     "amount_usdc": "0.001",
     "status": "ok"
   },
   "paidReportEnvelope": {
-    "report_id": "rpt_3e5fcba5f14518de2817bdf0a6e85f6bf076d77d210b7c233ac279a0a7d23334",
-    "report_hash": "0x994078c73bdb44f13007d7b6ff4ea899ff9dc44d11f1d3afae1320df418168ce",
+    "report_id": "rpt_e2e20c7066cde21d8b303e025771833cddb7c680237d3e52f17d06d5f0bf626c",
+    "report_hash": "0xa2fe04a6469c2c15d3b6282e8282726e3b6973b8800d4ac6ff4619d03ed1b659",
     "case_id": "CASE-EBL-2026-CU-SG-SHA",
-    "payment_tx": "0x6d796d39de0de3becd57f2c8b0ff72e6baf33e570259530cb294ff819d1a0b49",
+    "payment_tx": "0xb8968f4803c3a68525e183bd70596715004e5b498c44a172d7fbb0423a41ae90",
     "network": "eip155:1439",
     "asset": "0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d",
     "amount": "1000",
-    "settled_at": "2026-06-29T01:00:27.000Z",
+    "settled_at": "2026-10-12T03:02:25.000Z",
     "data_snapshot": "redacted: committed by report_hash",
     "validation": "Runtime envelope passed assertPaidReportEnvelope during X402-15 live smoke"
   },
   "paymentAttested": {
-    "contract": "0x36d9Ff1256b3db1EFC1EAcB4c9b5033165D24571",
-    "tx": "0xa03ab9622dbc1af7bd448af2a52b5322963abf65853916dc13c75a139adfef6e",
-    "explorer": "https://testnet.blockscout.injective.network/tx/0xa03ab9622dbc1af7bd448af2a52b5322963abf65853916dc13c75a139adfef6e",
-    "report_hash": "0x994078c73bdb44f13007d7b6ff4ea899ff9dc44d11f1d3afae1320df418168ce",
-    "payment_tx": "0x6d796d39de0de3becd57f2c8b0ff72e6baf33e570259530cb294ff819d1a0b49",
+    "contract": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+    "tx": "0x61e0ce548607636a95bd04136d5b9b5fcc1f49a92c06412b62d2e9487cd97a31",
+    "explorer": "https://testnet.blockscout.injective.network/tx/0x61e0ce548607636a95bd04136d5b9b5fcc1f49a92c06412b62d2e9487cd97a31",
+    "report_hash": "0xa2fe04a6469c2c15d3b6282e8282726e3b6973b8800d4ac6ff4619d03ed1b659",
+    "payment_tx": "0xb8968f4803c3a68525e183bd70596715004e5b498c44a172d7fbb0423a41ae90",
     "event": "PaymentAttested"
   },
   "pricingUpdated": {
-    "contract": "0x0F9618DDbac86eD51d48ef1361789D7e5eF1FAE1",
-    "tx": "0x590ff7dcb172277c25f4886bb82dc0e6c642b1f7d979f189c19a5be88e094508",
-    "explorer": "https://testnet.blockscout.injective.network/tx/0x590ff7dcb172277c25f4886bb82dc0e6c642b1f7d979f189c19a5be88e094508",
+    "contract": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC",
+    "tx": "0xd76c821efd5587eece80928eba5129e8cbdc6570867ef68ec3612cc2f89c6dae",
+    "explorer": "https://testnet.blockscout.injective.network/tx/0xd76c821efd5587eece80928eba5129e8cbdc6570867ef68ec3612cc2f89c6dae",
     "pool_id": 2,
-    "evidence_hash": "0x994078c73bdb44f13007d7b6ff4ea899ff9dc44d11f1d3afae1320df418168ce",
+    "evidence_hash": "0xa2fe04a6469c2c15d3b6282e8282726e3b6973b8800d4ac6ff4619d03ed1b659",
     "quote_hash": "0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e",
     "issue_price_e6": "800000",
     "event": "PricingUpdated"
   },
   "offering": {
-    "contract": "0x1F44D336111dE4e2640bd9a5945991D42e876f65",
+    "contract": "0x38c52c33FEC5cc430f19F573768671c47E63b310",
     "pool_id": 2,
     "ebl_id": 2,
     "final_issue_price_usd": 0.8,
@@ -60,53 +60,53 @@
   "transactions": [
     {
       "label": "mint eBL V2 commitment",
-      "txHash": "0xe9116114b34c3ea22f4729c0f4975391cfc2609d4a7432fa956beb5224ad91a6",
-      "blockNumber": 131942047,
-      "explorer": "https://testnet.blockscout.injective.network/tx/0xe9116114b34c3ea22f4729c0f4975391cfc2609d4a7432fa956beb5224ad91a6",
+      "txHash": "0xff954d2981b4a16b36274c0b2ccc8668fa6b17aada90ba0a3e719b6649a76e72",
+      "blockNumber": 143335311,
+      "explorer": "https://testnet.blockscout.injective.network/tx/0xff954d2981b4a16b36274c0b2ccc8668fa6b17aada90ba0a3e719b6649a76e72",
       "events": [
         {
           "name": "EBLMinted",
           "args": [
             "2",
-            "0x1bb8e8ab88ed54f4ace8279d7ed3477a393d0f4e7bc000026c69b2b67dd43bda",
-            "0xFf86f010D005d15bd43e1f254C12ACabEFae218d"
+            "0xb5a8f4d1a78769b59c9887a77a65c8b0c144630b5ad61895626e9f7ba5dde7b3",
+            "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
           ],
-          "address": "0x85bfdcd00E0bBb9dDce3dcD2A58A62380703AdA6"
+          "address": "0x8152FE274497C84850Ce79822feA3B885295cf53"
         },
         {
           "name": "EBLMintedV2",
           "args": [
             "2",
             "0xcbb79a2dc7946a1b0db32fa57833f07d5130915393acbf4315ddc3958383ad2f",
-            "0x1bb8e8ab88ed54f4ace8279d7ed3477a393d0f4e7bc000026c69b2b67dd43bda",
-            "0xFf86f010D005d15bd43e1f254C12ACabEFae218d"
+            "0xb5a8f4d1a78769b59c9887a77a65c8b0c144630b5ad61895626e9f7ba5dde7b3",
+            "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
           ],
-          "address": "0x85bfdcd00E0bBb9dDce3dcD2A58A62380703AdA6"
+          "address": "0x8152FE274497C84850Ce79822feA3B885295cf53"
         }
       ]
     },
     {
       "label": "pledge eBL",
-      "txHash": "0x753e412878dfc54b25fe6fd4ca908ed3c5ce4d6d606e8a98eff26a8f4777c9ad",
-      "blockNumber": 131942051,
-      "explorer": "https://testnet.blockscout.injective.network/tx/0x753e412878dfc54b25fe6fd4ca908ed3c5ce4d6d606e8a98eff26a8f4777c9ad",
+      "txHash": "0x623ae64bea3ac6a3f5438abea1d5f59d49baaeaf2027fb072be4db1438c62e7a",
+      "blockNumber": 143335318,
+      "explorer": "https://testnet.blockscout.injective.network/tx/0x623ae64bea3ac6a3f5438abea1d5f59d49baaeaf2027fb072be4db1438c62e7a",
       "events": [
         {
           "name": "EBLPledged",
           "args": [
             "2",
-            "0x1F44D336111dE4e2640bd9a5945991D42e876f65",
-            "0xFf86f010D005d15bd43e1f254C12ACabEFae218d"
+            "0x38c52c33FEC5cc430f19F573768671c47E63b310",
+            "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
           ],
-          "address": "0x85bfdcd00E0bBb9dDce3dcD2A58A62380703AdA6"
+          "address": "0x8152FE274497C84850Ce79822feA3B885295cf53"
         }
       ]
     },
     {
       "label": "create RWA offering",
-      "txHash": "0xf87bae897ec9bb7b811d34203659802f0d20c26599ea73d300aabf8d0c017166",
-      "blockNumber": 131942055,
-      "explorer": "https://testnet.blockscout.injective.network/tx/0xf87bae897ec9bb7b811d34203659802f0d20c26599ea73d300aabf8d0c017166",
+      "txHash": "0xa181fedb37f8d75d63e0094e6acbf247fe564cb5c3eda8a52d757d7e2ffd663c",
+      "blockNumber": 143335326,
+      "explorer": "https://testnet.blockscout.injective.network/tx/0xa181fedb37f8d75d63e0094e6acbf247fe564cb5c3eda8a52d757d7e2ffd663c",
       "events": [
         {
           "name": "OfferingCreated",
@@ -117,7 +117,7 @@
             "800000",
             "1000000"
           ],
-          "address": "0x1F44D336111dE4e2640bd9a5945991D42e876f65"
+          "address": "0x38c52c33FEC5cc430f19F573768671c47E63b310"
         },
         {
           "name": "OfferingStateChanged",
@@ -127,15 +127,15 @@
             "2",
             "0"
           ],
-          "address": "0x1F44D336111dE4e2640bd9a5945991D42e876f65"
+          "address": "0x38c52c33FEC5cc430f19F573768671c47E63b310"
         }
       ]
     },
     {
       "label": "bind paid report to PricingUpdated",
-      "txHash": "0x590ff7dcb172277c25f4886bb82dc0e6c642b1f7d979f189c19a5be88e094508",
-      "blockNumber": 131942058,
-      "explorer": "https://testnet.blockscout.injective.network/tx/0x590ff7dcb172277c25f4886bb82dc0e6c642b1f7d979f189c19a5be88e094508",
+      "txHash": "0xd76c821efd5587eece80928eba5129e8cbdc6570867ef68ec3612cc2f89c6dae",
+      "blockNumber": 143335336,
+      "explorer": "https://testnet.blockscout.injective.network/tx/0xd76c821efd5587eece80928eba5129e8cbdc6570867ef68ec3612cc2f89c6dae",
       "events": [
         {
           "name": "PricingUpdated",
@@ -144,11 +144,11 @@
             "800000",
             "1",
             "0",
-            "0x994078c73bdb44f13007d7b6ff4ea899ff9dc44d11f1d3afae1320df418168ce",
+            "0xa2fe04a6469c2c15d3b6282e8282726e3b6973b8800d4ac6ff4619d03ed1b659",
             "0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e",
-            "0xFf86f010D005d15bd43e1f254C12ACabEFae218d"
+            "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
           ],
-          "address": "0x0F9618DDbac86eD51d48ef1361789D7e5eF1FAE1"
+          "address": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC"
         }
       ]
     }

@@ -91,6 +91,26 @@ npm run verify:wave-b
 
 Evidence is written to `docs/evidence/wave-b-protocol.json` and `docs/evidence/wave-b-gate.json`.
 
+### MCP-9 — official Injective MCP server
+
+`npm run smoke:mcp:injective` drives a real `evm_broadcast` through `InjectiveLabs/mcp-server`. Use a fresh checkout
+and keep dependency install scripts off (the server holds the key in memory while it signs):
+
+```powershell
+git clone https://github.com/InjectiveLabs/mcp-server.git $env:TEMP\agentbl-injective-mcp-server
+git -C $env:TEMP\agentbl-injective-mcp-server apply --ignore-whitespace patches/injective-mcp-msg-sender.patch
+npm --prefix $env:TEMP\agentbl-injective-mcp-server ci --ignore-scripts
+npm --prefix $env:TEMP\agentbl-injective-mcp-server run build
+$env:MCP_LIVE_CONFIRM='injective-testnet'
+npm run smoke:mcp:injective
+```
+
+The patch is required until upstream ships the same change (see the incident table and `docs/wave-b.md` §4;
+re-checked against upstream `daa9838` on 2026-10-12, where it still applies). The evidence file records the
+checkout commit (`official_server_commit`) and the SHA-256 of its local diff (`official_server_local_diff_sha256`),
+so it never claims to come from unmodified upstream code. The smoke imports the deployer key into a throwaway
+`HOME`; delete `agentbl-injective-mcp-home-*` from the temp directory afterwards.
+
 ### SP-5 — Bank precompile / MTS USDC
 
 Read-only parity check:
@@ -147,6 +167,7 @@ Acceptance evidence: `docs/evidence/injective-exchange-precompile.json`.
 | Order cannot be found | Indexer lag or CID mismatch | Poll by wallet + symbol, then match exact CID; do not invent an order hash |
 | Commodity has no direct market | Market gap, not a software failure | Return `ineligible`; never substitute BTC/INJ as a cosmetic proxy hedge |
 | RPC/indexer disagreement | Different finality/latency paths | Treat explorer receipt as tx truth; retry bounded indexer reads; retain tx hash and CID |
+| Official MCP `evm_broadcast` fails with `sender address is missing` (code 18) | Upstream `InjectiveLabs/mcp-server` (checked at `daa9838`, 2026-07-14) builds `MsgEthereumTx` with only `raw`; the testnet now requires the signer in `from` | Apply `patches/injective-mcp-msg-sender.patch` to the server checkout, rebuild, re-run `npm run smoke:mcp:injective` |
 
 ## 6. Safety and rollback
 

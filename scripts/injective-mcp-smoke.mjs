@@ -1,5 +1,6 @@
 /** MCP-9 live smoke against InjectiveLabs/mcp-server. */
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -26,6 +27,22 @@ async function loadDotEnv() {
       value = value.slice(1, -1);
     }
     if (process.env[name] === undefined) process.env[name] = value;
+  }
+}
+
+// Names the exact server code behind the evidence: the checkout's commit plus a hash of any local
+// modification (scripts/patches/ holds the one this repo relies on). null = not a git checkout / unmodified.
+function serverCheckout(serverFile) {
+  const directory = path.resolve(serverFile, '..', '..', '..');
+  const git = (...args) => execFileSync('git', ['-C', directory, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  try {
+    const diff = git('-c', 'core.autocrlf=false', 'diff', '--no-color');
+    return {
+      commit: git('rev-parse', 'HEAD').trim(),
+      localDiffSha256: diff ? crypto.createHash('sha256').update(diff).digest('hex') : null
+    };
+  } catch {
+    return { commit: null, localDiffSha256: null };
   }
 }
 
@@ -99,6 +116,7 @@ process.env.MCP_HUMAN_APPROVAL_TOKEN = approvalToken;
 const defaultServerPath = path.join(os.tmpdir(), 'agentbl-injective-mcp-server', 'dist', 'mcp', 'server.js');
 const serverPath = process.env.INJECTIVE_MCP_SERVER_PATH?.trim() || defaultServerPath;
 await fs.access(serverPath);
+const checkout = serverCheckout(serverPath);
 
 const chain = chainConfigLib.resolveNetworkConfig(
   JSON.parse(await fs.readFile(path.join(root, 'public', 'chain-config.json'), 'utf8')),
@@ -157,6 +175,8 @@ try {
     chain_id: 1439,
     official_server: 'https://github.com/InjectiveLabs/mcp-server',
     official_server_path: serverPath,
+    official_server_commit: checkout.commit,
+    official_server_local_diff_sha256: checkout.localDiffSha256,
     tool_trace: [
       {
         tool: 'usdc_native_info',

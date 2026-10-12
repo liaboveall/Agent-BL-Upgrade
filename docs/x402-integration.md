@@ -107,7 +107,12 @@ re-readable cache). Notes on the Live flow:
    agents) produces the same payload; `tests/x402LiveGateway.test.js` runs both against the real server with a mock
    facilitator.
 4. **A client-supplied transaction hash is never trusted** (not as proof of payment, and not in the Demo route either).
-5. **Prerequisites:** `X402_MODE=live`, `X402_FACILITATOR_URL` (HTTPS), `X402_PAY_TO`, a funded buyer wallet, and the
+5. **The facilitator must support your network.** `GET <X402_FACILITATOR_URL>/supported` has to list scheme `exact`
+   for `X402_NETWORK`, otherwise live start-up fails closed. On 2026-10-12 `x402-facilitator.molandak.org` listed only
+   Monad networks and `x402.injective.network` did not answer; the staging relay recorded in
+   `docs/evidence/x402-live-smoke.json` lists `eip155:1439` with the canonical USDC. It is plain HTTP, so it also needs
+   `X402_ALLOW_INSECURE_TESTNET=true` (testnet only).
+6. **Prerequisites:** `X402_MODE=live`, `X402_FACILITATOR_URL` (HTTPS), `X402_PAY_TO`, a funded buyer wallet, and the
    attestor key authorised on `PaymentOracle` (`PAYMENT_ATTESTOR_PRIVATE_KEY`, see `docs/DEPLOYMENT.md`). If the live
    gateway cannot start, paid routes answer `503 x402_v2_live_transport_required` instead of falling back to Demo.
    Switching the runtime mode into or out of Live needs `AGENTBL_ADMIN_TOKEN`.
@@ -315,13 +320,20 @@ balances and hardened Oracle bytecode; purchases one report through the official
 V2 client/middleware; verifies the USDC `Transfer`; writes `PaymentAttested`; and
 saves explorer evidence to `docs/evidence/x402-live-smoke.json`.
 
-X402-15 passed on 2026-06-29 on `eip155:1439` using an explicit test-only
-self-transfer. The official V2 flow settled
-[0.001 USDC](https://testnet.blockscout.injective.network/tx/0x6d796d39de0de3becd57f2c8b0ff72e6baf33e570259530cb294ff819d1a0b49),
-unlocked report `rpt_3e5f…3334` (`report_hash=0x994078…168ce`), and emitted
-[`PaymentAttested`](https://testnet.blockscout.injective.network/tx/0xa03ab9622dbc1af7bd448af2a52b5322963abf65853916dc13c75a139adfef6e).
-The full machine-readable proof is committed at
-`docs/evidence/x402-live-smoke.json`.
+X402-15 passed on 2026-06-29 and was re-run on 2026-10-12 on `eip155:1439` against the redeployed v2 contracts, this
+time as a real transfer between two wallets (buyer `0x8c59…a0E9` pays payee `0x9da2…ed6B`, no self-payment). The
+official V2 flow through the staging facilitator settled
+[0.001 USDC](https://testnet.blockscout.injective.network/tx/0xb8968f4803c3a68525e183bd70596715004e5b498c44a172d7fbb0423a41ae90),
+unlocked report `rpt_e2e20c…626c` (`report_hash=0xa2fe04…b659`), and emitted
+[`PaymentAttested`](https://testnet.blockscout.injective.network/tx/0x61e0ce548607636a95bd04136d5b9b5fcc1f49a92c06412b62d2e9487cd97a31).
+The full machine-readable proof is committed at `docs/evidence/x402-live-smoke.json`. The harness has the buyer
+wallet write the attestation, so the buyer was an authorised attestor for that run only (revoked afterwards).
+
+The production path was exercised too: a second purchase through the running Live server
+(`npm run x402:intel -- --kind risk --live`) settled in
+[`0x9df522…a7ed`](https://testnet.blockscout.injective.network/tx/0x9df522ccb6e9f265b99f5f7937a21e08313fc255645415404ccfb41735f0a7ed)
+and was attested by the dedicated `PAYMENT_ATTESTOR_PRIVATE_KEY` (not the owner, not the buyer) in
+[`0x20f13f…bd11`](https://testnet.blockscout.injective.network/tx/0x20f13fc5bb43bcacabb2ba64d50b8730f71c7483ce5760c34931c148fa6fbd11).
 
 ## Two different businesses: x402 report payment vs RWA subscription
 

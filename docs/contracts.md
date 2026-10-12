@@ -12,7 +12,7 @@
 
 | 项目 | 状态 |
 |---|---|
-| 链上（Injective inEVM 测试网，chainId 1439） | 运行的是 **v2 字节码**：2026-10-12（UTC）重新部署，`npm run verify:bytecode` 确认六个合约都与本地构建一致；部署者与 owner 是 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，构造函数把它设为初始的 attestor / updater，专用的服务器密钥尚未授权（见下方运维动作） |
+| 链上（Injective inEVM 测试网，chainId 1439） | 运行的是 **v2 字节码**：2026-10-12（UTC）重新部署，`npm run verify:bytecode` 确认六个合约都与本地构建一致；部署者与 owner 是 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，构造函数把它设为初始的 attestor / updater；服务器专用密钥已另行授权：attestor `0x0dAaa9093971eE7F0BD15f184E86C4fDAE6a1b70`、updater `0xEB43623667f1Add616D0FbdEBbbE067a0F195F79` |
 | 本仓库源码 | 已包含 v2 加固（见 0.3），**已在链上生效**；之后再改合约仍需重新部署 |
 | 重新部署 | `cd hardhat && npm run deploy:all`（需要持有测试网 INJ 的 `DEPLOYER_PRIVATE_KEY`），部署脚本会自动更新 `public/chain-config.json` |
 | 对比链上与源码 | `npm run verify:bytecode`（只读，调用 `eth_getCode`）；加 `-- --strict` 可在两者不一致时返回非零退出码 |

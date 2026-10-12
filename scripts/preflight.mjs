@@ -44,12 +44,17 @@ async function text(relative) {
   return fs.readFile(path.join(root, relative), 'utf8');
 }
 
-async function command(group, name, binary, args, cwd = root) {
+// What a developer sets to run Live. The unit suite asserts the Demo-mode defaults, so it runs without these
+// (a preflight started with DEMO_MODE=false, or from a checkout whose .env is configured for Live, still passes it).
+const LIVE_SETTINGS = /^(DEMO_MODE|AGENTBL_ADMIN_TOKEN|X402_[A-Z0-9_]+|WHITE_AGENT_PRIVATE_KEY|PAYMENT_ATTESTOR_PRIVATE_KEY|PRICING_UPDATER_PRIVATE_KEY|SIGNER_KEYS_STRICT|DEPLOYER_PRIVATE_KEY)$/u;
+const withoutLiveSettings = () => Object.fromEntries(Object.entries(process.env).filter(([name]) => !LIVE_SETTINGS.test(name)));
+
+async function command(group, name, binary, args, cwd = root, env = process.env) {
   const viaNode = binary === npmCli;
   try {
     const { stdout, stderr } = await execFileAsync(viaNode ? process.execPath : binary, viaNode ? [binary, ...args] : args, {
       cwd,
-      env: process.env,
+      env,
       timeout: 180_000,
       maxBuffer: 12 * 1024 * 1024,
       windowsHide: true,
@@ -127,7 +132,9 @@ const nodeTests = await command(
   'Executable suites',
   'Full Node unit/integration suite',
   npm,
-  ['test', '--', '--test-concurrency=4']
+  ['test', '--', '--test-concurrency=4'],
+  root,
+  withoutLiveSettings()
 );
 // The exit code already decides pass/fail; this also reads the summary line (TAP "# fail N",
 // spec reporter "ℹ fail N") so a runner that exits 0 while reporting failures is still caught.
@@ -171,10 +178,15 @@ try {
   check('HTTP and x402', 'x402 catalog returns four reports', catalog.body.services?.length === 4);
 
   for (const service of X402_SERVICES) {
-    const unpaid = await fetch(`${api}${service.endpoint}`);
-    const expectedStatus = runtimeMode.demoMode ? 402 : 503;
+    // Demo answers an unpaid GET with 402. Live (x402 V2) only accepts POST (GET gets 405) and answers an unpaid
+    // POST with 402; a Live gateway that failed to start answers 503, which has to fail this check.
+    const unpaid = runtimeMode.demoMode
+      ? await fetch(`${api}${service.endpoint}`)
+      : await fetch(`${api}${service.endpoint}`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
+      });
     check('HTTP and x402', `${service.serviceId} enforces the mode-safe unpaid boundary`,
-      unpaid.status === expectedStatus, `HTTP ${unpaid.status}`);
+      unpaid.status === 402, `HTTP ${unpaid.status}`);
   }
 
   const paidReports = [];
