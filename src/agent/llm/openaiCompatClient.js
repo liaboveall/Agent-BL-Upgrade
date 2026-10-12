@@ -51,6 +51,19 @@ const PROVIDERS = {
   }
 };
 
+const REASONING_EFFORTS = new Set(['low', 'medium', 'high']);
+
+/**
+ * Optional `reasoning_effort` for reasoning models (GLM, DeepSeek-R1, o-series, ...). It is opt-in through
+ * LLM_REASONING_EFFORT because a provider that does not know the field may reject the request; an unset or
+ * unknown value sends nothing. Hidden thinking counts against max_tokens, so on a reasoning model an explicit
+ * effort also decides whether the visible answer fits (see docs/DEPLOYMENT.md).
+ */
+export function reasoningEffort(env = process.env) {
+  const value = String(env.LLM_REASONING_EFFORT ?? '').trim().toLowerCase();
+  return REASONING_EFFORTS.has(value) ? value : undefined;
+}
+
 /** First non-empty value among the given env var names (undefined entries are skipped). */
 function firstEnv(env, names) {
   for (const name of names) {
@@ -140,6 +153,8 @@ export async function chatCompletion({ messages, tools, toolChoice = 'auto', tem
   if (!cfg) throw new Error('No LLM provider configured. Set DEEPSEEK_API_KEY / DASHSCOPE_API_KEY / OPENAI_API_KEY / AZURE_OPENAI_* or LLM_BASE_URL+LLM_API_KEY.');
 
   const body = { model: cfg.model, messages, temperature };
+  const effort = reasoningEffort(env);
+  if (effort) body.reasoning_effort = effort;
   if (tools && tools.length > 0) {
     body.tools = tools;
     body.tool_choice = toolChoice;

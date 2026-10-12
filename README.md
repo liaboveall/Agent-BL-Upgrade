@@ -852,7 +852,7 @@ All configuration is optional in Demo Mode. [`.env.example`](.env.example) docum
 | Variable | Purpose 用途 |
 |---|---|
 | `AGENTBL_ADMIN_TOKEN` | Authorises switching the runtime mode into/out of Live (≥ 16 chars). Without it, mode switching is disabled whenever Live is configured. |
-| `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, … | LLM provider for the AI assistant; used only by the server-side relay. Set a spend limit on the key. |
+| `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, … | LLM provider for the AI assistant; used only by the server-side relay. Set a spend limit on the key. Reasoning models (GLM, DeepSeek-R1, …) spend `max_tokens` on hidden thinking: raise `LLM_MAX_TOKENS_CAP` (default 2048; `0` = no cap, for a free gateway) and/or set `LLM_REASONING_EFFORT` (`low`/`medium`/`high`). |
 | `X402_MODE=live`, `X402_FACILITATOR_URL`, `X402_PAY_TO` | The three settings Live x402 needs. Optional: `X402_PUBLIC_BASE_URL` behind a proxy. |
 | `PAYMENT_ATTESTOR_PRIVATE_KEY`, `PRICING_UPDATER_PRIVATE_KEY` | Dedicated signer keys; authorise them on-chain with `PaymentOracle.setAttestor` / `RiskPricingOracle.setUpdater`. |
 | `WHITE_AGENT_PRIVATE_KEY` | Buyer wallet for the CLI/agent x402 client. |

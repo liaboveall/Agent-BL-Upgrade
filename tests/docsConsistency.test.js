@@ -50,7 +50,7 @@ test('.env.example documents every variable the server reads and never ships a r
   const documented = new Set([...example.matchAll(/^#?\s*([A-Za-z][A-Za-z0-9_]*)=/gmu)].map((match) => match[1]));
   for (const name of [
     'PORT', 'HOST', 'TRUST_PROXY', 'DEMO_MODE', 'AGENTBL_ADMIN_TOKEN', 'AGENTBL_MAX_BODY_BYTES', 'AGENTBL_RUNTIME_DIR',
-    'LLM_PROXY_ENABLED', 'X402_MODE', 'X402_FACILITATOR_URL', 'X402_PAY_TO', 'X402_PUBLIC_BASE_URL',
+    'LLM_PROXY_ENABLED', 'LLM_MAX_TOKENS_CAP', 'LLM_REASONING_EFFORT', 'X402_MODE', 'X402_FACILITATOR_URL', 'X402_PAY_TO', 'X402_PUBLIC_BASE_URL',
     'PAYMENT_ATTESTOR_PRIVATE_KEY', 'PRICING_UPDATER_PRIVATE_KEY', 'SIGNER_KEYS_STRICT', 'DEPLOYER_PRIVATE_KEY'
   ]) {
     assert.ok(documented.has(name), `.env.example should document ${name}`);

@@ -3,7 +3,7 @@
 // talks to /api/llm/*. The server picks the model, caps output size, bounds the
 // request, limits concurrency and never echoes upstream error bodies.
 import { once } from 'node:events';
-import { buildChatEndpoint, resolveProvider } from '../agent/llm/openaiCompatClient.js';
+import { buildChatEndpoint, reasoningEffort, resolveProvider } from '../agent/llm/openaiCompatClient.js';
 import { HttpError, readJsonBody, sendJson } from './http.js';
 
 export const LLM_BODY_LIMIT_BYTES = 256 * 1024;
@@ -11,12 +11,29 @@ const MAX_MESSAGES = 60;
 const MAX_TOOLS = 16;
 const MAX_TOOL_CALLS = 8;
 const MAX_CONTENT_CHARS = 32_000;
-const MAX_TOKENS_CAP = 2048;
+export const DEFAULT_MAX_TOKENS_CAP = 2048;
+const MAX_TOKENS_CAP_RANGE = Object.freeze({ min: 256, max: 32_768 });
 const ROLES = new Set(['system', 'user', 'assistant', 'tool']);
 const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/u;
 const UPSTREAM_TIMEOUT_MS = 60_000;
 
 let inflight = 0;
+
+/**
+ * Largest output (max_tokens) a browser request may ask for, or null for no cap. 2048 suits ordinary chat models
+ * on a paid key, where the cap is what bounds the spend. A reasoning model spends most of max_tokens on hidden
+ * thinking, so the same prompt can come back with no answer at all; raise it with LLM_MAX_TOKENS_CAP (256-32768),
+ * or set 0 to remove the cap on a free gateway (the upstream timeout, the concurrency limit and the per-client
+ * rate limit still bound a request). An unset or out-of-range value keeps the default.
+ */
+export function maxTokensCap(env = process.env) {
+  const raw = String(env.LLM_MAX_TOKENS_CAP ?? '').trim();
+  const value = Number(raw);
+  if (raw !== '' && value === 0) return null;
+  return raw !== '' && Number.isInteger(value) && value >= MAX_TOKENS_CAP_RANGE.min && value <= MAX_TOKENS_CAP_RANGE.max
+    ? value
+    : DEFAULT_MAX_TOKENS_CAP;
+}
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -72,7 +89,7 @@ function normalizeTool(raw, index) {
 }
 
 /** Validate + normalize a browser chat request. Anything not listed here is dropped. */
-export function normalizeChatRequest(body) {
+export function normalizeChatRequest(body, { maxTokensCap: cap = DEFAULT_MAX_TOKENS_CAP } = {}) {
   if (!isRecord(body)) throw invalid('Request body must be a JSON object');
   if (!Array.isArray(body.messages) || body.messages.length === 0) throw invalid('messages must be a non-empty array');
   if (body.messages.length > MAX_MESSAGES) throw invalid(`messages is limited to ${MAX_MESSAGES} entries`);
@@ -81,7 +98,7 @@ export function normalizeChatRequest(body) {
     messages: body.messages.map(normalizeMessage),
     stream: body.stream === true,
     temperature: 0.3,
-    maxTokens: MAX_TOKENS_CAP
+    maxTokens: cap ?? undefined // no cap configured: send no max_tokens unless the browser asks for one
   };
   if (body.temperature !== undefined) {
     const temperature = Number(body.temperature);
@@ -91,7 +108,7 @@ export function normalizeChatRequest(body) {
   if (body.max_tokens !== undefined) {
     const maxTokens = Number(body.max_tokens);
     if (!Number.isInteger(maxTokens) || maxTokens < 1) throw invalid('max_tokens must be a positive integer');
-    request.maxTokens = Math.min(maxTokens, MAX_TOKENS_CAP);
+    request.maxTokens = cap === null ? maxTokens : Math.min(maxTokens, cap);
   }
   if (body.tools !== undefined) {
     if (!Array.isArray(body.tools) || body.tools.length > MAX_TOOLS) throw invalid(`tools must be an array of at most ${MAX_TOOLS} entries`);
@@ -111,14 +128,16 @@ export function llmStatus(env = process.env) {
     : { enabled: true, configured: false };
 }
 
-function upstreamBody(request, model) {
+function upstreamBody(request, model, env) {
   const body = {
     model,
     messages: request.messages,
     temperature: request.temperature,
-    max_tokens: request.maxTokens,
     stream: request.stream
   };
+  if (request.maxTokens !== undefined) body.max_tokens = request.maxTokens;
+  const effort = reasoningEffort(env);
+  if (effort) body.reasoning_effort = effort;
   if (request.tools?.length) {
     body.tools = request.tools;
     body.tool_choice = 'auto';
@@ -147,7 +166,7 @@ export async function relayChat(request, response, { env = process.env, fetchImp
     throw new HttpError(503, 'llm_not_configured', 'No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)');
   }
 
-  const chat = normalizeChatRequest(await readJsonBody(request, { limit: LLM_BODY_LIMIT_BYTES }));
+  const chat = normalizeChatRequest(await readJsonBody(request, { limit: LLM_BODY_LIMIT_BYTES }), { maxTokensCap: maxTokensCap(env) });
 
   const maxConcurrent = Number(env.LLM_PROXY_MAX_CONCURRENCY) > 0 ? Number(env.LLM_PROXY_MAX_CONCURRENCY) : 4;
   if (inflight >= maxConcurrent) {
@@ -167,7 +186,7 @@ export async function relayChat(request, response, { env = process.env, fetchImp
       upstream = await fetchImpl(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(upstreamBody(chat, provider.model)),
+        body: JSON.stringify(upstreamBody(chat, provider.model, env)),
         signal: controller.signal
       });
     } catch (cause) {
@@ -178,9 +197,18 @@ export async function relayChat(request, response, { env = process.env, fetchImp
 
     if (!chat.stream) {
       const json = await upstream.json().catch(() => null);
-      const message = json?.choices?.[0]?.message;
+      const choice = json?.choices?.[0];
+      const message = choice?.message;
       if (!message) throw new HttpError(502, 'llm_upstream_error', 'The LLM provider returned no message');
-      sendJson(response, 200, { ok: true, provider: provider.provider, model: provider.model, choices: [{ message }] });
+      // finish_reason + usage let the UI tell "the model ran out of max_tokens while thinking" (an empty
+      // message with finish_reason "length") from a real answer; they carry no provider detail or secret.
+      sendJson(response, 200, {
+        ok: true,
+        provider: provider.provider,
+        model: provider.model,
+        choices: [{ message, finish_reason: choice.finish_reason ?? null }],
+        usage: json.usage ?? null
+      });
       return;
     }
 

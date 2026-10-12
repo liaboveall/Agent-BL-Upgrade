@@ -5,7 +5,8 @@ import { clearLlmEnv, listen, requestJson } from './helpers/http.js';
 
 process.env.LLM_RATE_LIMIT_PER_MIN = '0'; // this file sends many /api/llm/chat requests from one IP
 const { createServer } = await import('../src/app/server.js');
-const { normalizeChatRequest } = await import('../src/app/llmProxy.js');
+const { normalizeChatRequest, maxTokensCap } = await import('../src/app/llmProxy.js');
+const { chatCompletion, reasoningEffort } = await import('../src/agent/llm/openaiCompatClient.js');
 
 const RELAY_KEY = 'sk-unit-test-relay-key-0123';
 
@@ -43,6 +44,8 @@ async function startUpstream() {
           return json(429, { error: 'slow down' });
         case 'empty':
           return json(200, { choices: [] });
+        case 'length': // a reasoning model that spent every max_token thinking: no text, no tool call
+          return json(200, { choices: [{ message: { role: 'assistant', content: null }, finish_reason: 'length' }], usage: { prompt_tokens: 10, completion_tokens: 2048, total_tokens: 2058 } });
         default:
           return json(200, { choices: [{ message: { role: 'assistant', content: 'hello from upstream' } }] });
       }
@@ -101,6 +104,55 @@ test('LLM relay', async (t) => {
     assert.equal(call.body.tools[0].type, 'function');
     assert.equal(call.body.tools[0].function.name, 'filter_eBLs');
     assert.ok(!('attacker_field' in call.body), 'unknown request fields are dropped');
+  });
+
+  await t.test('LLM_MAX_TOKENS_CAP raises the output cap, 0 removes it, and a missing or out-of-range value keeps 2048', async () => {
+    process.env.LLM_MAX_TOKENS_CAP = '8192';
+    await chat(app.base, { messages: [userMessage()], max_tokens: 999_999 });
+    assert.equal(upstream.state.received.at(-1).body.max_tokens, 8192, 'a request above the raised cap is clamped to it');
+    await chat(app.base, { messages: [userMessage()] });
+    assert.equal(upstream.state.received.at(-1).body.max_tokens, 8192, 'no requested value means the cap');
+    await chat(app.base, { messages: [userMessage()], max_tokens: 100 });
+    assert.equal(upstream.state.received.at(-1).body.max_tokens, 100, 'a smaller request is honoured');
+
+    for (const bad of ['abc', '100', '99999999', '2048.5', '']) {
+      process.env.LLM_MAX_TOKENS_CAP = bad;
+      await chat(app.base, { messages: [userMessage()], max_tokens: 999_999 });
+      assert.equal(upstream.state.received.at(-1).body.max_tokens, 2048, `LLM_MAX_TOKENS_CAP=${JSON.stringify(bad)} keeps the default`);
+    }
+
+    process.env.LLM_MAX_TOKENS_CAP = '0';
+    await chat(app.base, { messages: [userMessage()] });
+    assert.ok(!('max_tokens' in upstream.state.received.at(-1).body), '0 removes the cap: nothing is sent unless the browser asks');
+    await chat(app.base, { messages: [userMessage()], max_tokens: 50_000 });
+    assert.equal(upstream.state.received.at(-1).body.max_tokens, 50_000, 'with no cap an explicit request is forwarded as it is');
+  });
+
+  await t.test('LLM_REASONING_EFFORT is forwarded only when it is a known level', async () => {
+    await chat(app.base, { messages: [userMessage()] });
+    assert.ok(!('reasoning_effort' in upstream.state.received.at(-1).body), 'not sent unless configured');
+
+    process.env.LLM_REASONING_EFFORT = 'High';
+    await chat(app.base, { messages: [userMessage()] });
+    assert.equal(upstream.state.received.at(-1).body.reasoning_effort, 'high');
+
+    process.env.LLM_REASONING_EFFORT = 'turbo';
+    await chat(app.base, { messages: [userMessage()] });
+    assert.ok(!('reasoning_effort' in upstream.state.received.at(-1).body), 'an unknown level is ignored');
+  });
+
+  await t.test('a non-streamed answer carries finish_reason and usage, so a truncated reply is detectable', async () => {
+    upstream.state.mode = 'length';
+    const res = await chat(app.base, { messages: [userMessage()] });
+    assert.equal(res.status, 200);
+    assert.equal(res.data.choices[0].message.content, null);
+    assert.equal(res.data.choices[0].finish_reason, 'length');
+    assert.equal(res.data.usage.completion_tokens, 2048);
+    assert.ok(!res.text.includes(RELAY_KEY));
+
+    upstream.state.mode = 'json';
+    const normal = await chat(app.base, { messages: [userMessage()] });
+    assert.equal(normal.data.choices[0].finish_reason, null, 'an upstream without finish_reason is reported as null');
   });
 
   await t.test('tool calls and tool results round-trip', async () => {
@@ -262,4 +314,35 @@ test('normalizeChatRequest clamps and normalises', () => {
   assert.equal(normalized.stream, false);
   assert.deepEqual(normalized.messages, [{ role: 'user', content: 'x' }]);
   assert.equal(normalized.tools[0].function.name, 'a_b-1');
+});
+
+test('normalizeChatRequest honours a raised cap and never exceeds it', () => {
+  const messages = [{ role: 'user', content: 'x' }];
+  assert.equal(normalizeChatRequest({ messages, max_tokens: 100_000 }, { maxTokensCap: 8192 }).maxTokens, 8192);
+  assert.equal(normalizeChatRequest({ messages }, { maxTokensCap: 8192 }).maxTokens, 8192);
+  assert.equal(normalizeChatRequest({ messages, max_tokens: 500 }, { maxTokensCap: 8192 }).maxTokens, 500);
+  // null = no cap: nothing is imposed, an explicit request is kept
+  assert.equal(normalizeChatRequest({ messages }, { maxTokensCap: null }).maxTokens, undefined);
+  assert.equal(normalizeChatRequest({ messages, max_tokens: 123_456 }, { maxTokensCap: null }).maxTokens, 123_456);
+});
+
+test('maxTokensCap and reasoningEffort read their settings strictly', () => {
+  assert.equal(maxTokensCap({}), 2048);
+  assert.equal(maxTokensCap({ LLM_MAX_TOKENS_CAP: ' 4096 ' }), 4096);
+  assert.equal(maxTokensCap({ LLM_MAX_TOKENS_CAP: '255' }), 2048);
+  assert.equal(maxTokensCap({ LLM_MAX_TOKENS_CAP: '32769' }), 2048);
+  assert.equal(maxTokensCap({ LLM_MAX_TOKENS_CAP: ' 0 ' }), null, '0 means no cap');
+  assert.equal(reasoningEffort({}), undefined);
+  assert.equal(reasoningEffort({ LLM_REASONING_EFFORT: ' Medium ' }), 'medium');
+  assert.equal(reasoningEffort({ LLM_REASONING_EFFORT: 'max' }), undefined);
+});
+
+test('the agent client forwards LLM_REASONING_EFFORT too', async (t) => {
+  const upstream = await startUpstream();
+  t.after(() => upstream.close());
+  const env = { LLM_BASE_URL: `${upstream.base}/v1`, LLM_API_KEY: RELAY_KEY, LLM_MODEL: 'agent-model' };
+  await chatCompletion({ messages: [userMessage()] }, env);
+  assert.ok(!('reasoning_effort' in upstream.state.received.at(-1).body), 'not sent unless configured');
+  await chatCompletion({ messages: [userMessage()] }, { ...env, LLM_REASONING_EFFORT: 'low' });
+  assert.equal(upstream.state.received.at(-1).body.reasoning_effort, 'low');
 });

@@ -204,7 +204,7 @@ curl -sI $BASE/ | grep -i content-security     # 应该能看到 CSP
 | 症状 | 排查 |
 |---|---|
 | AI 结果是固定数值 | 没有配置 LLM / 行情 key，正在使用离线回退数据，属正常行为 |
-| AI 助手只做关键词搜索 | `/api/llm/status` 返回 `configured:false`（没配 key）或 `enabled:false`（`LLM_PROXY_ENABLED=false`） |
+| AI 助手只做关键词搜索 | `/api/llm/status` 返回 `configured:false`（没配 key）或 `enabled:false`（`LLM_PROXY_ENABLED=false`）；已配置但点了没反应、回答为空或被截断：推理型模型（GLM、DeepSeek-R1 等）的隐藏思考也计入 `max_tokens`，默认 2048 的上限可能被思考用完（响应里的 `finish_reason` 是 `length`），设置 `LLM_MAX_TOKENS_CAP`（范围 256–32768；免费网关可设 `0` 表示不设上限，上游超时、并发和限流仍然生效）和 `LLM_REASONING_EFFORT=high` |
 | 环境变量不生效 | 确认 `.env` 在项目根目录，或已通过 `--env-file` / 平台面板传入；变量名区分大小写 |
 | Docker 中写运行时目录报只读错误 | 确认 `/app/data/runtime` 挂载为可写的命名卷；根文件系统本身是只读的 |
 | 所有用户被限流 / 限流不生效 | 反向代理后面需要设置 `TRUST_PROXY=1`，并让代理传递 `X-Forwarded-For` |

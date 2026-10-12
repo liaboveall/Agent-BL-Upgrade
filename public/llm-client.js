@@ -14,8 +14,9 @@ const LLM_CONFIG = {
   ENDPOINT: '/api/llm/chat',
   STATUS_ENDPOINT: '/api/llm/status',
   TIMEOUT_MS: 60000,
-  TEMPERATURE: 0.3,
-  MAX_TOKENS: 2048
+  // No max_tokens here on purpose: the server owns the output limit (LLM_MAX_TOKENS_CAP, default 2048, 0 = none),
+  // so the browser must not hard-code a number that silently truncates a reasoning model's hidden thinking.
+  TEMPERATURE: 0.3
 };
 
 /** 生成唯一 ID */
@@ -105,8 +106,7 @@ export class LlmClient {
     const body = {
       messages,
       stream,
-      temperature: LLM_CONFIG.TEMPERATURE,
-      max_tokens: LLM_CONFIG.MAX_TOKENS
+      temperature: LLM_CONFIG.TEMPERATURE
     };
     if (tools && tools.length > 0) body.tools = toOpenAITools(tools);
     return body;
@@ -244,7 +244,8 @@ export class LlmClient {
 
       return {
         content: msg.content || null,
-        tool_calls: tool_calls || null
+        tool_calls: tool_calls || null,
+        finish_reason: json.choices?.[0]?.finish_reason ?? null
       };
     } finally {
       clearTimeout(timer);

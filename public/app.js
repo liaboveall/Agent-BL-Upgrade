@@ -1030,6 +1030,10 @@ Use the filter_eBLs tool. Match risk appetite, cargo type, route, ports, speed, 
       } else {
         toast(t('ai_no_match'), true);
       }
+    } else {
+      // Neither a tool call nor text. A reasoning model that spends all of max_tokens thinking ends like this
+      // (finish_reason "length"); do not fall silent: take the keyword fallback below and say why.
+      throw new Error(result.finish_reason === 'length' ? 'the model ran out of output tokens' : 'the model returned an empty answer');
     }
   } catch (e) {
     // Fallback to keyword search
