@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 # AgentBL web app + API (src/app/server.js). Contracts and docs are not part of the image.
 
-FROM node:22-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # Lifecycle scripts are not needed at runtime (postinstall only prints a banner).
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
-FROM node:22-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
