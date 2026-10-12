@@ -249,9 +249,9 @@ Deployed on Injective Testnet alongside `AgentBLRWA` and `RiskPricingOracle`.
 
 **Injective Testnet deployment** (`public/chain-config.json` is the source of truth):
 
-- Contract: [`0x98De9ccF7AaeD8DA2c328114CAC55fAB55F0abEe`](https://testnet.blockscout.injective.network/address/0x98De9ccF7AaeD8DA2c328114CAC55fAB55F0abEe)
-- Deployment tx: [`0x9b633734…a3682d1`](https://testnet.blockscout.injective.network/tx/0x9b633734a19f7f44e85abe537f594684bfa597b9394a0918dc09682fa3b70dd1)
-- This is the v1 build. The source now has two-step ownership that moves the attestor role with the owner
+- Contract: [`0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8`](https://testnet.blockscout.injective.network/address/0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8)
+- Deployment tx: [`0xddaabf1c…9b2faf8`](https://testnet.blockscout.injective.network/tx/0xddaabf1ce27f129966f9d69f75c758ee0d25f1f3c858a93f2f2fd7c689b2faf8)
+- This is the v2 build (redeployed 2026-10-12), which has two-step ownership that moves the attestor role with the owner
   (see `docs/contracts.md` §0); `npm run verify:bytecode` shows whether the deployment is current.
 
 **Event:**

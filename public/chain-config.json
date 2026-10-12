@@ -5,11 +5,11 @@
     "injective-testnet": {
       "network": "injective_testnet",
       "displayName": "Injective EVM Testnet",
-      "chainId": "0x59F",
+      "chainId": "0x59f",
       "chainIdDecimal": 1439,
       "cosmosChainId": "injective-888",
       "rpcUrls": [
-        "https://testnet.sentry.chain.json-rpc.injective.network"
+        "https://k8s.testnet.json-rpc.injective.network/"
       ],
       "wsUrls": [
         "wss://k8s.testnet.ws.injective.network/"
@@ -26,12 +26,12 @@
       },
       "accessModel": "permissionless",
       "contracts": {
-        "AgentBLRWA": "0x9EdfDacDE8955b927D6a3CEeAAbd15c9A1d186bA",
-        "PaymentOracle": "0x98De9ccF7AaeD8DA2c328114CAC55fAB55F0abEe",
-        "EBLRegistry": "0x3317010ACb5337145d86b1Ba370A2591037cFf70",
-        "RWAToken": "0x59edB85ac7499388284Daec7029cC1344D0C17B4",
-        "RWAOfferingPool": "0x8966919D0760837dC3fc7aD50492187F0528887f",
-        "RiskPricingOracle": "0xd15212ad15A6f6d926d72d5AF316bD7B2AF3A630"
+        "AgentBLRWA": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+        "PaymentOracle": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+        "EBLRegistry": "0x8152FE274497C84850Ce79822feA3B885295cf53",
+        "RWAToken": "0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C",
+        "RWAOfferingPool": "0x38c52c33FEC5cc430f19F573768671c47E63b310",
+        "RiskPricingOracle": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC"
       },
       "abis": {
         "AgentBLRWA": [
@@ -162,6 +162,32 @@
             ],
             "name": "Tokenized",
             "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "MAX_RISK_LEVEL",
+            "outputs": [
+              {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "MAX_RISK_SCORE_BPS",
+            "outputs": [
+              {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
           },
           {
             "inputs": [
@@ -479,11 +505,6 @@
         ],
         "EBLRegistry": [
           {
-            "inputs": [],
-            "stateMutability": "nonpayable",
-            "type": "constructor"
-          },
-          {
             "anonymous": false,
             "inputs": [
               {
@@ -644,6 +665,51 @@
             ],
             "name": "EBLTransferred",
             "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           },
           {
             "inputs": [
@@ -1047,6 +1113,19 @@
             "type": "function"
           },
           {
+            "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
             "inputs": [
               {
                 "internalType": "uint256",
@@ -1113,13 +1192,72 @@
             "outputs": [],
             "stateMutability": "nonpayable",
             "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "transferOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           }
         ],
         "RWAToken": [
           {
-            "inputs": [],
-            "stateMutability": "nonpayable",
-            "type": "constructor"
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "pool",
+                "type": "address"
+              }
+            ],
+            "name": "PoolSet",
+            "type": "event"
           },
           {
             "anonymous": false,
@@ -1164,6 +1302,13 @@
             ],
             "name": "TransferPermissionSet",
             "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           },
           {
             "inputs": [
@@ -1246,6 +1391,19 @@
           },
           {
             "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
             "name": "pool",
             "outputs": [
               {
@@ -1306,6 +1464,19 @@
             ],
             "stateMutability": "view",
             "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "transferOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           }
         ],
         "RWAOfferingPool": [
@@ -1362,12 +1533,69 @@
             "inputs": [
               {
                 "indexed": true,
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "eblId",
+                "type": "uint256"
+              }
+            ],
+            "name": "CollateralReleaseFailed",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "eblId",
+                "type": "uint256"
+              }
+            ],
+            "name": "CollateralReleased",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
                 "internalType": "address",
                 "name": "gate",
                 "type": "address"
               }
             ],
             "name": "ComplianceGateSet",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "departureProof",
+                "type": "bytes32"
+              }
+            ],
+            "name": "DepartureRecorded",
             "type": "event"
           },
           {
@@ -1393,6 +1621,62 @@
               }
             ],
             "name": "EmergencyStopSet",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "oldPaymentProof",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "newPaymentProof",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "oldRepaymentAmount",
+                "type": "uint256"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "newRepaymentAmount",
+                "type": "uint256"
+              }
+            ],
+            "name": "ImporterPaymentCorrected",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "reasonHash",
+                "type": "bytes32"
+              }
+            ],
+            "name": "OfferingCancelled",
             "type": "event"
           },
           {
@@ -1580,6 +1864,57 @@
             "inputs": [
               {
                 "indexed": true,
+                "internalType": "address",
+                "name": "oracle",
+                "type": "address"
+              }
+            ],
+            "name": "OracleSet",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "poolId",
                 "type": "uint256"
@@ -1630,6 +1965,19 @@
             ],
             "name": "Subscribed",
             "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "CANCEL_OFFERING",
+            "outputs": [
+              {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
           },
           {
             "inputs": [],
@@ -1750,6 +2098,13 @@
           },
           {
             "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [],
             "name": "accessMode",
             "outputs": [
               {
@@ -1814,6 +2169,24 @@
             "type": "function"
           },
           {
+            "inputs": [
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "reasonHash",
+                "type": "bytes32"
+              }
+            ],
+            "name": "cancelOffering",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
             "inputs": [],
             "name": "complianceGate",
             "outputs": [
@@ -1824,6 +2197,29 @@
               }
             ],
             "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "paymentProof",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint256",
+                "name": "repaymentAmount",
+                "type": "uint256"
+              }
+            ],
+            "name": "correctImporterPayment",
+            "outputs": [],
+            "stateMutability": "nonpayable",
             "type": "function"
           },
           {
@@ -2087,6 +2483,38 @@
             "type": "function"
           },
           {
+            "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ],
+            "name": "poolOfEbl",
+            "outputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
             "inputs": [
               {
                 "internalType": "uint256",
@@ -2311,6 +2739,19 @@
             "outputs": [],
             "stateMutability": "nonpayable",
             "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "transferOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           }
         ],
         "RiskPricingOracle": [
@@ -2324,6 +2765,44 @@
             ],
             "stateMutability": "nonpayable",
             "type": "constructor"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event"
           },
           {
             "anonymous": false,
@@ -2392,6 +2871,26 @@
             ],
             "name": "UpdaterSet",
             "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "MAX_RISK_LEVEL",
+            "outputs": [
+              {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           },
           {
             "inputs": [
@@ -2484,6 +2983,19 @@
           },
           {
             "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
             "name": "pool",
             "outputs": [
               {
@@ -2509,6 +3021,19 @@
               }
             ],
             "name": "setUpdater",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "transferOwnership",
             "outputs": [],
             "stateMutability": "nonpayable",
             "type": "function"
@@ -2599,6 +3124,17 @@
                 "type": "address"
               }
             ],
+            "name": "NotPendingOwner",
+            "type": "error"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "caller",
+                "type": "address"
+              }
+            ],
             "name": "UnauthorizedAttestor",
             "type": "error"
           },
@@ -2645,6 +3181,25 @@
               }
             ],
             "name": "AttestorUpdated",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
             "type": "event"
           },
           {
@@ -2726,6 +3281,13 @@
             ],
             "name": "PaymentAttested",
             "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           },
           {
             "inputs": [
@@ -2921,6 +3483,19 @@
             "type": "function"
           },
           {
+            "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
             "inputs": [
               {
                 "internalType": "address",
@@ -2955,47 +3530,47 @@
       },
       "deployments": {
         "AgentBLRWA": {
-          "address": "0x9EdfDacDE8955b927D6a3CEeAAbd15c9A1d186bA",
-          "deployTx": "0xc12601b494d304ebe30348ee512f0fa17596996c93fabb7c57b1b518c5a98935",
-          "blockNumber": 134234446,
-          "deployedAt": "2026-07-21T11:53:30.210Z"
+          "address": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+          "deployTx": "0x5646f0b9c3270b4ce02686f4a98fcd40efec510fd008e57344f68197c2ef0fb3",
+          "blockNumber": 143331433,
+          "deployedAt": "2026-10-12T02:28:30.699Z"
         },
         "PaymentOracle": {
-          "address": "0x98De9ccF7AaeD8DA2c328114CAC55fAB55F0abEe",
-          "deployTx": "0x9b633734a19f7f44e85abe537f594684bfa597b9394a0918dc09682fa3b70dd1",
-          "deployedAt": "2026-07-07T14:47:30.245Z"
+          "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+          "deployTx": "0xddaabf1ce27f129966f9d69f75c758ee0d25f1f3c858a93f2f2fd7c689b2faf8",
+          "deployedAt": "2026-10-12T02:28:35.991Z"
         },
         "EBLRegistry": {
-          "address": "0x3317010ACb5337145d86b1Ba370A2591037cFf70",
-          "deployTx": "0x0d73d85b1f15f7f9bed9da86e94aba9e088653a33d2a7ef67141122f0901a936",
-          "blockNumber": 134234453,
-          "deployedAt": "2026-07-21T11:53:30.210Z"
+          "address": "0x8152FE274497C84850Ce79822feA3B885295cf53",
+          "deployTx": "0xbde5509c98a5208df82cef84d96efff943f19f92ec58ce55068a92cc5ebcd270",
+          "blockNumber": 143331440,
+          "deployedAt": "2026-10-12T02:28:30.699Z"
         },
         "RWAToken": {
-          "address": "0x59edB85ac7499388284Daec7029cC1344D0C17B4",
-          "deployTx": "0x9cca19b62e8a5a8c25a1961bdba514c5dc12d5a43941946142e443182570e04c",
-          "blockNumber": 134234460,
-          "deployedAt": "2026-07-21T11:53:30.210Z"
+          "address": "0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C",
+          "deployTx": "0x0ba0508dc67031e4912c430205f3ec8e69a3f16f0bb5a956614288b5267ebd18",
+          "blockNumber": 143331448,
+          "deployedAt": "2026-10-12T02:28:30.699Z"
         },
         "RWAOfferingPool": {
-          "address": "0x8966919D0760837dC3fc7aD50492187F0528887f",
-          "deployTx": "0x71e783268373ef5044d38ede3a40733c742800e250034b3cf61503e6328be8b1",
-          "blockNumber": 134234467,
-          "deployedAt": "2026-07-21T11:53:30.210Z"
+          "address": "0x38c52c33FEC5cc430f19F573768671c47E63b310",
+          "deployTx": "0xcd7ad41578e18cb45e0201aa2a21b37d3e2ad27d306c8f88a1b2683800d29f89",
+          "blockNumber": 143331456,
+          "deployedAt": "2026-10-12T02:28:30.699Z"
         },
         "RiskPricingOracle": {
-          "address": "0xd15212ad15A6f6d926d72d5AF316bD7B2AF3A630",
-          "deployTx": "0x5457dd5acb9dac313292e7398c7b1ae4ff2287e773fac39ab46ad56006b68455",
-          "blockNumber": 134234474,
-          "deployedAt": "2026-07-21T11:53:30.210Z"
+          "address": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC",
+          "deployTx": "0x90c08062b2050e851ad3562d7815cbca277f0e9267ca2eb3e26e77ed7cfa5072",
+          "blockNumber": 143331465,
+          "deployedAt": "2026-10-12T02:28:30.699Z"
         }
       },
       "deployedAt": "2026-06-29T09:08:01.232Z",
       "deployTx": "0xd666868dadc99a1020a697ba71e40e8886c2dbe382259cefef65ba581749819e",
       "paymentOracle": {
-        "address": "0x98De9ccF7AaeD8DA2c328114CAC55fAB55F0abEe",
-        "deployTx": "0x9b633734a19f7f44e85abe537f594684bfa597b9394a0918dc09682fa3b70dd1",
-        "deployedAt": "2026-07-07T14:47:30.245Z",
+        "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+        "deployTx": "0xddaabf1ce27f129966f9d69f75c758ee0d25f1f3c858a93f2f2fd7c689b2faf8",
+        "deployedAt": "2026-10-12T02:28:35.991Z",
         "abi": [
           {
             "inputs": [],
@@ -3043,6 +3618,17 @@
                 "type": "address"
               }
             ],
+            "name": "NotPendingOwner",
+            "type": "error"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "caller",
+                "type": "address"
+              }
+            ],
             "name": "UnauthorizedAttestor",
             "type": "error"
           },
@@ -3089,6 +3675,25 @@
               }
             ],
             "name": "AttestorUpdated",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
             "type": "event"
           },
           {
@@ -3170,6 +3775,13 @@
             ],
             "name": "PaymentAttested",
             "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
           },
           {
             "inputs": [
@@ -3365,6 +3977,19 @@
             "type": "function"
           },
           {
+            "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
             "inputs": [
               {
                 "internalType": "address",
@@ -3401,21 +4026,21 @@
         "schema": "agentbl-protocol-deployment-v2",
         "network": "injective_testnet",
         "chainId": 1439,
-        "deployer": "0xFf86f010D005d15bd43e1f254C12ACabEFae218d",
-        "deployedAt": "2026-07-21T11:53:30.210Z",
+        "deployer": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+        "deployedAt": "2026-10-12T02:28:30.699Z",
         "deployTransactions": {
-          "AgentBLRWA": "0xc12601b494d304ebe30348ee512f0fa17596996c93fabb7c57b1b518c5a98935",
-          "EBLRegistry": "0x0d73d85b1f15f7f9bed9da86e94aba9e088653a33d2a7ef67141122f0901a936",
-          "RWAToken": "0x9cca19b62e8a5a8c25a1961bdba514c5dc12d5a43941946142e443182570e04c",
-          "RWAOfferingPool": "0x71e783268373ef5044d38ede3a40733c742800e250034b3cf61503e6328be8b1",
-          "RiskPricingOracle": "0x5457dd5acb9dac313292e7398c7b1ae4ff2287e773fac39ab46ad56006b68455"
+          "AgentBLRWA": "0x5646f0b9c3270b4ce02686f4a98fcd40efec510fd008e57344f68197c2ef0fb3",
+          "EBLRegistry": "0xbde5509c98a5208df82cef84d96efff943f19f92ec58ce55068a92cc5ebcd270",
+          "RWAToken": "0x0ba0508dc67031e4912c430205f3ec8e69a3f16f0bb5a956614288b5267ebd18",
+          "RWAOfferingPool": "0xcd7ad41578e18cb45e0201aa2a21b37d3e2ad27d306c8f88a1b2683800d29f89",
+          "RiskPricingOracle": "0x90c08062b2050e851ad3562d7815cbca277f0e9267ca2eb3e26e77ed7cfa5072"
         },
         "explorerAddresses": {
-          "AgentBLRWA": "https://testnet.blockscout.injective.network/address/0x9EdfDacDE8955b927D6a3CEeAAbd15c9A1d186bA",
-          "EBLRegistry": "https://testnet.blockscout.injective.network/address/0x3317010ACb5337145d86b1Ba370A2591037cFf70",
-          "RWAToken": "https://testnet.blockscout.injective.network/address/0x59edB85ac7499388284Daec7029cC1344D0C17B4",
-          "RWAOfferingPool": "https://testnet.blockscout.injective.network/address/0x8966919D0760837dC3fc7aD50492187F0528887f",
-          "RiskPricingOracle": "https://testnet.blockscout.injective.network/address/0xd15212ad15A6f6d926d72d5AF316bD7B2AF3A630"
+          "AgentBLRWA": "https://testnet.blockscout.injective.network/address/0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+          "EBLRegistry": "https://testnet.blockscout.injective.network/address/0x8152FE274497C84850Ce79822feA3B885295cf53",
+          "RWAToken": "https://testnet.blockscout.injective.network/address/0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C",
+          "RWAOfferingPool": "https://testnet.blockscout.injective.network/address/0x38c52c33FEC5cc430f19F573768671c47E63b310",
+          "RiskPricingOracle": "https://testnet.blockscout.injective.network/address/0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC"
         },
         "abis": {
           "AgentBLRWA": [
@@ -3546,6 +4171,32 @@
               ],
               "name": "Tokenized",
               "type": "event"
+            },
+            {
+              "inputs": [],
+              "name": "MAX_RISK_LEVEL",
+              "outputs": [
+                {
+                  "internalType": "uint8",
+                  "name": "",
+                  "type": "uint8"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "MAX_RISK_SCORE_BPS",
+              "outputs": [
+                {
+                  "internalType": "uint32",
+                  "name": "",
+                  "type": "uint32"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
             },
             {
               "inputs": [
@@ -3863,11 +4514,6 @@
           ],
           "EBLRegistry": [
             {
-              "inputs": [],
-              "stateMutability": "nonpayable",
-              "type": "constructor"
-            },
-            {
               "anonymous": false,
               "inputs": [
                 {
@@ -4028,6 +4674,51 @@
               ],
               "name": "EBLTransferred",
               "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferStarted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferred",
+              "type": "event"
+            },
+            {
+              "inputs": [],
+              "name": "acceptOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
             },
             {
               "inputs": [
@@ -4431,6 +5122,19 @@
               "type": "function"
             },
             {
+              "inputs": [],
+              "name": "pendingOwner",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
               "inputs": [
                 {
                   "internalType": "uint256",
@@ -4497,13 +5201,72 @@
               "outputs": [],
               "stateMutability": "nonpayable",
               "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "transferOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
             }
           ],
           "RWAToken": [
             {
-              "inputs": [],
-              "stateMutability": "nonpayable",
-              "type": "constructor"
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferStarted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferred",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "pool",
+                  "type": "address"
+                }
+              ],
+              "name": "PoolSet",
+              "type": "event"
             },
             {
               "anonymous": false,
@@ -4548,6 +5311,13 @@
               ],
               "name": "TransferPermissionSet",
               "type": "event"
+            },
+            {
+              "inputs": [],
+              "name": "acceptOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
             },
             {
               "inputs": [
@@ -4630,6 +5400,19 @@
             },
             {
               "inputs": [],
+              "name": "pendingOwner",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
               "name": "pool",
               "outputs": [
                 {
@@ -4690,6 +5473,19 @@
               ],
               "stateMutability": "view",
               "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "transferOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
             }
           ],
           "RWAOfferingPool": [
@@ -4746,12 +5542,69 @@
               "inputs": [
                 {
                   "indexed": true,
+                  "internalType": "uint256",
+                  "name": "poolId",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "uint256",
+                  "name": "eblId",
+                  "type": "uint256"
+                }
+              ],
+              "name": "CollateralReleaseFailed",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "uint256",
+                  "name": "poolId",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "uint256",
+                  "name": "eblId",
+                  "type": "uint256"
+                }
+              ],
+              "name": "CollateralReleased",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
                   "internalType": "address",
                   "name": "gate",
                   "type": "address"
                 }
               ],
               "name": "ComplianceGateSet",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "uint256",
+                  "name": "poolId",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "bytes32",
+                  "name": "departureProof",
+                  "type": "bytes32"
+                }
+              ],
+              "name": "DepartureRecorded",
               "type": "event"
             },
             {
@@ -4777,6 +5630,62 @@
                 }
               ],
               "name": "EmergencyStopSet",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "uint256",
+                  "name": "poolId",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "bytes32",
+                  "name": "oldPaymentProof",
+                  "type": "bytes32"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "bytes32",
+                  "name": "newPaymentProof",
+                  "type": "bytes32"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "oldRepaymentAmount",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "newRepaymentAmount",
+                  "type": "uint256"
+                }
+              ],
+              "name": "ImporterPaymentCorrected",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "uint256",
+                  "name": "poolId",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "bytes32",
+                  "name": "reasonHash",
+                  "type": "bytes32"
+                }
+              ],
+              "name": "OfferingCancelled",
               "type": "event"
             },
             {
@@ -4964,6 +5873,57 @@
               "inputs": [
                 {
                   "indexed": true,
+                  "internalType": "address",
+                  "name": "oracle",
+                  "type": "address"
+                }
+              ],
+              "name": "OracleSet",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferStarted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferred",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
                   "internalType": "uint256",
                   "name": "poolId",
                   "type": "uint256"
@@ -5014,6 +5974,19 @@
               ],
               "name": "Subscribed",
               "type": "event"
+            },
+            {
+              "inputs": [],
+              "name": "CANCEL_OFFERING",
+              "outputs": [
+                {
+                  "internalType": "uint8",
+                  "name": "",
+                  "type": "uint8"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
             },
             {
               "inputs": [],
@@ -5134,6 +6107,13 @@
             },
             {
               "inputs": [],
+              "name": "acceptOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [],
               "name": "accessMode",
               "outputs": [
                 {
@@ -5198,6 +6178,24 @@
               "type": "function"
             },
             {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "poolId",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "reasonHash",
+                  "type": "bytes32"
+                }
+              ],
+              "name": "cancelOffering",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
               "inputs": [],
               "name": "complianceGate",
               "outputs": [
@@ -5208,6 +6206,29 @@
                 }
               ],
               "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "poolId",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "paymentProof",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "repaymentAmount",
+                  "type": "uint256"
+                }
+              ],
+              "name": "correctImporterPayment",
+              "outputs": [],
+              "stateMutability": "nonpayable",
               "type": "function"
             },
             {
@@ -5471,6 +6492,38 @@
               "type": "function"
             },
             {
+              "inputs": [],
+              "name": "pendingOwner",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "",
+                  "type": "uint256"
+                }
+              ],
+              "name": "poolOfEbl",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
               "inputs": [
                 {
                   "internalType": "uint256",
@@ -5695,6 +6748,19 @@
               "outputs": [],
               "stateMutability": "nonpayable",
               "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "transferOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
             }
           ],
           "RiskPricingOracle": [
@@ -5708,6 +6774,44 @@
               ],
               "stateMutability": "nonpayable",
               "type": "constructor"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferStarted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferred",
+              "type": "event"
             },
             {
               "anonymous": false,
@@ -5776,6 +6880,26 @@
               ],
               "name": "UpdaterSet",
               "type": "event"
+            },
+            {
+              "inputs": [],
+              "name": "MAX_RISK_LEVEL",
+              "outputs": [
+                {
+                  "internalType": "uint8",
+                  "name": "",
+                  "type": "uint8"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "acceptOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
             },
             {
               "inputs": [
@@ -5868,6 +6992,19 @@
             },
             {
               "inputs": [],
+              "name": "pendingOwner",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
               "name": "pool",
               "outputs": [
                 {
@@ -5893,6 +7030,19 @@
                 }
               ],
               "name": "setUpdater",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "transferOwnership",
               "outputs": [],
               "stateMutability": "nonpayable",
               "type": "function"
@@ -5940,87 +7090,87 @@
         "wiring": [
           {
             "label": "RWAToken.setPool",
-            "txHash": "0x1e4ecca16f579cd07b45e790e12975ef77b9352b26c06c6c9c82e3098e5be406",
-            "blockNumber": 134234484,
-            "explorer": "https://testnet.blockscout.injective.network/tx/0x1e4ecca16f579cd07b45e790e12975ef77b9352b26c06c6c9c82e3098e5be406"
+            "txHash": "0x53969f109a614a8a8171a0948f2b6db730f5bb5cb1e202a4afacd0d79f61831e",
+            "blockNumber": 143331471,
+            "explorer": "https://testnet.blockscout.injective.network/tx/0x53969f109a614a8a8171a0948f2b6db730f5bb5cb1e202a4afacd0d79f61831e"
           },
           {
             "label": "RWAOfferingPool.setOracle",
-            "txHash": "0xd718600339294ca0ba394a4418f2fa01ab7b0dcfe574d60c2100fcf648631f53",
-            "blockNumber": 134234489,
-            "explorer": "https://testnet.blockscout.injective.network/tx/0xd718600339294ca0ba394a4418f2fa01ab7b0dcfe574d60c2100fcf648631f53"
+            "txHash": "0x0e05eb7db249cc84c20275d4b129f3447233b4eb4fe3600b8f1902363f91d15c",
+            "blockNumber": 143331483,
+            "explorer": "https://testnet.blockscout.injective.network/tx/0x0e05eb7db249cc84c20275d4b129f3447233b4eb4fe3600b8f1902363f91d15c"
           },
           {
             "label": "RWAOfferingPool.setAgentExecutor",
-            "txHash": "0x95c6d6eb025cad89539e27b848ef9ec158176f9a51186a9e28b11ed898628898",
-            "blockNumber": 134234494,
-            "explorer": "https://testnet.blockscout.injective.network/tx/0x95c6d6eb025cad89539e27b848ef9ec158176f9a51186a9e28b11ed898628898"
+            "txHash": "0x4502e8670173a74be680fa27362cbd62141caf7bbbf89b8f08eaacbbe8cbb334",
+            "blockNumber": 143331491,
+            "explorer": "https://testnet.blockscout.injective.network/tx/0x4502e8670173a74be680fa27362cbd62141caf7bbbf89b8f08eaacbbe8cbb334"
           }
         ],
         "smoke": {
-          "verifiedAt": "2026-07-21T11:53:30.210Z",
+          "verifiedAt": "2026-10-12T02:28:30.699Z",
           "eblId": 1,
           "poolId": 1,
           "transactions": [
             {
               "label": "create:mintEBLV2",
-              "txHash": "0x6c49f5fb920caac363dfc20e7d3f2fbcbd24b15d23653f6c6b06401685c5ec03",
-              "blockNumber": 134234499,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0x6c49f5fb920caac363dfc20e7d3f2fbcbd24b15d23653f6c6b06401685c5ec03"
+              "txHash": "0xac3c54435723756e7f45d5bc4ff2ee529a16a854ccaa184f60bc68e803d6fd3e",
+              "blockNumber": 143331498,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0xac3c54435723756e7f45d5bc4ff2ee529a16a854ccaa184f60bc68e803d6fd3e"
             },
             {
               "label": "create:pledge",
-              "txHash": "0x3b94cf69d316b76f1f2dce7f3b7f999d5afa100790d942ecc122ed2ea39ffb69",
-              "blockNumber": 134234505,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0x3b94cf69d316b76f1f2dce7f3b7f999d5afa100790d942ecc122ed2ea39ffb69"
+              "txHash": "0x908677fa74d8c47bb0faaef41f9c9eeee9e08ef3d2726ca2a6f2df0ccd51d775",
+              "blockNumber": 143331504,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0x908677fa74d8c47bb0faaef41f9c9eeee9e08ef3d2726ca2a6f2df0ccd51d775"
             },
             {
               "label": "create:createOffering",
-              "txHash": "0xfe4731d11175d54f40eb731b0658a337fdafecd090c47f21b248849cc311275e",
-              "blockNumber": 134234511,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0xfe4731d11175d54f40eb731b0658a337fdafecd090c47f21b248849cc311275e"
+              "txHash": "0x6a4361057002abceab4e2ac4e3f62c53319fd9e7df54d1a24b3ccddb50288fc6",
+              "blockNumber": 143331510,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0x6a4361057002abceab4e2ac4e3f62c53319fd9e7df54d1a24b3ccddb50288fc6"
             },
             {
               "label": "subscribe",
-              "txHash": "0x98af33740ffe10b7e56246bff4cf064b132dfe0fde196f57a9d8135ab542b763",
-              "blockNumber": 134234519,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0x98af33740ffe10b7e56246bff4cf064b132dfe0fde196f57a9d8135ab542b763"
+              "txHash": "0xf893869059d26d232dd3ec224c145560c72c650ed6ac9f1096c02ba5bc88bc1b",
+              "blockNumber": 143331519,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0xf893869059d26d232dd3ec224c145560c72c650ed6ac9f1096c02ba5bc88bc1b"
             },
             {
               "label": "reprice",
-              "txHash": "0xdbab79b898c6b9d135543152fbed9124e0d615f8de25c3aef145269916325439",
-              "blockNumber": 134234537,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0xdbab79b898c6b9d135543152fbed9124e0d615f8de25c3aef145269916325439"
+              "txHash": "0x3ad161b3bb780841ea07b1fe3f16c0b62d9541afd8ab6bc94270dc58b0ad50a8",
+              "blockNumber": 143331526,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0x3ad161b3bb780841ea07b1fe3f16c0b62d9541afd8ab6bc94270dc58b0ad50a8"
             },
             {
               "label": "pause",
-              "txHash": "0x87040fdaacd9e67e67fcaf0ed175978ae9c98194d2f434c773b28b6ccc3d6ef3",
-              "blockNumber": 134234542,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0x87040fdaacd9e67e67fcaf0ed175978ae9c98194d2f434c773b28b6ccc3d6ef3"
+              "txHash": "0xea31ac6a1a543e49a4e95f035f816cfa43686468c9a391e9789a764f6144ca1b",
+              "blockNumber": 143331531,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0xea31ac6a1a543e49a4e95f035f816cfa43686468c9a391e9789a764f6144ca1b"
             },
             {
               "label": "resume",
-              "txHash": "0xbcb7c91dab66dd099a1f4ef5cd5ea010fbe973c896fcd50d39a251f6e203b1b0",
-              "blockNumber": 134234547,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0xbcb7c91dab66dd099a1f4ef5cd5ea010fbe973c896fcd50d39a251f6e203b1b0"
+              "txHash": "0x19e6b084c444423a7196e87f026dc1b9d885609d3835281739ddc34f84bc9946",
+              "blockNumber": 143331536,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0x19e6b084c444423a7196e87f026dc1b9d885609d3835281739ddc34f84bc9946"
             },
             {
               "label": "settlement:payment-proof",
-              "txHash": "0x4f64fd59a5cb87d3eea52f948b4927bbad6087cb22b003006f96be9e0f8b25a4",
-              "blockNumber": 134234553,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0x4f64fd59a5cb87d3eea52f948b4927bbad6087cb22b003006f96be9e0f8b25a4"
+              "txHash": "0x7ced9365881c6d0292393dae6eb808e6fac62149c588d85e7665357779d56811",
+              "blockNumber": 143331543,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0x7ced9365881c6d0292393dae6eb808e6fac62149c588d85e7665357779d56811"
             },
             {
               "label": "settlement:arrival-proof",
-              "txHash": "0x2d82317d7a14e9300e610a096e60b743a402cd2986f1ca0852ff8b88d9de2b67",
-              "blockNumber": 134234559,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0x2d82317d7a14e9300e610a096e60b743a402cd2986f1ca0852ff8b88d9de2b67"
+              "txHash": "0x2c0abb8feff5d0d5c81210aebe09b973b5b0fff9aed4adcca263af208b95aeb7",
+              "blockNumber": 143331551,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0x2c0abb8feff5d0d5c81210aebe09b973b5b0fff9aed4adcca263af208b95aeb7"
             },
             {
               "label": "settle",
-              "txHash": "0x8a05635f79ef38f8de03757326f9ced1ad810c1688d4f764fe0a6144c1bf1432",
-              "blockNumber": 134234564,
-              "explorer": "https://testnet.blockscout.injective.network/tx/0x8a05635f79ef38f8de03757326f9ced1ad810c1688d4f764fe0a6144c1bf1432"
+              "txHash": "0x4486490ac3261a0496ad5a6646256dd3c154cf932f32680bc58efc778d1210c2",
+              "blockNumber": 143331559,
+              "explorer": "https://testnet.blockscout.injective.network/tx/0x4486490ac3261a0496ad5a6646256dd3c154cf932f32680bc58efc778d1210c2"
             }
           ],
           "finalState": "Repaid",

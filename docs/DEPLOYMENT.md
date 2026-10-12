@@ -157,7 +157,7 @@ AI 助手通过同源接口 `/api/llm/chat` 调用 LLM：key 留在服务器，�
 
 ### 合约
 
-仓库里的合约源码是 v2（见 [contracts.md](./contracts.md) §0），测试网上运行的是 v1。让改动生效需要重新部署：
+仓库里的合约源码是 v2（见 [contracts.md](./contracts.md) §0），测试网上已于 2026-10-12 重新部署为 v2。以后再改合约源码，需要重新部署才会生效：
 
 ```bash
 cd hardhat
@@ -211,4 +211,4 @@ curl -sI $BASE/ | grep -i content-security     # 应该能看到 CSP
 | 页面一直提示输入管理员令牌 | 模式切换需要 `AGENTBL_ADMIN_TOKEN`（≥ 16 字符）；令牌错误会返回 401 |
 | 浏览器控制台出现 CSP 拦截 | 检查是否加载了新的第三方脚本/域名，并调整 `src/app/security.js` |
 | 钱包交易失败 | 确认钱包在 Injective 测试网、账户有测试 INJ（[水龙头](https://testnet.faucet.injective.network/)），且 `chain-config.json` 中的合约地址是最新部署 |
-| 链上合约行为与文档不一致 | 运行 `npm run verify:bytecode`：测试网可能还是 v1，需要重新部署 |
+| 链上合约行为与文档不一致 | 运行 `npm run verify:bytecode`：链上合约可能落后于源码，需要重新部署 |

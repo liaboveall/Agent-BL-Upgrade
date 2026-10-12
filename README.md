@@ -43,7 +43,7 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 |---|---|
 | Pricing, risk, RAG, MCP tools, dashboard / 定价、风险、RAG、MCP 工具、前端 | Working. Deterministic fallback keeps the demo running without any key. / 可用，没有任何 Key 也能完整演示 |
 | x402 paid intelligence / x402 付费情报 | **Demo:** simulated locally (no real funds). **Live:** x402 V2 (EIP-3009) through a facilitator, exercised end-to-end with a mock facilitator, the official `@injectivelabs/x402` client and the browser wallet flow; it needs a facilitator, a payee address and a funded wallet. / Demo 为本地模拟；Live 走 x402 V2，需要 Facilitator、收款地址和有余额的钱包 |
-| Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The Injective testnet deployment is still **v1** until redeployed: run `npm run verify:bytecode`. / 源码已加固为 v2；测试网上仍是 v1，重新部署后才生效 |
+| Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The Injective testnet contracts were **redeployed as v2 on 2026-10-12**: `npm run verify:bytecode` confirms the on-chain code matches the source. / 源码已加固为 v2，测试网已于 2026-10-12 重新部署；`npm run verify:bytecode` 可确认链上代码与源码一致 |
 | Investor payments for RWA shares / 投资者认购的真实付款 | **Not implemented.** Subscriptions mint share receipts and record the amount owed; no stablecoin is escrowed. / **未实现**，认购只铸造份额凭证并记录应付金额 |
 
 ---
@@ -818,17 +818,17 @@ The architecture uses Injective's EVM-compatible environment for Web3 execution.
 
 | Contract 合约 | Address 地址 | Purpose 用途 |
 |---|---|---|
-| **AgentBLRWA** | [`0x9EdfDacDE8955b927D6a3CEeAAbd15c9A1d186bA`](https://testnet.blockscout.injective.network/address/0x9EdfDacDE8955b927D6a3CEeAAbd15c9A1d186bA) | Browser demo contract: tokenize an eBL in one transaction / 浏览器演示合约，一笔交易 tokenize |
-| **EBLRegistry V2** | [`0x3317010ACb5337145d86b1Ba370A2591037cFf70`](https://testnet.blockscout.injective.network/address/0x3317010ACb5337145d86b1Ba370A2591037cFf70) | eBL registry, cargo uniqueness, pledges / eBL 登记、防重复、质押 |
-| **RWAOfferingPool** | [`0x8966919D0760837dC3fc7aD50492187F0528887f`](https://testnet.blockscout.injective.network/address/0x8966919D0760837dC3fc7aD50492187F0528887f) | Offering lifecycle state machine / 发行生命周期状态机 |
-| **RiskPricingOracle** | [`0xd15212ad15A6f6d926d72d5AF316bD7B2AF3A630`](https://testnet.blockscout.injective.network/address/0xd15212ad15A6f6d926d72d5AF316bD7B2AF3A630) | AI pricing → on-chain pricing action / AI 定价上链 |
-| **RWAToken** | [`0x59edB85ac7499388284Daec7029cC1344D0C17B4`](https://testnet.blockscout.injective.network/address/0x59edB85ac7499388284Daec7029cC1344D0C17B4) | Per-pool, non-transferable share receipts (not an ERC-20) / 每池不可转让的份额凭证（不是 ERC-20） |
-| **PaymentOracle** | [`0x98De9ccF7AaeD8DA2c328114CAC55fAB55F0abEe`](https://testnet.blockscout.injective.network/address/0x98De9ccF7AaeD8DA2c328114CAC55fAB55F0abEe) | Binds an x402 settlement to the paid AI report / 把 x402 付款与付费报告绑定 |
+| **AgentBLRWA** | [`0xEcD538011b889a7f79566d80A835C74cab2b4e0e`](https://testnet.blockscout.injective.network/address/0xEcD538011b889a7f79566d80A835C74cab2b4e0e) | Browser demo contract: tokenize an eBL in one transaction / 浏览器演示合约，一笔交易 tokenize |
+| **EBLRegistry V2** | [`0x8152FE274497C84850Ce79822feA3B885295cf53`](https://testnet.blockscout.injective.network/address/0x8152FE274497C84850Ce79822feA3B885295cf53) | eBL registry, cargo uniqueness, pledges / eBL 登记、防重复、质押 |
+| **RWAOfferingPool** | [`0x38c52c33FEC5cc430f19F573768671c47E63b310`](https://testnet.blockscout.injective.network/address/0x38c52c33FEC5cc430f19F573768671c47E63b310) | Offering lifecycle state machine / 发行生命周期状态机 |
+| **RiskPricingOracle** | [`0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC`](https://testnet.blockscout.injective.network/address/0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC) | AI pricing → on-chain pricing action / AI 定价上链 |
+| **RWAToken** | [`0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C`](https://testnet.blockscout.injective.network/address/0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C) | Per-pool, non-transferable share receipts (not an ERC-20) / 每池不可转让的份额凭证（不是 ERC-20） |
+| **PaymentOracle** | [`0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8`](https://testnet.blockscout.injective.network/address/0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8) | Binds an x402 settlement to the paid AI report / 把 x402 付款与付费报告绑定 |
 
 [`public/chain-config.json`](public/chain-config.json) is the single source of truth for these addresses (a test keeps this table in sync with it).
 
-> **Deployment status | 部署状态:** the contracts above are the **v1** build. The source in [`hardhat/contracts`](hardhat/contracts) is v2 (collateral uniqueness, price bounds, settlement and ownership hardening — see [`docs/contracts.md`](docs/contracts.md) §0) and takes effect on-chain after `cd hardhat && npm run deploy:all`. `npm run verify:bytecode` reports whether the testnet code matches the local source. The protocol is a demo: **do not put real funds in it** (there is no payment leg for subscriptions yet).
-> 上表是 **v1** 部署；源码已是 v2，重新部署后才在链上生效；`npm run verify:bytecode` 可对比链上代码与本地源码。协议仅用于演示，**请勿放入真实资金**。
+> **Deployment status | 部署状态:** the contracts above are the **v2** build, redeployed on 2026-10-12 (UTC) from [`hardhat/contracts`](hardhat/contracts) (collateral uniqueness, price bounds, settlement and ownership hardening — see [`docs/contracts.md`](docs/contracts.md) §0). `npm run verify:bytecode` confirms the testnet code matches the local source; after changing a contract, redeploy with `cd hardhat && npm run deploy:all`. The protocol is a demo: **do not put real funds in it** (there is no payment leg for subscriptions yet).
+> 上表是 **v2** 部署（2026-10-12 UTC 重新部署）；`npm run verify:bytecode` 可确认链上代码与本地源码一致，改动合约后用 `cd hardhat && npm run deploy:all` 重新部署。协议仅用于演示，**请勿放入真实资金**。
 
 ---
 
@@ -1180,7 +1180,7 @@ Important limitations include:
 - cargo and settlement scenarios may use simulated or demo data;
 - Demo Mode does not represent real investment execution;
 - the smart contracts have **no payment leg for RWA subscriptions**: `subscribe` mints a share receipt and records the amount owed, but no stablecoin is escrowed and `settle` does not distribute repayments (see [`docs/contracts.md`](docs/contracts.md) §0.6);
-- the Injective testnet deployment is the v1 contract build until the hardened source is redeployed;
+- the Injective testnet contracts are owned by a single deployer key (no multisig); ownership transfer is two-step (see [`docs/contracts.md`](docs/contracts.md) §0);
 - offering, pool and subscription state lives in server memory and resets on restart (only x402 receipts, cached reports, decision logs and Mystery reveals are persisted);
 - real-world legal ownership requires jurisdiction-specific integration;
 - production eBL infrastructure requires recognized eBL systems and standards;
@@ -1197,7 +1197,7 @@ AgentBL 当前仍然是一个 **Hackathon Prototype**。
 - 部分货物与结算场景使用模拟 / Demo 数据；
 - Demo Mode 不代表真实投资执行；
 - 合约**没有认购的付款环节**：`subscribe` 只铸造份额凭证并记录应付金额，不托管稳定币，`settle` 也不向投资者分配回款；
-- 测试网上仍是 v1 合约，重新部署后加固后的源码才会生效；
+- 测试网合约的 owner 是单个部署者密钥（没有多签），所有权转移是两步式的（见 [`docs/contracts.md`](docs/contracts.md) §0）；
 - 池子、认购等状态保存在服务器内存里，重启后清空（只有 x402 收据、报告缓存、决策日志和 Mystery 记录会持久化）；
 - 现实世界法律所有权需要针对司法辖区进行进一步集成；
 - Production eBL 需要接入被认可的 eBL 系统与行业标准；
