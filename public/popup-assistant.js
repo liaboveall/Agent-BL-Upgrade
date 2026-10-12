@@ -33,9 +33,9 @@ const SYSTEM_PROMPT = `你是 AgentBL 协议的 AI 助手。AgentBL 是一个 We
 你可以帮助投资者浏览 eBL 市场、AI 智能推荐合适的提单标的：
 1. **recommendEBL** — AI 解析自然语言偏好（如"收益高一些、风险中等"），从所有可用 eBL 中筛选排序推荐 Top 3
 2. **compareEBLs** — 并排对比 2-3 个提单的核心指标（收益/风险/价格/金额）
-3. **getPoolStatus** — 查询某个 eBL 发行池的实时状态（认购比例、当前定价、是否暂停）
-4. **getPortfolio** — 查看投资者当前持仓（认购的 RWA 代币、成本、估值）
-5. **subscribeRWA** — 一键认购 RWA 代币（需要连接钱包）
+3. **getPoolStatus** — 查询某个 eBL 发行池在服务器上的状态（认购比例、当前定价、是否暂停；链下镜像，不是合约读数）
+4. **getPortfolio** — 查看服务器记录的认购（Demo 模拟记录，不是链上持仓）
+5. **subscribeRWA** — 记录一笔 Demo 模拟认购（不产生链上交易、不转移资金；需要连接钱包标识投资者）
 
 ### 出口商视角（已有升级）
 6. **getCases** — 列出所有已上链的 eBL 提单
@@ -45,7 +45,7 @@ const SYSTEM_PROMPT = `你是 AgentBL 协议的 AI 助手。AgentBL 是一个 We
 10. **analyzeRisk** — AI 航线风险评分
 11. **getWorldRisk** — 获取实时世界风险情报（社交媒体、新闻、预测市场）
 12. **mintRWA** — 出口商一键 tokenize eBL 并创建链上发行池
-13. **getAgentActivity** — 查看自主 AI 最近的决策记录（定价/改价/暂停/恢复/结算）
+13. **getAgentActivity** — 查看服务器真实记录的 Agent 活动；没有记录就如实告诉用户“暂无决策记录”，不要编造
 14. **searchKnowledge** — 搜索知识库
 15. **getWalletStatus** — 检查钱包连接状态
 
@@ -59,6 +59,8 @@ const SYSTEM_PROMPT = `你是 AgentBL 协议的 AI 助手。AgentBL 是一个 We
 - 用户问"AI做了什么决策""有预警吗"→ 调用 getAgentActivity
 - 问风险事件 → getWorldRisk
 - 铸造/认购前 → 提醒连接钱包
+- 认购是 Demo 模拟记录：要说明没有链上交易、没有资金转移，不要把它说成已成交的投资或承诺到港后自动兑付
+- 不要声称有定时巡检或自动上链的 Agent 进程，除非 getAgentActivity 的结果里有对应的真实记录
 
 ## AI 风险评估原则
 - 评估的是"这批货 + 这条航线 + 当前世界局势"的风险
@@ -184,7 +186,7 @@ const TOOLS = [
       type: 'object',
       properties: {
         preference: { type: 'string', description: '用户的自然语言偏好描述' },
-        risk_max: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], description: '可接受最高风险等级' },
+        risk_max: { type: 'string', enum: ['LOW', 'MEDIUM', 'WARNING', 'CRITICAL'], description: '可接受最高风险等级（WARNING 即“高风险”）' },
         yield_min: { type: 'number', description: '最低预期收益率 (bps)，500 表示 5%' },
         commodity: { type: 'string', description: '货物类型关键词，如"铜""原油"' },
         financing_max: { type: 'number', description: '最高融资金额 (USD)' },
@@ -216,7 +218,7 @@ const TOOLS = [
   },
   {
     name: 'getAgentActivity',
-    description: '查看自主 AI Agent 最近的决策记录时间线：何时定价/改价/暂停/恢复/结算，每个决策的理由和链上交易哈希',
+    description: '查看服务器记录的 Agent 活动时间线（定价、认购、上传等真实记录）。没有记录时如实返回“暂无记录”；只有真实的链上交易才会带交易哈希',
     parameters: {
       type: 'object',
       properties: {
@@ -242,7 +244,7 @@ const TOOLS = [
   },
   {
     name: 'subscribeRWA',
-    description: '投资者一键认购指定 eBL 发行池的 RWA 代币。需要先连接钱包（MetaMask），然后按当前发行价认购指定金额的 RWA 代币',
+    description: '在服务器上记录一笔 Demo 模拟认购（不产生链上交易，不转移资金）。需要先连接钱包以标识投资者，按当前发行价折算 RWA 代币数量',
     parameters: {
       type: 'object',
       properties: {
@@ -259,9 +261,15 @@ const TOOLS = [
 // Tool 执行层 —— 对接 api.js / web3.js / store.js
 // ===========================================================================
 
-// 模块级状态：投资者持仓 & Agent 决策日志
-const portfolio = [];         // [{ case_id, label, amount_usd, token_count, price, yield_bps, risk_level, subscribed_at }]
-const agentDecisions = [];    // [{ id, timestamp, trigger, decision, reasoning, tx_hash, case_id }]
+// 持仓与 Agent 活动都由服务器保存（/api/investors/portfolio、/api/agent/activity），
+// 这里不再维护任何本地假数据。
+const RISK_LABELS = {
+  LOW: '🟢 低风险',
+  MEDIUM: '🟡 中风险',
+  WARNING: '🟠 高风险',
+  CRITICAL: '🔴 严重'
+};
+const riskLabel = (level) => RISK_LABELS[level] || level;
 
 // 辅助：对提单逐一定价并返回带评分的列表
 async function _scoreAllCases() {
@@ -289,7 +297,7 @@ async function _scoreAllCases() {
   return results.filter(Boolean);
 }
 
-const toolExecutors = {
+export const toolExecutors = {
   async getCases() {
     const cases = await api.getCases();
     if (!cases || !cases.length) return '当前没有可用的贸易案例。';
@@ -466,7 +474,7 @@ ${factors ? `\n风险因素：\n${factors}` : ''}`;
 
       return `**RWA 铸造${result.mode === 'chain' ? '成功' : '（模拟）'}！** ${modeLabel}
 
-- 交易哈希：\`${result.txHash}\`
+- 交易哈希：${result.txHash ? '`' + result.txHash + '`' : '无（模拟，未发送链上交易）'}
 - 资金池 ID：${result.poolId}
 - 铸造数量：${result.mintedAmount} RWA 代币
 - 发行价：$${(Number(result.issuePriceE6) / 1e6).toFixed(2)}
@@ -513,39 +521,35 @@ ${isReal ? '- 可执行真实链上铸造' : '- 将使用模拟交易（合约�
   async recommendEBL(params) {
     if (!params.preference) return '请描述你的投资偏好，例如"收益高一些、风险中等"。';
 
-    const all = await _scoreAllCases();
-    if (!all.length) return '当前没有可投资的 eBL 提单。';
+    // 推荐由服务器完成（与 AI 搜索框、Copilot 共用同一套池子数据），助手只传自然语言和结构化条件。
+    const criteria = {};
+    if (params.risk_max) criteria.risk_max = params.risk_max;
+    if (params.yield_min) criteria.yield_min = Math.round(Number(params.yield_min));
+    if (params.commodity) criteria.commodity = String(params.commodity);
+    if (params.financing_max) criteria.financing_max = Number(params.financing_max);
+    if (params.sort_by) criteria.sort_by = params.sort_by === 'score' ? 'score_desc' : params.sort_by;
 
-    let results = [...all];
-    const riskOrder = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
-
-    // 应用筛选
-    if (params.risk_max) results = results.filter(r => riskOrder[r.riskLevel] <= riskOrder[params.risk_max]);
-    if (params.yield_min) results = results.filter(r => r.yieldBps >= params.yield_min);
-    if (params.commodity) {
-      const kw = params.commodity.toLowerCase();
-      results = results.filter(r =>
-        (r.caseEntry.cargo || '').toLowerCase().includes(kw) ||
-        (r.caseData?.bill_of_lading?.cargo || '').toLowerCase().includes(kw));
+    let res;
+    try {
+      res = await api.marketSearch({
+        preference: params.preference,
+        criteria: Object.keys(criteria).length ? criteria : undefined,
+        limit: params.max_results ? Math.round(Number(params.max_results)) : undefined
+      });
+    } catch (e) {
+      return `推荐失败：${e.message}`;
     }
-    if (params.financing_max) results = results.filter(r => r.financingUsd <= params.financing_max);
 
-    if (!results.length) return `没有找到完全匹配「${params.preference}」的提单。试试放宽条件？例如扩大风险接受范围或降低收益要求。`;
-
-    // 排序
-    if (params.sort_by === 'yield_desc') results.sort((a, b) => b.yieldBps - a.yieldBps);
-    else if (params.sort_by === 'risk_asc') results.sort((a, b) => a.riskBps - b.riskBps);
-    else results.sort((a, b) => b.score - a.score); // 默认收益风险比
-
-    const top = results.slice(0, params.max_results || 3);
-    const riskLabel = (lvl) => ({ LOW: '🟢 低风险', MEDIUM: '🟡 中风险', HIGH: '🟠 高风险', CRITICAL: '🔴 严重' })[lvl] || lvl;
+    const top = res.recommendations || [];
+    if (!top.length) return `没有找到完全匹配「${params.preference}」的提单。试试放宽条件？例如扩大风险接受范围或降低收益要求。`;
 
     const lines = top.map((r, i) => {
       const stars = i === 0 ? ' ⭐ 首选推荐' : '';
       const bl = r.caseData?.bill_of_lading || {};
-      return `${i + 1}. **${r.caseEntry.label}**${stars}
-   - 路线：${r.caseEntry.route}
-   - 货物：${bl.cargo || r.caseEntry.cargo || '未指定'} · ${bl.quantity_mt ? bl.quantity_mt + ' MT' : ''}
+      const route = bl.port_of_loading && bl.port_of_discharge ? `${bl.port_of_loading} → ${bl.port_of_discharge}` : '未知';
+      return `${i + 1}. **${r.caseEntry?.label || r.id}**${stars}
+   - 路线：${route}
+   - 货物：${bl.cargo || r.caseEntry?.cargo || '未指定'} · ${bl.quantity_mt ? bl.quantity_mt + ' MT' : ''}
    - 发行价：$${Number(r.price).toFixed(2)} / 代币
    - 预期收益率：**${(r.yieldBps / 100).toFixed(2)}%**
    - 风险等级：${riskLabel(r.riskLevel)} (${r.riskBps} bps)
@@ -553,105 +557,85 @@ ${isReal ? '- 可执行真实链上铸造' : '- 将使用模拟交易（合约�
    - 收益风险比：${r.score.toFixed(2)}${i === 0 ? ' ← 同类最优' : ''}`;
     });
 
-    const reasonText = params.risk_max
-      ? `筛选条件：风险 ≤ ${params.risk_max}${params.yield_min ? '、收益 ≥ ' + (params.yield_min / 100).toFixed(1) + '%' : ''}`
-      : `按"${params.preference}"综合排序`;
-
-    return `**🔍 AI 推荐结果**（${reasonText}，共 ${results.length} 个匹配）\n\n${lines.join('\n\n')}\n\n💡 点击提单名称可查看详情，说「对比前两个」可并排比较。`;
+    return `**🔍 AI 推荐结果**（${res.reason}，共 ${res.matched ?? top.length} 个匹配）\n\n${lines.join('\n\n')}\n\n💡 说「对比前两个」可并排比较。`;
   },
 
   async getPortfolio() {
-    if (!portfolio.length) {
-      return `📭 你还没有任何持仓。\n\n试试对我说「帮我推荐收益高、风险中等的提单」，让我帮你找到合适的投资标的。`;
+    const wallet = state.wallet?.address || web3.connectedAddress?.() || undefined;
+    let data;
+    try {
+      data = await api.getPortfolio(wallet);
+    } catch (e) {
+      return `读取持仓失败：${e.message}`;
+    }
+    const investments = data.investments || [];
+    if (!investments.length) {
+      return `📭 服务器上没有这个钱包的认购记录。\n\n试试对我说「帮我推荐收益高、风险中等的提单」，让我帮你找到合适的投资标的。`;
     }
 
-    const lines = portfolio.map((p, i) => {
-      const riskEmoji = { LOW: '🟢', MEDIUM: '🟡', HIGH: '🟠', CRITICAL: '🔴' }[p.risk_level] || '⚪';
+    const lines = investments.map((p, i) => {
+      const riskEmoji = { LOW: '🟢', MEDIUM: '🟡', WARNING: '🟠', CRITICAL: '🔴' }[p.riskLevel] || '⚪';
       return `${i + 1}. **${p.label}**
-   - 认购：${p.token_count} RWA × $${Number(p.price).toFixed(2)} = $${Number(p.amount_usd).toFixed(2)}
-   - 预期收益：${(p.yield_bps / 100).toFixed(2)}% | 风险：${riskEmoji} ${p.risk_level}
-   - 认购时间：${p.subscribed_at || '未知'}`;
+   - 认购：${Number(p.tokenCount).toFixed(2)} RWA × $${Number(p.price).toFixed(2)} = $${Number(p.amountUsd).toFixed(2)}
+   - 预期收益：${(p.yieldBps / 100).toFixed(2)}% | 风险：${riskEmoji} ${p.riskLevel}
+   - 认购时间：${p.timestamp || '未知'}
+   - 引用：\`${p.reference || '—'}\`（${p.mode === 'demo' ? 'Demo 模拟，无链上交易' : p.mode}）`;
     });
 
-    const totalUsd = portfolio.reduce((s, p) => s + Number(p.amount_usd), 0);
-    const avgYield = portfolio.length ? (portfolio.reduce((s, p) => s + p.yield_bps, 0) / portfolio.length / 100) : 0;
-
-    return `**📊 我的持仓**（${portfolio.length} 个标的，总投入 $${totalUsd.toFixed(2)}）\n\n${lines.join('\n\n')}\n\n平均预期收益：**${avgYield.toFixed(2)}%** | 可对任意持仓说「查看状态」获取实时进展。`;
+    const { totalInvestedUsd, avgYieldBps } = data.summary;
+    return `**📊 我的持仓**（${investments.length} 笔，总投入 $${Number(totalInvestedUsd).toFixed(2)}，Demo 模拟记录）\n\n${lines.join('\n\n')}\n\n平均预期收益：**${(avgYieldBps / 100).toFixed(2)}%**`;
   },
 
   async getPoolStatus(params) {
     if (!params.case_id) return '请提供提单 ID。';
-    if (!state.cases?.length) state.cases = await api.getCases();
 
-    const entry = state.cases.find(c => c.case_id === params.case_id);
-    if (!entry) return `未找到提单 ${params.case_id}。`;
-
+    let pool;
     try {
-      const comp = await api.compareSpeeds(entry.case);
-      const rec = comp.quotes?.find(q => q.payout_speed === comp.recommended_payout_speed)
-               || comp.quotes?.[0];
-      if (!rec) return `未能获取 ${params.case_id} 的发行池数据。`;
-
-      const riskLabel = (lvl) => ({ LOW: '🟢 低风险', MEDIUM: '🟡 中风险', HIGH: '🟠 高风险', CRITICAL: '🔴 严重' })[lvl] || lvl;
-      const paused = ['PAUSE_OFFERING', 'FREEZE_POOL'].includes(rec.pricing_action);
-
-      return `**📦 发行池状态：${params.case_id}**
-- 提单：${entry.label}
-- 路线：${entry.route}
-- 当前发行价：$${Number(rec.final_issue_price_usd).toFixed(2)} / 代币
-- 预期收益率：${(rec.implied_gross_yield_bps / 100).toFixed(2)}%
-- 风险等级：${riskLabel(rec.risk_level)} (${rec.risk_score_bps} bps)
-- 推荐到账速度：${comp.recommended_payout_speed || 'BALANCED'}
-- 状态：${paused ? '⏸️ 暂停中' : '✅ 开放认购'} (${rec.pricing_action})
-- 推荐代币供应量：${rec.recommended_token_supply || 'N/A'}
-- AI 核验货值：$${Number(rec.ai_verified_collateral_value_usd || 0).toFixed(2)}${paused ? '\n\n⚠️ 该发行池当前暂停，可能是 AI 检测到风险升级。说「查看 Agent 活动」了解原因。' : '\n\n💡 说「认购 ' + params.case_id + '」即可投资。'}`;
+      pool = await api.getPoolStatus(params.case_id);
     } catch (e) {
+      if (e.status === 404) return `未找到发行池 ${params.case_id}。`;
       return `查询发行池状态失败：${e.message}`;
     }
+    const quote = pool.quote || {};
+    const paused = ['Paused', 'Frozen'].includes(pool.status);
+    const progress = pool.targetUsd > 0 ? (pool.subscribedUsd / pool.targetUsd) * 100 : 0;
+
+    return `**📦 发行池状态：${pool.poolId}**（服务器上的链下镜像，不是合约读数）
+- 池状态：${paused ? '⏸️ ' : '✅ '}${pool.status}
+- 当前发行价：$${Number(quote.final_issue_price_usd).toFixed(2)} / 代币
+- 预期收益率：${(quote.implied_gross_yield_bps / 100).toFixed(2)}%
+- 风险等级：${riskLabel(quote.risk_level)} (${quote.risk_score_bps} bps)
+- 定价动作：${quote.pricing_action}
+- 认购进度：$${Number(pool.subscribedUsd).toFixed(2)} / $${Number(pool.targetUsd).toFixed(2)}（${progress.toFixed(1)}%）
+- 报价更新时间：${pool.quoteUpdatedAt || '未知'}${paused ? '\n\n⚠️ 该发行池当前暂停。说「查看 Agent 活动」查看服务器记录的原因。' : ''}`;
   },
 
   async getAgentActivity(params) {
-    const limit = params.limit || 5;
-    if (!agentDecisions.length) {
-      // 模拟一些初始决策记录
-      const now = new Date();
-      const cases = state.cases?.length ? state.cases : [];
-      if (cases.length) {
-        agentDecisions.push({
-          id: 'dec-001', timestamp: new Date(now - 3600000).toISOString(),
-          trigger: 'eBL 上链事件', decision: 'OPEN_OFFERING',
-          reasoning: `AI 交叉核验提单/发票/保险单通过。货物估值 $${(cases[0]?.case?.bill_of_lading?.declared_value_usd / 1e6 || 5).toFixed(1)}M。航线风险评估 MEDIUM。自动开盘。`,
-          tx_hash: '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join(''),
-          case_id: cases[0]?.case_id || 'CASE-EBL-2026-0001'
-        });
-      }
-      agentDecisions.push({
-        id: 'dec-002', timestamp: new Date(now - 1800000).toISOString(),
-        trigger: 'xAPI 检测地缘风险信号', decision: 'REPRICE_DOWN',
-        reasoning: 'Strait of Hormuz 冲突升级警告。AI 上调航线风险从 215bps → 280bps。发行价自动下调 3%。',
-        tx_hash: null, case_id: cases[0]?.case_id || 'CASE-EBL-2026-0001'
-      });
-      agentDecisions.push({
-        id: 'dec-003', timestamp: new Date(now - 600000).toISOString(),
-        trigger: '定时巡检 (5min)', decision: 'MONITORING',
-        reasoning: '当前所有发行池状态正常。风险无变化。无需干预。',
-        tx_hash: null, case_id: null
-      });
+    const limit = Math.min(Math.max(Number(params.limit) || 5, 1), 20);
+    let data;
+    try {
+      data = await api.getAgentActivity();
+    } catch (e) {
+      return `读取 Agent 活动失败：${e.message}`;
+    }
+    const activities = data.activities || [];
+    if (!activities.length) {
+      return '暂无决策记录。服务器还没有记录到任何 Agent 活动（定价、认购、单证上传等发生后会出现在这里）。';
     }
 
-    const recent = agentDecisions.slice(-limit).reverse();
-    const decisionIcon = { OPEN_OFFERING: '🟢 开盘', PAUSE_OFFERING: '⏸️ 暂停', REPRICE_DOWN: '📉 降价', REPRICE_UP: '📈 涨价', SETTLE: '✅ 结算', MONITORING: '👀 监控中' };
-
-    const lines = recent.map(d => {
-      const time = new Date(d.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-      const icon = decisionIcon[d.decision] || '🔧 ' + d.decision;
-      return `**[${time}] ${icon}**
-   触发：${d.trigger}
-   决策：${d.reasoning.slice(0, 150)}${d.reasoning.length > 150 ? '...' : ''}
-   ${d.tx_hash ? '链上交易：`' + d.tx_hash.slice(0, 18) + '...`' : ''}${d.case_id ? ' · ' + d.case_id : ''}`;
+    const recent = activities.slice(-limit).reverse();
+    const lines = recent.map((a) => {
+      const time = new Date(a.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      const where = [...new Set([a.caseId, a.poolId].filter(Boolean))].join(' · ');
+      const detail = a.details && Object.keys(a.details).length
+        ? Object.entries(a.details).slice(0, 4).map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`).join('，')
+        : '';
+      // 只有服务器明确给出真实 tx_hash 时才展示；这里不会生成任何哈希。
+      const tx = a.tx_hash ? `\n   链上交易：\`${a.tx_hash}\`` : '';
+      return `**[${time}] ${a.type} · ${a.action}**${where ? `（${where}）` : ''}${detail ? `\n   ${detail.slice(0, 160)}` : ''}${tx}`;
     });
 
-    return `**🤖 自主 AI Agent 活动记录**（最近 ${recent.length} 条）\n\n${lines.join('\n\n')}\n\n💡 AI Agent 每 5 分钟巡检一次，检测到风险变化时自主决策并上链执行。所有决策可审计。`;
+    return `**🤖 服务器记录的 Agent 活动**（最近 ${recent.length} 条，共 ${data.count} 条）\n\n${lines.join('\n\n')}`;
   },
 
   async compareEBLs(params) {
@@ -663,7 +647,6 @@ ${isReal ? '- 可执行真实链上铸造' : '- 将使用模拟交易（合约�
     const selected = ids.map(id => all.find(s => s.caseEntry.case_id === id)).filter(Boolean);
     if (selected.length < 2) return '部分提单未找到或无法获取定价数据。';
 
-    const riskLabel = (lvl) => ({ LOW: '🟢 低', MEDIUM: '🟡 中', HIGH: '🟠 高', CRITICAL: '🔴 严重' })[lvl] || lvl;
     const best = { yield: selected.reduce((b, s) => s.yieldBps > (b?.yieldBps || 0) ? s : b, null),
                    risk: selected.reduce((b, s) => s.riskBps < (b?.riskBps || Infinity) ? s : b, null),
                    score: selected.reduce((b, s) => s.score > (b?.score || 0) ? s : b, null) };
@@ -687,27 +670,24 @@ ${isReal ? '- 可执行真实链上铸造' : '- 将使用模拟交易（合约�
 
   async subscribeRWA(params) {
     if (!params.case_id) return '请提供要认购的提单 ID。';
-    if (!state.cases?.length) state.cases = await api.getCases();
 
-    const entry = state.cases.find(c => c.case_id === params.case_id);
-    if (!entry) return `未找到提单 ${params.case_id}。`;
-
-    // 先获取定价
-    let quote;
+    // 先看池子当前报价，折算代币数量（折算只是展示；金额与状态以服务器为准）。
+    let pool;
     try {
-      const comp = await api.compareSpeeds(entry.case);
-      const speed = params.payout_speed || comp.recommended_payout_speed || 'BALANCED';
-      quote = comp.quotes?.find(q => q.payout_speed === speed) || comp.quotes?.[0];
-      if (!quote) return `未能获取 ${params.case_id} 的当前发行价。`;
+      pool = await api.getPoolStatus(params.case_id);
     } catch (e) {
-      return `获取定价失败：${e.message}`;
+      if (e.status === 404) return `未找到发行池 ${params.case_id}。`;
+      return `获取发行池失败：${e.message}`;
+    }
+    const price = Number(pool.quote?.final_issue_price_usd);
+    if (!Number.isFinite(price) || price <= 0) return `未能获取 ${params.case_id} 的当前发行价。`;
+
+    const amountUsd = Number(params.amount_usd) || 5000;
+    if (Math.floor(amountUsd / price) <= 0) {
+      return `认购金额 $${amountUsd} 不足以购买至少 1 枚 RWA 代币（当前发行价 $${price.toFixed(2)}）。请提高认购金额。`;
     }
 
-    const amountUsd = params.amount_usd || 5000;
-    const tokenCount = Math.floor(amountUsd / Number(quote.final_issue_price_usd));
-    if (tokenCount <= 0) return `认购金额 $${amountUsd} 不足以购买至少 1 枚 RWA 代币（当前发行价 $${Number(quote.final_issue_price_usd).toFixed(2)}）。请提高认购金额。`;
-
-    // 检查钱包
+    // 用钱包地址标识投资者（不签名、不发交易）。
     if (!web3.isWalletConnected()) {
       try {
         const { address } = await web3.connectWallet();
@@ -719,40 +699,28 @@ ${isReal ? '- 可执行真实链上铸造' : '- 将使用模拟交易（合约�
       }
     }
 
-    // 记录认购到持仓
-    const position = {
-      case_id: params.case_id,
-      label: entry.label,
-      amount_usd: amountUsd,
-      token_count: tokenCount,
-      price: Number(quote.final_issue_price_usd),
-      yield_bps: quote.implied_gross_yield_bps || 0,
-      risk_level: quote.risk_level || 'UNKNOWN',
-      subscribed_at: new Date().toISOString()
-    };
-    portfolio.push(position);
+    let res;
+    try {
+      res = await api.subscribePool({
+        pool_id: params.case_id,
+        amount_usd: amountUsd,
+        wallet_address: state.wallet?.address || web3.connectedAddress?.()
+      });
+    } catch (e) {
+      return `认购被服务器拒绝：${e.message}`;
+    }
 
-    // 记录 Agent 决策
-    agentDecisions.push({
-      id: 'dec-' + Date.now(),
-      timestamp: new Date().toISOString(),
-      trigger: '投资者认购',
-      decision: 'SUBSCRIPTION',
-      reasoning: `投资者认购 ${entry.label}：$${amountUsd} → ${tokenCount} RWA 代币，发行价 $${Number(quote.final_issue_price_usd).toFixed(2)}。`,
-      tx_hash: null,
-      case_id: params.case_id
-    });
+    const inv = res.investment;
+    return `**📝 已记录 Demo 模拟认购**
 
-    return `**🎉 认购成功！**
+- 发行池：${params.case_id}
+- 认购金额：$${Number(inv.amountUsd).toFixed(2)}
+- 折算 RWA 代币：**${Number(inv.tokenCount).toFixed(2)} 枚**
+- 发行价：$${Number(inv.price).toFixed(2)} / 代币
+- 预期收益：${(inv.yieldBps / 100).toFixed(2)}% · 风险：${inv.riskLevel}
+- 引用号：\`${res.reference}\`（Demo 引用，不是链上交易）
 
-- 提单：${entry.label}
-- 认购金额：$${Number(amountUsd).toFixed(2)}
-- 获得 RWA 代币：**${tokenCount} 枚**
-- 发行价：$${Number(quote.final_issue_price_usd).toFixed(2)} / 代币
-- 预期收益：${(position.yield_bps / 100).toFixed(2)}%
-- 风险等级：${position.risk_level}
-
-💡 已加入你的持仓。说「我的持仓」可以随时查看。进口商付款到港后合约将自动兑付。`;
+⚠️ 这只是写在服务器内存里的模拟记录：没有产生链上交易，也没有转移任何资金；协议合约目前也不托管认购资金，到港后是否兑付不由这条记录决定。说「我的持仓」可以查看服务器上的记录。`;
   }
 };
 

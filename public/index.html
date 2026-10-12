@@ -27,6 +27,7 @@
         <nav id="nav" class="nav" role="tablist" aria-label="views">
           <button class="nav-tab active" data-view="market" role="tab" data-i18n="nav_market">投资市场</button>
           <button class="nav-tab" data-view="mint" role="tab" data-i18n="nav_mint">提单上链 · 铸造 RWA</button>
+          <button class="nav-tab" data-view="agent" role="tab" data-i18n="nav_agent">Agent 控制台</button>
         </nav>
 
         <div class="topbar-right">
@@ -341,6 +342,27 @@
             </div>
           </div>
         </section>
+      </section>
+
+      <!-- VIEW — Agent console: runtime status, decisions, approvals (FE-13) -->
+      <section class="view" id="view-agent" hidden>
+        <div class="agent-console">
+          <header class="panel-head">
+            <h2 data-i18n="ac_title">Agent 控制台</h2>
+            <p class="panel-sub" data-i18n="ac_subtitle">Agent 运行时做了什么、为什么这么做、有哪些方案在等人批准。这里的每一行都来自服务器的决策日志；模拟结果会明确标成 DEMO。</p>
+          </header>
+          <div class="ac-grid">
+            <article class="ac-card" id="ac-status"></article>
+            <article class="ac-card" id="ac-controls"></article>
+          </div>
+          <article class="ac-card" id="ac-approvals"></article>
+          <article class="ac-card" id="ac-injector" hidden></article>
+          <article class="ac-card" id="ac-timeline"></article>
+        </div>
+        <aside class="ac-drawer" id="ac-drawer" hidden aria-label="Decision detail">
+          <button class="ac-drawer-close btn ghost sm" type="button" data-i18n="ac_close" data-i18n-title="ac_close">关闭</button>
+          <div class="ac-drawer-body"></div>
+        </aside>
       </section>
 
       <!-- =================================================================== -->
@@ -796,7 +818,7 @@
         </div>
         <div class="aac-body">
           <div class="aac-col" id="agent-logs-container">
-            <div class="log-entry system-msg" data-i18n="agent_terminal_ready">&gt; 系统就绪，等待自主 Agent 执行任务…</div>
+            <div class="log-entry system-msg" data-i18n="agent_terminal_ready">&gt; 暂无 Agent 活动。服务器记录到真实活动（定价、认购、上传等）后会显示在这里。</div>
           </div>
           <div class="aac-col timeline-col" id="agent-timeline"></div>
         </div>

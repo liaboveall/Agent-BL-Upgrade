@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
+import { createWriteQueue, writeFileAtomic } from '../lib/jsonStore.js';
 import { runtimePath } from '../runtimePaths.js';
 
 /**
@@ -17,7 +17,7 @@ export class PaidReportCache {
     this.now = options.now ?? (() => Date.now());
     this.records = new Map();
     this.initialized = false;
-    this.writeQueue = Promise.resolve();
+    this.enqueueWrite = createWriteQueue();
   }
 
   async init() {
@@ -61,13 +61,7 @@ export class PaidReportCache {
     if (!this.filePath) return;
     const target = this.filePath;
     const body = `${JSON.stringify({ version: 1, records: [...this.records.values()] }, null, 2)}\n`;
-    this.writeQueue = this.writeQueue.then(async () => {
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
-      await fs.writeFile(temporary, body, 'utf8');
-      await fs.rename(temporary, target);
-    });
-    await this.writeQueue;
+    await this.enqueueWrite(() => writeFileAtomic(target, body));
   }
 
   /**

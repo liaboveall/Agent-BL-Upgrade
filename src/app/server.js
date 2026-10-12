@@ -21,8 +21,8 @@ import {
 import { X402_SERVICES } from '../x402/config.js';
 import { demoModeController, LiveModeUnavailableError } from '../demo/mode.js';
 import { DEFAULT_MYSTERY_QUOTE_MAX_AGE_SECONDS } from '../mystery/policy.js';
-import { storeState, createPool, subscribeToPool } from './store.js';
-import { recommend } from '../agent/investmentAdvisor.js';
+import { storeState, createPool, resetStore, subscribeToPool } from './store.js';
+import { parseLlmCriteria, poolToAdvisorCase, recommend } from '../agent/investmentAdvisor.js';
 import {
   loadSpotPurchase,
   loadSpotSale,
@@ -49,6 +49,12 @@ import {
   envInt,
   MIN_ADMIN_TOKEN_LENGTH
 } from './security.js';
+import { cleanupOrphanTemps } from '../lib/jsonStore.js';
+import { ActivityLog } from '../agent/runtime/activityLog.js';
+import { attachActivityPersistence, createAgentService } from '../agent/runtime/factory.js';
+import { loadAgentConfig } from '../agent/runtime/config.js';
+import { createAgentRoutes } from './agentRoutes.js';
+import { runtimeDir } from '../runtimePaths.js';
 import { createStaticHandler } from './static.js';
 import { llmStatus, relayChat } from './llmProxy.js';
 import { isRecord, looksLikeCase } from './shapes.js';
@@ -343,6 +349,33 @@ function boundedParam(value) {
   return value ? String(value).slice(0, 128) : null;
 }
 
+// The feed itself (sequence numbers, persistence, replay) lives in src/agent/runtime/activityLog.js;
+// this file only does the HTTP side. Every SSE message carries `id: <seq>`, so a client that
+// reconnects sends Last-Event-ID and receives what it missed instead of silently losing events.
+export const activityLog = new ActivityLog({
+  store: storeState,
+  mode: () => demoModeController.snapshot().mode
+});
+
+function lastEventId(request, url) {
+  const header = request.headers['last-event-id'];
+  const raw = (Array.isArray(header) ? header[0] : header) ?? url.searchParams.get('last_event_id');
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function sseMessage(activity) {
+  // Preserve the SSE envelope discriminator even when the domain activity has
+  // its own `type` (PRICING, RISK, TEST, ...).
+  return `id: ${activity.seq}\ndata: ${JSON.stringify({ ...activity, activityType: activity.type, type: 'activity' })}\n\n`;
+}
+
+function clientWants(client, activity) {
+  if (client.caseId && activity.caseId !== client.caseId) return false;
+  if (client.poolId && activity.poolId !== client.poolId) return false;
+  return true;
+}
+
 function openActivityStream(request, response, url) {
   if (!storeState.sseClients) storeState.sseClients = [];
   const maxClients = envInt(process.env, 'AGENTBL_MAX_SSE_CLIENTS', 200);
@@ -357,12 +390,15 @@ function openActivityStream(request, response, url) {
     'X-Accel-Buffering': 'no'
   });
   response.write('retry: 3000\n\n');
-  response.write('data: ' + JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() }) + '\n\n');
+  response.write('data: ' + JSON.stringify({ type: 'connected', timestamp: new Date().toISOString(), last_seq: activityLog.seq }) + '\n\n');
 
   const client = {
     response,
     caseId: boundedParam(url.searchParams.get('case_id')),
-    poolId: boundedParam(url.searchParams.get('pool_id'))
+    poolId: boundedParam(url.searchParams.get('pool_id')),
+    // While missed events are being replayed, live ones are held back so the order stays strict.
+    replaying: false,
+    held: []
   };
   storeState.sseClients.push(client);
   startSseHeartbeat();
@@ -376,45 +412,76 @@ function openActivityStream(request, response, url) {
     if (index > -1) storeState.sseClients.splice(index, 1);
     stopSseHeartbeatIfIdle();
   });
+
+  const resumeFrom = lastEventId(request, url);
+  if (resumeFrom !== null) {
+    client.replaying = true;
+    activityLog.since(resumeFrom, { caseId: client.caseId ?? undefined, poolId: client.poolId ?? undefined })
+      .then((missed) => {
+        let highest = resumeFrom;
+        for (const activity of missed) {
+          response.write(sseMessage(activity));
+          highest = Math.max(highest, activity.seq);
+        }
+        client.replaying = false;
+        for (const activity of client.held) {
+          if (activity.seq > highest) response.write(sseMessage(activity));
+        }
+        client.held = [];
+      })
+      .catch(() => { client.replaying = false; client.held = []; });
+  }
 }
 
 export function broadcastAgentActivity(activity) {
   if (!storeState.sseClients) return;
-
-  // Preserve the SSE envelope discriminator even when the domain activity has
-  // its own `type` (PRICING, RISK, TEST, ...).
-  const message = 'data: ' + JSON.stringify({ ...activity, activityType: activity.type, type: 'activity' }) + '\n\n';
-
-  storeState.sseClients.forEach((client) => {
-    if (client.caseId && activity.caseId !== client.caseId) return;
-    if (client.poolId && activity.poolId !== client.poolId) return;
-
+  const message = sseMessage(activity);
+  for (const client of storeState.sseClients) {
+    if (!clientWants(client, activity)) continue;
+    if (client.replaying) {
+      client.held.push(activity);
+      continue;
+    }
     try {
       client.response.write(message);
     } catch {
       // Client disconnected
     }
-  });
+  }
 }
 
-export function logAgentActivity(activity) {
-  if (!storeState.agentActivities) storeState.agentActivities = [];
+activityLog.onAppend(broadcastAgentActivity);
 
-  const record = {
-    id: `activity-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-    timestamp: new Date().toISOString(),
-    ...activity
-  };
+// The agent runtime. `createServer()` never starts it (so tests stay deterministic); the entry point
+// does, with persistence, unless AGENT_ENABLED=false. Until then this is a memory-only instance whose
+// routes can still be read and driven by tests.
+let agentService = null;
 
-  storeState.agentActivities.push(record);
-
-  if (storeState.agentActivities.length > 1000) {
-    storeState.agentActivities = storeState.agentActivities.slice(-1000);
+export function getAgentService() {
+  if (!agentService) {
+    agentService = createAgentService({
+      demoModeController,
+      ensurePools: () => ensureMockPools(),
+      activity: activityLog,
+      store: storeState
+    });
   }
+  return agentService;
+}
 
-  broadcastAgentActivity(record);
+/** Test hook: replace the runtime (e.g. with one that persists to a temp dir). */
+export function setAgentService(service) {
+  agentService = service;
+}
 
-  return record;
+const handleAgentRoute = createAgentRoutes({
+  getService: getAgentService,
+  runtimeMode: () => demoModeController.snapshot(),
+  activityLog
+});
+
+export function logAgentActivity(activity) {
+  return activityLog.append(activity);
 }
 
 /** 0x1234…abcd — enough to recognise a wallet without publishing it in a public feed. */
@@ -591,11 +658,18 @@ async function routeRequest(request, response, url) {
   }
 
   if (method === 'POST' && pathname === '/api/demo/reset') {
+    let snapshot;
     try {
-      sendJson(response, 200, { ok: true, ...demoModeController.reset() });
+      snapshot = demoModeController.reset();
     } catch (error) {
       sendJson(response, 409, { ok: false, code: error.code, error: error.message });
+      return;
     }
+    // A Demo reset starts the Demo over: the offchain pools and everything the agent recorded in Demo
+    // mode. Live records are never touched.
+    resetStore();
+    await getAgentService().resetDemo();
+    sendJson(response, 200, { ok: true, ...snapshot });
     return;
   }
 
@@ -807,26 +881,22 @@ async function routeRequest(request, response, url) {
     const body = await readJsonBody(request);
     await ensureMockPools();
 
-    // Format pools to match investmentAdvisor expects
     const availableCases = Array.from(storeState.pools.values())
       .filter((pool) => ['Open', 'Repriced'].includes(pool.status))
-      .map((p) => ({
-        id: p.poolId,
-        caseEntry: {
-          cargo: p.caseData?.bill_of_lading?.cargo || 'Unknown',
-          label: p.caseData?.case_id || 'Unknown'
-        },
-        caseData: p.caseData,
-        riskLevel: p.quote.risk_level,
-        yieldBps: p.quote.implied_gross_yield_bps,
-        riskBps: p.quote.risk_score_bps,
-        score: p.quote.implied_gross_yield_bps / Math.max(1, p.quote.risk_score_bps),
-        financingUsd: p.quote.requested_cash_usd,
-        price: p.quote.final_issue_price_usd
-      }));
+      .map(poolToAdvisorCase);
 
     const preference = typeof body?.preference === 'string' ? body.preference.slice(0, 500) : undefined;
-    const result = await recommend(preference, availableCases);
+    // Optional structured criteria (the assistant's tool call): validated like LLM output, then
+    // used as-is instead of re-parsing free text.
+    let criteria = null;
+    if (body?.criteria !== undefined) {
+      criteria = parseLlmCriteria(body.criteria);
+      if (!criteria) {
+        throw new HttpError(400, 'invalid_criteria', 'criteria must use risk_max, yield_min, commodity, financing_max, sort_by with valid values');
+      }
+    }
+    const limit = Number.isInteger(body?.limit) ? body.limit : undefined;
+    const result = await recommend(preference, availableCases, { criteria, limit });
     sendJson(response, 200, { ok: true, ...result });
     return;
   }
@@ -883,7 +953,24 @@ async function routeRequest(request, response, url) {
     await ensureMockPools();
     const pool = storeState.pools.get(poolId);
     if (!pool) throw new HttpError(404, 'pool_not_found', 'Pool not found');
-    sendJson(response, 200, { ok: true, poolId, status: pool.status, subscribedUsd: pool.subscribedUsd, targetUsd: pool.targetUsd });
+    sendJson(response, 200, {
+      ok: true,
+      poolId,
+      status: pool.status,
+      subscribedUsd: pool.subscribedUsd,
+      targetUsd: pool.targetUsd,
+      // Offchain mirror only: pools here live in server memory, they are not contract reads.
+      source: 'offchain-mirror',
+      quoteUpdatedAt: pool.quoteUpdatedAt,
+      quote: {
+        final_issue_price_usd: pool.quote.final_issue_price_usd,
+        implied_gross_yield_bps: pool.quote.implied_gross_yield_bps,
+        risk_level: pool.quote.risk_level,
+        risk_score_bps: pool.quote.risk_score_bps,
+        pricing_action: pool.quote.pricing_action,
+        recommended_token_supply: pool.quote.recommended_token_supply
+      }
+    });
     return;
   }
 
@@ -1195,22 +1282,26 @@ async function routeRequest(request, response, url) {
       step: 1,
       action: 'x402_challenge',
       status: '402_returned',
+      mode: 'demo',
       detail: 'Server returned HTTP 402 Payment Required'
     }, {
       step: 2,
       action: 'payment_signed',
       status: 'signed',
-      detail: 'EIP-3009 TransferWithAuthorization signed by White Agent'
+      mode: 'demo',
+      detail: 'DEMO (simulated) — no EIP-3009 authorization was signed'
     }, {
       step: 3,
       action: 'settlement',
       status: 'settled',
+      mode: 'demo',
       txHash: paymentResult.payment.txHash,
-      detail: 'Facilitator settled ' + service.priceUSDC + ' USDC'
+      detail: 'DEMO (simulated) settlement of ' + service.priceUSDC + ' USDC — not an on-chain transaction'
     }, {
       step: 4,
       action: 'intel_unlocked',
       status: 'unlocked',
+      mode: 'demo',
       detail: service.title + ' returned — ' + (intelResult.events?.length || 0) + ' risk events, ' + (intelResult.deepIntel?.length || 0) + ' evidence entries'
     }];
 
@@ -1243,14 +1334,11 @@ async function routeRequest(request, response, url) {
     const caseId = body.case_id === undefined ? null : String(body.case_id).slice(0, 128);
     const result = await eniAdapter.uploadDocument(body.file);
 
-    // Trigger AI-13 orchestrator if case_id is provided
+    // Remember which case a document belongs to. The orchestrator is NOT triggered from here yet
+    // (see docs/agent-implementation-plan.md WP2.1/WP2.4); recording the link is all this does.
     if (caseId) {
       if (!storeState.eblDocuments) storeState.eblDocuments = new Map();
-      storeState.eblDocuments.set(result.documentId, {
-        ...result,
-        caseId,
-        orchestrationTriggered: true
-      });
+      storeState.eblDocuments.set(result.documentId, { ...result, caseId });
     }
     logAgentActivity({
       type: 'DOCUMENT',
@@ -1283,26 +1371,26 @@ async function routeRequest(request, response, url) {
     return;
   }
 
+  // Agent runtime: status, control, events, decisions, approvals, pools.
+  if (await handleAgentRoute(request, response, url)) return;
+
   // BE-15: Agent Activity Query API
   if (method === 'GET' && pathname === '/api/agent/activity') {
     const caseId = url.searchParams.get('case_id');
     const poolId = url.searchParams.get('pool_id');
 
-    if (!storeState.agentActivities) storeState.agentActivities = [];
-
-    let activities = storeState.agentActivities;
-
-    if (caseId) {
-      activities = activities.filter((a) => a.caseId === caseId);
-    }
-    if (poolId) {
-      activities = activities.filter((a) => a.poolId === poolId);
-    }
+    const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit')) || 50));
+    const sinceRaw = url.searchParams.get('since_seq');
+    const filters = { caseId: caseId ?? undefined, poolId: poolId ?? undefined };
+    const activities = sinceRaw === null
+      ? activityLog.list({ ...filters, limit })
+      : await activityLog.since(Number(sinceRaw), { ...filters, limit });
 
     sendJson(response, 200, {
       ok: true,
-      activities: activities.slice(-50),
-      count: activities.length
+      activities,
+      count: activityLog.count(filters),
+      last_seq: activityLog.seq
     });
     return;
   }
@@ -1378,12 +1466,35 @@ function installGracefulShutdown(server) {
     closing = true;
     console.log(`${signal} received, shutting down...`);
     closeActivityStreams();
-    server.close(() => process.exit(0));
-    server.closeIdleConnections();
+    // Let the agent finish the event it is on and write its state before the process ends.
+    const agentStopped = (agentService?.stop() ?? Promise.resolve()).catch(() => {});
+    agentStopped.finally(() => activityLog.flush().catch(() => {})).finally(() => {
+      server.close(() => process.exit(0));
+      server.closeIdleConnections();
+    });
     setTimeout(() => process.exit(1), 10_000).unref();
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+/** Entry point only: switch persistence on and start the agent unless AGENT_ENABLED=false. */
+async function startAgentRuntime() {
+  const config = loadAgentConfig();
+  if (!config.enabled) {
+    console.log('[agentbl] agent runtime disabled (AGENT_ENABLED=false); decisions and activity stay readable.');
+    return;
+  }
+  await attachActivityPersistence(activityLog);
+  agentService = createAgentService({
+    demoModeController,
+    ensurePools: () => ensureMockPools(),
+    activity: activityLog,
+    store: storeState,
+    persist: true
+  });
+  const status = await agentService.start();
+  console.log(`[agentbl] agent runtime started: mode=${status.mode} autonomy=${status.autonomy.effective}${status.autonomy.downgraded ? ' (auto is treated as propose in Live)' : ''}`);
 }
 
 const isEntryPoint = process.argv[1]
@@ -1393,7 +1504,10 @@ const isEntryPoint = process.argv[1]
 if (isEntryPoint) {
   const port = Number(process.env.PORT ?? 3000);
   const host = process.env.HOST || undefined;
+  // Leftovers of writes that crashed mid-flight (see src/lib/jsonStore.js).
+  cleanupOrphanTemps(runtimeDir()).catch(() => {});
   const server = createServer();
   server.listen(port, host, () => printStartupNotes(port, host));
   installGracefulShutdown(server);
+  startAgentRuntime().catch((error) => console.error('[agentbl] agent runtime failed to start:', error));
 }

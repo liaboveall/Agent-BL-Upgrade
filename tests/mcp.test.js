@@ -375,3 +375,24 @@ test('runToolChain executes a 3-step pricing chain', async () => {
   assert.equal(results[2].tool, 'generate_pricing_quote');
   assert.ok(results[2].result.final_issue_price_usd > 0);
 });
+
+test('push_pricing_to_oracle: an unknown risk level or action is rejected, not defaulted (WP0.2)', async () => {
+  const quote = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
+  await assert.rejects(
+    () => callTool('push_pricing_to_oracle', { case_id: 'CASE-EBL-2026-0001', pricing_quote: { ...quote.result, risk_level: 'HIGH' } }),
+    /unknown risk_level/
+  );
+  await assert.rejects(
+    () => callTool('push_pricing_to_oracle', { case_id: 'CASE-EBL-2026-0001', pricing_quote: { ...quote.result, pricing_action: 'EXPLODE' } }),
+    /pricing_action/
+  );
+});
+
+test('push_pricing_to_oracle: RESUME_OFFERING is encoded as action 6 (WP0.2)', async () => {
+  const quote = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
+  const result = await callTool('push_pricing_to_oracle', {
+    case_id: 'CASE-EBL-2026-0001',
+    pricing_quote: { ...quote.result, pricing_action: 'RESUME_OFFERING' }
+  });
+  assert.equal(result.result.transaction.pricing_action, 6);
+});

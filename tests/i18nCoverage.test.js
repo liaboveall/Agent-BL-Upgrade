@@ -7,12 +7,23 @@ import { hasTranslation, setLang, t, tData } from '../public/i18n.js';
 const html = await fs.readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
 const mystery = await fs.readFile(new URL('../public/mystery.js', import.meta.url), 'utf8');
+const agentDir = new URL('../public/agent/', import.meta.url);
+const agentFiles = await Promise.all(
+  (await fs.readdir(agentDir)).filter((name) => name.endsWith('.js')).map((name) => fs.readFile(new URL(name, agentDir), 'utf8'))
+);
 
 function referencedTranslationKeys() {
   const keys = new Set();
   for (const match of html.matchAll(/data-i18n(?:-html|-ph|-title)?="([^"]+)"/gu)) keys.add(match[1]);
   for (const match of app.matchAll(/\bt\('([^']+)'(?=\s*(?:,|\)))/gu)) keys.add(match[1]);
   for (const match of mystery.matchAll(/\bt\('([^']+)'(?=\s*(?:,|\)))/gu)) keys.add(match[1]);
+  // Agent console modules: t('key') calls, plus every quoted ac_* key (toast and label keys are passed as strings).
+  for (const source of agentFiles) {
+    for (const match of source.matchAll(/\bt\('([^']+)'(?=\s*(?:,|\)))/gu)) keys.add(match[1]);
+    for (const match of source.matchAll(/'(ac_[a-z_]+)'/gu)) keys.add(match[1]);
+  }
+  for (const status of ['DECIDED', 'EXECUTING', 'COMPLETED', 'FAILED', 'SKIPPED', 'REJECTED', 'PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE']) keys.add(`ac_status_${status}`);
+  for (const verdict of ['AUTO', 'NEEDS_APPROVAL', 'OBSERVE_ONLY', 'REJECTED']) keys.add(`ac_verdict_${verdict}`);
   return [...keys].sort();
 }
 

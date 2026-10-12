@@ -29,6 +29,7 @@ export default [
       'hardhat/artifacts/**',
       'hardhat/cache/**',
       'data/runtime/**',
+      '.claude/**',
       'coverage/**'
     ]
   },

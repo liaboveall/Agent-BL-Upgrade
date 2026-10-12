@@ -107,7 +107,8 @@ test('resolveSignerKey prefers the dedicated key and only falls back (loudly, on
   assert.deepEqual(resolveSignerKey('PAYMENT_ATTESTOR', { SIGNER_KEYS_STRICT: 'true', PAYMENT_ATTESTOR_PRIVATE_KEY: '0xa' }, { warn }).dedicated, true);
   assert.throws(() => resolveSignerKey('SOMETHING_ELSE', {}), /Unknown signer role/u);
   assert.match(signerKeyRequirement('PRICING_UPDATER'), /PRICING_UPDATER_PRIVATE_KEY.*setUpdater/u);
-  assert.deepEqual(Object.keys(SIGNER_ROLES).sort(), ['PAYMENT_ATTESTOR', 'PRICING_UPDATER']);
+  // AGENT_EXECUTOR is the optional, never-owner-fallback role of the agent runtime (plan D2).
+  assert.deepEqual(Object.keys(SIGNER_ROLES).sort(), ['AGENT_EXECUTOR', 'PAYMENT_ATTESTOR', 'PRICING_UPDATER']);
 });
 
 test('recordPaymentEvidence: Demo mode returns a clearly simulated receipt', async () => {

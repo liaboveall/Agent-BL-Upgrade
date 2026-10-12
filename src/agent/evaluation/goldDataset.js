@@ -120,7 +120,7 @@ export const GOLD_DATASET = [
     insurance: { coverage_usd: 2200000, type: 'All risks' },
     ground_truth: {
       compliant: false,
-      risk_level: 'HIGH',
+      risk_level: 'WARNING',
       expected_valuation: 0,
       fraud_indicators: ['duplicate_cargo', 'multiple_financing']
     }
@@ -146,7 +146,7 @@ export const GOLD_DATASET = [
     insurance: null, // 保险单缺失
     ground_truth: {
       compliant: false,
-      risk_level: 'HIGH',
+      risk_level: 'WARNING',
       expected_valuation: null,
       fraud_indicators: ['missing_value', 'missing_insurance']
     }
@@ -275,7 +275,7 @@ export const GOLD_DATASET = [
     insurance: { coverage_usd: 7200000, type: 'Marine cargo' },
     ground_truth: {
       compliant: true,
-      risk_level: 'HIGH',
+      risk_level: 'WARNING',
       expected_valuation: 7000000,
       fraud_indicators: [],
       risk_factors: ['price_volatility', 'market_risk']
@@ -301,7 +301,7 @@ export const DATASET_METADATA = {
   disclaimer: 'All company names, vessel names, and specific values are fictional. No real commercial data included.',
   ground_truth_fields: [
     'compliant (boolean)',
-    'risk_level (LOW/MEDIUM/HIGH/CRITICAL)',
+    'risk_level (LOW/MEDIUM/WARNING/CRITICAL)',
     'expected_valuation (USD or null)',
     'fraud_indicators (array)',
     'risk_factors (array, optional)'

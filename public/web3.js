@@ -911,7 +911,8 @@ export async function simulatedMint(caseId, quote, financingUsd) {
   } catch { /* offline / endpoint missing — synthesize below */ }
   return {
     mode: 'sim',
-    txHash: tx.tx_hash ?? ('0x' + 'sim'.padEnd(64, '0')),
+    // A simulation sends nothing: no hash is better than a hash-shaped placeholder.
+    txHash: tx.tx_hash ?? null,
     poolId: 'sim',
     mintedAmount: mintedTokensFor(quote, financingUsd),
     issuePriceE6: priceToE6(quote.final_issue_price_usd),
@@ -920,95 +921,6 @@ export async function simulatedMint(caseId, quote, financingUsd) {
     blockNumber: tx.block_number ?? null,
     gasUsed: tx.gas_used ?? null
   };
-}
-
-/**
- * Call PaymentOracle.logPaymentEvidence() directly from the connected wallet.
- * Returns pending result immediately; polls public RPC for confirmation.
- */
-export async function logX402PaymentOnChain({ payer, serviceId, amountMicrousd, paymentRef, responseHash, quoteHash, evidenceHash, pricingAction }, onConfirmed) {
-  const cfg = await loadChainConfig();
-  const address = cfg?.contracts?.PaymentOracle;
-  const abi = cfg?.paymentOracle?.abi;
-  if (!isAddress(address) || !abi) throw err('NO_CONTRACT', 'PaymentOracle 未部署');
-
-  if (!_session) throw err('NO_SESSION', '钱包未连接');
-  if (_session.kind !== 'evm') throw err('EVM_WALLET_REQUIRED', 'PaymentOracle requires the MetaMask EVM path');
-
-  const ethers = await loadEthers();
-  const oracle = new ethers.Contract(address, abi, _session.signer);
-
-  let tx;
-  try {
-    tx = await oracle.logPaymentEvidence(
-      payer, serviceId, BigInt(amountMicrousd), paymentRef,
-      responseHash, quoteHash, evidenceHash, pricingAction
-    );
-  } catch (e) {
-    if (e?.code === 'ACTION_REJECTED' || e?.code === 4001) throw err('REJECTED', '用户在钱包中拒绝了交易');
-    throw e;
-  }
-  console.log('[x402] tx sent:', tx.hash);
-
-  // Background poll for confirmation with backup RPC support
-  const rpcUrls = [
-    'https://testnet.sentry.chain.json-rpc.injective.network',
-    'https://k8s.testnet.json-rpc.injective.network',
-    ...(cfg.rpcUrls || [])
-  ];
-  const uniqueRpcUrls = [...new Set(rpcUrls)];
-  let pubProvider = new ethers.JsonRpcProvider(uniqueRpcUrls[0]);
-  let currentRpcIndex = 0;
-  let consecutiveFailures = 0;
-
-  const switchToNextRpc = () => {
-    if (currentRpcIndex < uniqueRpcUrls.length - 1) {
-      currentRpcIndex++;
-      pubProvider = new ethers.JsonRpcProvider(uniqueRpcUrls[currentRpcIndex]);
-      console.log(`[x402] 🔄 切换到备用 RPC [${currentRpcIndex}]:`, uniqueRpcUrls[currentRpcIndex]);
-      consecutiveFailures = 0;
-      return true;
-    }
-    return false;
-  };
-
-  const deadline = Date.now() + 180000; // 3 分钟
-  const poll = async () => {
-    try {
-      const receipt = await pubProvider.getTransactionReceipt(tx.hash);
-      if (receipt && receipt.blockNumber) {
-        console.log('[x402] confirmed via poll — block:', receipt.blockNumber);
-        consecutiveFailures = 0;
-        if (onConfirmed) onConfirmed({ txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash), blockNumber: receipt.blockNumber });
-        return;
-      } else {
-        // 尝试 getTransaction 作为备用
-        const txData = await pubProvider.getTransaction(tx.hash);
-        if (txData && txData.blockNumber) {
-          console.log('[x402] confirmed via getTransaction — block:', txData.blockNumber);
-          consecutiveFailures = 0;
-          if (onConfirmed) onConfirmed({ txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash), blockNumber: txData.blockNumber });
-          return;
-        }
-        consecutiveFailures++;
-      }
-    } catch (e) {
-      console.warn('[x402] poll error:', e.message);
-      consecutiveFailures++;
-    }
-
-    // 连续失败 3 次则切换 RPC
-    if (consecutiveFailures >= 3) {
-      if (!switchToNextRpc()) {
-        console.error('[x402] 所有 RPC 节点都已尝试');
-      }
-    }
-
-    if (Date.now() < deadline) setTimeout(poll, 3000);
-  };
-  setTimeout(poll, 2000);
-
-  return { txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash), blockNumber: null };
 }
 
 /** Read a hardened PaymentOracle attestation by rpt_<sha256> or bytes32 id. */

@@ -51,7 +51,12 @@ test('BE-12: Pool API Tests', async (t) => {
       });
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.data.ok, true);
-      assert.ok(res.data.txHash);
+      // A mock subscription has no transaction: a demo reference, never a 0x hash.
+      assert.strictEqual(res.data.mode, 'demo');
+      assert.match(res.data.reference, /^demo:sub:[0-9a-f]{16}$/u);
+      assert.strictEqual(res.data.txHash, null);
+      assert.strictEqual(res.data.investment.reference, res.data.reference);
+      assert.doesNotMatch(JSON.stringify(res.data), /0x[0-9a-fA-F]{64}/u);
       assert.strictEqual(res.data.investment.amountUsd, 1000);
     });
 

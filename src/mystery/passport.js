@@ -91,7 +91,7 @@ export async function issueVoyagePassport({ record, stampType, subscription }) {
   if (normalizedStamp === 'INVESTOR_JOURNEY') {
     unsigned.subscription_reference = hashCanonical({
       reveal_proof_hash: record.proof.reveal_proof_hash,
-      subscription_tx_hash: subscription.txHash
+      subscription_tx_hash: subscription.reference ?? subscription.txHash
     });
   }
   unsigned.credential_id = `vp_${hashCanonical(unsigned).slice(2, 26)}`;

@@ -53,7 +53,11 @@ test('BE-14: eBL Document Ingestion Tests', async (t) => {
       assert.strictEqual(res.data.ok, true);
       assert.ok(res.data.document.documentId);
       assert.ok(res.data.document.documentHash);
-      assert.strictEqual(res.data.document.status, 'verified');
+      // The mock ENI only acknowledges receipt; it verifies nothing.
+      assert.strictEqual(res.data.document.status, 'received');
+      assert.strictEqual(res.data.document.mode, 'mock');
+      assert.strictEqual(res.data.document.eniNetwork, 'mock');
+      assert.strictEqual(res.data.document.content_hashed, true);
       assert.strictEqual(res.data.eni_mode, 'mock');
     });
 
@@ -101,7 +105,18 @@ test('BE-14: eBL Document Ingestion Tests', async (t) => {
       assert.strictEqual(res1.data.document.documentHash, res2.data.document.documentHash);
     });
 
-    await t.test('GET /api/ebl/document-status returns document verification status', async () => {
+    await t.test('metadata-only uploads are hashed deterministically and flagged as not content-hashed', async () => {
+      const file = { name: 'bl.pdf', type: 'application/pdf', size: 1234 };
+      const a = await request('POST', '/api/ebl/upload', { file });
+      const b = await request('POST', '/api/ebl/upload', { file });
+      assert.strictEqual(a.data.document.content_hashed, false);
+      assert.strictEqual(a.data.document.documentHash, b.data.document.documentHash, 'no Date.now() in the hash');
+      assert.match(a.data.document.documentHash, /^[0-9a-f]{64}$/u);
+      const other = await request('POST', '/api/ebl/upload', { file: { ...file, size: 1235 } });
+      assert.notStrictEqual(a.data.document.documentHash, other.data.document.documentHash);
+    });
+
+    await t.test('GET /api/ebl/document-status reports receipt, not verification', async () => {
       const uploadRes = await request('POST', '/api/ebl/upload', {
         file: {
           name: 'insurance.pdf',
@@ -115,8 +130,10 @@ test('BE-14: eBL Document Ingestion Tests', async (t) => {
 
       assert.strictEqual(statusRes.status, 200);
       assert.strictEqual(statusRes.data.ok, true);
-      assert.strictEqual(statusRes.data.status, 'verified');
-      assert.ok(statusRes.data.verifiedAt);
+      assert.strictEqual(statusRes.data.status, 'received');
+      assert.strictEqual(statusRes.data.mode, 'mock');
+      assert.ok(statusRes.data.receivedAt);
+      assert.strictEqual(statusRes.data.verifiedAt, undefined);
     });
 
     await t.test('POST /api/ebl/upload validates the file envelope', async () => {
@@ -155,7 +172,9 @@ test('BE-14: eBL Document Ingestion Tests', async (t) => {
       assert.strictEqual(missing.status, 400);
     });
 
-    await t.test('POST /api/ebl/upload triggers AI-13 orchestrator when case_id provided', async () => {
+    // The orchestrator is not wired to uploads yet (plan WP2.1/WP2.4). Until then this only
+    // records the document-to-case link, and must not claim anything more.
+    await t.test('POST /api/ebl/upload records the case link without claiming orchestration', async () => {
       const res = await request('POST', '/api/ebl/upload', {
         file: {
           name: 'complete_ebl.pdf',
@@ -167,7 +186,10 @@ test('BE-14: eBL Document Ingestion Tests', async (t) => {
 
       assert.strictEqual(res.status, 200);
       assert.ok(res.data.document.documentId);
-      // In real system, this would trigger compliance check + valuation + pricing
+      const { storeState } = await import('../src/app/store.js');
+      const link = storeState.eblDocuments.get(res.data.document.documentId);
+      assert.strictEqual(link.caseId, 'CASE-EBL-2026-ORCHESTRATE');
+      assert.strictEqual('orchestrationTriggered' in link, false);
     });
 
   } finally {

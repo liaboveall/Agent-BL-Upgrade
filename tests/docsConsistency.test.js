@@ -51,7 +51,12 @@ test('.env.example documents every variable the server reads and never ships a r
   for (const name of [
     'PORT', 'HOST', 'TRUST_PROXY', 'DEMO_MODE', 'AGENTBL_ADMIN_TOKEN', 'AGENTBL_MAX_BODY_BYTES', 'AGENTBL_RUNTIME_DIR',
     'LLM_PROXY_ENABLED', 'LLM_MAX_TOKENS_CAP', 'LLM_REASONING_EFFORT', 'X402_MODE', 'X402_FACILITATOR_URL', 'X402_PAY_TO', 'X402_PUBLIC_BASE_URL',
-    'PAYMENT_ATTESTOR_PRIVATE_KEY', 'PRICING_UPDATER_PRIVATE_KEY', 'SIGNER_KEYS_STRICT', 'DEPLOYER_PRIVATE_KEY'
+    'PAYMENT_ATTESTOR_PRIVATE_KEY', 'PRICING_UPDATER_PRIVATE_KEY', 'SIGNER_KEYS_STRICT', 'DEPLOYER_PRIVATE_KEY',
+    // Agent runtime (docs/agent-implementation-plan.md §4.7); every variable src/agent/runtime/config.js reads
+    // and the rest of the runtime relies on today.
+    'AGENT_ENABLED', 'AGENT_AUTONOMY', 'AGENT_ALLOW_UNATTENDED_IRREVERSIBLE', 'AGENT_PROTECTED_CHAIN_POOLS',
+    'AGENT_MONITOR_INTERVAL_SEC', 'AGENT_MAX_PRICE_MOVE_BPS', 'AGENT_COOLDOWN_SEC', 'AGENT_MAX_ACTIONS_PER_POOL_PER_DAY',
+    'AGENT_APPROVAL_TTL_SEC', 'AGENT_CHAIN_CONFIRMATIONS', 'AGENT_MAX_DECISIONS', 'AGENT_RETENTION_DAYS', 'AGENT_EXECUTOR_PRIVATE_KEY'
   ]) {
     assert.ok(documented.has(name), `.env.example should document ${name}`);
   }
@@ -65,5 +70,21 @@ test('.env.example documents every variable the server reads and never ships a r
     if (!match) continue;
     const [, name, value] = match;
     if (/(KEY|TOKEN|SECRET|PASSWORD)$/iu.test(name)) assert.equal(value.trim(), '', `${name} must be blank in .env.example`);
+  }
+});
+
+test('every AGENT_* variable the runtime reads is documented in .env.example', () => {
+  const example = read('.env.example');
+  const documented = new Set([...example.matchAll(/^#?\s*([A-Za-z][A-Za-z0-9_]*)=/gmu)].map((match) => match[1]));
+  const sources = [
+    read('src', 'agent', 'runtime', 'config.js'),
+    read('src', 'chain', 'signerKeys.js')
+  ].join('\n');
+  // `env.AGENT_X` reads in config.js, and the `env: 'AGENT_X_PRIVATE_KEY'` entries of signerKeys.js
+  // (role names such as AGENT_EXECUTOR are not environment variables).
+  const readByRuntime = new Set([...sources.matchAll(/(?:\benv\.|\benv: ')(AGENT_[A-Z0-9_]+)/gu)].map((match) => match[1]));
+  assert.ok(readByRuntime.size >= 12, `expected the runtime to read at least 12 AGENT_* variables, found ${readByRuntime.size}`);
+  for (const name of readByRuntime) {
+    assert.ok(documented.has(name), `${name} is read by the runtime but not documented in .env.example`);
   }
 });

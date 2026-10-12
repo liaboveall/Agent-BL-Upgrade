@@ -8,6 +8,28 @@ export const CONTRACT_ACTIONS = [
 
 export const RISK_LEVELS = ['LOW', 'MEDIUM', 'WARNING', 'CRITICAL'];
 
+// Boundary aliases: LLMs and users say "HIGH", the engine and the contracts say WARNING
+// (contracts.md §2.2). Map once here instead of letting a stray 'HIGH' flow through the system.
+const RISK_LEVEL_ALIASES = { HIGH: 'WARNING' };
+
+/**
+ * Normalise an untrusted risk-level string (LLM output, user input, a query parameter) to one of
+ * RISK_LEVELS. Case and surrounding whitespace are ignored and HIGH maps to WARNING. Returns null
+ * for anything else, so the caller decides whether to reject or ignore it.
+ */
+export function normalizeRiskLevel(value) {
+  if (typeof value !== 'string') return null;
+  const upper = value.trim().toUpperCase();
+  const mapped = RISK_LEVEL_ALIASES[upper] ?? upper;
+  return RISK_LEVELS.includes(mapped) ? mapped : null;
+}
+
+/** Position of a level in RISK_LEVELS (LOW = 0 ... CRITICAL = 3); -1 for an unknown level. */
+export function riskLevelRank(value) {
+  const level = normalizeRiskLevel(value);
+  return level ? RISK_LEVELS.indexOf(level) : -1;
+}
+
 export const WORKFLOW_STATES = [
   'Created',
   'Funding',

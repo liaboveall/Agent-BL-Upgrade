@@ -1,0 +1,65 @@
+// Agent runtime configuration (docs/agent-implementation-plan.md §4.7). Only variables something reads
+// today are here; the rest of §4.7 (risk-clear ticks, insurance window, scenario speed, upload limit,
+// vision, ...) is added together with the work package that uses it.
+//
+// Everything is read from the environment in one place so tests can pass a plain object, and so the
+// safety-relevant defaults (Live only ever proposes; irreversible actions never run unattended) live
+// next to each other.
+
+export const AUTONOMY_LEVELS = Object.freeze(['off', 'observe', 'propose', 'auto']);
+
+function int(value, fallback, { min = -Infinity, max = Infinity } = {}) {
+  if (value === undefined || value === null || String(value).trim() === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(parsed)));
+}
+
+function bool(value, fallback) {
+  if (value === undefined || value === null || String(value).trim() === '') return fallback;
+  return ['true', '1', 'yes', 'on'].includes(String(value).trim().toLowerCase());
+}
+
+/**
+ * The autonomy that actually applies. D1: in Live the agent only proposes, so `auto` is treated as
+ * `propose`; `off` and `observe` stay as configured. Demo defaults to `auto` (simulated execution).
+ * @returns {{ effective: string, configured: string|null, downgraded: boolean }}
+ */
+export function effectiveAutonomy(mode, configured) {
+  const requested = AUTONOMY_LEVELS.includes(String(configured ?? '').toLowerCase())
+    ? String(configured).toLowerCase()
+    : null;
+  if (mode === 'live') {
+    const base = requested ?? 'propose';
+    return { effective: base === 'auto' ? 'propose' : base, configured: requested, downgraded: base === 'auto' };
+  }
+  return { effective: requested ?? 'auto', configured: requested, downgraded: false };
+}
+
+/** Parse `AGENT_PROTECTED_CHAIN_POOLS` ("2,5") into a sorted list of positive integers. */
+export function parsePoolList(value) {
+  return [...new Set(String(value ?? '')
+    .split(',')
+    .map((part) => Number(part.trim()))
+    .filter((n) => Number.isSafeInteger(n) && n > 0))].sort((a, b) => a - b);
+}
+
+export function loadAgentConfig(env = process.env) {
+  return {
+    // The runtime is started by the server entry point unless it is switched off explicitly.
+    enabled: bool(env.AGENT_ENABLED, true),
+    autonomy: env.AGENT_AUTONOMY ?? null,
+    allowUnattendedIrreversible: bool(env.AGENT_ALLOW_UNATTENDED_IRREVERSIBLE, false),
+    protectedChainPools: env.AGENT_PROTECTED_CHAIN_POOLS === undefined
+      ? [2]
+      : parsePoolList(env.AGENT_PROTECTED_CHAIN_POOLS),
+    monitorIntervalSec: int(env.AGENT_MONITOR_INTERVAL_SEC, 300, { min: 30 }),
+    maxPriceMoveBps: int(env.AGENT_MAX_PRICE_MOVE_BPS, 1500, { min: 0 }),
+    cooldownSec: int(env.AGENT_COOLDOWN_SEC, 600, { min: 0 }),
+    maxActionsPerPoolPerDay: int(env.AGENT_MAX_ACTIONS_PER_POOL_PER_DAY, 12, { min: 1 }),
+    chainConfirmations: int(env.AGENT_CHAIN_CONFIRMATIONS, 1, { min: 1 }),
+    maxDecisions: int(env.AGENT_MAX_DECISIONS, 5000, { min: 100 }),
+    retentionDays: int(env.AGENT_RETENTION_DAYS, 90, { min: 1 }),
+    approvalTtlSec: int(env.AGENT_APPROVAL_TTL_SEC, 24 * 60 * 60, { min: 60 })
+  };
+}

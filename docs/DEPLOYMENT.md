@@ -39,12 +39,15 @@ cp .env.example .env
 | `INJECTIVE_RPC_URL` | Injective 测试网 RPC（有默认值） |
 | `X402_MODE=live`、`X402_FACILITATOR_URL`、`X402_PAY_TO`、`X402_PUBLIC_BASE_URL` | Live 模式的 x402 付费情报，详见 [x402-integration.md](./x402-integration.md) |
 | `PAYMENT_ATTESTOR_PRIVATE_KEY`、`PRICING_UPDATER_PRIVATE_KEY`、`SIGNER_KEYS_STRICT` | 服务器按角色使用的最小权限签名密钥，见“链上角色与密钥” |
+| `AGENT_ENABLED`、`AGENT_AUTONOMY`、`AGENT_PROTECTED_CHAIN_POOLS`、`AGENT_MAX_PRICE_MOVE_BPS` 等 `AGENT_*` | Agent 运行时的开关、自主级别、阈值，见“Agent 运行时”；完整列表在 `.env.example` 第 10 节 |
 
 前端连接的合约地址**不走环境变量**，而是读取 [`public/chain-config.json`](../public/chain-config.json)。重新部署合约后，部署脚本会自动更新这个文件（也可以用 `npm run migrate:chain-config`）。
 
 ### 运行时数据
 
-服务会把 x402 收据、报告缓存、Agent 决策日志、Mystery Voyage 揭晓记录写入 `AGENTBL_RUNTIME_DIR`（默认 `data/runtime/`，已在 `.gitignore` 中忽略）。生产环境要保证这个目录**可写且持久**，否则重启后这些记录会丢失。池子 / 认购数据只在内存里，重启即清空。
+服务会把 x402 收据、报告缓存、Mystery Voyage 揭晓记录和 Agent 运行时的状态写入 `AGENTBL_RUNTIME_DIR`（默认 `data/runtime/`，已在 `.gitignore` 中忽略）。生产环境要保证这个目录**可写且持久**，否则重启后这些记录会丢失。池子 / 认购数据只在内存里，重启即清空。
+
+Agent 运行时写入的文件：`agent-decisions.json`（决策日志）、`agent-activity.jsonl`（活动流，带单调序号，超过 5 MB 轮转）、`agent-events.jsonl` 与 `agent-event-index.json`（事件及其处理状态）、`agent-approvals.json`（审批）、`agent-pools.json`（案例与链上池的映射）、`agent-traces.jsonl`（决策追踪）。启动时会清理崩溃遗留的 `*.tmp` 文件。
 
 ---
 
@@ -151,9 +154,47 @@ AI 助手通过同源接口 `/api/llm/chat` 调用 LLM：key 留在服务器，�
 | 角色 | 环境变量 | 在链上授权 |
 |---|---|---|
 | 写入 `PaymentOracle` 付款证明 | `PAYMENT_ATTESTOR_PRIVATE_KEY` | `PaymentOracle.setAttestor(<地址>, true)` |
-| 向 `RiskPricingOracle` 推送价格（MCP 工具） | `PRICING_UPDATER_PRIVATE_KEY` | `RiskPricingOracle.setUpdater(<地址>, true)` |
+| 向 `RiskPricingOracle` 推送价格（MCP 工具、Agent 批准后的定价动作） | `PRICING_UPDATER_PRIVATE_KEY` | `RiskPricingOracle.setUpdater(<地址>, true)` |
+| （可选）Agent 直接发送离港、付款/到港证明、结算 | `AGENT_EXECUTOR_PRIVATE_KEY` | `RWAOfferingPool.setAgentExecutor(<地址>, true)` |
 
 `DEPLOYER_PRIVATE_KEY`（合约 owner）只在你运行 `cd hardhat && npm run deploy:all`（或 `deploy:protocol`、`deploy:payment-oracle`）的机器上需要，**不要放到对公网的服务器上**。设置 `SIGNER_KEYS_STRICT=true` 后，上面两个角色不会再回退到 owner 密钥。
+
+### Agent 运行时
+
+服务器入口会自动启动 Agent 运行时（`AGENT_ENABLED=false` 可关闭，决策和活动仍可读取）。`createServer()` 本身不启动任何定时器。
+
+**自主级别**（`AGENT_AUTONOMY`，也可在运行时用 `POST /api/agent/control` 调整，只改内存）：
+
+| 取值 | 含义 |
+|---|---|
+| `auto` | 仅 Demo 默认值：可逆动作自动执行，**全部是模拟**（链下池子，返回 `demo:` 引用，不产生交易哈希）。不可逆动作（结算、冻结、清算）和记录付款证明仍需审批 |
+| `propose` | 所有会改变状态的动作都进审批队列 |
+| `observe` | 只记录，不执行 |
+| `off` | 全部拒绝 |
+
+**Live 下 Agent 只提方案**：即使配置成 `auto`，也按 `propose` 处理，启动时会警告，`GET /api/agent/status` 的 `autonomy.downgraded` 为 `true`。每个动作都要管理员批准，批准后才会有任何链上动作。
+
+**审批与签名**（需要 `AGENTBL_ADMIN_TOKEN`；Demo 下没有配置令牌时开放）：
+
+- 定价类动作（改价、暂停、恢复、冻结、清算）：批准后服务器用已授权的 `PRICING_UPDATER_PRIVATE_KEY` 调 `RiskPricingOracle.updatePricing`，等回执并核对事件后才算完成；
+- 需要执行者角色或 owner 的动作（离港、付款证明、到港证明、结算、取消）：批准后状态为 `AWAITING_OWNER_SIGNATURE`。运维者在**自己的电脑上**运行：
+
+  ```bash
+  npm run agent:approve -- --list                       # 列出等待签名的审批
+  npm run agent:approve -- --id <审批号>                # 默认 dry-run：打印交易并做 staticCall 预检
+  npm run agent:approve -- --id <审批号> --confirm      # 用本机的 DEPLOYER_PRIVATE_KEY 签名发送，并把 tx 回填给服务器
+  ```
+
+  服务器收到哈希后会**自己去链上读交易和回执**，核对合约、方法、参数、发送者和事件，全部一致才标记完成；只有一个哈希是不会被信任的。服务器进程不读取 owner 密钥；
+- 可选升级：配置 `AGENT_EXECUTOR_PRIVATE_KEY`（并由 owner 调 `RWAOfferingPool.setAgentExecutor(<地址>, true)`）后，执行者角色的 4 个动作改由服务器直接发送。它**不会**回退到 owner 密钥。
+
+**受保护池**：`AGENT_PROTECTED_CHAIN_POOLS`（默认 `2`，即 Live 演示用的铜货池）。对它提出的冻结、清算、结算、取消，策略直接拒绝，owner CLI 也拒绝，保证“改价 → 暂停 → 恢复”可以反复演示。
+
+**紧急停止**：`POST /api/agent/control {"action":"emergency_stop"}`（`"stopped": false` 解除）。紧急停止期间只允许暂停；Live 下链上合约自己的 `emergencyStopped` 也会被读取。
+
+**反向代理**：活动流是 SSE（`/api/agent/activity/stream`），每条消息带 `id:`，断线重连时浏览器会带上 `Last-Event-ID`，服务器补发错过的事件。Nginx 需要对这个路径关闭缓冲（应用已发送 `X-Accel-Buffering: no`），并保持 `proxy_read_timeout` 大于心跳间隔（默认 25 秒）。
+
+**Demo 重置**（`POST /api/demo/reset`）会清空 Demo 模式下的事件、决策、审批和活动并重建链下池子；**绝不清除 Live 的记录**。
 
 ### 合约
 

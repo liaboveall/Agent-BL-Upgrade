@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createWriteQueue, writeFileAtomic } from '../lib/jsonStore.js';
 import { runtimePath } from '../runtimePaths.js';
 import { candidateSetHash, createRevealProof, createServerSecret, hashCanonical, serverCommitment } from './fairness.js';
 
@@ -42,7 +43,7 @@ export class MysteryRevealStore {
     this.paymentIndex = new Map();
     this.idempotencyIndex = new Map();
     this.loaded = false;
-    this.writeQueue = Promise.resolve();
+    this.enqueueWrite = createWriteQueue();
   }
 
   async load() {
@@ -328,13 +329,7 @@ export class MysteryRevealStore {
       }))),
       records: [...this.records.values()]
     };
-    this.writeQueue = this.writeQueue.then(async () => {
-      await fs.mkdir(path.dirname(this.filePath), { recursive: true });
-      const temporaryPath = this.filePath + '.' + process.pid + '.' + Date.now() + '.tmp';
-      await fs.writeFile(temporaryPath, JSON.stringify(snapshot, null, 2), 'utf8');
-      await fs.rename(temporaryPath, this.filePath);
-    });
-    await this.writeQueue;
+    await this.enqueueWrite(() => writeFileAtomic(this.filePath, JSON.stringify(snapshot, null, 2)));
   }
 }
 

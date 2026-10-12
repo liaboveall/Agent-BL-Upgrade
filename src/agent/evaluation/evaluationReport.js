@@ -1,11 +1,15 @@
-// TRUST-2: Evaluation Report - AI Agent Quality Metrics
-// 评估 OCR/解析准确率、文档一致性、风险分单调性、估值误差、tool-call 成功率
+// TRUST-2: Evaluation Report (SYNTHETIC SKELETON, not a measurement)
+// The parser/agent steps below are mocks that copy the gold labels, so the metrics are not evidence
+// of quality. The report is marked `synthetic: true` with a notice; WP5.1 of
+// docs/agent-implementation-plan.md rebuilds it on the real components.
 
 import { GOLD_DATASET } from './goldDataset.js';
 
 export async function runComprehensiveEvaluation() {
   const results = {
     timestamp: new Date().toISOString(),
+    synthetic: true,
+    notice: 'NOT A MEASUREMENT: this harness echoes the expected/ground-truth values back as the agent output, so these numbers are always perfect and say nothing about the real agent. A real evaluation (real components, labelled data) is docs/agent-implementation-plan.md WP5.1.',
     metrics: {},
     failed_cases: [],
     limitations: []
@@ -37,6 +41,7 @@ export async function runComprehensiveEvaluation() {
 
   // Limitations
   results.limitations = [
+    'Synthetic: parser and agent steps are mocks that echo the gold labels',
     'OCR not tested (using structured JSON input)',
     'No real-time market price feeds in evaluation',
     'War risk assessment uses static rules, not live intelligence',
@@ -112,7 +117,7 @@ async function evaluateDocumentConsistency() {
 }
 
 async function evaluateRiskMonotonicity() {
-  const riskOrder = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
+  const riskOrder = { LOW: 1, MEDIUM: 2, WARNING: 3, CRITICAL: 4 };
   const violations = [];
 
   // Check: Higher risk should lead to lower issue price

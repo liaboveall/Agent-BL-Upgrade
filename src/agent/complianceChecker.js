@@ -1,6 +1,12 @@
 // Compliance checker engine (AI-18)
-// Verifies Sanctions, Export Controls, MLETR, eUCP, DCSA, ICC DSI.
+//
+// DEMO RULES ONLY. Every check below is a keyword match on names and cargo text. Nothing is
+// looked up in the OFAC SDN list, the UN list, the EU list or any export-control classification
+// (docs/agent-implementation-plan.md WP2.3 replaces this with a versioned, fuzzy-matched demo
+// list). The outputs say so, so a result is never mistaken for a real screening.
 // Note: only flags risks, does NOT refuse service based on company size.
+
+export const COMPLIANCE_DISCLAIMER = 'Keyword-based demo rules; not an OFAC/UN/EU list screening and not a legal determination.';
 
 export function checkCompliance(caseData = {}) {
   const checks = [];
@@ -19,33 +25,33 @@ export function checkCompliance(caseData = {}) {
   }
 
   // 1. Sanctions Check
-  // Mock logic: If any entity contains "sanctioned" or a sanctioned country (e.g. Iran, DPRK), block.
+  // Demo rule: if any entity contains "sanctioned" or a sanctioned country (e.g. Iran, DPRK), block.
   let hasSanction = false;
   let sanctionEvidence = '';
   for (const ent of entities) {
     const name = (ent.name || '').toLowerCase();
     if (name.includes('sanctioned') || name.includes('iran') || name.includes('dprk') || name.includes('north korea')) {
       hasSanction = true;
-      sanctionEvidence = `${ent.role} (${ent.name}) is on the sanctions list.`;
+      sanctionEvidence = `${ent.role} (${ent.name}) matched a demo sanctions keyword.`;
       break;
     }
   }
 
   if (hasSanction) {
-    add('sanctions', 'Sanctions & OFAC Check', 'block', 'Entity is sanctioned.', sanctionEvidence);
+    add('sanctions', 'Sanctions Check (demo keyword rule)', 'block', 'Entity name matched a demo sanctions keyword.', sanctionEvidence);
   } else {
-    add('sanctions', 'Sanctions & OFAC Check', 'ok', 'No sanctioned entities found.', 'Cross-checked with OFAC SDN list.');
+    add('sanctions', 'Sanctions Check (demo keyword rule)', 'ok', 'No entity name matched a demo sanctions keyword.', 'Keyword demo rule only; no OFAC/UN/EU list was consulted.');
   }
 
   // 2. Export Controls
-  // Mock logic: If cargo is "Military" or "Dual-use", flag warning or block.
+  // Demo rule: if cargo is "Military" or "Dual-use", flag warning or block.
   const cargo = (caseData.caseEntry?.cargo || caseData.bill_of_lading?.cargo || '').toLowerCase();
   if (cargo.includes('military') || cargo.includes('weapon')) {
     add('export_controls', 'Export Controls Check', 'block', 'Military cargo requires strict licensing.', `Cargo identified as: ${cargo}`);
   } else if (cargo.includes('dual-use') || cargo.includes('semiconductor') || cargo.includes('chip')) {
     add('export_controls', 'Export Controls Check', 'warning', 'Dual-use goods, requires end-user verification.', `Cargo identified as: ${cargo}`);
   } else {
-    add('export_controls', 'Export Controls Check', 'ok', 'Cargo does not fall under strict export controls.', 'Cleared EAR99.');
+    add('export_controls', 'Export Controls Check', 'ok', 'Cargo text did not match a demo export-control keyword.', 'Keyword demo rule only; no export-control classification (ECCN/EAR) was performed.');
   }
 
   // 3. MLETR / eUCP / DCSA / ICC DSI Standards
@@ -80,5 +86,5 @@ export function checkCompliance(caseData = {}) {
   const has_block = checks.some(c => c.status === 'block');
   const issues = checks.filter(c => c.status !== 'ok').map(c => `[${c.status.toUpperCase()}] ${c.label}: ${c.detail}`);
 
-  return { ok, has_warning, has_block, checks, issues };
+  return { ok, has_warning, has_block, checks, issues, disclaimer: COMPLIANCE_DISCLAIMER };
 }

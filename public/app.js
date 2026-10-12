@@ -17,11 +17,14 @@ import * as web3 from './web3.js';
 import { t, tData, toggleLang, onLangChange, applyStaticI18n } from './i18n.js';
 import { initVoyage, renderVoyage, startVoyageClock, stopVoyageClock } from './voyage.js';
 import { initPopupAssistant } from './popup-assistant.js';
+import { hideAgentConsole, initAgentConsole, rerenderAgentConsole, showAgentConsole } from './agent/console.js';
 import { getLlmClient, getLlmStatus } from './llm-client.js';
 import { payV2WithWallet } from './x402-v2.js';
 import { initMysteryExperience, renderMysteryExperience, resetMysteryExperience } from './mystery.js';
 
 const PAUSED_ACTIONS = new Set(['PAUSE_OFFERING', 'FREEZE_POOL', 'TRIGGER_LIQUIDATION']);
+// Decision verbs worth a toast when the agent emits them (docs/agent-implementation-plan.md §4.3).
+const NOTIFY_DECISION_ACTIONS = new Set(['REPRICE', 'PAUSE', 'RESUME', 'FREEZE', 'LIQUIDATE', 'SETTLE']);
 const MARKET_PLAY_MS = 90000;
 const marketClock = { timer: 0, startedAt: 0 };
 
@@ -107,6 +110,7 @@ async function boot() {
   initMysteryExperience();
   initVoyage();
   initPopupAssistant();
+  initAgentConsole({ getCases: async () => state.cases?.length ? state.cases : api.getCases() });
   onLangChange(onLangChanged);
   await populateNetworkSelector();
   await reflectChainStatus();
@@ -126,24 +130,6 @@ async function boot() {
   await selectCase(state.cases[0]?.case_id);
   setView('market');
   warmMarketQuotes();
-
-  // Initialize with sample agent activities for demo
-  initSampleAgentActivities();
-}
-
-function initSampleAgentActivities() {
-  const sampleActivities = [
-    { type: 'SYSTEM', action: 'AGENT_INITIALIZED', details: { status: 'ready' } },
-    { type: 'DOCUMENT', action: 'eBL_UPLOADED', details: { fileName: 'copper_ore_sg_sha.pdf' } }
-  ];
-
-  sampleActivities.forEach(activity => {
-    logAgentActivityUI({
-      ...activity,
-      caseId: state.caseId,
-      timestamp: new Date(Date.now() - Math.random() * 60000).toISOString()
-    });
-  });
 }
 
 async function loadDemoRuntimeMode() {
@@ -275,6 +261,7 @@ function onLangChanged() {
   renderViewMint();
   if (state.view === 'voyage') renderVoyage();
   if (state.view === 'intel') renderIntelMarket();
+  if (state.view === 'agent') rerenderAgentConsole();
 }
 
 // ===========================================================================
@@ -333,6 +320,9 @@ function setView(name) {
   document.querySelectorAll('#nav .nav-tab').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   $('#view-market').hidden = name !== 'market';
   $('#view-mint').hidden = name !== 'mint';
+  $('#view-agent').hidden = name !== 'agent';
+  if (name === 'agent') showAgentConsole();
+  else hideAgentConsole();
   
   if (name === 'market') { renderMarket(); startMarketClock(); }
   else { stopMarketClock(); stopVoyageClock(); }
@@ -1407,7 +1397,7 @@ function renderMintResult(res, quote) {
     ),
     el('div', { class: 'mint-result-rows' },
       mintRow(t('res_price'), `$${f.price(quote.final_issue_price_usd)} ${t('unit_per_token')}`),
-      mintRow('tx_hash', f.shortHash(res.txHash, 12, 10), res.explorerUrl ? res.explorerUrl : null),
+      mintRow('tx_hash', res.txHash ? f.shortHash(res.txHash, 12, 10) : t('res_no_tx'), res.explorerUrl ? res.explorerUrl : null),
       res.poolId ? mintRow('poolId', String(res.poolId)) : null,
       res.blockNumber ? mintRow('block', `#${f.int(res.blockNumber)}`) : (pending ? mintRow('block', t('res_confirming')) : null)
     )
@@ -2243,7 +2233,13 @@ function updateX402PaymentCard(data) {
   const serviceId = pay.receipt?.serviceId ?? pay.serviceId;
   const amountUSDC = pay.receipt?.amountUSDC ?? pay.amountUSDC;
   const tx = $('#x402-txhash');
-  if (tx && pay.txHash) tx.textContent = pay.txHash.slice(0, 42) + '…';
+  if (tx && pay.txHash) {
+    // A Demo receipt hash is simulated; only a Live (on-chain) one is shown as a hash.
+    const simulated = pay.live === false || pay.onchain === false || pay.mode === 'demo';
+    tx.textContent = simulated
+      ? t('x402_demo_receipt_ref', { ref: pay.txHash.slice(0, 18) + '…' })
+      : pay.txHash.slice(0, 42) + '…';
+  }
   const svc = $('#x402-service');
   if (svc) svc.textContent = serviceId || data.service || data.kind || '—';
   const amt = $('#x402-amount');
@@ -2436,11 +2432,11 @@ async function purchaseWithWalletLive(serviceId, priceUSDC, endpoint) {
 }
 
 /**
- * Demo x402 wallet flow (Live mode delegates to purchaseWithWalletLive) — user's wallet directly calls PaymentOracle on-chain:
+ * Demo x402 wallet flow (Live mode delegates to purchaseWithWalletLive). Nothing is settled on-chain:
  *   1. GET endpoint → HTTP 402 + challenge
- *   2. User signs challenge via personal_sign
- *   3. User's wallet calls PaymentOracle.logPaymentEvidence() (user pays gas)
- *   4. POST signed tx hash to server → intel report unlocked
+ *   2. User signs the challenge with personal_sign (proves wallet control, costs nothing)
+ *   3. POST the signature → the server unlocks the report and records a SIMULATED receipt
+ * The receipt is labelled DEMO and never rendered as an explorer link.
  */
 async function purchaseWithWallet(serviceId, priceUSDC, endpoint) {
   const log = $('#x402-log');
@@ -2499,38 +2495,9 @@ async function purchaseWithWallet(serviceId, priceUSDC, endpoint) {
 
     log.innerHTML += `<p>• <span style="color:#2EA043;">✓ Signed by ${html(signerAddr.slice(0, 8))}…${html(signerAddr.slice(-4))}</span></p>`;
 
-    // ── Step 3: User's wallet calls PaymentOracle.logPaymentEvidence() on-chain ──
+    // ── Step 3: Demo settlement happens on the server (simulated, no transaction) ──
     setX402Step('settle', 'active', t('x402_settling_status'));
-
-    // Compute evidence hashes via Web Crypto
-    const responsePayload = JSON.stringify({ serviceId, priceUSDC, payer: signerAddr, nonce });
-    const respBuf = new TextEncoder().encode(responsePayload);
-    const respDigest = await crypto.subtle.digest('SHA-256', respBuf);
-    const responseHash = '0x' + [...new Uint8Array(respDigest)].map(b => b.toString(16).padStart(2, '0')).join('');
-
-    const paymentRef = `x402:${serviceId}:${nonce}`;
-    const amountMicrousd = Math.floor(priceUSDC * 1_000_000);
-
-    let paymentResult;
-    let useDirectChain = false;
-    try {
-      paymentResult = await web3.logX402PaymentOnChain({
-        payer: signerAddr,
-        serviceId,
-        amountMicrousd,
-        paymentRef,
-        responseHash,
-        quoteHash: responseHash,
-        evidenceHash: responseHash,
-        pricingAction: 'OPEN'
-      });
-      useDirectChain = true;
-      log.innerHTML += `<p>• <span style="color:#2EA043;">⛓️ On-chain tx sent from your wallet: ${html(paymentResult.txHash.slice(0, 18))}…</span></p>`;
-    } catch (chainErr) {
-      // Fallback: server relay if PaymentOracle not deployed or user rejected
-      if (chainErr.code === 'REJECTED') throw chainErr;
-      log.innerHTML += `<p>• <span style="color:#D29922;">⚠ Direct on-chain call unavailable (${html(chainErr.message)}) — using server relay fallback.</span></p>`;
-    }
+    log.innerHTML += `<p>• <span style="color:#1F6FEB;">${t('x402_demo_settlement_log')}</span></p>`;
 
     // ── Step 4: POST to server to get the unlocked intel report ──
     const paidRes = await fetch(endpoint, {
@@ -2539,15 +2506,10 @@ async function purchaseWithWallet(serviceId, priceUSDC, endpoint) {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X402-Signature': signature,
-        'X402-Signer': signerAddr,
-        ...(useDirectChain ? {
-          'X402-TxHash': paymentResult.txHash,
-          'X402-BlockNumber': String(paymentResult.blockNumber)
-        } : {})
+        'X402-Signer': signerAddr
       },
       body: JSON.stringify({
         nonce,
-        txHash: useDirectChain ? paymentResult.txHash : undefined,
         case: state.caseData,
         case_id: state.caseId
       })
@@ -2562,7 +2524,7 @@ async function purchaseWithWallet(serviceId, priceUSDC, endpoint) {
 
     // ── Done ──
     setX402Step('pay', 'done', t('x402_signed'));
-    setX402Step('settle', 'done', useDirectChain ? '⛓️ Settled (your wallet)' : t('x402_settled'));
+    setX402Step('settle', 'done', t('x402_settled'));
     setX402Step('unlock', 'done', t('x402_unlocked'));
     updateX402PaymentCard(data);
     updateX402PricingImpact(data);
@@ -2578,18 +2540,11 @@ async function purchaseWithWallet(serviceId, priceUSDC, endpoint) {
 
     log.innerHTML += '<p>• <span style="color:#2EA043;">Report unlocked — ' + html(reportCountSummary(data)) + '</span></p>';
 
-    // Show the ACTUAL on-chain tx hash from user's wallet
-    const displayTx = useDirectChain ? paymentResult : data.payment;
-    if (displayTx?.txHash) {
-      // Only ever link to an https explorer page; never echo a server-supplied scheme verbatim.
-      const candidateUrl = displayTx.explorerUrl
-        || `https://testnet.blockscout.injective.network/tx/${displayTx.txHash}`;
-      const explorerUrl = /^https:\/\//iu.test(candidateUrl) ? candidateUrl : '#';
-      log.innerHTML += `<p>• <span style="color:#2EA043;">⛓️ <a href="${html(explorerUrl)}" target="_blank" rel="noopener noreferrer" style="color:#1F6FEB;">View on Injective Explorer ↗</a></span></p>`;
-      log.innerHTML += `<p>• <span style="color:#2EA043;">💳 Payer (tx from YOUR wallet): ${html(signerAddr.slice(0, 10))}…${html(signerAddr.slice(-6))}</span></p>`;
-    }
+    // The Demo receipt is simulated: show it as such, with no explorer link and no claim that a
+    // transaction came from the user's wallet.
+    log.innerHTML += `<p>• <span style="color:#D29922;">🔬 ${html(t('x402_demo_receipt_note', { payer: signerAddr.slice(0, 10) + '…' + signerAddr.slice(-6) }))}</span></p>`;
 
-    log.innerHTML += `<p style="margin-top:8px;color:#2EA043;"><strong>💰 x402 Payment Complete ✓ — Report Unlocked</strong></p>`;
+    log.innerHTML += `<p style="margin-top:8px;color:#2EA043;"><strong>${html(t('x402_demo_complete'))}</strong></p>`;
   } catch (e) {
     setX402Step('settle', 'error', t('x402_failed'));
     log.innerHTML += `<p>• <span style="color:#D6336C;">✗ ${t('x402_fail_log', { msg: html(e.message) })}</span></p>`;
@@ -2625,7 +2580,7 @@ async function renderPortfolio() {
   const list = $('#portfolio-list');
   if (!list) return;
   try {
-    const res = await fetch('/api/investors/portfolio?wallet_address=' + encodeURIComponent(state.walletAddress || '0xDemoWallet'));
+    const res = await fetch('/api/investors/portfolio?wallet_address=' + encodeURIComponent(state.wallet?.address || '0xDemoWallet'));
     const data = await res.json();
     if (!data.ok) return;
 
@@ -2645,7 +2600,7 @@ async function renderPortfolio() {
         </div>
         <div style="display:flex; justify-content:space-between; color:var(--text-2); font-size:12px;">
           <span>${t('portfolio_metrics', { yield: `${(inv.yieldBps/100).toFixed(2)}%`, risk: html(f.riskLabel(inv.riskLevel)) })}</span>
-          <span style="font-family:var(--mono)">${html(String(inv.txHash).slice(0,10))}...</span>
+          <span style="font-family:var(--mono)" title="${html(t('portfolio_demo_ref_title'))}">${html(String(inv.reference ?? '—').slice(0, 24))}</span>
         </div>
       </div>
     `).join('');
@@ -2736,8 +2691,10 @@ function subscribeToAgentActivity(caseId, { retry = false } = {}) {
 
         logAgentActivityUI(data);
 
-        if (data.action === 'REPRICE_DECISION' || data.action === 'PAUSE_OFFERING') {
-          toast(`🤖 Agent: ${data.action}`);
+        // Decision records carry the agent's decision verb in details.decision_action.
+        const decisionAction = data.details?.decision_action ?? data.action;
+        if (NOTIFY_DECISION_ACTIONS.has(decisionAction)) {
+          toast(`🤖 Agent: ${decisionAction}`);
         }
       }
     };
@@ -2763,9 +2720,13 @@ function getActivityEmoji(action) {
     'VALUATION_COMPLETE': '💰',
     'PRICING_QUOTE': '📊',
     'RISK_ESCALATION': '⚠️',
-    'REPRICE_DECISION': '📉',
-    'PAUSE_OFFERING': '⏸️',
-    'RESUME_OFFERING': '▶️',
+    'REPRICE': '📉',
+    'PAUSE': '⏸️',
+    'RESUME': '▶️',
+    'WARNING': '⚠️',
+    'DECISION_MADE': '🧠',
+    'APPROVAL_REQUESTED': '🙋',
+    'EXECUTION_CONFIRMED': '⛓️',
     'ON_CHAIN_UPDATE': '⛓️',
     'SUBSCRIPTION': '💵',
     'SETTLE': '✅'
@@ -2931,7 +2892,7 @@ function wireStaticHandlers() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             file: fileData,
-            case_id: state.selectedCaseId
+            case_id: state.caseId
           })
         });
 
@@ -2950,11 +2911,11 @@ function wireStaticHandlers() {
           logAgentActivityUI({
             type: 'DOCUMENT',
             action: 'eBL_UPLOADED',
-            caseId: state.selectedCaseId,
+            caseId: state.caseId,
             details: {
               fileName: file.name,
               documentId: data.document.documentId,
-              status: 'verified'
+              status: data.document.status
             }
           });
         } else {

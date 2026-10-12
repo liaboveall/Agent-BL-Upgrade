@@ -1,5 +1,8 @@
-// ENI Adapter for eBL document ingestion
-// Provides mock ENI interface when live ENI is unavailable
+// ENI Adapter for eBL document ingestion.
+//
+// There is no ENI/TradeGo API or sandbox to call, so this adapter is a MOCK and says so on every
+// record (`mode: 'mock'`). It only acknowledges receipt of a document: it does not verify the
+// document, and nothing is written to any network. "status: received" means exactly that.
 
 import crypto from 'node:crypto';
 import { HttpError } from './http.js';
@@ -64,20 +67,25 @@ export class ENIAdapter {
       throw invalidDocument('File size exceeds 10MB limit');
     }
 
-    // Generate document hash
+    // The hash is of the content when the client sent it. A metadata-only upload (the browser
+    // currently sends just name/type/size) is hashed over that metadata instead, deterministically
+    // and flagged `content_hashed: false` so nobody mistakes it for a hash of the document.
+    const contentHashed = typeof content === 'string' && content.length > 0;
     const hash = crypto.createHash('sha256')
-      .update(content || name + Date.now())
+      .update(contentHashed ? content : JSON.stringify({ name, type, size }))
       .digest('hex');
 
     const record = {
       documentId: `ENI-DOC-${Date.now()}-${crypto.randomBytes(5).toString('hex')}`,
       documentHash: hash,
+      content_hashed: contentHashed,
       fileName: name,
       fileType: type,
       fileSize: size,
       uploadedAt: new Date().toISOString(),
-      status: 'verified',
-      eniNetwork: 'injective_testnet_mock'
+      status: 'received',
+      mode: 'mock',
+      eniNetwork: 'mock'
     };
     this._remember(record);
     return record;
@@ -96,7 +104,8 @@ export class ENIAdapter {
     return {
       documentId: record.documentId,
       status: record.status,
-      verifiedAt: record.uploadedAt
+      mode: record.mode,
+      receivedAt: record.uploadedAt
     };
   }
 }

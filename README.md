@@ -44,6 +44,7 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 | Pricing, risk, RAG, MCP tools, dashboard / 定价、风险、RAG、MCP 工具、前端 | Working. Deterministic fallback keeps the demo running without any key. / 可用，没有任何 Key 也能完整演示 |
 | x402 paid intelligence / x402 付费情报 | **Demo:** simulated locally (no real funds). **Live:** x402 V2 (EIP-3009) through a facilitator, exercised end-to-end with a mock facilitator, the official `@injectivelabs/x402` client and the browser wallet flow; it needs a facilitator that lists `eip155:1439`, a payee address and a funded wallet; a real testnet payment and its on-chain attestation were re-verified on 2026-10-12 ([`docs/x402-integration.md`](docs/x402-integration.md)). / Demo 为本地模拟；Live 走 x402 V2，需要支持 `eip155:1439` 的 Facilitator、收款地址和有余额的钱包；2026-10-12 已用真实测试网付款和链上证明复验 |
 | Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The Injective testnet contracts were **redeployed as v2 on 2026-10-12**: `npm run verify:bytecode` confirms the on-chain code matches the source. / 源码已加固为 v2，测试网已于 2026-10-12 重新部署；`npm run verify:bytecode` 可确认链上代码与源码一致 |
+| Autonomous agent / 自主 Agent | **Runtime in place, no monitoring yet.** Events (injected through `POST /api/agent/events`) become decisions with a recorded policy verdict; in Demo they run as simulated actions on the offchain pool (a `demo:` reference, never a tx hash), in Live they only wait in an approval queue and run after a human approves (pricing actions by the server's authorised key, owner-signed ones through `npm run agent:approve`). The Agent console (status, decision timeline, approvals, Demo event injector) is live. Not built yet: scheduled monitoring sources, document ingestion into the pipeline, scenario playback. Plan: [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md). / **运行时已就绪，尚无监控源**：通过 `POST /api/agent/events` 注入的事件会变成带策略结论的决策；Demo 下是对链下池子的模拟执行（`demo:` 引用，没有交易哈希），Live 下只进审批队列，批准后才执行（定价类动作由服务器的已授权密钥发送，需要 owner 的动作用 `npm run agent:approve`）。Agent 控制台（状态、决策时间线、审批、Demo 事件注入器）已上线。尚未完成：定时监控源、单证接入流水线、场景播放。规划见 [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md) |
 | Investor payments for RWA shares / 投资者认购的真实付款 | **Not implemented.** Subscriptions mint share receipts and record the amount owed; no stablecoin is escrowed. / **未实现**，认购只铸造份额凭证并记录应付金额 |
 
 ---
@@ -857,7 +858,7 @@ All configuration is optional in Demo Mode. [`.env.example`](.env.example) docum
 | `PAYMENT_ATTESTOR_PRIVATE_KEY`, `PRICING_UPDATER_PRIVATE_KEY` | Dedicated signer keys; authorise them on-chain with `PaymentOracle.setAttestor` / `RiskPricingOracle.setUpdater`. |
 | `WHITE_AGENT_PRIVATE_KEY` | Buyer wallet for the CLI/agent x402 client. |
 | `TRUST_PROXY`, `HOST`, `PORT` | Reverse-proxy and bind settings. |
-| `AGENTBL_RUNTIME_DIR` | Writable, persistent folder for receipts, cached reports and decision logs. |
+| `AGENTBL_RUNTIME_DIR` | Writable, persistent folder for x402 receipts, cached reports and Mystery reveals. |
 
 **Going Live (testnet):** start from a Demo deployment, set the three x402 variables and the admin token, make sure the payee and the buyer hold testnet USDC/INJ, then switch the mode from the dashboard (it asks for the admin token) or start with `DEMO_MODE=false`. In Live mode the paid endpoints answer with an x402 V2 `402`; the dashboard pays with the connected wallet (EIP-3009 `transferWithAuthorization`, signed with `eth_signTypedData_v4`), the facilitator settles, and the server attests the report on `PaymentOracle`. Details: [`docs/x402-integration.md`](docs/x402-integration.md) and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
@@ -1181,7 +1182,7 @@ Important limitations include:
 - Demo Mode does not represent real investment execution;
 - the smart contracts have **no payment leg for RWA subscriptions**: `subscribe` mints a share receipt and records the amount owed, but no stablecoin is escrowed and `settle` does not distribute repayments (see [`docs/contracts.md`](docs/contracts.md) §0.6);
 - the Injective testnet contracts are owned by a single deployer key (no multisig); ownership transfer is two-step (see [`docs/contracts.md`](docs/contracts.md) §0);
-- offering, pool and subscription state lives in server memory and resets on restart (only x402 receipts, cached reports, decision logs and Mystery reveals are persisted);
+- offering, pool and subscription state lives in server memory and resets on restart (only x402 receipts, cached reports and Mystery reveals are persisted; the agent decision log is not written at runtime yet, see the status table);
 - real-world legal ownership requires jurisdiction-specific integration;
 - production eBL infrastructure requires recognized eBL systems and standards;
 - real logistics feeds are not yet fully integrated;

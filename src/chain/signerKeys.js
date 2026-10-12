@@ -16,6 +16,15 @@ export const SIGNER_ROLES = Object.freeze({
   PRICING_UPDATER: Object.freeze({
     env: 'PRICING_UPDATER_PRIVATE_KEY',
     contractRole: 'RiskPricingOracle.setUpdater(address,true)'
+  }),
+  // OPTIONAL (docs/agent-implementation-plan.md D2). Only when this key is set can the server itself send
+  // markInTransit / recordImporterPayment / recordCargoArrival / settle; otherwise an operator signs them
+  // with the owner key through `npm run agent:approve`. It never falls back to the owner key.
+  AGENT_EXECUTOR: Object.freeze({
+    env: 'AGENT_EXECUTOR_PRIVATE_KEY',
+    contractRole: 'RWAOfferingPool.setAgentExecutor(address,true)',
+    optional: true,
+    noOwnerFallback: true
   })
 });
 
@@ -38,6 +47,7 @@ export function resolveSignerKey(roleName, env = process.env, { warn = console.w
 
   const dedicated = env[role.env]?.trim();
   if (dedicated) return { privateKey: dedicated, source: role.env, dedicated: true };
+  if (role.noOwnerFallback) return null;
 
   const owner = env[OWNER_KEY_ENV]?.trim();
   if (!owner || strictMode(env)) return null;

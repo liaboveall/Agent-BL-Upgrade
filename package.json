@@ -36,6 +36,7 @@
     "deploy:protocol": "npm --prefix hardhat run deploy:protocol",
     "verify:bytecode": "node scripts/verify-bytecode.mjs",
     "verify:wave-b": "node scripts/wave-b-gate.mjs",
+    "agent:approve": "node scripts/agent-approve.mjs",
     "smoke:mcp:injective": "node scripts/injective-mcp-smoke.mjs",
     "migrate:chain-config": "node scripts/migrate-chain-config.mjs",
     "spike:bank": "node scripts/injective-bank-precompile.mjs",

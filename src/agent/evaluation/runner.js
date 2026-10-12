@@ -1,5 +1,9 @@
-// SP-9: Agent Evaluation Runner
-// Evaluates Agent AI quality against the eval dataset
+// SP-9: Agent Evaluation Runner (SYNTHETIC SKELETON)
+//
+// The "agent" executed here is `mockAgentExecution`, which returns the dataset's expected values.
+// The metrics therefore verify only the scoring plumbing, never the agent. The result carries
+// `synthetic: true` and a notice so nobody reports them as a quality measurement. WP5.1 of
+// docs/agent-implementation-plan.md replaces this with a run against the real components.
 
 import { EVAL_DATASET, EVAL_METRICS } from './dataset.js';
 
@@ -64,7 +68,7 @@ export async function runEvaluation({ verbose = false } = {}) {
     metrics.tool_call_success_rate >= EVAL_METRICS.TOOL_CALL_SUCCESS_TARGET &&
     metrics.groundedness_score >= EVAL_METRICS.GROUNDEDNESS_TARGET;
 
-  return { results, metrics };
+  return { results, metrics, synthetic: true, notice: 'NOT A MEASUREMENT: this harness echoes the expected/ground-truth values back as the agent output, so these numbers are always perfect and say nothing about the real agent. A real evaluation (real components, labelled data) is docs/agent-implementation-plan.md WP5.1.' };
 }
 
 // Mock agent execution for testing

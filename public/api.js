@@ -98,3 +98,33 @@ export function riskSweep(caseData) {
 export function worldRisk(caseData) {
   return postJson('/api/intel/world-risk', { case: rawCase(caseData) });
 }
+
+/** AI-19: server-side recommendation over the market pools. `criteria` is optional structured input. */
+export function marketSearch({ preference, criteria, limit } = {}) {
+  return postJson('/api/market/search', { preference, criteria, limit });
+}
+
+/** BE-12: offchain mirror of one pool (status, subscription progress, current quote summary). */
+export function getPoolStatus(poolId) {
+  return fetchJson('/api/pool/status?pool_id=' + encodeURIComponent(poolId));
+}
+
+/** BE-13: the Demo subscriptions the server holds for a wallet. */
+export function getPortfolio(walletAddress) {
+  const query = walletAddress ? '?wallet_address=' + encodeURIComponent(walletAddress) : '';
+  return fetchJson('/api/investors/portfolio' + query);
+}
+
+/** BE-12: record a Demo (simulated) subscription on the server. No transaction is sent. */
+export function subscribePool({ pool_id, amount_usd, wallet_address }) {
+  return postJson('/api/pool/subscribe', { pool_id, amount_usd, wallet_address });
+}
+
+/** BE-15: the server's persisted-in-memory agent activity feed. */
+export function getAgentActivity({ caseId, poolId } = {}) {
+  const params = new URLSearchParams();
+  if (caseId) params.set('case_id', caseId);
+  if (poolId) params.set('pool_id', poolId);
+  const query = params.toString();
+  return fetchJson('/api/agent/activity' + (query ? '?' + query : ''));
+}

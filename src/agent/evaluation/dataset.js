@@ -107,7 +107,7 @@ export const EVAL_DATASET = [
     },
     expected: {
       tool_calls: ['assess_geopolitical_risk'],
-      risk_level: ['HIGH', 'CRITICAL'],
+      risk_level: ['WARNING', 'CRITICAL'],
       task_completion: true
     }
   },

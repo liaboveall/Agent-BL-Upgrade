@@ -38,5 +38,8 @@ Thumbs.db
 # Claude Code local-machine settings (keep .claude/settings.json shareable)
 .claude/settings.local.json
 
+# Claude Code worktrees (parallel sessions check out copies of the repo here)
+.claude/worktrees/
+
 # My own
 Assign/

@@ -6,7 +6,7 @@
 
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
-import path from 'node:path';
+import { createWriteQueue, writeFileAtomic } from '../lib/jsonStore.js';
 import { runtimePath } from '../runtimePaths.js';
 
 const DEFAULT_LOG_PATH = runtimePath('agent-decisions.json');
@@ -64,7 +64,7 @@ export class DecisionLogger {
     this.clock = options.clock ?? (() => new Date());
     this.records = [];
     this.initialized = false;
-    this.writeQueue = Promise.resolve();
+    this.enqueueWrite = createWriteQueue();
   }
 
   async init() {
@@ -91,13 +91,7 @@ export class DecisionLogger {
     if (!this.filePath) return;
     const body = `${JSON.stringify(this.records, null, 2)}\n`;
     const target = this.filePath;
-    this.writeQueue = this.writeQueue.then(async () => {
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
-      await fs.writeFile(temp, body, 'utf8');
-      await fs.rename(temp, target);
-    });
-    await this.writeQueue;
+    await this.enqueueWrite(() => writeFileAtomic(target, body));
   }
 
   async record(decision) {
@@ -150,6 +144,43 @@ export class DecisionLogger {
       transaction,
       status: transaction.success === false ? 'FAILED' : 'COMPLETED'
     });
+  }
+
+  /** Remove every record the predicate matches (Demo reset). Returns how many were removed. */
+  async clearWhere(predicate) {
+    await this.init();
+    const before = this.records.length;
+    this.records = this.records.filter((record) => !predicate(record));
+    const removed = before - this.records.length;
+    if (removed) await this.persist();
+    return removed;
+  }
+
+  /**
+   * Keep the log bounded: drop the oldest finished records beyond `maxRecords`, and finished records
+   * older than `olderThanMs`. Records that are still in flight are never dropped.
+   */
+  async prune({ maxRecords, olderThanMs, finished = ['COMPLETED', 'FAILED', 'SKIPPED', 'REJECTED'] } = {}) {
+    await this.init();
+    const isFinished = (record) => finished.includes(record.status);
+    const cutoff = olderThanMs ? Date.parse(this.now()) - olderThanMs : null;
+    let records = this.records;
+    if (cutoff !== null) {
+      records = records.filter((record) => !(isFinished(record) && Date.parse(record.created_at) < cutoff));
+    }
+    if (maxRecords && records.length > maxRecords) {
+      let excess = records.length - maxRecords;
+      records = records.filter((record) => {
+        if (excess > 0 && isFinished(record)) { excess -= 1; return false; }
+        return true;
+      });
+    }
+    const removed = this.records.length - records.length;
+    if (removed) {
+      this.records = records;
+      await this.persist();
+    }
+    return removed;
   }
 
   async get(decisionId) {

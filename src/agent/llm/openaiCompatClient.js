@@ -145,6 +145,22 @@ export function isConfigured(env = process.env) {
 }
 
 /**
+ * Names of the built-in providers whose API key is present in `env`, in resolution order.
+ * Used by callers that fan out over several providers (llmConsensus): they must only ever
+ * contact providers the operator really configured.
+ */
+export function configuredProviders(env = process.env) {
+  return Object.keys(PROVIDERS).filter((name) => {
+    if (name === 'azure') {
+      const cfg = PROVIDERS.azure;
+      return Boolean(env[cfg.keyEnv] && env[cfg.baseUrlEnv] && env[cfg.deploymentEnv]);
+    }
+    const cfg = PROVIDERS[name];
+    return Boolean(firstEnv(env, [cfg.keyEnv, ...(cfg.keyEnvAliases ?? [])]));
+  });
+}
+
+/**
  * Single /chat/completions call with optional tools.
  * Returns the raw assistant message object: { role, content, tool_calls? }.
  */

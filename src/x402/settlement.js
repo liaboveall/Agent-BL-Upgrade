@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createFacilitatorRequest } from '@injectivelabs/x402/protocol';
 import { SettleResponseSchema, VerifyResponseSchema } from '@injectivelabs/x402/schemas';
+import { createWriteQueue, writeFileAtomic } from '../lib/jsonStore.js';
 import { x402Network, x402PayTo, x402RpcUrl, x402Usdc } from './config.js';
 import chainConfig from '../../scripts/lib/chain-config.cjs';
 import { resolveSignerKey, signerKeyRequirement } from '../chain/signerKeys.js';
@@ -79,7 +80,7 @@ export class JsonReceiptStore {
     this.filePath = options.filePath === null ? null : options.filePath;
     this.records = new Map();
     this.initialized = false;
-    this.writeQueue = Promise.resolve();
+    this.enqueueWrite = createWriteQueue();
   }
 
   async init() {
@@ -107,13 +108,7 @@ export class JsonReceiptStore {
     if (!this.filePath) return;
     const target = this.filePath;
     const body = `${JSON.stringify({ version: 1, records: [...this.records.values()] }, null, 2)}\n`;
-    this.writeQueue = this.writeQueue.then(async () => {
-      await fs.mkdir(path.dirname(target), { recursive: true });
-      const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
-      await fs.writeFile(temporary, body, 'utf8');
-      await fs.rename(temporary, target);
-    });
-    await this.writeQueue;
+    await this.enqueueWrite(() => writeFileAtomic(target, body));
   }
 
   async get(paymentId) {

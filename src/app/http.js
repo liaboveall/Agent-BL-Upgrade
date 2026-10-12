@@ -107,6 +107,11 @@ export function describeError(error) {
   if (error instanceof URIError) {
     return { status: 400, code: 'malformed_url', message: 'Malformed percent-encoding in request URL' };
   }
+  // Agent-runtime errors (invalid event, approval state conflicts, mode rules, ...) are the caller's
+  // to see: they carry their own 4xx status and a message written for an operator.
+  if (error?.expose === true && Number.isInteger(error.status) && error.status < 500) {
+    return { status: error.status, code: error.code, message: error.message, details: error.issues };
+  }
   if (error?.code === 'paid_report_invalid') {
     return { status: 400, code: error.code, message: error.message, details: error.errors };
   }

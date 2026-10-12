@@ -9,7 +9,8 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { calculateRisk } from '../core/riskEngine.js';
 import { quoteFromCase } from '../core/pricingEngine.js';
-import { normalizeHash32, normalizePricingQuoteHashes, PAYOUT_SPEEDS, assertPricingQuote } from '../core/pricingSchema.js';
+import { normalizePricingQuoteHashes, PAYOUT_SPEEDS, assertPricingQuote } from '../core/pricingSchema.js';
+import { toChainPricingArgs } from '../core/oracle.js';
 import { simulateWorkflow } from '../core/workflow.js';
 import { assertTradeCase } from '../core/schema.js';
 import { listHarnessCaseFiles } from '../core/scenarioRunner.js';
@@ -303,25 +304,11 @@ export async function handlePushPricingToOracle({
     approved,
     approval_token
   });
-  const riskLevels = { LOW: 0, MEDIUM: 1, WARNING: 2, CRITICAL: 3 };
-  const actions = {
-    OPEN_OFFERING: 0,
-    OPEN_WITH_WARNING: 1,
-    REPRICE_DOWN: 2,
-    PAUSE_OFFERING: 3,
-    FREEZE_POOL: 4,
-    TRIGGER_LIQUIDATION: 5
-  };
   const txPayload = {
     oracle_id: 'AgentBL-RiskPricingOracle-v1',
     oracle_address: oracleAddress,
-    pool_id: Number(pool_id),
     case_id,
-    issue_price_e6: Math.round(Number(pricing_quote.final_issue_price_usd) * 1_000_000),
-    risk_level: riskLevels[pricing_quote.risk_level] ?? 1,
-    pricing_action: actions[pricing_quote.pricing_action] ?? 1,
-    evidence_hash: normalizeHash32(pricing_quote.evidence_hash, 'pricing_quote.evidence_hash'),
-    quote_hash: normalizeHash32(pricing_quote.quote_hash, 'pricing_quote.quote_hash')
+    ...toChainPricingArgs(pricing_quote, { pool_id })
   };
 
   if (policy.dry_run) {

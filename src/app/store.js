@@ -4,6 +4,7 @@ import { HttpError } from './http.js';
 
 // In-memory data store for the AgentBL backend.
 // Satisfies hackathon requirements for mock persistence without an external DB.
+// Everything recorded here is a Demo simulation: no subscription touches a contract.
 
 export const storeState = {
   pools: new Map(),
@@ -59,12 +60,19 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
     pool.status = 'Funded';
   }
 
-  const txHash = '0x' + crypto.randomBytes(32).toString('hex');
+  // A mock subscription has no transaction. The reference is a deterministic, clearly
+  // non-chain identifier (never a 0x… string that could be mistaken for a tx hash).
+  const reference = `demo:sub:${crypto.createHash('sha256')
+    .update([walletAddress, poolId, amountUsd, storeState.investments.length].join('|'))
+    .digest('hex').slice(0, 16)}`;
   const tokenCount = amountUsd / (pool.quote.final_issue_price_usd || 1);
   const normalizedWalletAddress = String(walletAddress ?? '').toLowerCase();
 
   const investment = {
-    txHash,
+    reference,
+    mode: 'demo',
+    // Deprecated: kept (always null) for callers that still read it. Nothing was sent on-chain.
+    txHash: null,
     walletAddress: normalizedWalletAddress,
     poolId,
     amountUsd,
@@ -78,5 +86,5 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
   };
 
   storeState.investments.push(investment);
-  return { txHash, investment, poolStatus: pool.status };
+  return { reference, mode: 'demo', txHash: null, investment, poolStatus: pool.status };
 }
