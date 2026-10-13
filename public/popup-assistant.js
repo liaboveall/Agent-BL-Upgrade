@@ -2,7 +2,7 @@
 // The browser renders results and opens asset panels; messages never execute a transaction.
 import { el, clear } from './dom.js';
 import { state } from './store.js';
-import { t, onLangChange } from './i18n.js';
+import { t, tData, tTradeText, onLangChange } from './i18n.js';
 import { copilotQuery, resetCopilotSession } from './copilot/api.js';
 import { renderRecommendations, poolStateLabel } from './copilot/ui.js';
 
@@ -17,12 +17,12 @@ async function serverJson(path) {
 export const toolExecutors = {
   async getAgentActivity({ limit = 10 } = {}) {
     const result = await serverJson(`/api/agent/activity?limit=${Math.min(50, Math.max(1, Number(limit) || 10))}`);
-    if (!result.activities.length) return '暂无决策记录。';
+    if (!result.activities.length) return t('cp_activity_empty');
     return result.activities.map((item) => `${item.action}${item.tx_hash ? ` · ${item.tx_hash}` : ''}`).join('\n');
   },
   async getPortfolio() {
     const result = await serverJson(`/api/investors/portfolio?wallet_address=${encodeURIComponent(state.wallet?.address || '0xDemoWallet')}`);
-    return result.investments.map((item) => `${item.label} · Demo 模拟 · ${item.riskLevel === 'WARNING' ? '🟠' : ''}${item.riskLevel} · ${item.reference}`).join('\n') || t('portfolio_empty');
+    return result.investments.map((item) => `${tData(item.label)} · ${t('cp_tool_demo')} · ${item.riskLevel === 'WARNING' ? '🟠' : ''}${item.riskLevel} · ${item.reference}`).join('\n') || t('portfolio_empty');
   },
   async recommendEBL({ preference }) { return (await copilotQuery(preference)).narrative; },
   async compareEBLs({ case_ids = [] }) { return (await copilotQuery('compare', { pool_ids: case_ids })).narrative; }
@@ -37,16 +37,18 @@ export function initPopupAssistant() {
   const title = el('strong', { id: 'copilot-title' });
   const input = el('input', { type: 'text', maxlength: 2000, autocomplete: 'off' });
   const send = el('button', { type: 'submit', class: 'btn' });
-  const close = el('button', { type: 'button', class: 'ghost', onclick: () => { dialog.hidden = true; launcher.setAttribute('aria-expanded', 'false'); launcher.focus(); } });
+  const closeDialog = () => dialog.close();
+  const close = el('button', { type: 'button', class: 'ghost', onclick: closeDialog });
   const reset = el('button', { type: 'button', class: 'ghost', onclick: () => submit(t('cp_reset_message')) });
   const welcome = el('p', { class: 'muted' });
   transcript.append(welcome);
   const form = el('form', { onsubmit: (event) => { event.preventDefault(); submit(input.value); } }, input, send);
-  const dialog = el('section', { id: 'copilot-dialog', class: 'cp-dialog', role: 'dialog', 'aria-labelledby': 'copilot-title', hidden: true },
+  const dialog = el('dialog', { id: 'copilot-dialog', class: 'cp-dialog', 'aria-labelledby': 'copilot-title' },
     el('header', {}, title, reset, close), transcript, form);
   let busy = false, generation = 0;
   const entries = [];
   const openAsset = (case_id) => {
+    closeDialog();
     window.dispatchEvent(new CustomEvent('agentbl:selectcase', { detail: { case_id } }));
   };
   function localize() {
@@ -71,12 +73,12 @@ export function initPopupAssistant() {
         narrative.textContent = t('cp_explaining');
       } });
       if (requestGeneration !== generation) return;
-      narrative.textContent = result.narrative; entry.result = result;
+      narrative.textContent = tTradeText(result.narrative); entry.result = result;
       renderRecommendations(cards, result, { onSelect: openAsset });
       if (result.intent === 'PORTFOLIO') {
         const portfolio = await serverJson(`/api/investors/portfolio?wallet_address=${encodeURIComponent(state.wallet?.address || '0xDemoWallet')}`);
         if (requestGeneration !== generation) return;
-        for (const item of portfolio.investments) cards.append(el('p', {}, `${item.label} · $${item.amountUsd.toLocaleString()} · ${t(`cp_source_${item.source_label}`)} · ${poolStateLabel(item.current_status)}`));
+        for (const item of portfolio.investments) cards.append(el('p', {}, `${tData(item.label)} · $${item.amountUsd.toLocaleString()} · ${t(`cp_source_${item.source_label}`)} · ${poolStateLabel(item.current_status)}`));
         if (!portfolio.investments.length) cards.append(el('p', {}, t('portfolio_empty')));
       }
     } catch (error) {
@@ -86,15 +88,15 @@ export function initPopupAssistant() {
     } finally {
       if (requestGeneration === generation) {
         busy = false; send.disabled = false; reset.disabled = false; localize();
-        transcript.scrollTop = transcript.scrollHeight; input.focus();
+        transcript.scrollTop = transcript.scrollHeight;
+        if (dialog.open && (document.activeElement === input || document.activeElement === send)) input.focus();
       }
     }
   }
   launcher.addEventListener('click', () => {
-    dialog.hidden = !dialog.hidden; launcher.setAttribute('aria-expanded', String(!dialog.hidden));
-    if (!dialog.hidden) input.focus();
+    dialog.showModal(); launcher.setAttribute('aria-expanded', 'true'); input.focus();
   });
-  dialog.addEventListener('keydown', (event) => { if (event.key === 'Escape') close.click(); });
+  dialog.addEventListener('close', () => { launcher.setAttribute('aria-expanded', 'false'); launcher.focus({ preventScroll: true }); });
   window.addEventListener('agentbl:runtimechange', () => {
     generation += 1; resetCopilotSession(); busy = false; send.disabled = false; reset.disabled = false;
     entries.length = 0; clear(transcript); transcript.append(welcome); localize();

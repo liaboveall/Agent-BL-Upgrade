@@ -6,8 +6,12 @@
     <title>AgentBL · eBL-backed RWA Investment Marketplace</title>
     <link rel="stylesheet" href="/styles.css?v=5" />
     <link rel="stylesheet" href="/light-theme.css" />
+    <link rel="stylesheet" href="/copilot/styles.css" />
+    <link rel="stylesheet" href="/accessibility.css" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
+    <a class="skip-link" href="#main-content" data-i18n="a11y_skip">跳到主要内容</a>
     <!-- Ambient glowing backgrounds for glassmorphism -->
     <div class="ambient-glow glow-1"></div>
     <div class="ambient-glow glow-2"></div>
@@ -24,23 +28,23 @@
           </div>
         </div>
 
-        <nav id="nav" class="nav" role="tablist" aria-label="views">
-          <button class="nav-tab active" data-view="market" role="tab" data-i18n="nav_market">投资市场</button>
-          <button class="nav-tab" data-view="mint" role="tab" data-i18n="nav_mint">提单上链 · 铸造 RWA</button>
-          <button class="nav-tab" data-view="agent" role="tab" data-i18n="nav_agent">Agent 控制台</button>
+        <nav id="nav" class="nav" role="tablist" data-i18n-aria="a11y_views">
+          <button id="tab-market" class="nav-tab active" data-view="market" role="tab" aria-selected="true" aria-controls="view-market" data-i18n="nav_market">投资市场</button>
+          <button id="tab-mint" class="nav-tab" data-view="mint" role="tab" aria-selected="false" aria-controls="view-mint" tabindex="-1" data-i18n="nav_mint">提单上链 · 铸造 RWA</button>
+          <button id="tab-agent" class="nav-tab" data-view="agent" role="tab" aria-selected="false" aria-controls="view-agent" tabindex="-1" data-i18n="nav_agent">Agent 控制台</button>
         </nav>
 
         <div class="topbar-right">
           <button id="lang-btn" class="btn ghost lang-btn" data-i18n-title="lang_btn_title">EN</button>
-          <select id="network-select" class="network-select" aria-label="Protocol network"></select>
+          <select id="network-select" class="network-select" data-i18n-aria="a11y_network"></select>
           <div class="wallet-wrap">
             <button id="wallet-btn" class="btn ghost wallet-btn" data-i18n="wallet_connect" data-i18n-title="wallet_title" aria-haspopup="menu" aria-expanded="false">Connect Wallet</button>
-            <div id="wallet-menu" class="wallet-menu" role="menu" hidden>
+            <div id="wallet-menu" class="wallet-menu" role="menu" data-i18n-aria="wallet_choose" hidden>
               <div id="wallet-picker" class="wallet-picker">
                 <span class="wallet-menu-label" data-i18n="wallet_choose">选择钱包</span>
-                <button class="wallet-choice" data-wallet="metamask" type="button"><span>🦊</span><strong>MetaMask</strong><small data-i18n="wallet_evm">EVM 合约钱包</small></button>
-                <button class="wallet-choice" data-wallet="keplr" type="button"><span>🔭</span><strong>Keplr</strong><small data-i18n="wallet_native">Injective 原生钱包</small></button>
-                <button class="wallet-choice" data-wallet="leap" type="button"><span>🟢</span><strong>Leap</strong><small data-i18n="wallet_native">Injective 原生钱包</small></button>
+                <button class="wallet-choice" data-wallet="metamask" type="button" role="menuitem"><span>🦊</span><strong>MetaMask</strong><small data-i18n="wallet_evm">EVM 合约钱包</small></button>
+                <button class="wallet-choice" data-wallet="keplr" type="button" role="menuitem"><span>🔭</span><strong>Keplr</strong><small data-i18n="wallet_native">Injective 原生钱包</small></button>
+                <button class="wallet-choice" data-wallet="leap" type="button" role="menuitem"><span>🟢</span><strong>Leap</strong><small data-i18n="wallet_native">Injective 原生钱包</small></button>
               </div>
               <div id="wallet-account" hidden>
                 <div class="wallet-menu-addr">
@@ -75,7 +79,7 @@
     <!-- ============ Shared sub-bar: category filter · trade-case / eBL selector · search (both views) ============ -->
     <div class="subbar">
       <div class="subbar-inner">
-        <label class="control-label" data-i18n="case_label">Selected case / eBL</label>
+        <label class="control-label" for="case-dropdown" data-i18n="case_label">Selected case / eBL</label>
         <div id="case-select" class="case-picker" data-i18n-title="case_select_aria"></div>
         <div class="subbar-right">
           <div class="category-filter" id="category-filter">
@@ -86,7 +90,7 @@
           </div>
           <div class="search-box" id="search-box">
             <span class="search-icon">🔍</span>
-            <input id="search-input" data-i18n-ph="search_ph" placeholder="Search eBLs or describe your preference…" />
+            <input id="search-input" data-i18n-ph="search_ph" data-i18n-aria="search_ph" placeholder="Search eBLs or describe your preference…" />
             <button id="ai-search-btn" class="btn ai-btn" data-i18n="ai_parse" data-i18n-title="ai_search_title" title="AI parses natural-language preferences">AI 筛选</button>
           </div>
         </div>
@@ -94,11 +98,11 @@
       </div>
     </div>
 
-    <main class="page">
+    <main class="page" id="main-content" tabindex="-1">
       <!-- =================================================================== -->
       <!-- VIEW ⓪ — Investor marketplace: choose an eBL-backed RWA project      -->
       <!-- =================================================================== -->
-      <section class="view" id="view-market">
+      <section class="view" id="view-market" role="tabpanel" aria-labelledby="tab-market">
         <section class="market-hero" aria-labelledby="market-title">
           <div class="market-hero-copy">
             <p class="eyebrow" data-i18n="market_eyebrow">Investment marketplace</p>
@@ -174,9 +178,9 @@
         <section id="copilot-search-results" class="cp-search-results" aria-live="polite" aria-label="Copilot"></section>
 
         <section class="market-shell">
-          <aside class="market-rail" aria-label="Marketplace controls">
+          <aside class="market-rail" data-i18n-aria="a11y_market_controls">
             <div class="market-rail-head">
-              <span class="metric-label" data-i18n="market_sort_label">Sort deals</span>
+              <label class="metric-label" for="market-sort" data-i18n="market_sort_label">Sort deals</label>
               <select id="market-sort" class="market-sort">
                 <option value="recommended" data-i18n="market_sort_recommended">Recommended</option>
                 <option value="yield_desc" data-i18n="market_sort_yield">Highest upside</option>
@@ -199,7 +203,7 @@
             </div>
           </aside>
 
-          <section class="market-board" aria-label="Investment projects">
+          <section class="market-board" data-i18n-aria="market_board_h">
             <div class="market-board-head">
               <div>
                 <span class="metric-label" data-i18n="market_board_label">eBL deal stickers</span>
@@ -210,14 +214,14 @@
             <div id="market-grid" class="market-grid" aria-live="polite"></div>
           </section>
 
-          <aside id="market-detail" class="market-detail" aria-label="Selected project"></aside>
+          <aside id="market-detail" class="market-detail" data-i18n-aria="a11y_selected_project"></aside>
         </section>
       </section>
 
       <!-- =================================================================== -->
       <!-- VIEW ① — Tokenize: Bill of Lading -> Smart Contract -> RWA mint      -->
       <!-- =================================================================== -->
-      <section class="view" id="view-mint" hidden>
+      <section class="view" id="view-mint" role="tabpanel" aria-labelledby="tab-mint" hidden>
         <section class="hero">
           <div class="hero-copy">
             <p class="eyebrow" data-i18n="hero_eyebrow">Tokenize eBL · discounted RWA issuance</p>
@@ -276,13 +280,13 @@
 
           <div class="control-group speed-group">
             <label class="control-label" data-i18n="payout_speed_label">Exporter payout speed</label>
-            <div id="speed-select" class="segmented speed" role="tablist" aria-label="Payout speed"></div>
+            <div id="speed-select" class="segmented speed" role="radiogroup" data-i18n-aria="payout_speed_label"></div>
           </div>
           <div id="speed-cards" class="speed-cards"></div>
 
           <div class="mint-grid">
             <!-- FE-11: eBL Management & Upload -->
-            <div class="card ebl-management" style="grid-column: span 2;">
+            <div class="card ebl-management">
               <h3 class="card-head-line" data-i18n="ebl_upload_h">eBL 单据管理</h3>
               <div class="ebl-upload-zone premium-upload-zone" id="ebl-upload-zone">
                 <div class="upload-icon-wrap">
@@ -300,11 +304,11 @@
               <label class="control-label" data-i18n="exporter_preferences">出口商偏好（自主 Agent 约束）</label>
               <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
                 <div class="mint-input-row">
-                  <span class="muted" style="width: 140px;" data-i18n="pref_min_price">最低发行价 (USD)</span>
+                  <label class="muted" for="pref-min-price" style="width: 140px;" data-i18n="pref_min_price">最低发行价 (USD)</label>
                   <input id="pref-min-price" type="number" step="0.01" min="0" max="1" value="0.75" />
                 </div>
                 <div class="mint-input-row">
-                  <span class="muted" style="width: 140px;" data-i18n="pref_speed">到账速度偏好</span>
+                  <label class="muted" for="pref-speed" style="width: 140px;" data-i18n="pref_speed">到账速度偏好</label>
                   <select id="pref-speed" style="flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-main);">
                     <option value="" data-i18n="pref_ai_recommended">AI 推荐</option>
                     <option value="FAST" data-i18n="speed_FAST_label">快速</option>
@@ -347,7 +351,7 @@
       </section>
 
       <!-- VIEW — Agent console: runtime status, decisions, approvals (FE-13) -->
-      <section class="view" id="view-agent" hidden>
+      <section class="view" id="view-agent" role="tabpanel" aria-labelledby="tab-agent" hidden>
         <div class="agent-console">
           <header class="panel-head">
             <h2 data-i18n="ac_title">Agent 控制台</h2>
@@ -360,17 +364,18 @@
           <article class="ac-card" id="ac-approvals"></article>
           <article class="ac-card" id="ac-injector" hidden></article>
           <article class="ac-card" id="ac-timeline"></article>
+          <p id="ac-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
         </div>
-        <aside class="ac-drawer" id="ac-drawer" hidden aria-label="Decision detail">
+        <dialog class="ac-drawer" id="ac-drawer" data-i18n-aria="a11y_decision_detail">
           <button class="ac-drawer-close btn ghost sm" type="button" data-i18n="ac_close" data-i18n-title="ac_close">关闭</button>
           <div class="ac-drawer-body"></div>
-        </aside>
+        </dialog>
       </section>
 
       <!-- =================================================================== -->
       <!-- Deal Detail Modal (Voyage tracking & x402 AI Risk)                  -->
       <!-- =================================================================== -->
-      <dialog id="deal-detail-modal" class="deal-modal">
+      <dialog id="deal-detail-modal" class="deal-modal" aria-labelledby="modal-title">
         <form method="dialog" class="modal-close-bar">
           <div class="modal-header">
             <h2 id="modal-title" data-i18n="modal_title">项目详情</h2>
@@ -395,10 +400,10 @@
             <div class="voyage-rail" id="voyage-rail">
               <div class="rail-line"></div>
               <div class="rail-progress" id="rail-progress"></div>
-              <div class="ship" id="ship" tabindex="0">
+              <div class="ship" id="ship" tabindex="0" role="img" aria-labelledby="ship-tooltip">
                 <span class="ship-icon">🚢</span>
-                <div class="ship-tooltip" id="ship-tooltip">—</div>
               </div>
+              <div class="ship-tooltip" id="ship-tooltip">—</div>
             </div>
             <div class="port port-arr">
               <span class="port-tag" data-i18n="vp_arr">ETA</span>
@@ -408,7 +413,7 @@
           </div>
           <div class="voyage-controls">
             <button id="voyage-play" class="btn ghost sm" data-i18n="pause_label">Pause</button>
-            <input id="voyage-scrub" class="scrubber" type="range" min="0" max="1000" value="0" />
+            <input id="voyage-scrub" class="scrubber" type="range" min="0" max="1000" value="0" data-i18n-aria="a11y_voyage_progress" />
             <span id="voyage-eta-note" class="muted"></span>
           </div>
         </section>
@@ -473,7 +478,7 @@
           <div class="card">
             <div id="risk-feed" class="risk-feed"><p class="muted" data-i18n="feed_loading">Loading…</p></div>
             <div class="search-bar">
-              <input id="rag-query" data-i18n-ph="rag_ph" placeholder="Search intel…" />
+              <input id="rag-query" data-i18n-ph="rag_ph" data-i18n-aria="rag_ph" placeholder="Search intel…" />
               <button id="rag-search-btn" class="btn" data-i18n="rag_btn">Search</button>
             </div>
             <div id="rag-results" class="rag-results"></div>
@@ -497,7 +502,7 @@
         </section>
 
         <section class="market-shell">
-          <aside class="market-rail" aria-label="x402 report catalog">
+          <aside class="market-rail" data-i18n-aria="x402_catalog_heading">
             <div class="market-rail-head">
               <span class="metric-label" data-i18n="x402_services_heading">可用报告</span>
               <h2 data-i18n="x402_catalog_heading">AI 风控报告目录</h2>
@@ -507,7 +512,7 @@
             </div>
           </aside>
 
-          <section class="market-board" aria-label="x402 payment flow">
+          <section class="market-board" data-i18n-aria="x402_flow_heading">
             <div class="market-board-head">
               <div>
                 <span class="metric-label" data-i18n="x402_flow_heading">Live payment flow</span>
@@ -645,7 +650,7 @@
         </form>
 
         <div class="mystery-modal-body">
-          <div id="mystery-stepper" class="x402-flow mystery-stepper" aria-label="Mystery Voyage settlement progress">
+          <div id="mystery-stepper" class="x402-flow mystery-stepper" data-i18n-aria="a11y_mystery_progress">
             <div class="x402-step" id="mystery-step-commit"><div class="x402-step-num">1</div><div class="x402-step-body"><strong data-i18n="mystery_step_commit">Commit</strong><p class="muted" data-i18n="mystery_step_commit_desc">Freeze eligible routes</p></div><span class="x402-step-status">—</span></div>
             <div class="x402-step-arrow" aria-hidden="true">→</div>
             <div class="x402-step" id="mystery-step-challenge"><div class="x402-step-num">2</div><div class="x402-step-body"><strong data-i18n="mystery_step_402">402</strong><p class="muted" data-i18n="mystery_step_402_desc">Price challenge</p></div><span class="x402-step-status">—</span></div>
@@ -740,7 +745,7 @@
               <div><span class="metric-label" data-i18n="mystery_local_verifier">Browser-local proof verifier</span><h3 data-i18n="mystery_verifier_title">Commit-reveal proof</h3></div>
               <span id="mystery-proof-status" class="mystery-proof-status">—</span>
             </div>
-            <textarea id="mystery-proof-json" spellcheck="false" aria-label="Mystery Voyage reveal proof JSON"></textarea>
+            <textarea id="mystery-proof-json" spellcheck="false" data-i18n-aria="mystery_verifier_title"></textarea>
             <div class="mystery-proof-actions"><button id="mystery-proof-reset" class="btn ghost sm" type="button" data-i18n="mystery_reset_proof">Reset proof</button></div>
             <div id="mystery-proof-summary" class="mystery-proof-summary" aria-live="polite"></div>
           </section>
@@ -808,30 +813,27 @@
       </footer>
       <!-- FE-13: Agent Activity View -->
       <!-- FE-13: Agent Activity View -->
-      <section class="agent-activity-console" id="agent-activity-console">
-        <div class="aac-header">
+      <details class="agent-activity-console" id="agent-activity-console">
+        <summary class="aac-header">
           <div class="aac-title">
             <div class="live-dot"></div>
             <span data-i18n="agent_terminal_h">[ 系统 ] 自主 Agent 终端</span>
           </div>
-          <button id="toggle-activity-console" class="aac-toggle-btn">
+          <span class="aac-toggle-btn" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-          </button>
-        </div>
+          </span>
+        </summary>
         <div class="aac-body">
-          <div class="aac-col" id="agent-logs-container">
+          <div class="aac-col" id="agent-logs-container" role="log" aria-live="polite" data-i18n-aria="agent_terminal_h">
             <div class="log-entry system-msg" data-i18n="agent_terminal_ready">&gt; 暂无 Agent 活动。服务器记录到真实活动（定价、认购、上传等）后会显示在这里。</div>
           </div>
           <div class="aac-col timeline-col" id="agent-timeline"></div>
         </div>
-      </section>
+      </details>
       
     </main>
 
-    <div id="toast" class="toast" hidden></div>
-    <link rel="stylesheet" href="/custom-select.css">
-    <link rel="stylesheet" href="/copilot/styles.css" />
-    <script src="/custom-select.js"></script>
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
     <script type="module" src="/app.js"></script>
   </body>
 </html>

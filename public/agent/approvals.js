@@ -32,13 +32,14 @@ export function approvalControls(approval, decision, onChanged) {
     wrap.append(
       el('div', { class: 'ac-actions' },
         el('button', {
-          class: 'btn', type: 'button',
+          class: 'btn', type: 'button', 'data-focus-key': `approve:${approval.approval_id}`,
           onclick: () => guarded(() => agent.approve(approval.approval_id), onChanged, 'ac_approved_toast')
         }, t('ac_approve')),
         el('button', {
-          class: 'btn ghost', type: 'button',
+          class: 'btn ghost', type: 'button', 'data-focus-key': `reject:${approval.approval_id}`,
           onclick: () => {
-            const note = window.prompt(t('ac_reject_reason')) ?? '';
+            const note = window.prompt(t('ac_reject_reason'));
+            if (note === null) return;
             return guarded(() => agent.reject(approval.approval_id, note.trim() || undefined), onChanged, 'ac_rejected_toast');
           }
         }, t('ac_reject'))),
@@ -86,7 +87,7 @@ export function approvalCard(decision, { protectedPools, onChanged, onOpen }) {
       : null,
     reasons.length ? el('ul', { class: 'ac-list' }, reasons.map((reason) => el('li', {}, reason))) : null,
     approvalControls({ approval_id: approval.approval_id, status: decision.status === 'AWAITING_OWNER_SIGNATURE' ? 'AWAITING_OWNER_SIGNATURE' : 'PENDING', route: approval.route }, decision, onChanged),
-    el('button', { class: 'ac-link', type: 'button', onclick: () => onOpen(decision.decision_id) }, t('ac_details')));
+    el('button', { class: 'ac-link', type: 'button', 'data-focus-key': `details:${decision.decision_id}`, onclick: () => onOpen(decision.decision_id) }, t('ac_details')));
   return card;
 }
 

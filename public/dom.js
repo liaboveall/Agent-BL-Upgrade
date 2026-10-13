@@ -50,6 +50,9 @@ let toastTimer;
 export function toast(msg, isError = false) {
   const t = $('#toast');
   if (!t) return;
+  const dialog = document.activeElement?.closest('dialog[open]') ?? [...document.querySelectorAll('dialog[open]')].at(-1);
+  const host = dialog ?? document.body;
+  if (t.parentElement !== host) host.append(t);
   t.textContent = msg;
   t.className = `toast show${isError ? ' error' : ''}`;
   t.hidden = false;

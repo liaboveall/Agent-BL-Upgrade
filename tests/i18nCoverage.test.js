@@ -2,28 +2,27 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import test from 'node:test';
 
-import { hasTranslation, setLang, t, tData } from '../public/i18n.js';
+import { applyStaticI18n, hasTranslation, setLang, t, tData, tTradeText } from '../public/i18n.js';
 
 const html = await fs.readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
-const mystery = await fs.readFile(new URL('../public/mystery.js', import.meta.url), 'utf8');
-const agentDir = new URL('../public/agent/', import.meta.url);
-const agentFiles = await Promise.all(
-  (await fs.readdir(agentDir)).filter((name) => name.endsWith('.js')).map((name) => fs.readFile(new URL(name, agentDir), 'utf8'))
-);
-const copilotFiles = await Promise.all(
-  (await fs.readdir(new URL('../public/copilot/', import.meta.url))).filter((name) => name.endsWith('.js'))
-    .map((name) => fs.readFile(new URL(`../public/copilot/${name}`, import.meta.url), 'utf8'))
-);
-copilotFiles.push(await fs.readFile(new URL('../public/popup-assistant.js', import.meta.url), 'utf8'));
+// Scan the whole application surface, including voyage, wallet and shared helpers.
+async function frontendSources(directory) {
+  const sources = [];
+  for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+    if (entry.name === 'vendor' || entry.name === 'i18n.js') continue;
+    const path = new URL(entry.name + (entry.isDirectory() ? '/' : ''), directory);
+    if (entry.isDirectory()) sources.push(...await frontendSources(path));
+    else if (entry.name.endsWith('.js')) sources.push(await fs.readFile(path, 'utf8'));
+  }
+  return sources;
+}
+const sources = await frontendSources(new URL('../public/', import.meta.url));
 
 function referencedTranslationKeys() {
   const keys = new Set();
-  for (const match of html.matchAll(/data-i18n(?:-html|-ph|-title)?="([^"]+)"/gu)) keys.add(match[1]);
-  for (const match of app.matchAll(/\bt\('([^']+)'(?=\s*(?:,|\)))/gu)) keys.add(match[1]);
-  for (const match of mystery.matchAll(/\bt\('([^']+)'(?=\s*(?:,|\)))/gu)) keys.add(match[1]);
+  for (const match of html.matchAll(/data-i18n(?:-html|-ph|-title|-aria)?="([^"]+)"/gu)) keys.add(match[1]);
   // Agent console modules: t('key') calls, plus every quoted ac_* key (toast and label keys are passed as strings).
-  for (const source of [...agentFiles, ...copilotFiles]) {
+  for (const source of sources) {
     for (const match of source.matchAll(/\bt\('([^']+)'(?=\s*(?:,|\)))/gu)) keys.add(match[1]);
     for (const match of source.matchAll(/'(ac_[a-z_]+)'/gu)) keys.add(match[1]);
     for (const match of source.matchAll(/'((?:cp|ebld)_[a-z_]+)'/gu)) if (!match[1].endsWith('_')) keys.add(match[1]);
@@ -41,6 +40,7 @@ function referencedTranslationKeys() {
   for (const key of ['bl_id', 'bl_no', 'invoice_no', 'cargo', 'quantity_mt', 'declared_value_usd', 'total_amount_usd', 'unit_price_usd_per_mt', 'currency', 'vessel', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'eta', 'issue_date', 'coverage_ratio', 'insured_value_usd', 'expires_at']) keys.add(`ebld_field_${key}`);
   for (const status of ['DECIDED', 'EXECUTING', 'COMPLETED', 'FAILED', 'SKIPPED', 'REJECTED', 'PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE']) keys.add(`ac_status_${status}`);
   for (const verdict of ['AUTO', 'NEEDS_APPROVAL', 'OBSERVE_ONLY', 'REJECTED']) keys.add(`ac_verdict_${verdict}`);
+  for (const level of ['off', 'observe', 'propose', 'auto']) keys.add(`ac_autonomy_${level}`);
   return [...keys].sort();
 }
 
@@ -51,6 +51,22 @@ test('frontend translation keys have both Chinese and English copy', () => {
     if (!hasTranslation(key, 'en')) missing.push(`en:${key}`);
   }
   assert.deepEqual(missing, []);
+});
+
+test('accessible labels and the document language follow the language switch', () => {
+  const savedDocument = globalThis.document;
+  const attributes = new Map([['data-i18n-aria', 'a11y_network']]);
+  const label = { getAttribute: (key) => attributes.get(key), setAttribute: (key, value) => attributes.set(key, value) };
+  const root = { querySelectorAll: (selector) => selector === '[data-i18n-aria]' ? [label] : [] };
+  globalThis.document = { title: '', documentElement: { lang: '' } };
+  try {
+    setLang('en'); applyStaticI18n(root);
+    assert.equal(attributes.get('aria-label'), 'Protocol network');
+    assert.equal(globalThis.document.documentElement.lang, 'en');
+    setLang('zh'); applyStaticI18n(root);
+    assert.equal(attributes.get('aria-label'), '协议网络');
+    assert.equal(globalThis.document.documentElement.lang, 'zh-CN');
+  } finally { globalThis.document = savedDocument; }
 });
 
 test('Chinese UI keeps navigation and key investor information in Chinese', () => {
@@ -80,5 +96,9 @@ test('Chinese-native trade data is rendered in English in English mode', () => {
     'Designated Warehouse, Nanhai, Foshan (Inbound Receipt WH-FS-00008)'
   );
   assert.equal(tData('Non-GMO Soybeans (非转基因大豆), Bulk'), 'Non-GMO Soybeans, Bulk');
+  assert.equal(tData('domestic_aluminum_market/medium (中国 / 华南): +30bps'), 'domestic_aluminum_market/medium (China / South China): +30bps');
+  const source = '5. 铝锭 AL99.70（P1020 级别，国产重熔用铝锭） · 佛山南海指定仓库（入库单号 WH-FS-2026-05003）';
+  assert.doesNotMatch(tTradeText(source), /[\u3400-\u9fff]/u);
+  assert.match(tTradeText(source), /AL99\.70.*P1020.*WH-FS-2026-05003/u);
   setLang('zh');
 });

@@ -5,6 +5,7 @@
 
 import { clear, el, toast } from '../dom.js';
 import { t } from '../i18n.js';
+import { changedDecisions, preserveFocus } from '../accessibility.js';
 import { agent, safeExplorerUrl } from './api.js';
 import { approvalControls, renderApprovalsPanel } from './approvals.js';
 import { showDecisionDetail } from './decision-detail.js';
@@ -28,6 +29,10 @@ const view = {
   selectedCase: null,
   filters: { status: '', action: '' },
   openDecisionId: null,
+  drawerReturnFocus: null,
+  announced: null,
+  announcement: null,
+  renderSnapshot: null,
   wired: false,
   getCases: async () => []
 };
@@ -59,7 +64,7 @@ function statusCard(status) {
     el('header', { class: 'ac-panel-head' }, el('h3', {}, t('ac_status_h')), badge(status.running ? t('ac_running') : t('ac_stopped'), status.running ? 'tone-ok' : 'tone-muted')),
     el('div', { class: 'ac-kvlist' },
       kv(t('ac_mode'), el('span', {}, modeBadge(status.mode), ' ', badge(status.executor === 'chain' ? 'CHAIN' : 'SIM', status.executor === 'chain' ? 'tone-ok' : 'tone-muted', status.executor === 'chain' ? t('ac_exec_chain') : t('ac_exec_demo')))),
-      kv(t('ac_autonomy'), el('span', {}, autonomy.effective,
+      kv(t('ac_autonomy'), el('span', {}, t(`ac_autonomy_${autonomy.effective}`),
         autonomy.downgraded ? [' ', badge(t('ac_downgraded'), 'tone-warn', t('ac_downgraded_hint'))] : null)),
       kv(t('ac_monitor'), t('ac_monitor_value', { sec: status.scheduler.interval_sec })),
       kv(t('ac_last_tick'), status.scheduler.last_tick_at ? formatTime(status.scheduler.last_tick_at) : '—'),
@@ -86,15 +91,15 @@ function controlsCard(status) {
     await refresh();
   };
   const select = el('select', { id: 'ac-autonomy', class: 'ac-select', 'aria-label': t('ac_autonomy') },
-    ['off', 'observe', 'propose', 'auto'].map((level) => el('option', { value: level, selected: level === (status?.autonomy.effective ?? 'propose') }, level)));
+    ['off', 'observe', 'propose', 'auto'].map((level) => el('option', { value: level, selected: level === (status?.autonomy.effective ?? 'propose') }, t(`ac_autonomy_${level}`))));
   select.addEventListener('change', () => run({ action: 'set_autonomy', autonomy: select.value }, 'ac_autonomy_set'));
   root.append(
     el('header', { class: 'ac-panel-head' }, el('h3', {}, t('ac_controls_h'))),
     el('div', { class: 'ac-actions ac-wrap' },
-      el('button', { class: 'btn ghost', type: 'button', onclick: () => run({ action: status?.running ? 'stop' : 'start' }, status?.running ? 'ac_stopped_toast' : 'ac_started_toast') }, status?.running ? t('ac_stop') : t('ac_start')),
-      el('button', { class: 'btn ghost', type: 'button', onclick: () => run({ action: 'tick' }, 'ac_tick_toast') }, t('ac_tick')),
+      el('button', { class: 'btn ghost', type: 'button', 'data-focus-key': 'control:running', onclick: () => run({ action: status?.running ? 'stop' : 'start' }, status?.running ? 'ac_stopped_toast' : 'ac_started_toast') }, status?.running ? t('ac_stop') : t('ac_start')),
+      el('button', { class: 'btn ghost', type: 'button', 'data-focus-key': 'control:tick', onclick: () => run({ action: 'tick' }, 'ac_tick_toast') }, t('ac_tick')),
       el('button', {
-        class: `btn ${status?.emergency_stop ? '' : 'ghost'} ac-danger`, type: 'button',
+        class: `btn ${status?.emergency_stop ? '' : 'ghost'} ac-danger`, type: 'button', 'data-focus-key': 'control:emergency',
         onclick: () => run({ action: 'emergency_stop', stopped: !status?.emergency_stop }, status?.emergency_stop ? 'ac_emergency_lifted' : 'ac_emergency_set')
       }, status?.emergency_stop ? t('ac_emergency_lift') : t('ac_emergency_stop'))),
     el('label', { class: 'ac-field', for: 'ac-autonomy' }, el('span', {}, t('ac_autonomy')), select),
@@ -121,17 +126,18 @@ function txCell(decision) {
 }
 
 function timelineRow(decision) {
-  const row = el('button', {
-    class: `ac-row${decision.decision_id === view.openDecisionId ? ' is-open' : ''}`, type: 'button',
-    'aria-label': `${decision.action} ${decision.case_id}`,
-    onclick: () => openDrawer(decision.decision_id)
+  const row = el('div', {
+    class: `ac-row${decision.decision_id === view.openDecisionId ? ' is-open' : ''}`, role: 'listitem',
+    onclick: (event) => { if (!event.target.closest('button, a')) openDrawer(decision.decision_id); }
   },
   el('span', { class: 'ac-row-time' }, formatTime(decision.created_at)),
   el('span', { class: 'ac-row-trigger' },
     el('span', {}, triggerLabel(decision)),
     el('span', { class: 'muted ac-small' }, decision.case_id),
     el('span', { class: 'ac-row-badges' }, modeBadge(decision.mode), view.protectedCases.has(decision.case_id) ? badge(t('ac_protected'), 'tone-warn', t('ac_protected_hint')) : null)),
-  el('span', { class: 'ac-row-action' }, el('strong', {}, decision.action), decision.proposed_action && decision.proposed_action !== decision.action ? el('span', { class: 'muted ac-small' }, `(${decision.proposed_action})`) : null),
+  el('span', { class: 'ac-row-action' }, el('button', { type: 'button', class: 'ac-row-open', 'data-focus-key': `decision:${decision.decision_id}`,
+    'aria-label': t('ac_open_decision', { action: decision.action, case: decision.case_id }), onclick: () => openDrawer(decision.decision_id) }, el('strong', {}, decision.action)),
+  decision.proposed_action && decision.proposed_action !== decision.action ? el('span', { class: 'muted ac-small' }, `(${decision.proposed_action})`) : null),
   el('span', { class: 'ac-row-state' }, verdictBadge(decision.policy?.verdict), statusBadge(decision.status)),
   el('span', { class: 'ac-row-tx' }, txCell(decision)),
   el('span', { class: 'ac-row-id' }, el('code', {}, shortId(decision.decision_id, 11, 4)), copyButton(decision.decision_id)));
@@ -141,6 +147,10 @@ function timelineRow(decision) {
 function timelineCard() {
   const root = $('#ac-timeline');
   if (!root) return;
+  preserveFocus(root, () => renderTimelineCard(root));
+}
+
+function renderTimelineCard(root) {
   clear(root);
   const actions = [...new Set(view.decisions.map((decision) => decision.action))].sort();
   const statuses = [...new Set(view.decisions.map((decision) => decision.status))].sort();
@@ -148,9 +158,9 @@ function timelineCard() {
     && (!view.filters.action || decision.action === view.filters.action));
 
   const filterSelect = (key, options, label) => {
-    const select = el('select', { class: 'ac-select', 'aria-label': label },
+    const select = el('select', { class: 'ac-select', 'aria-label': label, 'data-focus-key': `filter:${key}` },
       el('option', { value: '' }, label),
-      options.map((value) => el('option', { value, selected: view.filters[key] === value }, value)));
+      options.map((value) => el('option', { value, selected: view.filters[key] === value }, key === 'status' ? t(`ac_status_${value}`) : value)));
     select.addEventListener('change', () => { view.filters[key] = select.value; timelineCard(); });
     return select;
   };
@@ -158,7 +168,7 @@ function timelineCard() {
     el('header', { class: 'ac-panel-head' },
       el('h3', {}, t('ac_timeline_h')),
       el('div', { class: 'ac-actions ac-wrap' }, filterSelect('status', statuses, t('ac_filter_status')), filterSelect('action', actions, t('ac_filter_action')))),
-    el('div', { class: 'ac-rows', role: 'log', 'aria-live': 'polite', 'aria-label': t('ac_timeline_h') },
+    el('div', { class: 'ac-rows', role: 'list', 'aria-label': t('ac_timeline_h') },
       filtered.length
         ? filtered.map(timelineRow)
         : el('p', { class: 'muted ac-empty' }, view.decisions.length ? t('ac_timeline_filtered_empty') : t('ac_timeline_empty'))));
@@ -171,23 +181,40 @@ function drawerElement() {
 }
 
 async function openDrawer(decisionId) {
-  view.openDecisionId = decisionId;
   const drawer = drawerElement();
   if (!drawer) return;
-  drawer.hidden = false;
-  const body = drawer.querySelector('.ac-drawer-body');
-  await showDecisionDetail(body, decisionId, {
-    approvalPanel: (approvals, decision) => el('div', {}, approvals.map((approval) => approvalControls(approval, decision, refresh)))
-  });
+  if (!drawer.open) {
+    const opener = document.activeElement;
+    view.drawerReturnFocus = { id: opener?.id, key: opener?.getAttribute('data-focus-key') };
+    drawer.showModal();
+  }
+  view.openDecisionId = decisionId;
   timelineCard();
-  drawer.querySelector('.ac-drawer-close')?.focus({ preventScroll: true });
+  await updateDrawer();
 }
 
 function closeDrawer() {
+  drawerElement()?.close();
+}
+
+function drawerClosed() {
+  const decisionId = view.openDecisionId;
   view.openDecisionId = null;
-  const drawer = drawerElement();
-  if (drawer) drawer.hidden = true;
   timelineCard();
+  const saved = view.drawerReturnFocus;
+  const target = [...$('#view-agent').querySelectorAll('[data-focus-key], [id]')].find((node) =>
+    saved?.key ? node.getAttribute('data-focus-key') === saved.key : saved?.id ? node.id === saved.id : node.getAttribute('data-focus-key') === `decision:${decisionId}`);
+  (target ?? $('#tab-agent'))?.focus({ preventScroll: true });
+  view.drawerReturnFocus = null;
+}
+
+async function updateDrawer() {
+  const id = view.openDecisionId, drawer = drawerElement();
+  if (!id || !drawer?.open) return;
+  await showDecisionDetail(drawer.querySelector('.ac-drawer-body'), id, {
+    isCurrent: () => drawer.open && view.openDecisionId === id,
+    approvalPanel: (approvals, decision) => el('div', {}, approvals.map((approval) => approvalControls(approval, decision, refresh)))
+  });
 }
 
 // ------------------------------------------------------------------ data + lifecycle
@@ -213,8 +240,13 @@ async function refresh() {
     view.status = status;
     view.decisions = decisions.decisions ?? [];
     view.protectedCases = new Set((pools.pools ?? []).filter((pool) => pool.protected).map((pool) => pool.case_id));
-    render();
-    if (view.openDecisionId && !drawerElement()?.hidden) await openDrawer(view.openDecisionId);
+    const changes = changedDecisions(view.announced, view.decisions);
+    view.announced = view.decisions;
+    if (changes.length) view.announcement = { count: changes.length, action: changes[0].action, status: changes[0].status, id: shortId(changes[0].decision_id, 11, 4) };
+    renderAnnouncement();
+    const snapshot = JSON.stringify([status, view.decisions, [...view.protectedCases]]);
+    if (snapshot !== view.renderSnapshot) { view.renderSnapshot = snapshot; render(); }
+    await updateDrawer();
   } catch (error) {
     const root = $('#ac-status');
     if (root && !view.status) { clear(root); root.append(el('p', { class: 'ac-error' }, error.message)); }
@@ -223,7 +255,17 @@ async function refresh() {
   }
 }
 
+function renderAnnouncement() {
+  const node = $('#ac-announcement'), latest = view.announcement;
+  const text = latest ? t('ac_timeline_update', { ...latest, status: t(`ac_status_${latest.status}`) }) : '';
+  if (node && node.textContent !== text) node.textContent = text;
+}
+
 function render() {
+  preserveFocus($('#view-agent'), renderPanels);
+}
+
+function renderPanels() {
   statusCard(view.status);
   controlsCard(view.status);
   const approvalsRoot = $('#ac-approvals');
@@ -247,6 +289,7 @@ function render() {
     }
   }
   timelineCard();
+  renderAnnouncement();
 }
 
 function scheduleRefresh() {
@@ -273,11 +316,12 @@ function closeStream() {
 
 export async function showAgentConsole() {
   view.active = true;
+  view.renderSnapshot = null;
   const drawer = drawerElement();
   if (drawer && !view.wired) {
     view.wired = true;
     drawer.querySelector('.ac-drawer-close')?.addEventListener('click', closeDrawer);
-    drawer.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDrawer(); });
+    drawer.addEventListener('close', drawerClosed);
   }
   statusCard(null);
   await loadCases();
@@ -288,6 +332,7 @@ export async function showAgentConsole() {
 }
 
 export function hideAgentConsole() {
+  if (drawerElement()?.open) closeDrawer();
   view.active = false;
   closeStream();
   clearInterval(view.pollTimer);
@@ -296,5 +341,5 @@ export function hideAgentConsole() {
 
 /** Re-render with the current data (language change). */
 export function rerenderAgentConsole() {
-  if (view.active) render();
+  if (view.active) { render(); updateDrawer(); }
 }

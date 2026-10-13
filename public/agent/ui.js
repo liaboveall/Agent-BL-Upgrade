@@ -52,7 +52,7 @@ export function formatDateTime(iso) {
 
 /** A small button that copies `value` and says so; falls back silently when the clipboard is unavailable. */
 export function copyButton(value, label = t('ac_copy')) {
-  const button = el('button', { class: 'ac-copy', type: 'button', title: label, 'aria-label': label }, '⧉');
+  const button = el('button', { class: 'ac-copy', type: 'button', title: label, 'aria-label': label, 'data-focus-key': `copy:${value}` }, '⧉');
   button.addEventListener('click', async (event) => {
     event.stopPropagation();
     try {

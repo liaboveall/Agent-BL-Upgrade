@@ -4,7 +4,8 @@
 // `demo:` reference and never gets an explorer link.
 
 import { clear, el } from '../dom.js';
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
+import { preserveFocus } from '../accessibility.js';
 import { agent, safeExplorerUrl } from './api.js';
 import { badge, copyButton, formatDateTime, kv, section, shortId, statusBadge, usd, verdictBadge } from './ui.js';
 
@@ -92,15 +93,23 @@ function renderEvidence(decision) {
  * @param {string} decisionId
  * @param {{approvalPanel: (approvals: object[], decision: object) => HTMLElement}} hooks
  */
-export async function showDecisionDetail(container, decisionId, { approvalPanel }) {
-  clear(container);
-  container.append(el('p', { class: 'muted' }, t('ac_loading')));
+export async function showDecisionDetail(container, decisionId, { approvalPanel, isCurrent = () => true }) {
+  const version = Number(container.dataset.requestVersion ?? 0) + 1;
+  container.dataset.requestVersion = String(version);
+  if (container.dataset.decisionId !== decisionId) {
+    clear(container);
+    container.append(el('p', { class: 'muted' }, t('ac_loading')));
+  }
   try {
     const [detail, traceResult] = await Promise.all([
       agent.decision(decisionId),
       agent.trace(decisionId).catch(() => ({ trace: null }))
     ]);
     const { decision, approvals, activity } = detail;
+    if (!isCurrent() || Number(container.dataset.requestVersion) !== version) return;
+    const snapshot = JSON.stringify([detail, traceResult, getLang()]);
+    if (container.dataset.detailSnapshot === snapshot) return;
+    preserveFocus(container, () => {
     clear(container);
     const proposal = decision.proposal ?? {};
     // append() would print a literal "null" for an absent section, so absent ones are filtered out.
@@ -127,7 +136,10 @@ export async function showDecisionDetail(container, decisionId, { approvalPanel 
         el('li', {}, el('code', {}, `#${record.seq}`), ` ${record.action} `, el('span', { class: 'muted' }, formatDateTime(record.timestamp))))))
     ].filter(Boolean));
     container.dataset.decisionId = decisionId;
+    container.dataset.detailSnapshot = snapshot;
+    });
   } catch (error) {
+    if (!isCurrent() || Number(container.dataset.requestVersion) !== version) return;
     clear(container);
     container.append(el('p', { class: 'ac-error' }, error.message));
   }

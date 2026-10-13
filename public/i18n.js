@@ -76,6 +76,7 @@ const DATA_DICT = {
 };
 
 const EN_DATA_DICT = {
+  '中国': 'China', '中国 / 华南': 'China / South China',
   'Non-GMO Soybeans (非转基因大豆), Bulk': 'Non-GMO Soybeans, Bulk',
   '铝锭 AL99.70（P1020 级别，国产重熔用铝锭）': 'Aluminum Ingot AL99.70 (P1020 Grade, Domestic Remelting Ingot)',
   'AL99.70 / P1020 级别': 'AL99.70 / P1020 Grade',
@@ -90,8 +91,20 @@ export function tData(str) {
   const exact = EN_DATA_DICT[str];
   if (exact) return exact;
   return String(str)
+    .replace(/\((中国(?: \/ 华南)?)\)/gu, (_match, region) => `(${EN_DATA_DICT[region]})`)
     .replace(/佛山南海指定仓库[（(]入库单号\s*([^）)]+)[）)]/gu, 'Designated Warehouse, Nanhai, Foshan (Inbound Receipt $1)')
     .replace(/佛山南海指定仓库[（(]出库单号\s*([^）)]+)[）)]/gu, 'Designated Warehouse, Nanhai, Foshan (Outbound Receipt $1)');
+}
+
+// Localize known trade labels embedded in a narrative without altering the response or its evidence.
+export function tTradeText(str) {
+  if (!str) return str;
+  let text = tData(str);
+  const dictionary = lang === 'zh' ? DATA_DICT : EN_DATA_DICT;
+  for (const [original, translated] of Object.entries(dictionary).sort((a, b) => b[0].length - a[0].length)) {
+    if (original.length >= 8) text = text.replaceAll(original, translated);
+  }
+  return text;
 }
 
 /**
@@ -100,6 +113,7 @@ export function tData(str) {
  *   data-i18n-html    -> innerHTML
  *   data-i18n-ph      -> placeholder
  *   data-i18n-title   -> title
+ *   data-i18n-aria    -> accessible label
  */
 export function applyStaticI18n(root = document) {
   const title = t('document_title');
@@ -108,6 +122,7 @@ export function applyStaticI18n(root = document) {
   root.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = t(el.getAttribute('data-i18n-html')); });
   root.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => { el.setAttribute('title', t(el.getAttribute('data-i18n-title'))); });
+  root.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria'))); });
 }
 
 // ===========================================================================
@@ -115,6 +130,16 @@ export function applyStaticI18n(root = document) {
 // ===========================================================================
 const DICT = {
   zh: {
+    cp_activity_empty: '暂无决策记录。', cp_tool_demo: 'Demo 模拟',
+    a11y_skip: '跳到主要内容', a11y_views: '页面导航', a11y_network: '协议网络',
+    a11y_market_controls: '市场排序和持仓', a11y_selected_project: '当前项目',
+    a11y_decision_detail: '决策详情', a11y_voyage_progress: '航程进度', a11y_mystery_progress: '盲盒付款与揭晓进度',
+    ac_timeline_update: '{count} 条决策有更新：{action}，{status}（{id}）。',
+    ac_open_decision: '查看决策：{action} · {case}',
+    ac_autonomy_off: '关闭', ac_autonomy_observe: '仅观察', ac_autonomy_propose: '提出方案', ac_autonomy_auto: '按策略自动执行',
+    agent_stream_connected: '🔗 已连接 Agent 活动流', agent_stream_reconnecting: '⚠️ 活动流已断开，正在重连…',
+    agent_timeline_heading: '🤖 Agent 决策时间线',
+    wallet_connected_toast: '{wallet} 已连接 · {network}', wallet_missing_toast: '未安装 {wallet}',
     cp_title: '投资者 Copilot', cp_placeholder: '例如：低风险、预算1万美元，再改看铝',
     cp_send: '发送', cp_close: '关闭', cp_reset: '重置偏好', cp_reset_message: '重新开始',
     cp_welcome: '告诉我你的货物、风险、收益或预算偏好。我会保留多轮条件，按最新报价筛选，并说明排除原因。',
@@ -760,6 +785,16 @@ const DICT = {
   },
 
   en: {
+    cp_activity_empty: 'No decision records yet.', cp_tool_demo: 'Demo (simulated)',
+    a11y_skip: 'Skip to main content', a11y_views: 'Page navigation', a11y_network: 'Protocol network',
+    a11y_market_controls: 'Market sorting and portfolio', a11y_selected_project: 'Selected project',
+    a11y_decision_detail: 'Decision detail', a11y_voyage_progress: 'Voyage progress', a11y_mystery_progress: 'Mystery payment and reveal progress',
+    ac_timeline_update: '{count} decisions updated: {action}, {status} ({id}).',
+    ac_open_decision: 'View decision: {action} · {case}',
+    ac_autonomy_off: 'Off', ac_autonomy_observe: 'Observe only', ac_autonomy_propose: 'Propose', ac_autonomy_auto: 'Automatic under policy',
+    agent_stream_connected: '🔗 Connected to Agent activity stream', agent_stream_reconnecting: '⚠️ Activity stream disconnected, reconnecting…',
+    agent_timeline_heading: '🤖 Agent decision timeline',
+    wallet_connected_toast: '{wallet} connected · {network}', wallet_missing_toast: '{wallet} is not installed',
     cp_title: 'Investor Copilot', cp_placeholder: 'Try: low risk, USD 10k budget, then switch to aluminium',
     cp_send: 'Send', cp_close: 'Close', cp_reset: 'Reset preferences', cp_reset_message: 'start over',
     cp_welcome: 'Tell me your commodity, risk, yield or budget preferences. I keep context across turns, filter current quotes and explain exclusions.',

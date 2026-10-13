@@ -15,6 +15,7 @@ import * as f from './format.js';
 import * as api from './api.js';
 import * as web3 from './web3.js';
 import { t, tData, toggleLang, onLangChange, applyStaticI18n } from './i18n.js';
+import { syncChoiceGroup, wireChoiceGroup, wireMenuNavigation, wireModalFocus, scrollBehavior } from './accessibility.js';
 import { initVoyage, renderVoyage, startVoyageClock, stopVoyageClock } from './voyage.js';
 import { initPopupAssistant } from './popup-assistant.js';
 import { hideAgentConsole, initAgentConsole, rerenderAgentConsole, showAgentConsole } from './agent/console.js';
@@ -265,9 +266,9 @@ function onLangChanged() {
   renderPortfolio();
   renderMysteryExperience();
   renderViewMint();
-  if (state.view === 'voyage') renderVoyage();
-  if (state.view === 'intel') renderIntelMarket();
+  if ($('#deal-detail-modal')?.open) { renderVoyage(); renderIntelMarket(); }
   if (state.view === 'agent') rerenderAgentConsole();
+  renderAgentTimeline();
 }
 
 // ===========================================================================
@@ -359,6 +360,7 @@ function selectSpeed(speed) {
 function setView(name) {
   state.view = name;
   document.querySelectorAll('#nav .nav-tab').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
+  syncChoiceGroup($('#nav'), name, 'view');
   $('#view-market').hidden = name !== 'market';
   $('#view-mint').hidden = name !== 'mint';
   $('#view-agent').hidden = name !== 'agent';
@@ -367,10 +369,12 @@ function setView(name) {
   
   if (name === 'market') { renderMarket(); startMarketClock(); }
   else { stopMarketClock(); stopVoyageClock(); }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: scrollBehavior() });
 }
 
-async function openDealDetailModal(caseId) {
+let dealReturnFocus = null;
+async function openDealDetailModal(caseId, opener = document.activeElement) {
+  dealReturnFocus = { id: opener?.id, key: opener?.getAttribute('data-focus-key') };
   if (caseId) {
     await selectCase(caseId);
   }
@@ -388,7 +392,13 @@ function closeDealDetailModal() {
   const modal = $('#deal-detail-modal');
   if (modal) modal.close();
   stopVoyageClock();
-  startMarketClock();
+  if (state.view === 'market') startMarketClock();
+  if (!modal?.open && dealReturnFocus) {
+    const target = [...document.querySelectorAll('[id], [data-focus-key]')].find((node) =>
+      dealReturnFocus.key ? node.getAttribute('data-focus-key') === dealReturnFocus.key : node.id === dealReturnFocus.id);
+    target?.focus({ preventScroll: true });
+    dealReturnFocus = null;
+  }
 }
 
 // Add event listener for dialog close
@@ -631,7 +641,7 @@ function renderMarketCard(entry, comparison) {
     renderMarketFunding(funding, paused),
     el('div', { class: 'market-card-actions' },
       el('button', { class: 'btn sm market-subscribe-shortcut', onclick: () => selectMarketCase(entry.case_id) }, t('market_card_subscribe')),
-      el('button', { class: 'btn ghost sm', onclick: () => { selectMarketCase(entry.case_id).then(() => openDealDetailModal(entry.case_id)); } }, t('market_card_track'))
+      el('button', { class: 'btn ghost sm', 'data-focus-key': `market-track:${entry.case_id}`, onclick: (event) => openDealDetailModal(entry.case_id, event.currentTarget) }, t('market_card_track'))
     )
   );
 }
@@ -881,6 +891,7 @@ function renderCaseSelector() {
   }
 
   const select = el('select', {
+    id: 'case-dropdown',
     class: 'case-dropdown',
     'aria-label': t('case_select_aria'),
     onchange: (event) => selectCase(event.target.value)
@@ -912,7 +923,7 @@ function renderSpeedSelector() {
   for (const speed of ['FAST', 'BALANCED', 'LOW_COST']) {
     const meta = f.SPEED_META[speed];
     box.append(el('button', {
-      class: 'seg-btn', role: 'tab', 'data-speed': speed,
+      class: 'seg-btn', role: 'radio', 'data-speed': speed,
       onclick: () => selectSpeed(speed)
     },
       el('span', { class: 'seg-main', text: meta.label }),
@@ -929,6 +940,7 @@ function highlightCase() {
 }
 
 function highlightSpeed() {
+  syncChoiceGroup($('#speed-select'), state.speed, 'speed');
   const rec = state.comparison?.recommended_payout_speed;
   document.querySelectorAll('#speed-select .seg-btn').forEach((b) => {
     b.classList.toggle('active', b.dataset.speed === state.speed);
@@ -952,7 +964,7 @@ function onCategoryClick(cat) {
 
 function highlightCategoryBtn() {
   document.querySelectorAll('#category-filter .cat-btn').forEach((b) =>
-    b.classList.toggle('active', b.dataset.cat === state.categoryFilter));
+    { b.classList.toggle('active', b.dataset.cat === state.categoryFilter); b.setAttribute('aria-pressed', String(b.dataset.cat === state.categoryFilter)); });
 }
 
 // ===========================================================================
@@ -1486,7 +1498,7 @@ async function doConnect(walletType) {
   refreshWalletUi();
   closeWalletMenu();
   const net = await networkName();
-  toast(`${WALLET_META[walletType]?.label ?? walletType} connected · ${net}`);
+  toast(t('wallet_connected_toast', { wallet: WALLET_META[walletType]?.label ?? walletType, network: net }));
   return address;
 }
 
@@ -1499,7 +1511,7 @@ async function onWalletChoice(event) {
   try {
     await doConnect(walletType);
   } catch (e) {
-    if (e.code === 'NO_WALLET') toast(`${WALLET_META[walletType]?.label ?? walletType} is not installed`, true);
+    if (e.code === 'NO_WALLET') toast(t('wallet_missing_toast', { wallet: WALLET_META[walletType]?.label ?? walletType }), true);
     else if (e.code === 'REJECTED') toast(t('t_connect_cancel'), true);
     else toast(t('t_connect_fail', { msg: e.message || e }), true);
   }
@@ -1510,11 +1522,12 @@ function isWalletMenuOpen() {
   return menu ? !menu.hidden : false;
 }
 
-function closeWalletMenu() {
+function closeWalletMenu(returnFocus = false) {
   const menu = $('#wallet-menu');
   const btn = $('#wallet-btn');
   if (menu) menu.hidden = true;
   if (btn) btn.setAttribute('aria-expanded', 'false');
+  if (returnFocus) btn?.focus({ preventScroll: true });
 }
 
 async function openWalletMenu() {
@@ -1526,12 +1539,13 @@ async function openWalletMenu() {
   document.querySelectorAll('.wallet-choice').forEach((choice) => {
     const available = availability[choice.dataset.wallet];
     choice.classList.toggle('unavailable', !available);
-    choice.title = available ? '' : `${WALLET_META[choice.dataset.wallet]?.label} extension not detected`;
+    choice.title = available ? '' : t('wallet_missing_toast', { wallet: WALLET_META[choice.dataset.wallet]?.label });
   });
   refreshWalletUi();
   if (!addr) {
     menu.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
+    menu.querySelector('.wallet-choice')?.focus();
     return;
   }
   const addrEl = $('#wallet-menu-address');
@@ -1550,6 +1564,7 @@ async function openWalletMenu() {
   }
   menu.hidden = false;
   btn.setAttribute('aria-expanded', 'true');
+  menu.querySelector('#wallet-account [role="menuitem"]')?.focus();
 }
 
 function toggleWalletMenu() {
@@ -2575,13 +2590,13 @@ async function renderPortfolio() {
 // ===========================================================================
 // `msg` is plain text and is inserted as a text node: log lines carry values that
 // originate on the server (SSE events), in wallets and in error messages.
-function agentLog(msg, color = 'var(--text-2)') {
+function agentLog(msg, color = 'var(--text-2)', translationKey = null) {
   const container = $('#agent-logs-container');
   if (!container) return;
   const time = new Date().toISOString().split('T')[1].slice(0,8);
   const entry = el('div', { class: 'log-entry' },
     el('span', { style: 'color:var(--muted)' }, `[${time}]`),
-    ` ${msg}`);
+    ' ', el('span', { 'data-i18n': translationKey }, msg));
   entry.style.color = color;
   container.appendChild(entry);
   container.scrollTop = container.scrollHeight;
@@ -2645,7 +2660,7 @@ function subscribeToAgentActivity(caseId, { retry = false } = {}) {
 
       if (data.type === 'connected') {
         agentActivityRetries = 0;
-        agentLog('🔗 Connected to Agent activity stream', 'var(--ok)');
+        agentLog(t('agent_stream_connected'), 'var(--ok)', 'agent_stream_connected');
       } else if (data.type === 'activity') {
         const emoji = getActivityEmoji(data.action);
         agentLog(`${emoji} Agent: ${data.action}${data.details?.price ? ` → $${data.details.price}` : ''}`, 'var(--accent)');
@@ -2662,7 +2677,7 @@ function subscribeToAgentActivity(caseId, { retry = false } = {}) {
     };
 
     agentActivityStream.onerror = () => {
-      agentLog('⚠️ SSE disconnected, reconnecting...', 'var(--warn)');
+      agentLog(t('agent_stream_reconnecting'), 'var(--warn)', 'agent_stream_reconnecting');
       if (agentActivityStream) agentActivityStream.close();
       agentActivityStream = null;
       // Back off (3s, 6s, ... up to 30s) so a full or restarting server is not hammered.
@@ -2705,7 +2720,7 @@ function renderAgentTimeline() {
   const recentActivities = state.agentActivities.slice(0, 10);
 
   let timelineHtml = '<div style="font-family: var(--mono); line-height: 1.5;">';
-  timelineHtml += '<div style="color: var(--accent); margin-bottom: 4px; font-weight: 600; font-size: 10px;">🤖 Agent Decision Timeline</div>';
+  timelineHtml += `<div style="color: var(--accent); margin-bottom: 4px; font-weight: 600; font-size: 12px;">${html(t('agent_timeline_heading'))}</div>`;
   timelineHtml += '<div style="border-top: 1px solid var(--line-soft); margin: 4px 0;"></div>';
 
   recentActivities.forEach(activity => {
@@ -2742,6 +2757,11 @@ function renderAgentTimeline() {
 // Wiring
 // ===========================================================================
 function wireStaticHandlers() {
+  wireModalFocus(document);
+  wireChoiceGroup($('#nav'));
+  wireChoiceGroup($('#speed-select'));
+  wireMenuNavigation($('#wallet-menu'), () => closeWalletMenu(true));
+  highlightCategoryBtn();
   document.querySelectorAll('#nav .nav-tab').forEach((b) =>
     b.addEventListener('click', () => {
       setView(b.dataset.view);
@@ -2767,7 +2787,7 @@ function wireStaticHandlers() {
     if (isWalletMenuOpen() && !e.target.closest('.wallet-wrap')) closeWalletMenu();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isWalletMenuOpen()) closeWalletMenu();
+    if (e.key === 'Escape' && isWalletMenuOpen()) closeWalletMenu(true);
   });
   $('#mode-toggle-btn')?.addEventListener('click', onModeToggle);
   $('#demo-reset-btn')?.addEventListener('click', onDemoReset);
@@ -2807,18 +2827,6 @@ function wireStaticHandlers() {
   });
 
   initDocumentManagement();
-
-  // FE-13: Agent Console Toggle
-  if (window.matchMedia?.('(max-width: 760px)').matches) {
-    $('#agent-activity-console')?.classList.add('collapsed');
-  }
-  $('#toggle-activity-console')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    $('#agent-activity-console').classList.toggle('collapsed');
-  });
-  $('.aac-header')?.addEventListener('click', () => {
-    $('#agent-activity-console').classList.toggle('collapsed');
-  });
 
   // Category filter buttons
   document.querySelectorAll('#category-filter .cat-btn').forEach((b) =>

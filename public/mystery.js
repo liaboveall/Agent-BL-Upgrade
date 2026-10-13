@@ -1,6 +1,7 @@
 import { state } from './store.js';
 import { $, el, clear, toast } from './dom.js';
 import { t, tData } from './i18n.js';
+import { scrollBehavior } from './accessibility.js';
 import * as web3 from './web3.js';
 import { payV2WithWallet } from './x402-v2.js';
 import { isIndependentSubscriptionAuthorized, verifyMysteryProof } from './mystery-proof.js';
@@ -592,8 +593,8 @@ function renderReport(report) {
   $('#mystery-report-coverage').textContent = `${Number(report.collateral?.coverage_ratio ?? 0).toFixed(2)}x`;
   $('#mystery-report-freshness').textContent = `${report.evidence_freshness?.status ?? '—'} · ${Number(report.evidence_freshness?.age_seconds ?? 0).toFixed(0)}s`;
   renderPaymentEvidence(report);
-  replaceList($('#mystery-report-reasons'), suitability.reasons, t('mystery_no_match_reason'));
-  replaceList($('#mystery-report-risks'), risk.factors, t('mystery_no_risk_factor'));
+  replaceList($('#mystery-report-reasons'), suitability.reasons?.map(tData), t('mystery_no_match_reason'));
+  replaceList($('#mystery-report-risks'), risk.factors?.map(tData), t('mystery_no_risk_factor'));
   $('#mystery-non-guarantee').textContent = report.non_guarantee_notice || t('mystery_non_guarantee');
   $('#mystery-post-actions').hidden = false;
   $('#mystery-subscribe-btn').disabled = !mysteryState.proofValid;
@@ -797,7 +798,7 @@ export function initMysteryExperience() {
   $('#mystery-open-btn')?.addEventListener('click', openMysteryVoyage);
   $('#mystery-proof-json')?.addEventListener('input', verifyEditedProof);
   $('#mystery-proof-reset')?.addEventListener('click', resetProof);
-  $('#mystery-view-report-btn')?.addEventListener('click', () => $('#mystery-risk-passport')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  $('#mystery-view-report-btn')?.addEventListener('click', () => $('#mystery-risk-passport')?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }));
   $('#mystery-subscribe-btn')?.addEventListener('click', openSubscriptionConfirmation);
   $('#mystery-subscribe-close')?.addEventListener('click', () => $('#mystery-subscribe-modal')?.close());
   $('#mystery-subscribe-amount')?.addEventListener('input', updateSubscriptionConfirmation);

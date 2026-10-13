@@ -3,10 +3,11 @@
 // events are labelled as admin-injected on the server; nothing here pretends to be a live feed.
 
 import { clear, el, toast } from '../dom.js';
-import { t } from '../i18n.js';
+import { t, tData } from '../i18n.js';
 import { agent } from './api.js';
 
 const today = () => new Date().toISOString().slice(0, 10);
+const pending = new Set();
 
 /** Event factories. Payload values are plain fixtures; the server validates and sources them. */
 const SCENARIOS = [
@@ -22,16 +23,23 @@ const SCENARIOS = [
 export async function renderInjector(container, { cases, selectedCaseId, onChange, onInjected }) {
   clear(container);
   const select = el('select', { id: 'ac-inj-case', class: 'ac-select', 'aria-label': t('ac_inj_case') },
-    cases.map((entry) => el('option', { value: entry.case_id, selected: entry.case_id === selectedCaseId }, entry.label ?? entry.case_id)));
+    cases.map((entry) => {
+      const bl = entry.case?.bill_of_lading;
+      const label = bl ? `${tData(bl.cargo)} · ${tData(bl.port_of_loading)} → ${tData(bl.port_of_discharge)}` : tData(entry.label ?? entry.case_id);
+      return el('option', { value: entry.case_id, selected: entry.case_id === selectedCaseId }, label);
+    }));
   select.addEventListener('change', () => onChange?.(select.value));
 
   const buttons = SCENARIOS.map((scenario) => el('button', {
-    class: 'btn ghost', type: 'button',
+    class: 'btn ghost', type: 'button', 'data-focus-key': `inject:${scenario.id}`,
+    'aria-disabled': String(pending.has(`${selectedCaseId}:${scenario.id}`)),
     onclick: async (event) => {
       const button = event.currentTarget;
-      button.disabled = true;
+      const caseId = select.value, key = `${caseId}:${scenario.id}`;
+      if (pending.has(key)) return;
+      pending.add(key);
+      button.setAttribute('aria-disabled', 'true');
       try {
-        const caseId = select.value;
         let subscribedUsd = 0;
         if (scenario.id === 'pay') {
           try { subscribedUsd = (await agent.poolStatus(caseId)).subscribedUsd ?? 0; } catch { subscribedUsd = 0; }
@@ -45,7 +53,8 @@ export async function renderInjector(container, { cases, selectedCaseId, onChang
       } catch (error) {
         toast(error.message, true);
       } finally {
-        button.disabled = false;
+        pending.delete(key);
+        container.querySelector(`[data-focus-key="inject:${scenario.id}"]`)?.setAttribute('aria-disabled', 'false');
       }
     }
   }, t(scenario.label)));
