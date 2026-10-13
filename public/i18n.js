@@ -418,6 +418,8 @@ const DICT = {
     pref_ai_recommended: 'AI 推荐',
     pref_price_updated: '出口商将最低发行价约束更新为 {value}',
     pref_speed_updated: '出口商将到账速度偏好更新为 {value}',
+    pref_saved: '出口商偏好已保存到 Agent：之后的自动改价会遵守最低发行价',
+    pref_save_failed: '出口商偏好未能保存：{msg}',
 
     // protocol evidence
     protocol_evidence_h: '实时协议凭证',
@@ -1023,6 +1025,8 @@ const DICT = {
     pref_ai_recommended: 'AI Recommended',
     pref_price_updated: 'Exporter updated the minimum issue price constraint to {value}',
     pref_speed_updated: 'Exporter updated the payout speed preference to {value}',
+    pref_saved: 'Exporter preferences saved to the agent: automatic repricing now respects the minimum issue price',
+    pref_save_failed: 'Exporter preferences were not saved: {msg}',
 
     // protocol evidence
     protocol_evidence_h: 'Live protocol evidence',

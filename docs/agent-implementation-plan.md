@@ -2,7 +2,7 @@
 
 > 版本：v1.1（2026-10-12）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
 > 基线：`main` @ `2292906`。该基线下 `npm test` 541 个用例全部通过，合约测试 74 个通过。
-> 状态：**开发中**（Phase 0 的 P0 项已完成，见 §13 状态表）。开发会话按本文推进，并随时更新 §13 的状态表。
+> 状态：**开发中**（Phase 0、Phase 1 和 Phase 2 的 Demo 部分已完成，见 §13 状态表；Phase 2 的实现说明在 §13 之后）。开发会话按本文推进，并随时更新 §13 的状态表。
 > 范围：项目里所有“应有的 Agent 功能”：`docs/tasks.md`、`docs/PRD.md`、`docs/injective-hackathon-gap-analysis2.md` 和 README 中承诺过的 Agent 能力，以及顺带的改进与优化。
 
 ---
@@ -1032,14 +1032,14 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 1.5 | AgentService 与服务器接线 | P0 | 1.1–1.4 | L | Done（2026-10-12） |
 | 1.6 | 追踪 | P1 | 1.5 | S | Done（2026-10-12；瀑布图在 4.1） |
 | 1.7 | PoolRegistry | P1 | 1.5 | S | Done（2026-10-12；Live 的 pool #2 映射用假链测过，真链核对在首次 Live 启动时发生） |
-| 2.1 | 单证接入 v2 | P0 | 1.5 | M | Todo |
-| 2.2 | 解析器增强（文本 P0；PDF 和视觉 P1） | P0/P1 | 2.1 | L | Todo |
+| 2.1 | 单证接入 v2 | P0 | 1.5 | M | Done（2026-10-13；旧 `/api/ebl/upload` 带内容时转发） |
+| 2.2 | 解析器增强（文本 P0；PDF 和视觉 P1） | P0/P1 | 2.1 | L | 文本部分 Done（2026-10-13：注入筛查、保单样例、桶计原油）；PDF 与视觉 Todo；`WAREHOUSE_RECEIPT` Todo |
 | 2.3 | 合规 v2 | P1 | — | M | Todo |
-| 2.4 | 编排器 v2 | P0 | 2.1、2.2 | M | Todo |
-| 2.5 | 持续监控与场景播放器 | P0 | 1.5 | L | Todo |
-| 2.6 | 结算流水线 | P0/P1 | 2.5 | M | Todo |
+| 2.4 | 编排器 v2 | P0 | 2.1、2.2 | M | Demo 部分 Done（2026-10-13：`processDocuments`）；Live 开盘的 3 笔 owner 交易与 `isUnique` 检查 Todo |
+| 2.5 | 持续监控与场景播放器 | P0 | 1.5 | L | Done（2026-10-13；航程只派生保险，离港和到港来自场景或人工证明） |
+| 2.6 | 结算流水线 | P0/P1 | 2.5 | M | Demo 部分 Done（2026-10-13：两份证明齐了才提出 SETTLE，且需审批）；Live 的 USDC 回执核验 Todo |
 | 2.7 | 链上监听 | P1 | 1.7 | M | Todo |
-| 2.8 | 出口商偏好 | P0 | 2.4 | S | Todo |
+| 2.8 | 出口商偏好 | P0 | 2.4 | S | Done（2026-10-13；前端已保存到服务器） |
 | 2.9 | PRD §9.2 Agent API | P1 | 2.4 | S | Todo |
 | 3.1 | InvestorContext | P0 | — | M | Todo |
 | 3.2 | 意图路由 | P0 | 3.1 | M | Todo |
@@ -1073,6 +1073,28 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 **推荐执行顺序**：
 
 0.1 → 0.2 → 0.3 → 0.5 → 1.2 → 1.1 → 1.4 → 1.3 → 1.5 → 4.1（尽早看到真实的决策流）→ 2.5 → 2.1 → 2.2 文本部分 → 2.4 → 2.8 → 2.6 Demo 部分 → 4.2 → 4.3 → 3.1–3.5 → 3.7 → 5.4 → 5.1 → 5.8 → 0.4（随各阶段持续更新）→ P1 项（含 0.6、1.7、5.9）→ P2 项 → 7.1（部署前确认）。
+
+### Phase 2 实现说明（2026-10-13）
+
+已落地：
+
+- `POST /api/agent/ingest`、`GET /api/agent/jobs[/:id]`、`PUT|GET /api/agent/cases/:id/preferences`、`GET /api/agent/scenarios` 和 `POST /api/agent/scenarios/:name/start|step|run|stop`。
+- 九步接入流水线（`AgentOrchestrator.processDocuments`）：解析 → 注入筛查 → 一致性 → 合规 → 估值 → 世界风险 → 三档定价 → 出口商约束 → 决策。每一步有耗时、状态和 `PIPELINE_STEP` 活动记录；作业（job）里能看到全部步骤。
+- 决策可以是 `OPEN`、`OPEN_WITH_WARNING`、`HOLD_FOR_REVIEW`（怀疑注入、解析不全、关键单据冲突、需要 OCR、出口商底价无法满足、定价引擎不愿开盘）或 `REJECT`（合规阻断）。
+- 监控来源：`RiskTracker`（基线 + 滞回，`AGENT_RISK_CLEAR_TICKS`）、世界风险监控、保险到期监控；场景播放器和三个场景 `copper-typhoon`、`warcrisis-hormuz`、`insurance-gap`。
+- 付款证明和到港证明都记录后，Agent 才提出 `SETTLE`（事件 `SETTLEMENT_READY`，来源 `agent`），`SETTLE` 始终需要审批。
+
+与规划不同、或需要知道的地方：
+
+1. **离线夹具不进定价。** `data/world-intel` 的离线夹具对每一批货都给出同样的严重信号（连大豆和铁矿也有“战争”），它不是这批货的证据。接入流水线只把**实时**（xAPI）信号并入价格；夹具信号作为 `info` 级发现记录下来。否则任何上传都会因为夹具而被 PAUSE。
+2. **场景里离港在台风之前。** 合约的 `markInTransit` 只接受 `Funded` / `Subscribed`，已经 `Repriced` 的池子不能再离港，所以 `copper-typhoon` 的顺序是：认购 → 离港 → 台风预警（改价）→ 升级（暂停）→ 解除（恢复）→ 到港 → 付款（等批准）→ 结算（等批准）。这是合约的真实约束，不是演示的取巧。
+3. **`warcrisis-hormuz` 用原油案例**，不是规划里的铜战争案例：后者在目录里本来就是 `Paused`，播放不出任何变化。原油的价格已含战争折价，所以第一步是 `WARNING`（价格没有下调空间），第二步才是 `PAUSE`。
+4. **保险监控在 Demo 里只认场景时钟。** Demo 世界是 2026 年 6 月，用真实时钟看每张保单都已过期。Live 用真实时钟，并且只看已映射到链上池的池子。
+5. **Live 的 `OPEN` 只有记录，没有签名路线。** Live 下上传会得到 `OPEN` 提案，策略要求审批，但 `mintEBLV2 → pledge → createOffering` 的 owner 计划还没做，所以决策以 `SKIPPED` 结束并写明原因，不会假装有交易。这是 WP2.4 剩下的 Live 部分。
+6. **`HOLD_FOR_REVIEW` 还没有“复核通过”的出口。** 事件类型 `REVIEW_RESOLVED` 已定义，但没有接线；目前被挂起的单证需要修正后重新上传。
+7. **桶计原油**：解析器现在读取 `bbl`，吨数只取单证上写明的（`78,221 MT`），不做换算；没有写明吨数时保持缺失并转人工复核。单价保留原单位（`unit_price_usd_per_bbl`）。
+8. **旧 `/api/ebl/upload`**：只带元数据（浏览器目前的做法）时仍只是 mock 确认；带 `content` 和 `case_id` 时同一份内容进入接入流水线，响应里多一个 `ingest` 字段如实说明结果。前端真正读取并上传文件内容属于 WP4.2。
+9. 新增 `AGENT_VALUATION_LLM`（默认 `true`）：接入流水线的估值步骤是否使用已配置的 LLM（失败或未配置时回退确定性路径）。
 
 **各阶段完成后**：给用户汇报，并按阶段给出建议的提交分组。
 

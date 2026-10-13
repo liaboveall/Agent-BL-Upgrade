@@ -43,6 +43,20 @@ export async function getCases() {
   }];
 }
 
+/** WP2.8: the exporter's preferences for a case, as the agent holds them (the server is the source of truth). */
+export function getExporterPreferences(caseId) {
+  return fetchJson(`/api/agent/cases/${encodeURIComponent(caseId)}/preferences`);
+}
+
+/** WP2.8: store the preferences the agent must respect (a price floor, a payout speed, a financing target). */
+export function saveExporterPreferences(caseId, preferences) {
+  return fetchJson(`/api/agent/cases/${encodeURIComponent(caseId)}/preferences`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(preferences ?? {})
+  });
+}
+
 /** Unwrap a catalog entry to its raw case object. /api/cases returns { case_id, label, …, case: rawCase },
  *  but the pricing endpoints expect the raw case (with bill_of_lading, financing, etc.) directly. */
 function rawCase(caseData) {

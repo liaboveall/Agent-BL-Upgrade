@@ -196,6 +196,21 @@ AI 助手通过同源接口 `/api/llm/chat` 调用 LLM：key 留在服务器，�
 
 **Demo 重置**（`POST /api/demo/reset`）会清空 Demo 模式下的事件、决策、审批和活动并重建链下池子；**绝不清除 Live 的记录**。
 
+**单证接入**（`POST /api/agent/ingest`）：
+
+- 请求体 `{ case_id?, documents: [{ name, mime_type, text | content_base64 }], exporter_preferences? }`。类型白名单是 `text/markdown`、`text/plain`、`application/pdf`、`image/png`、`image/jpeg`，并用文件头（魔数）核对真实类型；单个文档上限 `AGENT_UPLOAD_MAX_BYTES`（默认 8 MiB，base64 编码前）；一个请求最多约 3 个满额文档。
+- 文件按内容的 SHA-256 保存在运行时目录的 `uploads/`（**不在 `public/` 下**），元数据和作业在 `ingest-documents.json`、`ingest-jobs.json`，由单证生成的案例在 `cases/`。同一内容重复上传返回同一个作业，不会产生第二个决策。
+- 返回的 ENI 记录是 **mock**（`mode: "mock"`、`verified: false`），只表示服务器收到了文件，不代表任何登记机构核验过。
+- Demo 下无需令牌；Live 下需要 `AGENTBL_ADMIN_TOKEN`。进度从 `GET /api/agent/jobs/:id` 查看，加 `?wait=1` 可以等流水线跑完再返回。
+- 当前只读取文本和 Markdown；PDF 和图片会被保存并挂起为 `OCR_REQUIRED`（转人工），没有抽取。怀疑含有“对机器下指令”的文本、关键单据互相矛盾、解析不全，都会得到 `HOLD_FOR_REVIEW` 且**不开池**；合规关键字阻断得到 `REJECT`。
+- `AGENT_VALUATION_LLM`（默认 `true`）决定估值步骤是否使用已配置的 LLM；LLM 失败或未配置时自动回退确定性路径，决策里会记录 provider。
+
+**监控**：服务器入口每 `AGENT_MONITOR_INTERVAL_SEC` 秒检查一次。世界风险只在**变化**时产生事件（第一次观察只是基线；连续 `AGENT_RISK_CLEAR_TICKS` 次平静才算解除，避免来回抖动）。保险在到期前 `AGENT_INSURANCE_WARN_DAYS` 天提醒，过期且池子活跃时提议暂停；Demo 下只在场景时钟下检查，Live 下用真实时钟并且只看已映射到链上的池子。没有配置 xAPI 时世界风险来自离线夹具，**夹具信号只记录，不进入价格**。
+
+**Demo 场景**（`GET /api/agent/scenarios`、`POST /api/agent/scenarios/:name/run`，`{"reset":true}` 先清空 Demo 记录）：`copper-typhoon`、`warcrisis-hormuz`、`insurance-gap`。它们和真实来源走同一条运行时，只提供“发生了什么”，结果由策略和模拟执行器决定；仅 Demo 可用，需要管理员令牌（若已配置）。`copper-typhoon` 跑到“进口商付款等批准”为止：批准后 Agent 才提出结算，结算再批准一次。
+
+**出口商偏好**（`PUT /api/agent/cases/:id/preferences`）：`min_acceptable_issue_price`（0–1）、`payout_speed_preference`、`target_financing_amount`。接入流水线据此选速度，价格达不到底价时挂起复核；之后的自动改价低于底价时转为审批。
+
 ### 合约
 
 仓库里的合约源码是 v2（见 [contracts.md](./contracts.md) §0），测试网上已于 2026-10-12 重新部署为 v2。以后再改合约源码，需要重新部署才会生效：

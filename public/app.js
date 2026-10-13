@@ -267,10 +267,44 @@ function onLangChanged() {
 // ===========================================================================
 // Controller — shared selection / routing
 // ===========================================================================
+/** The preferences the form currently shows, in the shape the server stores. Empty fields are left out. */
+function currentExporterPreferences() {
+  const preferences = {};
+  const floorInput = $('#pref-min-price');
+  const floor = floorInput && floorInput.value !== '' ? Number(floorInput.value) : NaN;
+  if (Number.isFinite(floor) && floor >= 0 && floor <= 1) preferences.min_acceptable_issue_price = floor;
+  const speed = $('#pref-speed')?.value;
+  if (speed) preferences.payout_speed_preference = speed;
+  return preferences;
+}
+
+/** WP2.8: the agent enforces these, so the server must hold them, not just this browser tab. */
+async function persistExporterPreferences() {
+  if (!state.caseId) return;
+  try {
+    await api.saveExporterPreferences(state.caseId, currentExporterPreferences());
+    agentLog(t('pref_saved'));
+  } catch (error) {
+    toast(t('pref_save_failed', { msg: error.message }), true);
+  }
+}
+
+/** Show what the agent already holds for a case instead of whatever the previous case left in the form. */
+async function loadExporterPreferences(caseId) {
+  try {
+    const stored = (await api.getExporterPreferences(caseId))?.preferences ?? {};
+    if ($('#pref-min-price') && Number.isFinite(stored.min_acceptable_issue_price)) $('#pref-min-price').value = String(stored.min_acceptable_issue_price);
+    if ($('#pref-speed')) $('#pref-speed').value = stored.payout_speed_preference ?? '';
+  } catch {
+    // The form keeps its current values; saving will report a real problem.
+  }
+}
+
 async function selectCase(caseId) {
   const entry = state.cases.find((c) => c.case_id === caseId);
   if (!entry) return;
   state.caseId = caseId;
+  await loadExporterPreferences(caseId);
   state.caseData = entry.case;
   state.financingUsd = null;
   state.mint = null;
@@ -2809,6 +2843,7 @@ function wireStaticHandlers() {
   $('#demo-reset-btn')?.addEventListener('click', onDemoReset);
   $('#mint-btn').addEventListener('click', onMint);
   $('#pref-min-price')?.addEventListener('change', async () => {
+    persistExporterPreferences();
     if (state.caseId) {
       const entry = state.cases.find(c => c.case_id === state.caseId);
       if (entry) {
@@ -2827,6 +2862,7 @@ function wireStaticHandlers() {
     }
   });
   $('#pref-speed')?.addEventListener('change', (e) => {
+    persistExporterPreferences();
     const val = e.target.value;
     agentLog(t('pref_speed_updated', { value: val ? f.SPEED_META[val]?.label ?? val : t('pref_ai_recommended') }));
     if (val) {
