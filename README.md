@@ -34,6 +34,7 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 | Run the application tests / 运行应用测试 | `npm test` (Node 20.11+) |
 | Run the contract tests / 运行合约测试 | `npm run test:contracts` (Node **22.13+**; run `npm --prefix hardhat install` once first) |
 | Run every release check / 运行全部发布检查 | `npm run preflight` |
+| Measure Agent components and write the evaluation report / 实测 Agent 并生成报告 | `npm run eval:agent` (`-- --check` checks without overwriting evidence / 只检查，不覆盖证据) |
 | Run it in Docker / 用 Docker 运行 | `docker compose up -d --build` → http://localhost:3000 |
 | Compare the testnet deployment with the contract source / 对比链上合约与源码 | `npm run verify:bytecode` |
 
@@ -47,6 +48,7 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 | Autonomous agent / 自主 Agent | **Runtime, document intake, monitoring and a Demo scenario player are in place.** Uploaded documents (`POST /api/agent/ingest`) run a nine-step pipeline (parse, injection screen, consistency, compliance, valuation, world risk, three-speed pricing, exporter constraints, decision) and end in OPEN, HOLD_FOR_REVIEW or REJECT; scheduled monitors turn *changes* in world risk and insurance deadlines into events; Demo scenarios replay a whole cargo story. Events (also injectable through `POST /api/agent/events`) become decisions with a recorded policy verdict; in Demo they run as simulated actions on the offchain pool (a `demo:` reference, never a tx hash), in Live they only wait in an approval queue and run after a human approves (pricing actions by the server's authorised key, owner-signed ones through `npm run agent:approve`). The Agent console (status, decision timeline, approvals, Demo event injector) is live. Not built yet: PDF/image extraction, Live opening (the three owner transactions), the chain watcher. Plan: [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md). / **运行时、单证接入、监控和 Demo 场景播放器已就绪**：上传的单证（`POST /api/agent/ingest`）走九步流水线（解析、注入筛查、一致性、合规、估值、世界风险、三档定价、出口商约束、决策），结果是开盘、挂起复核或拒绝；定时监控把世界风险和保险到期的**变化**变成事件；Demo 场景可以回放一整批货的故事。通过 `POST /api/agent/events` 注入的事件也会变成带策略结论的决策；Demo 下是对链下池子的模拟执行（`demo:` 引用，没有交易哈希），Live 下只进审批队列，批准后才执行（定价类动作由服务器的已授权密钥发送，需要 owner 的动作用 `npm run agent:approve`）。Agent 控制台（状态、决策时间线、审批、Demo 事件注入器）已上线。尚未完成：PDF/图片抽取、Live 开盘（三笔 owner 交易）、链上监听。规划见 [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md) |
 | Investor Copilot / 投资者 Copilot | **Phase 3 P0 implemented.** Multi-turn preferences, deterministic/validated LLM parsing, current offchain-pool retrieval, explainable ranking and SSE responses; search and the floating assistant share the server implementation. No action executes from chat. Dynamic rerank notifications and confirmed action cards remain P1. [Guide](docs/copilot.md). / **Phase 3 P0 已实现**：多轮偏好、确定性与经校验的 LLM 解析、当前链下池检索、可解释排序和 SSE；搜索框与悬浮助手共用服务器逻辑。聊天不会执行操作。主动重排通知与确认动作卡片仍属 P1。 |
 | Investor payments for RWA shares / 投资者认购的真实付款 | **Not implemented.** Subscriptions mint share receipts and record the amount owed; no stablecoin is escrowed. / **未实现**，认购只铸造份额凭证并记录应付金额 |
+| Agent quality and recovery / Agent 质量与恢复 | **Phase 5 P0 implemented locally.** Real-component deterministic evaluation, fault matrix, pending-transaction recovery and 61 release checks. Demo Live checks are SKIP; provider and real-chain validation remain separate. [Guide](docs/agent-reliability.md), [measured report](docs/evaluation-report.md). / **Phase 5 P0 已完成本地实现**：实际组件评测、故障矩阵、未确认交易对账和 61 项发布闸门；Demo 的 Live 检查记 SKIP，真实提供方/链上验收另有边界。 |
 
 ---
 
@@ -898,6 +900,8 @@ The preflight gate checks:
 - UI acceptance;
 - live-readiness configuration.
 
+The gate runs **61 checks**, including the Agent fault matrix, three complete Demo stories, measured quality thresholds and the no-fabrication suite. Live-only checks are **SKIP** in Demo. A passing gate does not establish real provider quality, user trials or current testnet execution. [Recovery and evidence guide](docs/agent-reliability.md).
+
 Preflight 会检查：
 
 - Runtime Environment；
@@ -909,6 +913,8 @@ Preflight 会检查：
 - MCP；
 - UI；
 - Live Readiness。
+
+当前固定 **61 项**，包含 Agent 故障矩阵、三个完整 Demo 故事、实测质量阈值和禁止伪造套件。Demo 中的 Live 专属项是 **SKIP**。通过本地闸门不能替代真实提供方、用户试用或本次链上执行证据。
 
 Live-network checks may be skipped or reported as warnings in **Demo Mode**.
 

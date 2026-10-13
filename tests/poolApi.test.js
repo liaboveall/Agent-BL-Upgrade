@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import http from 'node:http';
+import { listenOnUsablePort } from '../scripts/lib/listen.mjs';
+
+let port;
 import { handleRequest } from '../src/app/server.js';
 import { resetStore, storeState } from '../src/app/store.js';
 
@@ -9,7 +12,7 @@ function request(method, path, body = null) {
     const req = http.request({
       method,
       hostname: '127.0.0.1',
-      port: 8081,
+      port,
       path,
       headers: body ? { 'Content-Type': 'application/json' } : {}
     }, (res) => {
@@ -34,7 +37,8 @@ function request(method, path, body = null) {
 test('BE-12: Pool API Tests', async (t) => {
   // Start server
   const server = http.createServer(handleRequest);
-  await new Promise(res => server.listen(8081, res));
+  await listenOnUsablePort(server, '127.0.0.1');
+  port = server.address().port;
 
   try {
     resetStore();

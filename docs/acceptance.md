@@ -4,6 +4,8 @@
 
 当前主线：**AI 动态定价的 eBL-backed RWA 折价发行协议**（见 `docs/PRD.md` v0.2）。
 
+2026-10-13 Agent Phase 5 P0：可靠性、真实组件评测与发布闸门已接入。`npm run eval:agent -- --check` 必须通过全部 19 项冻结阈值；`node --test tests/agentReliability.test.js` 覆盖 15 个故障矩阵测试；`npm run preflight` 固定 61 项，Demo 的 Live 专属检查为 SKIP。日期、代码/金标摘要、分母和局限见 [evaluation-report.md](evaluation-report.md)；恢复与本地浏览器证据见 [agent-reliability.md](agent-reliability.md)。这些本地测量不替代真实提供方、真实交易或用户试用。
+
 > 状态说明：
 > - **Current** = 当前 harness 已经能验证（旧 `RiskReport` 引擎仍在跑）。
 > - **Target** = 新模型（`PricingQuote` / RWA 折价发行）的目标验收项，随 `tasks.md` 的 AI-1 / BE-2 / BE-3 等任务落地后转为 Current。

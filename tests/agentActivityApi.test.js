@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import http from 'node:http';
+import { listenOnUsablePort } from '../scripts/lib/listen.mjs';
+
+let port;
 import { handleRequest, logAgentActivity } from '../src/app/server.js';
 import { resetStore } from '../src/app/store.js';
 
@@ -9,7 +12,7 @@ function request(method, path, body = null) {
     const req = http.request({
       method,
       hostname: '127.0.0.1',
-      port: 8084,
+      port,
       path,
       headers: body ? { 'Content-Type': 'application/json' } : {}
     }, (res) => {
@@ -33,7 +36,8 @@ function request(method, path, body = null) {
 
 test('BE-15: Agent Activity API Tests', async (t) => {
   const server = http.createServer(handleRequest);
-  await new Promise(res => server.listen(8084, res));
+  await listenOnUsablePort(server, '127.0.0.1');
+  port = server.address().port;
 
   try {
     resetStore();
@@ -130,7 +134,7 @@ test('BE-15: Agent Activity API Tests', async (t) => {
       const req = http.request({
         method: 'GET',
         hostname: '127.0.0.1',
-        port: 8084,
+        port,
         path: '/api/agent/activity/stream?case_id=CASE-SSE-TEST'
       }, (res) => {
         assert.strictEqual(res.statusCode, 200);

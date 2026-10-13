@@ -44,6 +44,12 @@ const requiredFiles = [
   'src/skill/demoOperator.js',
   'scripts/lib/chain-config.cjs',
   'scripts/migrate-chain-config.mjs',
+  'scripts/eval-agent.mjs',
+  'scripts/agent-demo-check.mjs',
+  'src/agent/evaluation/runner.js',
+  'src/agent/evaluation/goldDataset.js',
+  'tests/agentEvaluation.test.js',
+  'tests/agentReliability.test.js',
   'tests/riskEngine.test.js',
   'tests/scenarioRunner.test.js',
   'tests/chainConfig.test.js',
@@ -59,7 +65,7 @@ const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'));
 for (const script of [
   'postinstall', 'dev', 'test', 'check', 'demo', 'smoke', 'scenarios', 'mcp',
   'mcp:stdio', 'deploy:protocol', 'verify:wave-b', 'smoke:mcp:injective',
-  'migrate:chain-config'
+  'migrate:chain-config', 'eval:agent'
 ]) {
   assert.ok(pkg.scripts[script], `Missing package script: ${script}`);
 }

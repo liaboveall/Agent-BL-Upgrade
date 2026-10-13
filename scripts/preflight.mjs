@@ -2,7 +2,7 @@ import { listenOnUsablePort } from './lib/listen.mjs';
 import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { promisify } from 'node:util';
+import { promisify, parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createServer } from '../src/app/server.js';
 import { MCP_TOOL_HANDLERS, MCP_TOOLS_MANIFEST } from '../src/mcp/mcpServer.js';
@@ -11,6 +11,9 @@ import { fetchPaidIntel } from '../src/x402/client.js';
 import { loadX402Config, X402_SERVICES, x402RpcUrl } from '../src/x402/config.js';
 import { assertPaidReportEnvelope, computeReportHash, createPaidReportEnvelope } from '../src/x402/paidReport.js';
 import chainConfigLib from './lib/chain-config.cjs';
+import { createAgentService } from '../src/agent/runtime/factory.js';
+import { runValuationAgent } from '../src/agent/valuationAgent.js';
+import { writeJsonAtomic } from '../src/lib/jsonStore.js';
 
 const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -21,17 +24,19 @@ const npmCli = process.env.npm_execpath && /npm-cli\.c?js$/u.test(process.env.np
   : null;
 const npm = npmCli ?? (process.platform === 'win32' ? 'npm.cmd' : 'npm');
 const results = [];
-const EXPECTED_CHECKS = 56;
+const EXPECTED_CHECKS = 61;
+const { values: options } = parseArgs({ options: { report: { type: 'string' } } });
 
 function result(group, name, status, detail = '') {
   results.push({ group, name, status, detail });
-  const symbol = status === 'PASS' ? '✓' : status === 'WARN' ? '!' : '✗';
+  const symbol = status === 'PASS' ? '✓' : status === 'WARN' ? '!' : status === 'SKIP' ? '–' : '✗';
   console.log(`  ${symbol} [${results.length}/${EXPECTED_CHECKS}] ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
 const pass = (group, name, detail) => result(group, name, 'PASS', detail);
 const fail = (group, name, detail) => result(group, name, 'FAIL', detail);
 const warn = (group, name, detail) => result(group, name, 'WARN', detail);
+const skip = (group, name, detail) => result(group, name, 'SKIP', detail);
 const check = (group, name, condition, detail = '') => (
   condition ? pass(group, name, detail) : fail(group, name, detail || 'check failed')
 );
@@ -47,7 +52,10 @@ async function text(relative) {
 // What a developer sets to run Live. The unit suite asserts the Demo-mode defaults, so it runs without these
 // (a preflight started with DEMO_MODE=false, or from a checkout whose .env is configured for Live, still passes it).
 const LIVE_SETTINGS = /^(DEMO_MODE|AGENTBL_ADMIN_TOKEN|X402_[A-Z0-9_]+|WHITE_AGENT_PRIVATE_KEY|PAYMENT_ATTESTOR_PRIVATE_KEY|PRICING_UPDATER_PRIVATE_KEY|SIGNER_KEYS_STRICT|DEPLOYER_PRIVATE_KEY)$/u;
-const withoutLiveSettings = () => Object.fromEntries(Object.entries(process.env).filter(([name]) => !LIVE_SETTINGS.test(name)));
+const withoutLiveSettings = (testRunner = false) => ({ ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !LIVE_SETTINGS.test(name)
+  && name !== 'NODE_TEST_CONTEXT' && !/^(?:LLM_|OPENAI_|AZURE_OPENAI_|DEEPSEEK_|DASHSCOPE_|Tencent_|Ali_|XAPI_)/u.test(name))),
+  // Node sets its own marker inside test workers. Setting it on the test runner would suppress every test.
+  ...(!testRunner ? { NODE_TEST_CONTEXT: 'preflight-offline' } : {}), DEMO_MODE: 'true', LLM_PROXY_ENABLED: 'false' });
 
 async function command(group, name, binary, args, cwd = root, env = process.env) {
   const viaNode = binary === npmCli;
@@ -58,7 +66,9 @@ async function command(group, name, binary, args, cwd = root, env = process.env)
       timeout: 180_000,
       maxBuffer: 12 * 1024 * 1024,
       windowsHide: true,
-      shell: !viaNode && process.platform === 'win32'
+      // node.exe often lives under "Program Files": execFile handles that path without a shell.
+      // Only the fallback npm.cmd shim needs cmd.exe on Windows.
+      shell: !viaNode && process.platform === 'win32' && /\.(?:cmd|bat)$/iu.test(binary)
     });
     pass(group, name, (stdout || stderr).trim().split(/\r?\n/u).at(-1));
     return { ok: true, output: `${stdout}\n${stderr}` };
@@ -84,9 +94,12 @@ let x402Config;
 try { x402Config = loadX402Config(process.env); pass('Environment', 'x402 config passes fail-fast validation', x402Config.network); }
 catch (error) { fail('Environment', 'x402 config passes fail-fast validation', error.message); }
 check('Environment', 'Four paid report products configured', X402_SERVICES.length === 4);
-if (runtimeMode.liveAvailable) pass('Environment', 'Live mode prerequisites configured');
+if (runtimeMode.demoMode) skip('Environment', 'Live mode prerequisites configured', 'not required or exercised in Demo');
+else if (runtimeMode.liveAvailable) pass('Environment', 'Live mode prerequisites configured');
 else warn('Environment', 'Live mode prerequisites configured', `demo-only: ${runtimeMode.liveMissing.join(', ')}`);
-check('Environment', 'Deterministic AI fallback remains available', true, 'wallet/API keys optional in demo');
+const fallbackCase = JSON.parse(await text('data/demo-case.json'));
+const fallback = await runValuationAgent(fallbackCase, { env: {}, forceDeterministic: true });
+check('Environment', 'Deterministic AI fallback remains available', fallback.provider === 'deterministic-fallback' && Boolean(fallback.valuation), 'executed locally with no provider');
 
 // 9-18: files, contracts and UI assets
 console.log('\n[Files and schemas]');
@@ -134,20 +147,21 @@ const nodeTests = await command(
   npm,
   ['test', '--', '--test-concurrency=4'],
   root,
-  withoutLiveSettings()
+  withoutLiveSettings(true)
 );
 // The exit code already decides pass/fail; this also reads the summary line (TAP "# fail N",
 // spec reporter "ℹ fail N") so a runner that exits 0 while reporting failures is still caught.
-const reportedFailures = /^\s*(?:#|ℹ) fail (\d+)\s*$/mu.exec(nodeTests.output)?.[1];
-if (nodeTests.ok && reportedFailures !== undefined && Number(reportedFailures) !== 0) {
+const testSummary = Object.fromEntries([...nodeTests.output.matchAll(/^\s*(?:#|ℹ) (tests|pass|fail|cancelled|skipped) (\d+)\s*$/gmu)]
+  .map((match) => [match[1], Number(match[2])]));
+if (nodeTests.ok && (!(testSummary.tests > 0) || testSummary.pass !== testSummary.tests || testSummary.fail !== 0 || testSummary.cancelled !== 0 || testSummary.skipped !== 0)) {
   results.at(-1).status = 'FAIL';
-  results.at(-1).detail = `test runner reported ${reportedFailures} failing tests`;
+  results.at(-1).detail = `incomplete test execution: ${JSON.stringify(testSummary)}`;
 }
 await command('Executable suites', 'Solidity contract suite', npm, ['test'], path.join(root, 'hardhat'));
-await command('Executable suites', 'Main API smoke flow', npm, ['run', 'smoke']);
-await command('Executable suites', 'Risk/pricing scenario regression', npm, ['run', 'scenarios']);
-if (runtimeMode.demoMode) await command('Executable suites', 'One-minute offline demo', npm, ['run', 'demo:once']);
-else warn('Executable suites', 'One-minute offline demo', 'skipped because runtime is LIVE');
+await command('Executable suites', 'Main API smoke flow', npm, ['run', 'smoke'], root, runtimeMode.demoMode ? withoutLiveSettings() : process.env);
+await command('Executable suites', 'Risk/pricing scenario regression', npm, ['run', 'scenarios'], root, withoutLiveSettings());
+if (runtimeMode.demoMode) await command('Executable suites', 'One-minute offline demo', npm, ['run', 'demo:once'], root, withoutLiveSettings());
+else skip('Executable suites', 'One-minute offline demo', 'runtime is LIVE');
 check('Executable suites', 'Critical JavaScript modules imported', true, 'server/client/endpoints/preflight');
 
 // 26-31: MCP business tools
@@ -192,7 +206,7 @@ try {
   const paidReports = [];
   for (const service of X402_SERVICES) {
     if (!runtimeMode.demoMode) {
-      warn('HTTP and x402', `${service.serviceId} signed demo unlock`, 'skipped in LIVE mode; no automatic spend');
+      skip('HTTP and x402', `${service.serviceId} signed demo unlock`, 'LIVE mode; no automatic spend');
       continue;
     }
     try {
@@ -237,7 +251,8 @@ try {
     }
   }
   const kinds = new Set(paidReports.map((report) => report?.kind));
-  check('HTTP and x402', 'Paid reports contain distinct business outputs', runtimeMode.demoMode ? kinds.size === 4 : true);
+  if (runtimeMode.demoMode) check('HTTP and x402', 'Paid reports contain distinct business outputs', kinds.size === 4);
+  else skip('HTTP and x402', 'Paid reports contain distinct business outputs', 'requires separately authorized real payments');
   const smoke = await getJson(`${api}/api/x402/smoke`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}'
   });
@@ -247,10 +262,26 @@ try {
 } finally {
   await new Promise((resolve) => server.close(resolve));
 }
-if (runtimeMode.demoMode) await command('HTTP and x402', 'Standalone x402 smoke command', npm, ['run', 'smoke:x402']);
-else warn('HTTP and x402', 'Standalone x402 smoke command', 'skipped in LIVE mode; no automatic spend');
+if (runtimeMode.demoMode) await command('HTTP and x402', 'Standalone x402 smoke command', npm, ['run', 'smoke:x402'], root, withoutLiveSettings());
+else skip('HTTP and x402', 'Standalone x402 smoke command', 'LIVE mode; no automatic spend');
 
-// 47-51: UI acceptance hooks
+// Agent release gates: actual runtime lifecycle and separate executable checks. No Live transactions.
+console.log('\n[Agent release gates]');
+const agent = createAgentService({ store: { pools: new Map(), agentActivities: [] }, env: {}, chainConfig: null,
+  monitors: false, getChainContext: async () => null });
+try {
+  await agent.start();
+  const running = (await agent.status()).running;
+  await agent.stop();
+  check('Agent release gates', 'Agent runtime starts and stops without pending work', running && !(await agent.status()).running && !agent.bus.status().processing);
+} catch (error) { fail('Agent release gates', 'Agent runtime starts and stops without pending work', error.message); }
+finally { await agent.stop(); }
+await command('Agent release gates', 'Agent reliability fault matrix', process.execPath, ['--test', 'tests/agentReliability.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Three Demo Agent stories including approved settlement', process.execPath, ['scripts/agent-demo-check.mjs'], root, withoutLiveSettings());
+const evaluationCheck = await command('Agent release gates', 'Measured deterministic Agent quality thresholds', npm, ['run', 'eval:agent', '--', '--check'], root, withoutLiveSettings());
+await command('Agent release gates', 'No fabricated transactions, activity or capabilities', process.execPath, ['--test', 'tests/noFabrication.test.js'], root, withoutLiveSettings(true));
+
+// 52-56: UI acceptance hooks
 console.log('\n[UI acceptance]');
 const html = await text('public/index.html');
 const app = await text('public/app.js');
@@ -261,17 +292,17 @@ check('UI acceptance', 'Paid report market tab and pipeline', html.includes('vie
 check('UI acceptance', 'priceFlash/riskPulse/paymentFlow hooks', /priceFlash/u.test(css) && /riskPulse/u.test(css) && /particleFlow/u.test(css));
 check('UI acceptance', 'Reduced-motion safety rule', /prefers-reduced-motion:\s*reduce/u.test(css));
 
-// 52-56: live readiness and documentation consistency
+// 57-61: live readiness and documentation consistency
 console.log('\n[Live readiness]');
 if (!runtimeMode.demoMode && x402Config?.facilitatorUrl) {
   await liveHttpCheck('Facilitator /supported is reachable', `${x402Config.facilitatorUrl}/supported`);
-} else warn('Live readiness', 'Facilitator /supported is reachable', 'explicitly skipped in Demo Mode');
+} else skip('Live readiness', 'Facilitator /supported is reachable', 'Demo Mode');
 
 if (!runtimeMode.demoMode) await rpcCheck('Injective RPC reports the pinned chain');
-else warn('Live readiness', 'Injective RPC reports the pinned chain', 'explicitly skipped in Demo Mode');
+else skip('Live readiness', 'Injective RPC reports the pinned chain', 'Demo Mode');
 
 if (!runtimeMode.demoMode && process.env.X402_PAY_TO) await balanceCheck(process.env.X402_PAY_TO);
-else warn('Live readiness', 'Live wallet has readable INJ gas balance', 'explicitly skipped in Demo Mode');
+else skip('Live readiness', 'Live wallet has readable INJ gas balance', 'Demo Mode');
 
 const chainRegistry = JSON.parse(await text('public/chain-config.json'));
 const chainConfig = chainConfigLib.resolveNetworkConfig(chainRegistry, 'injective-testnet');
@@ -312,8 +343,8 @@ const liveEvidenceValid = protocolNames.every((name) => addressPattern.test(chai
     && transactionPattern.test(officialWrite?.evm_tx_hash ?? '')
     && officialWrite?.arguments_summary?.to?.toLowerCase() === chainConfig.contracts.AgentBLRWA.toLowerCase();
 if (runtimeMode.demoMode) {
-  warn('Live readiness', 'Wave B live payment, five-contract protocol, pricing, and official MCP evidence are valid',
-    'explicitly skipped in Demo Mode');
+  skip('Live readiness', 'Wave B live payment, five-contract protocol, pricing, and official MCP evidence are valid',
+    'Demo Mode; historical evidence is not a current Live check');
 } else {
   check('Live readiness', 'Wave B live payment, five-contract protocol, pricing, and official MCP evidence are valid',
     liveEvidenceValid);
@@ -326,11 +357,15 @@ check('Live readiness', 'README documents x402, Wave B, stdio MCP, and mode boun
 if (results.length !== EXPECTED_CHECKS) {
   throw new Error(`Preflight definition error: expected ${EXPECTED_CHECKS} checks, produced ${results.length}`);
 }
-const counts = Object.fromEntries(['PASS', 'WARN', 'FAIL'].map((status) => [status, results.filter((item) => item.status === status).length]));
+const counts = Object.fromEntries(['PASS', 'WARN', 'SKIP', 'FAIL'].map((status) => [status, results.filter((item) => item.status === status).length]));
 console.log('\n' + '='.repeat(60));
-console.log(`Preflight: ${counts.PASS} PASS / ${counts.WARN} WARN / ${counts.FAIL} FAIL (${EXPECTED_CHECKS} total)`);
+console.log(`Preflight: ${counts.PASS} PASS / ${counts.WARN} WARN / ${counts.SKIP} SKIP / ${counts.FAIL} FAIL (${EXPECTED_CHECKS} total)`);
 console.log('='.repeat(60));
 process.exitCode = counts.FAIL > 0 ? 1 : 0;
+if (options.report) await writeJsonAtomic(path.resolve(root, options.report), { schema_version: 1,
+  generated_at: new Date().toISOString(), mode: runtimeMode.mode, counts, checks: results,
+  source_sha256: /^Source SHA256: ([a-f0-9]{64})$/mu.exec(evaluationCheck.output)?.[1] ?? null,
+  live_provider_calls: runtimeMode.demoMode ? false : 'read-only readiness probes', live_transactions: false });
 
 async function fetchModeSnapshot() {
   const demoMode = process.env.DEMO_MODE !== 'false';

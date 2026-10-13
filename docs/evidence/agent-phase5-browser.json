@@ -1,0 +1,93 @@
+{
+  "browser": "155.0.4283.45",
+  "mode": "demo",
+  "viewports": [
+    1440,
+    390
+  ],
+  "checks": [
+    "Demo reset is available without Live credentials",
+    "Agent console displays the running Demo runtime",
+    "Copper scenario starts on the real server",
+    "Copper scenario runs the risk and arrival sequence",
+    "Payment requires approval and settlement has not run",
+    "Settlement has its own explicit approval card",
+    "All seven real Demo decisions complete after both approvals",
+    "Demo results contain references and no blockchain transaction links",
+    "Decision drawer labels the simulated execution",
+    "Escape closes the decision drawer",
+    "Keyboard language switch renders English",
+    "English Agent console fits a 390px viewport",
+    "Chinese language restores on mobile",
+    "Chinese Agent console fits a 390px viewport",
+    "Browser stop control stops the runtime",
+    "Browser start control restarts the runtime",
+    "No page script errors"
+  ],
+  "page_errors": [],
+  "decisions": [
+    {
+      "action": "SETTLE",
+      "status": "COMPLETED",
+      "mode": "demo",
+      "reference": "demo:72abb740c08c"
+    },
+    {
+      "action": "RECORD_PAYMENT",
+      "status": "COMPLETED",
+      "mode": "demo",
+      "reference": "demo:fd38185a5fc8"
+    },
+    {
+      "action": "RECORD_ARRIVAL",
+      "status": "COMPLETED",
+      "mode": "demo",
+      "reference": "demo:5af3c43da190"
+    },
+    {
+      "action": "RESUME",
+      "status": "COMPLETED",
+      "mode": "demo",
+      "reference": "demo:e7e70bf92a74"
+    },
+    {
+      "action": "PAUSE",
+      "status": "COMPLETED",
+      "mode": "demo",
+      "reference": "demo:662d4d1e1f99"
+    },
+    {
+      "action": "REPRICE",
+      "status": "COMPLETED",
+      "mode": "demo",
+      "reference": "demo:4815035f96a5"
+    },
+    {
+      "action": "MARK_IN_TRANSIT",
+      "status": "COMPLETED",
+      "mode": "demo",
+      "reference": "demo:c5329b5e81ba"
+    }
+  ],
+  "measurements": [
+    {
+      "locale": "en",
+      "viewport": 390,
+      "inner": 390,
+      "scroll": 390
+    },
+    {
+      "locale": "zh",
+      "viewport": 390,
+      "inner": 390,
+      "scroll": 390
+    }
+  ],
+  "checked_at": "2026-10-13 08:45:53 UTC",
+  "transport_check": "Windows curl.exe /api/agent/status returned running:true, mode:demo, generation:1; no signer configured",
+  "console_limitations": [
+    "favicon.ico returned 404 on the initial navigation; no page script exceptions",
+    "Codex browser-panel open returned queued; controls were verified in a separate local Edge/Playwright session",
+    "This checks the Agent console flow only; full-site accessibility and localization remain WP4.6"
+  ]
+}

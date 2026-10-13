@@ -200,6 +200,8 @@ HTTPS：`sudo certbot --nginx -d your-domain.com`
 
 **Demo 重置**（`POST /api/demo/reset`）会清空 Demo 模式下的事件、决策、审批和活动并重建链下池子；**绝不清除 Live 的记录**。
 
+**交易恢复**：广播后的回执查询超时保持 `EXECUTING`，下一 tick 按持久化哈希查回执，不会重新广播；缺少哈希的定价动作仅按精确 oracle 防重放 ID 只读恢复，仍无法确认时保持 `reconciliation_required`，需运维对账。暂时性 RPC 错误不能被写成成功或改为模拟。旧模式/世代审批不能执行，已广播的 Live 事实也不能改变新 Demo 池。恢复矩阵、局限及 `npm run eval:agent` / 61 项 preflight 说明见 [agent-reliability.md](agent-reliability.md)。
+
 **单证接入**（`POST /api/agent/ingest`）：
 
 - 请求体 `{ case_id?, documents: [{ name, mime_type, text | content_base64 }], exporter_preferences? }`。类型白名单是 `text/markdown`、`text/plain`、`application/pdf`、`image/png`、`image/jpeg`，并用文件头（魔数）核对真实类型；单个文档上限 `AGENT_UPLOAD_MAX_BYTES`（默认 8 MiB，base64 编码前）；一个请求最多约 3 个满额文档。

@@ -1,8 +1,8 @@
 # AgentBL Agent 全量实现规划
 
-> 版本：v1.2（2026-10-13；Phase 3 P0、单证界面与 Demo 持仓已接线）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
+> 版本：v1.3（2026-10-13；Phase 5 P0 可靠性、真实组件评测与发布闸门）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
 > 基线：`main` @ `2292906`。该基线下 `npm test` 541 个用例全部通过，合约测试 74 个通过。
-> 状态：**开发中**（Phase 0、Phase 1、Phase 2 的 Demo 部分和 Phase 3 P0 已完成；§13 状态表之后有阶段实现说明）。开发会话按本文推进，并随时更新 §13 的状态表。
+> 状态：**开发中**（Phase 0、Phase 1、Phase 2 的 Demo 部分、Phase 3 P0 和 Phase 5 P0 已完成；剩余 P0 为 WP4.6 全站验收；§13 有阶段说明）。开发会话按本文推进，并随时更新 §13 的状态表。
 > 范围：项目里所有“应有的 Agent 功能”：`docs/tasks.md`、`docs/PRD.md`、`docs/injective-hackathon-gap-analysis2.md` 和 README 中承诺过的 Agent 能力，以及顺带的改进与优化。
 
 ---
@@ -49,7 +49,8 @@
 ```text
 npm test / npm run lint / npm run check / npm run test:coverage
 npm run test:contracts            # Hardhat，Node ≥ 22.13
-npm run preflight                 # 发布总闸门（Demo 当前 52 PASS / 4 WARN / 0 FAIL）
+npm run preflight                 # 61 项发布总闸门；Live 专属项在 Demo 下为 SKIP
+npm run eval:agent                # 真实组件确定性评测与报告；--check 不覆盖报告
 npm run dev                       # http://localhost:3000
 ```
 
@@ -1055,14 +1056,14 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 4.4 | ID 贯通 | P1 | 4.1 | S | Todo |
 | 4.5 | 一键全流程演示 | P1 | 2.5、4.1 | M | Todo |
 | 4.6 | 国际化、无障碍、移动端 | P0 | 4.x | S | Todo |
-| 5.1 | 重建评测体系 | P0 | 2.x、3.x | L | Todo |
+| 5.1 | 重建评测体系 | P0 | 2.x、3.x | L | Done（2026-10-13；7 类实际组件评测，44 段双语对话/100 轮；真实 LLM 未运行） |
 | 5.2 | 红队生成器 | P1 | 5.1 | M | Todo |
 | 5.3 | 新鲜度接入 | P1 | 2.5 | S | Todo |
-| 5.4 | 可靠性矩阵 | P0 | 1.x | M | Todo |
+| 5.4 | 可靠性矩阵 | P0 | 1.x | M | Done（2026-10-13；15 个故障矩阵测试，假链/注入时钟；未确认广播不重发） |
 | 5.5 | 决策重放 | P1 | 1.5 | S | Todo |
 | 5.6 | 隐私与保留 | P1 | 1.5 | S | Todo |
 | 5.7 | 权限矩阵文档 | P1 | 1.2 | S | Todo |
-| 5.8 | preflight 扩充 | P0 | 5.1 | S | Todo |
+| 5.8 | preflight 扩充 | P0 | 5.1 | S | Done（2026-10-13；61 项，实际执行计数与 SKIP 分开记录） |
 | 5.9 | 测试网冒烟（pool #2 默认；`--lifecycle` 可选） | P1 | 1.3、1.4、1.7、§16 | S | Todo |
 | 6.1 | MCP | P1 | 1.5、3.5 | M | Todo |
 | 6.2 | A2A Agent Card | P1 | — | S | Todo |
@@ -1110,10 +1111,19 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 - P1 仍未完成：WP3.6 主动重排推送；WP3.8 金额/价格/份额确认卡片、Live 钱包认购；当前动作意图仅引导用户到现有面板，绝不自动执行。Phase 2 的 PDF/视觉、Live 开盘、链上监听等待办保持原状态。
 - **本地验证通过**：`npm run lint` 零警告、`npm run check` 通过、`npm test` **857/857**（零跳过）、`npm run test:coverage` **857/857**，lines **94.12%** / branches **82.48%** / functions **91.50%**。测试使用假 LLM/本地链桩，没有真实提供方调用或链上交易。证据与代码摘要见 [evidence/copilot-phase3-local.json](evidence/copilot-phase3-local.json)。
 - **浏览器自动化通过**：Chromium 153，中英文、1440px / 390px、Enter / Escape、多轮条件、搜索、市场 Demo 认购及持仓、真实文件上传、字段来源、复核补件和决策详情跳转，零页面脚本错误；Windows `curl.exe` 也确认了本机入口。桌面控制工具因 WSL 路径 URI 错误无法启动，所以使用本机 Playwright Chromium；没有声称完成内置窗格控制或用户人工试用。
-- **下一批入口**：按既定顺序推进 WP5.4 可靠性矩阵 → WP5.1 评测体系 → WP5.8 preflight 扩充。P1 和真实链上操作仍按 §16 的边界安排。
+- **本次交接后的批次**：WP5.4 → WP5.1 → WP5.8 已在下节 Phase 5 P0 完成。当前下一入口为剩余 P0 的 WP4.6；P1 和真实链上操作仍按 §16 的边界安排。
 - 本次提交分组（按依赖顺序）：① `feat(agent): connect document management and safe review resubmission`；② `feat(copilot): persistent investor context and explainable server ranking`；③ `feat(frontend): unify investor search and assistant with Copilot`；④ `docs: record Phase 3 P0 evidence and remaining P1 scope`。本地验收 JSON 保留验收当时的未提交状态；提交、推送和远端 CI 另行确认。
 
 ---
+
+### Phase 5 P0 实现说明（2026-10-13）
+
+- WP5.4：共用风险高水位防止迟到解除；注入时钟贯穿审批/日志/事件；广播后超时保持 EXECUTING；按哈希或精确 oracle 防重放 ID 只读恢复；模式与世代在排队、批准、发送前校验；Live 确认不会改变切换后的 Demo 池。
+- WP5.1：删除回抄金标的旧骨架，调用实际组件；19 份文本/扰动单证、10 个一致性、10 个合规、1,350 次定价检查、三个自主循环、44 段中英文对话/100 轮、六个 NDCG 查询、16 个注入与一个干净对照。19 项阈值由单测强制执行，篡改金标、空输出与全部 HOLD 均有负向检查。
+- 评测发现并修复了自然语言日期的本地时区偏移与 `Miranda` 被 `iran` 子串误阻断。修复前证据保留，正确金标未改。合规仍是 Demo 关键词规则，WP2.3 正式 v2 没有被标成完成。
+- WP5.8：61 项闸门加入实际运行时、故障矩阵、完整 Demo 故事、评测和禁止伪造；Demo 的 Live 检查明确 SKIP；零测试、跳过或取消不能被 exit 0 冒充通过；修复 Windows 程序路径和旧 API 测试固定端口冲突。
+- 本地覆盖率测试 **881/881**，零跳过，lines **94.30%** / branches **83.00%** / functions **91.61%**；最终 preflight 为 **56 PASS / 0 WARN / 5 SKIP / 0 FAIL**，含 74 个合约测试。完整发布结果和浏览器记录见 [agent-reliability.md](agent-reliability.md) 及其证据链接。没有真实 LLM、真实交易、用户人工试用、提交/推送、部署或远端 CI 声明。
+- **下一批入口：WP4.6** 全站国际化、无障碍、移动端验收；本轮仅复验了 Agent 控制台中英/390px/键盘流程，未替代全站审计。之后进入 P1。
 
 ## 14. 测试策略
 

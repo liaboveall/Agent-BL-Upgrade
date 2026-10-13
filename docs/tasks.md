@@ -4,6 +4,8 @@
 
 **2026-10-13 当前增量**：Phase 3 P0 已接入运行时（多轮偏好、最新池检索排序、搜索/助手统一）；WP4.2 已上传真实内容并展示抽取来源与复核补件，WP4.3 已展示当前 Demo 持仓镜像与关联决策。P1 的主动重排、确认动作卡片、Live 持仓和 PDF/OCR 仍待完成。详见 [copilot.md](copilot.md) 和规划 §13。
 
+**2026-10-13 Phase 5 P0 增量**：WP5.4 / WP5.1 / WP5.8 已实现：15 个故障矩阵测试、隔离金标的真实组件评测（44 段双语对话/100 轮；19 项质量阈值）和 61 项发布闸门。修复前的日期/误阻断失败保留证据；Demo 的 Live 检查明确 SKIP。详见 [agent-reliability.md](agent-reliability.md) 与 [evaluation-report.md](evaluation-report.md)。下一批入口是剩余 P0 的 WP4.6 全站验收；P1、真实链上和真实 LLM 各自未被自动标成完成。
+
 每个任务都必须有 Owner 和可验证方式。没有验证方式的任务不要认领。  
 当前主线：**Web3 原生贸易融资协议：出口商 tokenize eBL，AI 自主定价与执行，全球投资者直接出资，Injective 全程上链审计**。
 
@@ -359,7 +361,7 @@ agentbl://contracts/deployments   # network、合约地址、ABI 版本、explor
 | ID | Task | Priority | Owner | Status | Verification / Definition of Done |
 |---|---|---|---|---|---|
 | TRUST-1 | 建立 Gold dataset：真实/脱敏 eBL、发票、保险单、正常/欺诈/缺字段/战争/延误至少 20 cases | P0 | Done | Done | 数据许可和来源可说明；字段级 ground truth；不得把敏感商业数据提交到公开仓库 | 20 条 gold dataset 完成 |
-| TRUST-2 | 评估 OCR/解析准确率、文档一致性 precision/recall、风险分单调性、估值误差、tool-call 成功率 | P1 | Done | Partial | `docs/evaluation-report.md` 给出指标、失败样例、限制；不能只报总测试数 | Evaluation report 生成器完成<br>**2026-10-12 复核（Partial）**：评测用“标准答案当解析结果”的 mock，指标恒为满分，`docs/evaluation-report.md` 不存在；报告已标 `synthetic`。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP5.1。 |
+| TRUST-2 | 评估 OCR/解析准确率、文档一致性 precision/recall、风险分单调性、估值误差、tool-call 成功率 | P1 | Done | Partial | `docs/evaluation-report.md` 给出指标、失败样例、限制；不能只报总测试数 | **历史 2026-10-12**：旧 mock 回抄金标，指标不能作为证据。**2026-10-13 WP5.1**：旧骨架已替换为真实组件测量，报告与源/金标摘要已生成，19 项确定性阈值由测试强制执行。文本抽取、一致性、Demo 合规、定价性质、自主循环、Copilot、注入已测；OCR/视觉、真实估值提供方与完整 tool-call 质量仍未验收。 |
 | TRUST-3 | Prompt-injection 防护：文档内容视为不可信数据，不能改变工具权限、支付地址、网络、价格和系统规则 | P0 | Done | Partial | 恶意 eBL fixture 不能触发任意 tool/tx、改 payTo、泄露 secret；测试纳入 preflight | 5 个注入测试 + sanitizer 完成<br>**2026-10-12 复核（Partial）**：模块存在，但运行时和测试都没有调用它。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.2 / WP5.4。<br>**2026-10-13**：接入流水线在解析后筛查中英文指令语句、隐藏字符和字段里的钱包地址，命中即 HOLD_FOR_REVIEW，且不开池。`tests/ingest.test.js`、`tests/agentIngestPipeline.test.js`。 |
 | TRUST-4 | 合约安全：访问控制、暂停、重入、重放、整数精度、重复 cargo/payment/report、状态机、emergency stop | P0 | Bowen | Todo | Slither 或同等静态检查 + adversarial tests；所有 high finding 关闭或书面接受 |
 | TRUST-5 | 数据新鲜度和来源健康：风险情报标 `observed_at/expires_at/source_status`，过期自动降置信度或拒绝定价 | P0 | Done | Partial | clock-controlled tests；断网不把旧数据冒充实时数据 | DataFreshnessValidator 完成<br>**2026-10-12 复核（Partial）**：模块存在，但运行时没有调用它。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP5.3。 |
@@ -391,14 +393,14 @@ agentbl://contracts/deployments   # network、合约地址、ABI 版本、explor
 | DEMO-2 | 首页只保一个主 CTA："购买这笔 RWA 的 AI 风控报告"；二级入口再放融资/市场/航运 | P0 | Bowen | Todo | 5 秒可用性测试：新用户能说出谁付钱、买什么、链上发生什么 |
 | DEMO-3 | 完成支付流水、riskPulse、priceFlash、waterfall、Agent activity 的同屏联动 | P1 | Bowen | Todo | 同一 `report_id/decision_id/tx_hash` 贯穿各面板；没有随机日志或不一致数字 |
 | DEMO-4 | 编写 30 秒 / 1 分钟 / 3 分钟中文路演稿与英文 tagline，三版数字、角色和叙事完全一致 | P0 | Bowen | Todo | 交叉检查 README、PRD、demo-script、video-script；至少 3 次计时彩排 |
-| DEMO-5 | 新建 `npm run preflight`，汇总 54 项检查：环境、文件/schema、300 Node tests、24 contract tests、smoke/scenarios、MCP、x402、RPC/facilitator、余额、合约地址、UI asset、文档一致性 | P0 | Bowen | Done | `scripts/preflight.mjs` 固定 54 项并真正执行全部套件；Demo 实测 50 PASS / 4 Live WARN / 0 FAIL；关键失败 exit 1 |
+| DEMO-5 | `npm run preflight` 汇总环境、schema、应用/合约测试、smoke/scenarios、MCP、x402、Live readiness、UI hooks 和 Agent 质量 | P0 | Bowen | Done | 2026-10-13：`scripts/preflight.mjs` 固定 61 项；56 PASS / 0 WARN / 5 SKIP / 0 FAIL；缺失实际测试计数或跳过/取消均失败。Live/readiness、提供方及人工验证各自独立。 |
 | DEMO-6 | 评委追问预案：为什么 AI、谁承担货损、为何不是证券保本、报告是否能伪造、支付失败怎么办、为何必须 Injective、与 TradeGo/银行差异 | P0 | Bowen | Todo | 每题 20 秒答案 + 可点击证据/代码/tx；不做未经律师确认的法律断言 |
 | DEMO-7 | 录制 Live 主视频 + Demo Mode 兜底视频，准备本地 MP4、关键截图和 CLI 兜底 | P0 | Bowen | Todo | 飞行模式也能播放；视频中的 tx 链接和当前部署配置一致 |
 | DEMO-8 | 做一次"故障彩排"：RPC、facilitator、LLM、xAPI、钱包分别失效 | P0 | Bowen | Todo | 每种故障 15 秒内切到正确兜底；不刷新整场、不暴露堆栈/密钥 |
 
-### 11.3 `preflight` 固定 54 项
+### 11.3 `preflight`（当前固定 61 项；下表为原始 54 项设计）
 
-实现时按下列编号输出，不能用"54 项"当口号却只跑五条命令。Live-only 检查在 Demo Mode 可记为 `SKIP`，但不能记为 `PASS`。
+**现行实现**以 `scripts/preflight.mjs` 和 [agent-reliability.md](agent-reliability.md) 为准：61 项，MCP 9 tools + 3 resources，Agent 新增闸门在 47–51，Demo 的 Live 专属项为 SKIP。下表保留最初设计，不代表它的每一项已完成（如正式静态安全扫描、人工 390px/视频审查）。不能只用总项数代替实际执行和分项证据。
 
 | # | Check | # | Check |
 |---:|---|---:|---|
@@ -447,7 +449,7 @@ QA 目标：任何新增功能都必须回到同一条主链路，不能散。
 | QA-7 | 最终演示前跑完整验证矩阵 | Bowen | Todo | `npm run check && npm run test && npm run smoke && npm run scenarios && npm run demo` | - |
 | QA-8 | 准备演示失败兜底：CLI demo、mock provider、contract mock | Bowen | Todo | README / docs 更新 | contract mock 已完成（`contractHarness.js`）；CLI demo / README 兜底说明待补 |
 | QA-9 | 最后 6 小时功能冻结协调 | Bowen | Todo | 全员确认 | - |
-| QA-10 | 增加自主 Agent 可靠性测试矩阵：事件乱序、重复事件、进程重启、RPC 超时、xAPI/LLM 不可用、链上交易失败 | Bowen | Todo | `npm run test`，所有失败路径均有幂等恢复或确定性 fallback | - |
+| QA-10 | 增加自主 Agent 可靠性测试矩阵：事件乱序、重复事件、进程重启、RPC 超时、xAPI/LLM 不可用、链上交易失败 | Bowen | Done | `npm run test`，所有失败路径均有幂等恢复或确定性 fallback | 2026-10-13：15 个矩阵测试，假链/注入时钟；已广播只读对账、审批过期与世代隔离、明确回退；真实链上冒烟仍见 WP5.9 |
 | QA-11 | 增加 eBL V2 安全测试：一货多单、伪造 cargoHash、未授权 transfer/endorse、质押中转让、重放攻击 | Bowen | Review | `cd hardhat && npm test` + 安全测试报告 | 回归测试：`hardhat/test/contractHardening.test.js`（一张 eBL 只能支撑一个 offering、V1/V2 重复登记、未授权 transfer/endorse、质押中转让）、`paymentOracle.test.js` 与 `eblRegistryV2.test.js`（重放、重复 cargoHash）；随机状态机对照 `offeringModel.test.js`；报告见 `docs/contracts.md` §0.3 / §0.6 |
 | QA-12 | 增加市场与角色 API 集成测试：访问控制、分页、并发认购、持久化恢复、链上/链下状态对账 | Bowen | Todo | `npm run test && npm run smoke`，API、持久化存储与合约事件三方一致 | - |
 | QA-13 | 建立 MetaMask / Keplr / Leap × 桌面/移动端 × 真实链/离线 fallback 的手动验收矩阵 | Bowen | Todo | 完整 checklist、截图与测试 tx hash | - |
@@ -537,7 +539,7 @@ Gate D：连续 3 次 preflight 全绿；Live/Demo/CLI/视频四套路径都演�
 | SP-6 | Injective Exchange precompile | P2 | 可选的 RWA 二级市场/风险对冲 | 只有存在真实测试市场与清楚经济模型时才接；验收为真实 order/query，不以 mock 截图算完成 | Done — 仅 GOLD 直连对冲获准；真实 `0x65` deposit/spot/order/query/cancel/withdraw，order `0xfe53…2b58`、order tx `0x38c9…fc5b`；铜/铝/大豆/原油无直接市场时 fail closed |
 | SP-7 | Injective Indexer + Explorer | P0 | 支付、定价、暂停、恢复、兑付事件回读 | UI 中每个关键状态都能跳到真实 tx/event；Indexer 不可用时 RPC fallback | Done |
 | SP-8 | Azure OpenAI / Microsoft Foundry Models | P1 | `openaiCompatClient` 新增 Azure provider；解析、解释、报告生成 | `AZURE_OPENAI_ENDPOINT/DEPLOYMENT/API_KEY` 配置；工具调用与 structured output 通过；确定性 fallback 保留 | Done |
-| SP-9 | Microsoft Foundry Evaluation | P1 | Agent AI 质量证明 | 建立 ≥20 条 eval dataset；Task Completion ≥85%、Tool Call Success ≥95%、Groundedness ≥0.8；保存可分享结果截图/JSON | Partial — 评测数据集是真的，但跑评测的“Agent”是返回标准答案的 mock，指标不可当作质量证明。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP5.1。 |
+| SP-9 | Microsoft Foundry Evaluation | P1 | Agent AI 质量证明 | 建立 ≥20 条 eval dataset；Task Completion ≥85%、Tool Call Success ≥95%、Groundedness ≥0.8；保存可分享结果截图/JSON | Partial — 2026-10-13 WP5.1 已移除回抄金标 mock，真实本地组件评测与 JSON 已落地；未接入 Foundry，不把自有指标冒充平台指标。见 [evaluation-report.md](evaluation-report.md)。 |
 | SP-10 | Microsoft Foundry / Application Insights tracing | P1 | Agent 调用链可观测 | 用 OpenTelemetry 记录 parser→checker→risk→valuation→pricing→payment→chain spans、延迟、错误和成本；默认脱敏 | Partial — `tracer.js` 没有被运行时引用，`@opentelemetry/api` 未安装，span 全是空操作。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP1.6。 |
 | SP-11 | GitHub Copilot | P2 | 团队开发效率 | 只在开发说明中如实记录，不作为产品技术创新点或 runtime 集成 | - |
 | SP-12 | ENI / TradeGo / 丽讯 | P0 | 可信 eBL、真实业务数据、落地背书 | 至少拿到 sandbox/API schema、样例 document ID 或正式 LOI 之一；拿不到时显式 mock adapter，不虚构合作上线 | - |
