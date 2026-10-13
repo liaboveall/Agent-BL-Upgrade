@@ -1,8 +1,8 @@
 # AgentBL Agent 全量实现规划
 
-> 版本：v1.3（2026-10-13；Phase 5 P0 可靠性、真实组件评测与发布闸门）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
+> 版本：v1.6（2026-10-13；P1 WP3.6 / WP3.8 与 WP0.6 可重复 Wave B）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
 > 基线：`main` @ `2292906`。该基线下 `npm test` 541 个用例全部通过，合约测试 74 个通过。
-> 状态：**开发中**（Phase 0、Phase 1、Phase 2 的 Demo 部分、Phase 3 P0 和 Phase 5 P0 已完成；剩余 P0 为 WP4.6 全站验收；§13 有阶段说明）。开发会话按本文推进，并随时更新 §13 的状态表。
+> 状态：**开发中**（P0 与 P1 WP3.6 / WP3.8 / WP0.6 本地实现及验收已完成；WP0.6 另有实链只读复验，无新交易。下一入口 WP2.2 PDF/视觉等 P1 余项。真实提供方、钱包/链上写入与用户人工验收另有证据边界，见 §13）。开发会话按本文推进，并随时更新 §13 的状态表。
 > 范围：项目里所有“应有的 Agent 功能”：`docs/tasks.md`、`docs/PRD.md`、`docs/injective-hackathon-gap-analysis2.md` 和 README 中承诺过的 Agent 能力，以及顺带的改进与优化。
 
 ---
@@ -1025,7 +1025,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 0.3 | 统一原子存储 | P0 | — | S | Done（2026-10-12） |
 | 0.4 | 文档与任务表诚实化 | P0 | 0.1 | S | 首轮 Done；随各 WP 持续更新 |
 | 0.5 | 适配 worktree 开发 | P0 | — | S | Done（2026-10-12） |
-| 0.6 | 让 `verify:wave-b` 可以重跑（含抽出 `cargoIdentity`） | P1 | — | S | Todo |
+| 0.6 | 让 `verify:wave-b` 可以重跑（含抽出 `cargoIdentity`） | P1 | — | S | Done（2026-10-13；13 项离线测试、默认只读/显式确认、cargoHash 保持、Oracle 防重放与历史保护；实链 dry-run=ALREADY_CURRENT，零新交易） |
 | 1.1 | 事件模型与事件总线 | P0 | 0.3 | M | Done（2026-10-12） |
 | 1.2 | 策略引擎 | P0 | — | M | Done（2026-10-12；另加“只做记录的动作不进审批”规则） |
 | 1.3 | 审批队列与 CLI | P0 | 1.2 | M | Done（2026-10-12；CLI 与核验用假合约测过，真链签名未跑，需用户同意） |
@@ -1047,15 +1047,15 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 3.3 | 检索 | P0 | 3.1 | M | Done（2026-10-13） |
 | 3.4 | 排序 | P0 | 3.3 | S | Done（2026-10-13） |
 | 3.5 | 推荐与解释 | P0 | 3.2–3.4 | M | Done（2026-10-13；先结构化结果，再核对后的叙述；LLM 用假提供方验证） |
-| 3.6 | 动态重排推送 | P1 | 3.5、1.5 | M | Todo |
+| 3.6 | 动态重排推送 | P1 | 3.5、1.5 | M | Done（2026-10-13；原条件重排、关注、SSE 最新快照续接、双订阅与决策链接；见 copilot.md） |
 | 3.7 | 前端统一 | P0 | 3.5 | M | Done（2026-10-13） |
-| 3.8 | 动作提案 | P1 | 3.7 | M | Todo |
+| 3.8 | 动作提案 | P1 | 3.7 | M | 本地实现 Done（2026-10-13；确认/取消、Demo 持仓和报告、Live 钱包辅助函数与回执桩；真实钱包/交易未验收，按 §16） |
 | 4.1 | Agent 控制台 | P0 | 1.5 | L | Done（2026-10-12；暂缺：重放校验按钮（5.5）、模型用量（接入 LLM 后）、点击决策联动价格瀑布图（4.4）） |
 | 4.2 | eBL 管理 | P0 | 2.1 | M | Done（2026-10-13；文本上传、字段来源、SSE、修正补件重跑） |
 | 4.3 | 持仓 | P0 | 0.1 | S | Done（2026-10-13；Demo 服务器持仓、当前镜像与决策；Live 持仓不在本包） |
 | 4.4 | ID 贯通 | P1 | 4.1 | S | Todo |
 | 4.5 | 一键全流程演示 | P1 | 2.5、4.1 | M | Todo |
-| 4.6 | 国际化、无障碍、移动端 | P0 | 4.x | S | Todo |
+| 4.6 | 国际化、无障碍、移动端 | P0 | 4.x | S | Done（2026-10-13；全站中英、1440/390px、40 个页面/弹窗组合和 255 项浏览器检查；真实读屏器/实体手机未验收） |
 | 5.1 | 重建评测体系 | P0 | 2.x、3.x | L | Done（2026-10-13；7 类实际组件评测，44 段双语对话/100 轮；真实 LLM 未运行） |
 | 5.2 | 红队生成器 | P1 | 5.1 | M | Todo |
 | 5.3 | 新鲜度接入 | P1 | 2.5 | S | Todo |
@@ -1073,7 +1073,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 
 **推荐执行顺序**：
 
-0.1 → 0.2 → 0.3 → 0.5 → 1.2 → 1.1 → 1.4 → 1.3 → 1.5 → 4.1（尽早看到真实的决策流）→ 2.5 → 2.1 → 2.2 文本部分 → 2.4 → 2.8 → 2.6 Demo 部分 → 4.2 → 4.3 → 3.1–3.5 → 3.7 → 5.4 → 5.1 → 5.8 → 0.4（随各阶段持续更新）→ P1 项（含 0.6、1.7、5.9）→ P2 项 → 7.1（部署前确认）。
+0.1 → 0.2 → 0.3 → 0.5 → 1.2 → 1.1 → 1.4 → 1.3 → 1.5 → 4.1（尽早看到真实的决策流）→ 2.5 → 2.1 → 2.2 文本部分 → 2.4 → 2.8 → 2.6 Demo 部分 → 4.2 → 4.3 → 3.1–3.5 → 3.7 → 5.4 → 5.1 → 5.8 → 4.6 → 0.4（随各阶段持续更新）→ P1 项（首先 3.6，再 3.8；含 0.6、1.7、5.9）→ P2 项 → 7.1（部署前确认）。
 
 ### Phase 2 实现说明（2026-10-13）
 
@@ -1108,10 +1108,10 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 - LLM 输出按 zod 校验；显式数字由确定性解析决定。模型关闭、繁忙、失败或超时会回退。遵守 `LLM_PROXY_ENABLED`、`LLM_MAX_TOKENS_CAP` 和 `LLM_PROXY_MAX_CONCURRENCY`，消息接口使用现有 llm 限流桶。SSE 先发 `result`，再发完整且核对数字的 `narrative`，最后 `done`。
 - WP4.2：实际文件内容上传、作业步骤、字段来源/置信度、发现及决策入口；复核以修正补件创建新作业，事件为 `REVIEW_RESOLVED`，全部检查重跑，旧证据保留。WP4.3：持仓取同一个服务器接口，显示原成本、来源、当前镜像和相关决策。
 - 当前边界：期限按单证的发货日期到 ETA 计算；地区和港口使用内置词典；单一数值上限/下限可执行，区间先澄清。候选是链下镜像，风险情报 fixture 只作参考；持仓是重启会清空的 Demo 记录。
-- P1 仍未完成：WP3.6 主动重排推送；WP3.8 金额/价格/份额确认卡片、Live 钱包认购；当前动作意图仅引导用户到现有面板，绝不自动执行。Phase 2 的 PDF/视觉、Live 开盘、链上监听等待办保持原状态。
+- 当时 P1 未完成：WP3.6 主动重排、WP3.8 确认卡片与 Live 钱包路径；后续本地实现已在下方 P1 批次完成。Phase 2 的 PDF/视觉、Live 开盘、链上监听等待办保持原状态。
 - **本地验证通过**：`npm run lint` 零警告、`npm run check` 通过、`npm test` **857/857**（零跳过）、`npm run test:coverage` **857/857**，lines **94.12%** / branches **82.48%** / functions **91.50%**。测试使用假 LLM/本地链桩，没有真实提供方调用或链上交易。证据与代码摘要见 [evidence/copilot-phase3-local.json](evidence/copilot-phase3-local.json)。
 - **浏览器自动化通过**：Chromium 153，中英文、1440px / 390px、Enter / Escape、多轮条件、搜索、市场 Demo 认购及持仓、真实文件上传、字段来源、复核补件和决策详情跳转，零页面脚本错误；Windows `curl.exe` 也确认了本机入口。桌面控制工具因 WSL 路径 URI 错误无法启动，所以使用本机 Playwright Chromium；没有声称完成内置窗格控制或用户人工试用。
-- **本次交接后的批次**：WP5.4 → WP5.1 → WP5.8 已在下节 Phase 5 P0 完成。当前下一入口为剩余 P0 的 WP4.6；P1 和真实链上操作仍按 §16 的边界安排。
+- **本次交接后的批次**：WP5.4 → WP5.1 → WP5.8 已在下节 Phase 5 P0 完成。当时剩余的 P0 WP4.6 已在后续批次收尾；P1 和真实链上操作仍按 §16 的边界安排。
 - 本次提交分组（按依赖顺序）：① `feat(agent): connect document management and safe review resubmission`；② `feat(copilot): persistent investor context and explainable server ranking`；③ `feat(frontend): unify investor search and assistant with Copilot`；④ `docs: record Phase 3 P0 evidence and remaining P1 scope`。本地验收 JSON 保留验收当时的未提交状态；提交、推送和远端 CI 另行确认。
 
 ---
@@ -1123,7 +1123,36 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 - 评测发现并修复了自然语言日期的本地时区偏移与 `Miranda` 被 `iran` 子串误阻断。修复前证据保留，正确金标未改。合规仍是 Demo 关键词规则，WP2.3 正式 v2 没有被标成完成。
 - WP5.8：61 项闸门加入实际运行时、故障矩阵、完整 Demo 故事、评测和禁止伪造；Demo 的 Live 检查明确 SKIP；零测试、跳过或取消不能被 exit 0 冒充通过；修复 Windows 程序路径和旧 API 测试固定端口冲突。
 - 本地覆盖率测试 **881/881**，零跳过，lines **94.30%** / branches **83.00%** / functions **91.61%**；最终 preflight 为 **56 PASS / 0 WARN / 5 SKIP / 0 FAIL**，含 74 个合约测试。完整发布结果和浏览器记录见 [agent-reliability.md](agent-reliability.md) 及其证据链接。没有真实 LLM、真实交易、用户人工试用、提交/推送、部署或远端 CI 声明。
-- **下一批入口：WP4.6** 全站国际化、无障碍、移动端验收；本轮仅复验了 Agent 控制台中英/390px/键盘流程，未替代全站审计。之后进入 P1。
+- **当时下一批入口：WP4.6**；本轮仅复验了 Agent 控制台中英/390px/键盘流程，未替代全站审计。全站收尾见下节。
+
+### WP4.6 全站前端验收（2026-10-13）
+
+- 原生下拉框与页尾活动 disclosure；修复窄屏上传跨列、弹窗网格和航程提示；导航/到账速度语义、可访问标签、键盘焦点、polite 播报和 reduced-motion 全站接线。
+- 决策行移除嵌套控件，抽屉和 Copilot 使用原生 dialog；异步/SSE/轮询不夺走焦点。审批拒绝 prompt 的 Cancel 保持待审批；Demo 事件等待态防重复提交。
+- 全站扫描翻译键和 aria 文案，已知贸易标签只在展示层转换；原始证据不改。中英 × 1440/390px 共 40 个组合、255 项真实浏览器检查通过，零脚本错误、零非预期本地 HTTP 错误。保留首轮焦点失败记录。
+- 本地工程检查和代码摘要见 [evidence/agent-phase4-local.json](evidence/agent-phase4-local.json)，复现、截图、发布检查与局限见 [frontend-acceptance.md](frontend-acceptance.md)。本次没有真实 LLM/资金/链上写入，也没有提交、推送、部署或远端 CI 声明。
+- **当时下一入口：P1 WP3.6，再 WP3.8**，已在下节完成本地实现与验收。Phase 2 余项和 Live 冒烟仍按各 WP 与 §16 逐项安排，不由前端验收自动完成。
+
+### P1 WP3.6 / WP3.8 实现说明（2026-10-13）
+
+- 决策记录及确认执行驱动会话重排；保留硬约束、比较范围、文本词项和多样性规则。推荐外移后仍跟踪该池，恢复能重新进入推荐。关注列表持久化；只保存与公开候选词汇匹配的检索词项，不保存聊天原文。
+- `/api/copilot/sessions/:id/stream` 推送 `COPILOT_RERANK`，含原/新排名、当前报价、原因和真实 `decision_id`。断线续接发送最新已持久化快照，合并中间变更；不是完整事件日志。过期、删除、模式重置关闭订阅。搜索单轮会话与助手多轮会话独立。
+- 卡片明确池子、金额、价格、份额、五分钟有效期和风险披露；确认前重查报价、容量、预算、合规及单证 HOLD。取消不执行，重复 Demo 确认返回同一 `demo:` 引用；持仓来源为 Copilot。预算是单次动作上限，不是资金托管或跨会话累计支出账本。
+- Live 卡片先读已映射池的链上报价，按整数份额向下取整。钱包检查部署、网络、账户、停机与资格，先 `staticCall`，再验证真实 `Subscribed` 回执。现有合约无价格上限参数；发送后价格变化或回执不匹配保持需对账，不自动重发。没有真实 Live 交易验收。
+- 报告确认走现有 Demo smoke 或 Live V2 钱包路径，复用目录价格与 challenge 数额校验。Demo 显示 `demo:x402:` 收据，移除旧接口的合成 txHash；报告和完成状态支持语言切换。Live/report 准备状态为 `CONFIRMING`，重复确认被拒绝，该状态本身不证明链上完成。
+- 浏览器发现并修复了同一决策“记录→确认”通知覆盖排名变化的时序问题：保留首次基线，并按实际已完成状态合并通知。中英 × 1440px/390px、双面板共 110 项浏览器检查通过，无页面脚本错误。工程检查、源码摘要、诊断失败记录和边界见 [copilot.md](copilot.md) 及 [evidence/copilot-p1-local.json](evidence/copilot-p1-local.json)。
+- 未提交、未推送；真实 LLM、用户人工试用、实体设备、内置浏览器控制和真实链上操作未由本地自动化替代。下一批为 WP0.6，再 WP2.2 等 P1 余项。
+- 建议提交分组：① `feat(copilot): stream decision-driven recommendation updates`；② `feat(copilot): require priced action confirmation and verify wallet receipts`；③ `test(copilot): record P1 browser and local acceptance`。保留上一批 WP4.6 未提交改动。
+
+### P1 WP0.6 可重复 Wave B（2026-10-13）
+
+- `src/chain/cargoIdentity.js` 原样沿用旧 JSON 公式和 voyage 空字符串回退。铜货哈希锁定为 `0xcbb79a2dc7946a1b0db32fa57833f07d5130915393acbf4315ddc3958383ad2f`，不引入 `voyage_no`。该模块供后续 Live OPEN/owner 计划复用；本次未完成 WP2.4 的 Live OPEN。
+- 脚本默认/`--dry-run` 只读、不读 `.env` 或私钥；新货物计划 mint→pledge→createOffering→pricing，已登记活跃池复用 eBL/池仅计划 pricing。暂停、终态、已登记却无活跃池、错误质押和紧急停机均在发送前拒绝。
+- 相同报告/报价已被 Oracle 处理且当前值一致时返回 `ALREADY_CURRENT`，零交易；已处理但被其他报价替换时明确拒绝，不能篡改承诺绕过防重放。未处理的合法 OPEN 可能把 pool #2 价格恢复到报告价。既有支付不再付费。
+- `--confirm` 才在运维者本机加载配置并使用 owner key；实际广播仍须先按 §16 获得用户同意，本会话只测试假签名/假链。每步先模拟、再核对匹配合约的回执事件；广播不确定或回执不匹配记录 `RECONCILIATION_REQUIRED`，不自动继续。新建 attempt 文件，历史证据不会被覆盖。
+- 实链只读复验（2026-10-13 20:05 SGT）重新核验旧 USDC 转账、PaymentAttested、cargoHash、池状态及 Oracle 记录：eBL #2 / pool #2 为 Open、价格 800000 micros（$0.80），报告/报价已处理，零交易。见 [evidence/wave-b-repeatable-readonly-2026-10-13.json](evidence/wave-b-repeatable-readonly-2026-10-13.json)。这不代表新的链上写入验收。
+- 13 项离线行为测试见 `tests/waveBGate.test.js`，包括未登记、复用、暂停/终态、重复承诺、支付/存证日志伪配、只读密钥隔离、历史文件保护、确认各步骤与中途失败。最终工程证据见 [evidence/wave-b-repeatable-local.json](evidence/wave-b-repeatable-local.json)。下一入口 WP2.2 PDF/视觉；建议单独提交 `fix(chain): make Wave B verification replay-safe and preserve evidence`，本轮仍未提交/推送。
+- 最终全量 926/926、零跳过；lint/check 通过；覆盖率 94.33% / 82.93% / 91.63%；61 项 preflight 为 56 PASS / 0 WARN / 5 SKIP / 0 FAIL（含 74 个合约测试）。同时补强 Copilot 删除会话与其他订阅隔离的回归。之前的 110 项浏览器证据单独保留，测试服务器已停止。
 
 ## 14. 测试策略
 

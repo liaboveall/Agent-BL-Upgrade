@@ -1,6 +1,6 @@
-# 投资者 Copilot（Phase 3 P0）
+# 投资者 Copilot（Phase 3 P0 / P1）
 
-2026-10-13：投资者悬浮助手与市场的 AI 搜索框使用同一套服务器检索和排序。搜索框是无状态单轮，悬浮助手会保留多轮偏好。旧市场搜索接口保留兼容。
+2026-10-13：搜索和悬浮助手使用同一套服务器检索与排序。搜索每次创建独立单轮会话以接收风险更新，助手保留多轮偏好；两者不会互相覆盖。WP3.6 主动重排和 WP3.8 确认卡片已完成本地实现与验收，真实 Live 钱包交易仍待用户按实施规划 §16 执行。旧市场搜索接口保留兼容。
 
 可在 Demo 模式依次输入：
 
@@ -23,13 +23,44 @@
 | `POST /api/copilot/sessions` | `{locale: "zh" 或 "en"}`，创建会话 |
 | `GET /api/copilot/sessions/:id` | 读取结构化偏好 |
 | `DELETE /api/copilot/sessions/:id` | 删除会话；正在处理的请求不能将它恢复 |
-| `POST /api/copilot/sessions/:id/messages` | `{message, locale?, limit?, pool_ids?}`，多轮；同一会话串行处理 |
+| `POST /api/copilot/sessions/:id/messages` | `{message, locale?, limit?, pool_ids?, service_id?}`，多轮；同一会话串行处理 |
 | `POST /api/copilot/query` | 相同输入，无状态单轮 |
+| `GET /api/copilot/sessions/:id/stream` | `COPILOT_RERANK`；支持 `Last-Event-ID` 或 `last_event_id` |
+| `PUT /api/copilot/sessions/:id/watchlist` | `{pool_ids: [...]}`，最多 30 个已知池 |
+| `POST /api/copilot/sessions/:id/actions/:actionId/confirm` | `{confirm:true, wallet_address?}`，重新检查当前卡片；Live/报告返回准备信息 |
+| `POST /api/copilot/sessions/:id/actions/:actionId/cancel` | 取消尚未开始的卡片，不执行 |
+| `POST /api/pool/subscribe` | Copilot Demo 确认：`{confirm:true, copilot_action:{session_id,action_id}, wallet_address?}`；金额与池子取已保存卡片 |
 
-`Accept: text/event-stream` 时按 `result → narrative → done` 返回：先显示结构化卡片，再显示完整、通过数字核对的解释。服务中断、会话过期或模式变化不会当成成功完成。TTL 默认一天，上限默认500个活跃会话；只存结构化约束、意图增量和最近排序摘要，不存聊天原文或钱包。切换模式或重置 Demo 会使旧会话失效。
+消息使用 `Accept: text/event-stream` 时按 `result → narrative → done` 返回：先显示结构化卡片，再显示完整、通过数字核对的解释。服务中断、会话过期或模式变化不会当成成功完成。TTL 默认一天，上限默认500个活跃会话；存结构化约束、意图增量、公开候选词汇中的检索词项、排序摘要、最新变更快照和有界动作卡片，不存聊天原文或钱包。切换模式或重置 Demo 会使旧会话失效。
 
 单证页面已改为上传真实内容，并展示作业步骤、抽取字段、来源行号、方法、置信度和相关决策。HOLD 作业的“提交修正单证”会创建新作业和 `REVIEW_RESOLVED` 事件，再跑全部检查，保留原 HOLD 证据；恢复以前用过的正确内容也会创建独立复核作业，相同补件重复提交则返回同一作业。当前 PDF/图片的接收不代表已实现 OCR。市场的“模拟认购”在 Demo 下向服务器记录持仓并显示服务器实际价格/份额；市场和助手的持仓都读取 `/api/investors/portfolio`，显示原始成本、来源、当前池状态/价格/风险和关联决策。这些 Demo 持仓在重启后清空。
 
-尚未完成的 P1 工作：WP3.6 主动重排推送；WP3.8 带价格、金额、份额及确认按钮的动作卡片和 Live 钱包认购。当前“认购 / 买报告”意图只引导用户打开现有面板，不会执行动作。未做真实 LLM 提供方验收或真实链上交易。
+### 主动重排与确认动作（WP3.6 / WP3.8）
+
+影响上次推荐或关注池的决策会用原条件重新检索排序，推送原/新排名、报价、原因和 `decision_id`。被硬约束移出列表的池仍被跟踪，后续恢复能重新进入。重排不调用 LLM、不改偏好，也不延长 TTL。前端显示更新和决策链接并保留键盘焦点。搜索和助手同时订阅时保留同一决策的首次变化基线，确认通知不会把排名下降覆盖成空变化。
+
+流按会话隔离；Copilot 流数量使用现有 `AGENTBL_MAX_SSE_CLIENTS`，默认 200。删除、过期、Demo 重置关闭流；慢客户端关闭连接后续接。续接只发最新已持久化快照及其序号，合并中间变化，不提供逐条历史通知。快照的 `at` 是当时计算时间；它不恢复已清空的 Demo 持仓，也不替代链上镜像监听（WP2.7）。
+
+先输入 `铜，预算1000美元`，再输入 `认购1000美元`。标的不唯一时需先选择池子，金额缺失时需填写。卡片列出金额、单价、份额和风险披露，五分钟有效；用户确认才执行，取消不创建持仓。认购仅生成份额凭证，现有合约不收取认购款、不托管资金，也不分配兑付款；Live 钱包交易仍消耗 gas。预算是单次动作上限，不是跨动作/跨会话累计支出额度。
+
+确认重新检查会话、模式、报价哈希/价格、容量、预算、合规及单证 HOLD。新消息取代旧卡片，旧 ID 不能执行；Demo 重复确认返回同一收据，持仓来源为 Copilot。Demo 的 `Open`、`Repriced`、`Subscribed` 可认购，与合约一致。
+
+Live 卡片只用于已映射池：先读链上报价、状态和剩余份额，整数份额向下取整。钱包检查部署、网络、账户、资格与停机状态，模拟调用后才广播；匹配合约、池、投资者、份额和价格的 `Subscribed` 回执才显示确认。现有 `subscribe` 无价格上限参数，读取与挖矿之间的价格变化不能在合约内原子拒绝；不匹配回执需对账，不自动重发或回落 Demo。Live 持仓 API 没有因此完成。
+
+`买估值报告` / `buy a valuation report`，以及风险、反欺诈报告取服务目录价格；确认后走现有 Demo smoke 或 Live V2 钱包路径。Demo 显示 `demo:x402:` 收据并移除旧接口合成交易哈希；报告与完成状态支持语言切换。Live/report 确认置为 `CONFIRMING`，阻止重复准备；服务器此状态本身不证明支付或链上完成。V2 仍核对 challenge 数额、网络和签名账户。
+
+### P1 本地验收
+
+[浏览器记录](evidence/copilot-p1-browser.json)：Edge Chromium 155，中文/英文 × 1440px/390px，110 项检查；双面板独立订阅、台风暂停/恢复、排名、决策详情、焦点、取消、重复点击、实际 Demo 持仓、估值报告和语言切换均通过，无页面脚本错误。截图见同目录 `copilot-p1-mobile-*.png`。工程检查、覆盖率、源码摘要与边界见 [本地记录](evidence/copilot-p1-local.json)。
+
+最终工程检查：`npm test` 913/913、零跳过；`npm run lint` 零警告、`npm run check` 通过；覆盖率 lines 94.30% / branches 82.98% / functions 91.55%，门槛 88/72/86 未降低。[发布闸门](evidence/copilot-p1-preflight.json) 56 PASS / 0 WARN / 5 SKIP / 0 FAIL（61 项，包含 74 个合约测试）；Demo 的 Live 检查保持 SKIP。
+
+保留诊断记录：[Agent 被关闭的首次环境](evidence/copilot-p1-browser-before-fix.json)、[详情短 ID 的旧断言](evidence/copilot-p1-browser-short-id-check.json)、[默认 30 次/分钟限流](evidence/copilot-p1-browser-rate-limit.json)、[跨面板选择器的旧断言](evidence/copilot-p1-browser-scope-check.json)、[确认通知覆盖排名变化](evidence/copilot-p1-browser-phase-delta-before-fix.json)。最后一项是已修复的产品时序问题，新增双订阅测试；其余通过修正隔离环境/验收脚本解决。
+
+复现时跳过本机 `.env`，使用独立 `AGENTBL_RUNTIME_DIR`、`DEMO_MODE=true`、`X402_MODE=demo`、`AGENT_ENABLED=true`、`LLM_PROXY_ENABLED=false`、`AGENT_VALUATION_LLM=false`、空 `XAPI_KEY`。四组连续自动化使用 `LLM_RATE_LIMIT_PER_MIN=120`，默认仍是 30。启动服务器后执行 `playwright-cli -s=agentbl-copilot-p1 --raw run-code --filename=scripts/copilot-p1-acceptance.playwright.js`。脚本重置 Demo、播放场景、模拟认购和解锁报告，只可针对隔离 Demo 数据运行；结束后停掉自己启动的服务。
+
+内置浏览器面板返回 queued，交互在本机 Edge/Playwright 完成。没有真实 LLM、钱包签名、链上写入或用户人工试用；浏览器可读取公开测试网部署信息。本批次后的 WP0.6 已完成本地及只读实链验收，见 [wave-b.md](wave-b.md)；下一入口为 PDF/视觉、Live USDC 回执和监听等 P1 余项。
+
+### 历史 Phase 3 P0 验证
 
 本阶段验证：857 个用例全部通过，lint/check 通过，覆盖率为 lines 94.12% / branches 82.48% / functions 91.50%。新增用例覆盖数值越权、并发更新、会话删除/过期、模式切换、最新报价、SSE 分帧和断流、单证复核不能绕过注入，以及普通监控事件不能解除单证 HOLD。浏览器使用本机 Chromium 通过中英文、390px、键盘操作、文件上传和复核、持仓及决策跳转检查；[本地验收记录](evidence/copilot-phase3-local.json) 绑定代码摘要，没有将其描述为用户人工试用、真实提供方或链上验收。

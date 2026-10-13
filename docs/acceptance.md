@@ -4,6 +4,10 @@
 
 当前主线：**AI 动态定价的 eBL-backed RWA 折价发行协议**（见 `docs/PRD.md` v0.2）。
 
+2026-10-13 Copilot P1（WP3.6/WP3.8）：中文/英文 × 1440px/390px、110 项浏览器检查通过，覆盖双面板独立重排、台风暂停/恢复、决策链接、焦点、确认/取消、重复点击只记一次 Demo 持仓、报告解锁与语言切换。Live 只用链/钱包桩验证读取、签名边界和匹配回执，没有真实钱包/交易验收。源码摘要、检查和失败诊断见 [copilot.md](copilot.md) 与 [evidence/copilot-p1-local.json](evidence/copilot-p1-local.json)。
+
+2026-10-13 WP4.6：全站中文/英文 × 1440px/390px，本地 40 个页面/弹窗组合与 255 项浏览器检查通过；覆盖原生选择器、导航、单证上传、SSE 焦点/播报、Tab/Escape、proof、分享和 reduced-motion。复现脚本、修复前失败记录和当前证据见 [frontend-acceptance.md](frontend-acceptance.md)。这不替代真实读屏器、实体设备、Live 钱包或用户人工试用。
+
 2026-10-13 Agent Phase 5 P0：可靠性、真实组件评测与发布闸门已接入。`npm run eval:agent -- --check` 必须通过全部 19 项冻结阈值；`node --test tests/agentReliability.test.js` 覆盖 15 个故障矩阵测试；`npm run preflight` 固定 61 项，Demo 的 Live 专属检查为 SKIP。日期、代码/金标摘要、分母和局限见 [evaluation-report.md](evaluation-report.md)；恢复与本地浏览器证据见 [agent-reliability.md](agent-reliability.md)。这些本地测量不替代真实提供方、真实交易或用户试用。
 
 > 状态说明：

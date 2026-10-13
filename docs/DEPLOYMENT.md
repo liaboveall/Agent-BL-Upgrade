@@ -134,6 +134,10 @@ HTTPS：`sudo certbot --nginx -d your-domain.com`
 
 ### LLM 中继
 
+Copilot WP3.6 使用额外的 `/api/copilot/sessions/:id/stream` 长连接，与消息响应的短 SSE 分开。代理应关闭缓冲并转发 `Last-Event-ID`；续接只发送最新已持久化的重排快照，合并中间通知。删除、TTL 到期、模式重置关闭订阅；重排不延长 TTL，也不调用模型。`copilot-sessions.json` 同时保存有界动作卡片和快照，文件仍应置于独立运行时卷。Demo 池/持仓重启清空的边界没有改变。
+
+确认卡片最多有效五分钟。Demo 认购确认会记一次带 Copilot 来源的持仓；Live/report 准备为 `CONFIRMING`，禁止重复准备，不能用这个状态判定链上成功。Live 卡片必须取得 PoolRegistry 中已映射池的链上报价；钱包只使用浏览器的用户签名者。现有认购合约不收取 USDC、无价格上限参数；发送后报价或回执不匹配需人工对账。真实验收逐笔遵守实施规划 §16，详见 [copilot.md](copilot.md)。
+
 投资者 Copilot 通过同源的 `/api/copilot/query` 或 `/api/copilot/sessions/:id/messages` 请求服务器。服务器负责偏好解析、最新池检索、排序和解释；旧 `/api/llm/chat` 保留为兼容中继。key 留在服务器。Copilot 遵守 `LLM_PROXY_ENABLED`、`LLM_MAX_TOKENS_CAP`（默认 2048，推理模型可调高或设为 0）和 `LLM_PROXY_MAX_CONCURRENCY`（默认 4；繁忙时使用确定性回退）；消息接口和旧中继共用 `LLM_RATE_LIMIT_PER_MIN` 的每客户端限流桶（默认 30）。每轮最多两次模型调用，分别用于偏好解析和解释，单次超时 15 秒。金额、收益等明确数值始终取自确定性解析；模型解释的数字未经结构化结果核对不会展示。
 
 但这个接口**本身没有登录**：任何能访问站点的人都能在限流范围内消耗你的 LLM 额度。公开部署时请：
@@ -229,7 +233,7 @@ npm run deploy:all             # 需要 .env 里持有测试网 INJ 的 DEPLOYER
 cd .. && npm run verify:bytecode -- --strict   # 确认链上代码与源码一致
 ```
 
-重新部署后，部署脚本会自动更新 `public/chain-config.json`；然后按上表给两个新密钥授权，并重新运行 `npm run verify:wave-b` 之类的链上验证。合约是演示级别，**没有认购的付款环节，不要放入真实资金**。
+重新部署后，部署脚本更新 `public/chain-config.json`；按上表完成明确授权的角色配置，再运行 `npm run verify:wave-b -- --dry-run` 只读复核。Wave B 默认不读私钥、不发交易，复用已登记的货物/活跃池，同一已处理报告返回 no-op；实际广播需单独获得用户同意后用 `--confirm`。新 attempt 证据不覆盖历史文件，细节见 [wave-b.md](wave-b.md)。现有六个合约默认不改/不重部署；它们**没有认购付款环节，不要放入真实资金**。
 
 ### 通用
 

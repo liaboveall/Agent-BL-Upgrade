@@ -2,9 +2,15 @@
 
 任务状态：`Todo` / `In Progress` / `Review` / `Done` / `Blocked` / `Partial`（有代码和测试，但没有接入运行时或存在已知的不实之处；以 [agent-implementation-plan.md](agent-implementation-plan.md) 为准）
 
-**2026-10-13 当前增量**：Phase 3 P0 已接入运行时（多轮偏好、最新池检索排序、搜索/助手统一）；WP4.2 已上传真实内容并展示抽取来源与复核补件，WP4.3 已展示当前 Demo 持仓镜像与关联决策。P1 的主动重排、确认动作卡片、Live 持仓和 PDF/OCR 仍待完成。详见 [copilot.md](copilot.md) 和规划 §13。
+**2026-10-13 WP0.6 增量**：Wave B 默认只读，保持已部署 cargoHash、复用活跃池、拒绝暂停/终态、识别 Oracle 已处理承诺并保护历史证据。13 项离线测试通过；实链 dry-run 复核为 eBL #2 / pool #2 Open、$0.80、`ALREADY_CURRENT`，无新交易。详情与证据见 [wave-b.md](wave-b.md)。后续入口为 WP2.2 PDF/视觉等 P1 余项。
 
-**2026-10-13 Phase 5 P0 增量**：WP5.4 / WP5.1 / WP5.8 已实现：15 个故障矩阵测试、隔离金标的真实组件评测（44 段双语对话/100 轮；19 项质量阈值）和 61 项发布闸门。修复前的日期/误阻断失败保留证据；Demo 的 Live 检查明确 SKIP。详见 [agent-reliability.md](agent-reliability.md) 与 [evaluation-report.md](evaluation-report.md)。下一批入口是剩余 P0 的 WP4.6 全站验收；P1、真实链上和真实 LLM 各自未被自动标成完成。
+**2026-10-13 当前增量**：Phase 3 P0、多轮偏好、最新池排序和搜索/助手统一已接入；WP4.2/4.3 已提供真实内容上传、来源/复核与 Demo 持仓镜像。P1 WP3.6 重排和 WP3.8 确认卡片已在下方完成本地验收；Live 持仓和 PDF/OCR 仍待完成。详见 [copilot.md](copilot.md) 和规划 §13。
+
+**2026-10-13 P1 WP3.6 / WP3.8 增量**：原条件主动重排、关注、SSE 最新快照续接、双面板隔离；认购/报告报价卡片、确认/取消、Demo 幂等持仓和报告解锁，以及 Live 钱包读取/签名/回执辅助函数已实现。110 项中英/1440px/390px 浏览器检查通过；修复并保留确认通知覆盖排名变化的失败证据。工程检查和局限见 [copilot.md](copilot.md) 及 [本地记录](evidence/copilot-p1-local.json)。没有真实 LLM、真实钱包交易、用户人工试用或提交/推送声明。当时下一批 WP0.6 已在上方完成；当前入口为 WP2.2 等 P1 余项。
+
+**2026-10-13 Phase 5 P0 增量**：WP5.4 / WP5.1 / WP5.8 已实现：15 个故障矩阵测试、隔离金标的真实组件评测（44 段双语对话/100 轮；19 项质量阈值）和 61 项发布闸门。修复前的日期/误阻断失败保留证据；Demo 的 Live 检查明确 SKIP。详见 [agent-reliability.md](agent-reliability.md) 与 [evaluation-report.md](evaluation-report.md)。当时的下一入口 WP4.6 已由下方增量收尾；P1、真实链上和真实 LLM 各自未被自动标成完成。
+
+**2026-10-13 WP4.6 增量**：全站国际化、无障碍和移动端本地验收完成：原生选择器、语义导航、键盘/焦点、SSE polite 播报、活动终端和窄屏弹窗修复；40 个中英/1440px/390px 组合、255 项浏览器检查通过。证据与局限见 [frontend-acceptance.md](frontend-acceptance.md)。下一入口为 P1 WP3.6 主动重排，再 WP3.8 确认动作卡片；FE-11/13 等含 Live/其他 P1 的任务保留原状态。
 
 每个任务都必须有 Owner 和可验证方式。没有验证方式的任务不要认领。  
 当前主线：**Web3 原生贸易融资协议：出口商 tokenize eBL，AI 自主定价与执行，全球投资者直接出资，Injective 全程上链审计**。

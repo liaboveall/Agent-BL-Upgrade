@@ -46,8 +46,9 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 | x402 paid intelligence / x402 付费情报 | **Demo:** simulated locally (no real funds). **Live:** x402 V2 (EIP-3009) through a facilitator, exercised end-to-end with a mock facilitator, the official `@injectivelabs/x402` client and the browser wallet flow; it needs a facilitator that lists `eip155:1439`, a payee address and a funded wallet; a real testnet payment and its on-chain attestation were re-verified on 2026-10-12 ([`docs/x402-integration.md`](docs/x402-integration.md)). / Demo 为本地模拟；Live 走 x402 V2，需要支持 `eip155:1439` 的 Facilitator、收款地址和有余额的钱包；2026-10-12 已用真实测试网付款和链上证明复验 |
 | Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The Injective testnet contracts were **redeployed as v2 on 2026-10-12**: `npm run verify:bytecode` confirms the on-chain code matches the source. / 源码已加固为 v2，测试网已于 2026-10-12 重新部署；`npm run verify:bytecode` 可确认链上代码与源码一致 |
 | Autonomous agent / 自主 Agent | **Runtime, document intake, monitoring and a Demo scenario player are in place.** Uploaded documents (`POST /api/agent/ingest`) run a nine-step pipeline (parse, injection screen, consistency, compliance, valuation, world risk, three-speed pricing, exporter constraints, decision) and end in OPEN, HOLD_FOR_REVIEW or REJECT; scheduled monitors turn *changes* in world risk and insurance deadlines into events; Demo scenarios replay a whole cargo story. Events (also injectable through `POST /api/agent/events`) become decisions with a recorded policy verdict; in Demo they run as simulated actions on the offchain pool (a `demo:` reference, never a tx hash), in Live they only wait in an approval queue and run after a human approves (pricing actions by the server's authorised key, owner-signed ones through `npm run agent:approve`). The Agent console (status, decision timeline, approvals, Demo event injector) is live. Not built yet: PDF/image extraction, Live opening (the three owner transactions), the chain watcher. Plan: [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md). / **运行时、单证接入、监控和 Demo 场景播放器已就绪**：上传的单证（`POST /api/agent/ingest`）走九步流水线（解析、注入筛查、一致性、合规、估值、世界风险、三档定价、出口商约束、决策），结果是开盘、挂起复核或拒绝；定时监控把世界风险和保险到期的**变化**变成事件；Demo 场景可以回放一整批货的故事。通过 `POST /api/agent/events` 注入的事件也会变成带策略结论的决策；Demo 下是对链下池子的模拟执行（`demo:` 引用，没有交易哈希），Live 下只进审批队列，批准后才执行（定价类动作由服务器的已授权密钥发送，需要 owner 的动作用 `npm run agent:approve`）。Agent 控制台（状态、决策时间线、审批、Demo 事件注入器）已上线。尚未完成：PDF/图片抽取、Live 开盘（三笔 owner 交易）、链上监听。规划见 [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md) |
-| Investor Copilot / 投资者 Copilot | **Phase 3 P0 implemented.** Multi-turn preferences, deterministic/validated LLM parsing, current offchain-pool retrieval, explainable ranking and SSE responses; search and the floating assistant share the server implementation. No action executes from chat. Dynamic rerank notifications and confirmed action cards remain P1. [Guide](docs/copilot.md). / **Phase 3 P0 已实现**：多轮偏好、确定性与经校验的 LLM 解析、当前链下池检索、可解释排序和 SSE；搜索框与悬浮助手共用服务器逻辑。聊天不会执行操作。主动重排通知与确认动作卡片仍属 P1。 |
+| Investor Copilot / 投资者 Copilot | **Phase 3 P0 + WP3.6/WP3.8 implemented locally.** Multi-turn preferences, explainable ranking, decision-driven SSE reranking and priced confirmation cards. Demo subscriptions/reports are verified locally; Live wallet helpers are tested with stubs, without a real transaction. Chat messages never execute actions. [Guide](docs/copilot.md). / **P0 与 WP3.6/WP3.8 本地实现完成**：多轮偏好、可解释排序、决策驱动重排与报价确认卡片；Demo 持仓/报告已验收，Live 钱包辅助函数以桩验证，未执行真实交易。消息本身不会执行操作。 |
 | Investor payments for RWA shares / 投资者认购的真实付款 | **Not implemented.** Subscriptions mint share receipts and record the amount owed; no stablecoin is escrowed. / **未实现**，认购只铸造份额凭证并记录应付金额 |
+| Localization, keyboard access and mobile / 国际化、键盘与移动端 | **WP4.6 verified locally.** Chinese/English, 1440px/390px, native controls, modal focus and SSE announcements: 40 page/dialog combinations and 255 browser checks. [Evidence and limits](docs/frontend-acceptance.md). / **WP4.6 本地验收完成**：中英、1440px/390px、原生控件、弹窗焦点和 SSE 播报，40 个页面/弹窗组合、255 项浏览器检查；人工读屏器、实体手机和 Live 钱包另行验收。 |
 | Agent quality and recovery / Agent 质量与恢复 | **Phase 5 P0 implemented locally.** Real-component deterministic evaluation, fault matrix, pending-transaction recovery and 61 release checks. Demo Live checks are SKIP; provider and real-chain validation remain separate. [Guide](docs/agent-reliability.md), [measured report](docs/evaluation-report.md). / **Phase 5 P0 已完成本地实现**：实际组件评测、故障矩阵、未确认交易对账和 61 项发布闸门；Demo 的 Live 检查记 SKIP，真实提供方/链上验收另有边界。 |
 
 ---
@@ -1039,7 +1040,7 @@ npm run intel             # world-risk intelligence (offline fixtures without a 
 npm run smoke:x402        # Demo x402: 402 -> sign -> settle -> unlock
 npm run x402:intel        # buy a paid report from the CLI (Demo, or Live with WHITE_AGENT_PRIVATE_KEY)
 npm run smoke:x402:live   # explicit-consent testnet smoke (see docs/x402-integration.md)
-npm run verify:wave-b     # link a live payment to its on-chain attestation and pricing evidence
+npm run verify:wave-b -- --dry-run  # read-only replay-safe plan; signing requires a separately authorized --confirm
 npm run verify:bytecode   # compare deployed contracts with the local build
 npm run mcp:stdio         # MCP server over stdio
 ```
@@ -1304,12 +1305,14 @@ Web3 Settlement
 - Injective Testnet Evidence
 - Local Demo Mode
 - Multi-turn Investor Copilot with explainable current-pool ranking
+- Proactive decision-driven reranking and priced confirmation cards
+- Demo subscriptions/reports; Live wallet helpers with local receipt validation tests
 - Document jobs, extraction provenance and corrected-document review
 
 ### Next Stage | 下一阶段
 
-- Proactive Opportunity Re-ranking Notifications
-- Confirmed Action Cards and Live Wallet Subscriptions
+- PDF/vision document extraction
+- User-authorized Live wallet acceptance
 - Richer Logistics Context
 - Real-world Data Integration
 - Stronger Recommendation Explainability
