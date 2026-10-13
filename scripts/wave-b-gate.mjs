@@ -1,277 +1,142 @@
-/** Gate B live evidence linker.
- * Existing x402 payment -> PaymentAttested(reportHash) -> PricingUpdated
- * (evidenceHash=reportHash) -> RWAOfferingPool final quote.
+/** Gate B replay-safe operator CLI. Default: read-only, no key or .env access.
+ * --confirm is required to sign. Historical wave-b-gate.json is never overwritten.
  */
-import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
+import { parseArgs } from 'node:util';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ethers } from 'ethers';
 import chainConfigLib from './lib/chain-config.cjs';
-import { quoteFromCase } from '../src/core/pricingEngine.js';
+import { planWaveBGate, verifyWaveBPayment, contractEvents, WaveBGateError } from '../src/chain/waveBGate.js';
+import { writeJsonAtomic } from '../src/lib/jsonStore.js';
 
-const root = path.resolve(import.meta.dirname, '..');
-const explorer = 'https://testnet.blockscout.injective.network';
-const explorerApi = 'https://testnet.blockscout-api.injective.network/api/v2';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const safeJson = (value) => JSON.parse(JSON.stringify(value, (_key, item) => typeof item === 'bigint' ? item.toString() : item));
+const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+export const USAGE = `Usage:
+  npm run verify:wave-b -- --dry-run          read-only plan; no .env or owner key read
+  npm run verify:wave-b -- --confirm          explicitly sign planned transactions
+  npm run verify:wave-b -- --dry-run --report <new-file.json>
 
-async function loadDotEnv() {
-  let source;
-  try { source = await fs.readFile(path.join(root, '.env'), 'utf8'); } catch { return; }
-  for (const raw of source.split(/\r?\n/u)) {
-    const line = raw.trim();
-    if (!line || line.startsWith('#')) continue;
-    const separator = line.indexOf('=');
-    if (separator < 1) continue;
-    const name = line.slice(0, separator).trim();
-    let value = line.slice(separator + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
+Default is --dry-run. --confirm and --dry-run are mutually exclusive.
+Reuses the registered cargo and its active pool. Paused/terminal pools fail before signing.
+An already processed/current report is a read-only no-op; replay protection is never bypassed.
+OPEN pricing may restore protected pool #2 to the report price. No new x402 payment is made.
+Evidence goes to a new wave-b-attempt file; historical evidence is preserved.
+Only --confirm loads local configuration and uses DEPLOYER_PRIVATE_KEY on the operator's machine.
+`;
+
+export function optionsFor(argv) {
+  const { values } = parseArgs({ args: argv, options: { 'dry-run': { type: 'boolean' }, confirm: { type: 'boolean' },
+    help: { type: 'boolean', short: 'h' }, report: { type: 'string' } } });
+  if (values.confirm && values['dry-run']) throw new WaveBGateError('invalid_options', 'Choose --dry-run or --confirm');
+  return { confirm: values.confirm === true, help: values.help === true, report: values.report };
+}
+
+function verifyStep(step, receipt, plan, chain, operator) {
+  const events = contractEvents(receipt, step.address, chain.abis[step.contract]);
+  const event = events.find((entry) => {
+    const a = entry.args;
+    if (step.method === 'mintEBLV2') return entry.name === 'EBLMintedV2' && Number(a.eblId) === plan.ebl_id && same(a.cargoHash, plan.cargo_hash) && same(a.metadataHash, step.args[1]) && same(a.holder, operator);
+    if (step.method === 'pledge') return entry.name === 'EBLPledged' && Number(a.eblId) === plan.ebl_id && same(a.pool, step.args[1]) && same(a.holder, operator);
+    if (step.method === 'createOffering') return entry.name === 'OfferingCreated' && Number(a.poolId) === plan.pool_id && Number(a.eblId) === plan.ebl_id
+      && a.tokenSupply === BigInt(step.args[1]) && a.issuePrice === BigInt(step.args[2]) && a.targetRedemptionValue === BigInt(step.args[3]);
+    return entry.name === 'PricingUpdated' && Number(a.poolId) === plan.pool_id && Number(a.issuePrice) === plan.pricing.issue_price_e6
+      && Number(a.riskLevel) === plan.pricing.risk_level && Number(a.action) === plan.pricing.pricing_action
+      && same(a.evidenceHash, plan.pricing.evidence_hash) && same(a.quoteHash, plan.pricing.quote_hash) && same(a.updater, operator);
+  });
+  if (!event || Number(receipt.status) !== 1) throw new WaveBGateError('receipt_mismatch', `Receipt for ${step.method} does not match the plan; reconcile before any further transaction`);
+  return safeJson(events);
+}
+
+/** Injectable boundary for offline CLI tests. No network or key reads at import time. */
+export async function run({ argv = process.argv.slice(2), env = process.env, log = console.log,
+  readJson = async (file) => JSON.parse(await fs.readFile(path.join(root, file), 'utf8')),
+  providerFactory = (rpc) => { const request = new ethers.FetchRequest(rpc); request.timeout = 10_000; return new ethers.JsonRpcProvider(request); },
+  contractFactory = (address, abi, provider) => new ethers.Contract(address, abi, provider),
+  loadEnv = async () => import('../src/env.js'), walletFactory = (key, provider) => new ethers.NonceManager(new ethers.Wallet(key, provider)) } = {}) {
+  const options = optionsFor(argv);
+  if (options.help) { log(USAGE); return { help: true }; }
+  if (options.confirm) await loadEnv();
+  const chain = chainConfigLib.resolveNetworkConfig(await readJson('public/chain-config.json'), 'injective-testnet');
+  const report = await readJson('docs/evidence/x402-live-smoke.json');
+  const caseData = await readJson('data/cases/copper-sg-shanghai.case.json');
+  const provider = providerFactory(env.INJECTIVE_RPC_URL?.trim() || chain.rpcUrls[0]);
+  let attempt = null, output = null;
+  const persist = async () => { if (output) await writeJsonAtomic(output, safeJson(attempt)); };
+  try {
+    if (Number((await provider.getNetwork()).chainId) !== 1439) throw new WaveBGateError('wrong_network', 'RPC must be Injective testnet 1439');
+    const contracts = Object.fromEntries(['EBLRegistry', 'RWAOfferingPool', 'RiskPricingOracle'].map((name) =>
+      [name, contractFactory(chain.contracts[name], chain.abis[name], provider)]));
+    const { EBLRegistry: registry, RWAOfferingPool: pool, RiskPricingOracle: oracle } = contracts;
+    if (!same(await oracle.pool(), chain.contracts.RWAOfferingPool) || !same(await pool.eblRegistry(), chain.contracts.EBLRegistry)) {
+      throw new WaveBGateError('deployment_mismatch', 'Oracle, pool and eBL registry do not refer to the configured deployment');
     }
-    if (process.env[name] === undefined) process.env[name] = value;
-  }
-}
-
-async function explorerJson(route) {
-  const response = await fetch(`${explorerApi}${route}`);
-  if (!response.ok) throw new Error(`Blockscout ${route} returned ${response.status}`);
-  return response.json();
-}
-
-async function nextAccountNonce(address) {
-  const page = await explorerJson(`/addresses/${address}/transactions?filter=from`);
-  const latest = page.items?.[0];
-  return latest ? Number(latest.nonce) + 1 : 0;
-}
-
-async function waitTransaction(txHash) {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    const response = await fetch(`${explorerApi}/transactions/${txHash}`);
-    if (response.ok) {
-      const transaction = await response.json();
-      if (transaction.status === 'ok') return transaction;
-      if (transaction.status === 'error') throw new Error(`Transaction reverted: ${txHash}`);
-    } else if (response.status !== 404) {
-      throw new Error(`Blockscout transaction lookup returned ${response.status}`);
+    const proof = verifyWaveBPayment({ report, chain, paymentReceipt: await provider.getTransactionReceipt(report.payment_tx),
+      attestationReceipt: await provider.getTransactionReceipt(report.attestation_tx) });
+    const buildPlan = () => planWaveBGate({ caseData, report, chain, registry, pool, oracle });
+    const plan = await buildPlan();
+    attempt = { schema: 'agentbl-wave-b-attempt-v2', checked_at: new Date().toISOString(),
+      mode: options.confirm ? 'confirm' : 'dry-run', status: plan.no_op ? 'ALREADY_CURRENT' : 'PLANNED',
+      network: plan.network, payment_evidence: 'docs/evidence/x402-live-smoke.json', payment: proof, plan, transactions: [],
+      historical_gate: 'docs/evidence/wave-b-gate.json', live_transactions: false };
+    if (options.report || options.confirm) {
+      const target = path.resolve(root, options.report ?? `docs/evidence/wave-b-attempt-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.json`);
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      // Reserve a new file exclusively; neither custom paths nor retries overwrite old evidence.
+      const handle = await fs.open(target, 'wx'); await handle.close(); output = target; await persist();
     }
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
-  }
-  throw new Error(`Timed out waiting for ${txHash}`);
-}
-
-async function decodedEvents(txHash, contractInterface) {
-  const { items } = await explorerJson(`/transactions/${txHash}/logs`);
-  return items.flatMap((item) => {
+    log(JSON.stringify(safeJson({ mode: attempt.mode, status: attempt.status, plan }), null, 2));
+    if (!options.confirm || plan.no_op) {
+      log(plan.no_op ? 'Gate B already matches the processed report and current on-chain quote; no transactions sent.' : 'Dry run only: no .env, signer key or transaction was used.');
+      return attempt;
+    }
+    let signer;
     try {
-      const parsed = contractInterface.parseLog({
-        topics: item.topics.filter(Boolean),
-        data: item.data
-      });
-      return [{ name: parsed.name, args: parsed.args, address: item.address.hash }];
-    } catch {
-      return [];
+      if (!env.DEPLOYER_PRIVATE_KEY?.trim()) throw new Error('missing');
+      signer = walletFactory(env.DEPLOYER_PRIVATE_KEY.trim(), provider);
+    } catch { throw new WaveBGateError('owner_key_unavailable', 'A valid operator DEPLOYER_PRIVATE_KEY is required for --confirm; its value is never printed'); }
+    const operator = await signer.getAddress();
+    if (!await oracle.isUpdater(operator)) throw new WaveBGateError('not_updater', 'Operator is not an authorized pricing updater');
+    if (!plan.reused && (!same(await registry.owner(), operator) || !same(await pool.owner(), operator))) throw new WaveBGateError('not_owner', 'New mint and offering require the operator to own both contracts');
+    if (JSON.stringify(safeJson(await buildPlan())) !== JSON.stringify(safeJson(plan))) throw new WaveBGateError('plan_changed', 'Pool or registry changed since the plan; review a fresh dry run');
+    attempt.status = 'EXECUTING'; await persist();
+    for (const step of plan.steps) {
+      const contract = contracts[step.contract].connect(signer);
+      // Static simulation before each send includes the current pledge/state/replay checks.
+      await contract[step.method].staticCall(...step.args);
+      attempt.broadcast_attempted = true; attempt.live_transactions = 'unknown'; await persist();
+      const transaction = await contract[step.method](...step.args, { gasLimit: 1_000_000n, gasPrice: 500_000_000n });
+      const entry = { method: step.method, contract: step.address, txHash: transaction.hash,
+        explorer: `${chain.explorerBase}/tx/${transaction.hash}`, status: 'SUBMITTED' };
+      attempt.transactions.push(entry); attempt.live_transactions = true; await persist();
+      log(`${step.method}: ${transaction.hash}`);
+      const receipt = await transaction.wait(1, 120_000);
+      if (!receipt) throw new WaveBGateError('receipt_pending', 'Submitted transaction is unconfirmed; reconcile before retrying');
+      entry.events = verifyStep(step, receipt, plan, chain, operator); entry.blockNumber = receipt.blockNumber; entry.status = 'CONFIRMED';
+      await persist();
     }
+    const final = await buildPlan();
+    if (!final.no_op) throw new WaveBGateError('final_state_mismatch', 'Final chain quote does not match this report; reconcile the recorded transactions');
+    attempt.status = 'COMPLETED'; attempt.final = final; await persist();
+    log(`Gate B PASS; new evidence: ${output}. Historical evidence preserved.`);
+    return attempt;
+  } catch (error) {
+    if (attempt) {
+      attempt.status = attempt.broadcast_attempted ? 'RECONCILIATION_REQUIRED' : 'FAILED_BEFORE_SEND';
+      attempt.error = { code: error instanceof WaveBGateError ? error.code : 'operation_failed',
+        message: error instanceof WaveBGateError ? error.message : 'Operation failed; inspect the recorded transaction hashes before retrying' };
+      await persist().catch(() => {});
+    }
+    throw error;
+  } finally { provider.destroy?.(); }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch((error) => {
+    console.error(error instanceof WaveBGateError ? `${error.code}: ${error.message}`
+      : `Wave B failed (${error.code ?? 'operation_failed'}); no further transactions sent. Check recorded hashes before retrying.`);
+    process.exitCode = 1;
   });
 }
-
-async function send(label, promise, contractInterface) {
-  const transaction = await promise;
-  console.log(`  ${label}: ${transaction.hash}`);
-  const mined = await waitTransaction(transaction.hash);
-  const events = await decodedEvents(transaction.hash, contractInterface);
-  return {
-    label,
-    txHash: transaction.hash,
-    blockNumber: mined.block_number,
-    explorer: `${explorer}/tx/${transaction.hash}`,
-    events
-  };
-}
-
-function serializable(value) {
-  return JSON.parse(JSON.stringify(value, (_, item) => typeof item === 'bigint' ? item.toString() : item));
-}
-
-await loadDotEnv();
-const privateKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
-if (!privateKey) throw new Error('DEPLOYER_PRIVATE_KEY is required');
-
-const chain = chainConfigLib.resolveNetworkConfig(
-  JSON.parse(await fs.readFile(path.join(root, 'public', 'chain-config.json'), 'utf8')),
-  'injective-testnet'
-);
-assert.equal(chain.chainIdDecimal, 1439);
-const addresses = chain.contracts;
-for (const name of ['PaymentOracle', 'EBLRegistry', 'RWAOfferingPool', 'RiskPricingOracle']) {
-  assert.ok(ethers.isAddress(addresses[name]), `${name} deployment missing`);
-}
-
-const x402 = JSON.parse(await fs.readFile(path.join(root, 'docs', 'evidence', 'x402-live-smoke.json'), 'utf8'));
-const caseData = JSON.parse(await fs.readFile(path.join(root, 'data', 'cases', 'copper-sg-shanghai.case.json'), 'utf8'));
-const quote = quoteFromCase(caseData);
-assert.equal(quote.case_id, x402.case_id);
-
-const paymentTx = await explorerJson(`/transactions/${x402.payment_tx}`);
-assert.equal(paymentTx.status, 'ok');
-const paymentOracleInterface = new ethers.Interface(chain.paymentOracle.abi);
-const attestationEvents = await decodedEvents(x402.attestation_tx, paymentOracleInterface);
-const attested = attestationEvents.find((event) => event.name === 'PaymentAttested');
-assert.ok(attested, 'PaymentAttested event not found');
-assert.equal(attested.args.reportHash.toLowerCase(), x402.report_hash.toLowerCase());
-assert.equal(attested.args.paymentTxHash.toLowerCase(), x402.payment_tx.toLowerCase());
-
-const rpc = process.env.INJECTIVE_RPC_URL?.trim() || 'https://k8s.testnet.json-rpc.injective.network';
-const provider = new ethers.JsonRpcProvider(rpc, 1439);
-const wallet = new ethers.Wallet(privateKey, provider);
-let nonce = await nextAccountNonce(wallet.address);
-const transactionOverrides = () => ({
-  gasLimit: 1_000_000n,
-  gasPrice: 500_000_000n,
-  chainId: 1439,
-  nonce: nonce++
-});
-const abis = chain.protocol.abis;
-const registryInterface = new ethers.Interface(abis.EBLRegistry);
-const poolInterface = new ethers.Interface(abis.RWAOfferingPool);
-const oracleInterface = new ethers.Interface(abis.RiskPricingOracle);
-const registry = new ethers.Contract(addresses.EBLRegistry, abis.EBLRegistry, wallet);
-const pool = new ethers.Contract(addresses.RWAOfferingPool, abis.RWAOfferingPool, wallet);
-const oracle = new ethers.Contract(addresses.RiskPricingOracle, abis.RiskPricingOracle, wallet);
-
-const transactions = [];
-const metadataHash = ethers.sha256(ethers.toUtf8Bytes(JSON.stringify({
-  case_id: x402.case_id,
-  payment_tx: x402.payment_tx,
-  report_hash: x402.report_hash
-})));
-const bill = caseData.bill_of_lading;
-const cargoHash = ethers.sha256(ethers.toUtf8Bytes(JSON.stringify({
-  carrier: bill.carrier ?? null,
-  vessel: bill.vessel,
-  voyage: bill.voyage ?? bill.voyage_number ?? '',
-  cargo: bill.cargo,
-  quantity_mt: bill.quantity_mt,
-  case_id: caseData.case_id
-})));
-const v2Metadata = {
-  vessel: bill.vessel ?? '',
-  voyage: bill.voyage ?? bill.voyage_number ?? '',
-  portOfLoading: bill.port_of_loading ?? '',
-  portOfDischarge: bill.port_of_discharge ?? '',
-  cargo: bill.cargo,
-  quantity: BigInt(Math.round(bill.quantity_mt)),
-  quantityUnit: 'MT',
-  hsCode: caseData.commercial_invoice?.hs_code ?? caseData.cargo?.hs_code ?? '740311',
-  declaredValueUsdE6: BigInt(Math.round(bill.declared_value_usd * 1_000_000)),
-  incoterms: bill.incoterms ?? caseData.commercial_invoice?.incoterms ?? 'CIF',
-  mletr: true,
-  eucp: true,
-  dcsa: true
-};
-const mint = await send(
-  'mint eBL V2 commitment',
-  registry.mintEBLV2(cargoHash, metadataHash, wallet.address, v2Metadata, transactionOverrides()),
-  registryInterface
-);
-transactions.push(mint);
-const minted = mint.events.find((event) => event.name === 'EBLMinted');
-assert.ok(minted);
-const eblId = Number(minted.args.eblId);
-
-transactions.push(await send('pledge eBL', registry.pledge(eblId, addresses.RWAOfferingPool, transactionOverrides()), registryInterface));
-const issuePriceE6 = Math.round(quote.final_issue_price_usd * 1_000_000);
-const supply = BigInt(Math.round(quote.recommended_token_supply));
-const createdTx = await send(
-  'create RWA offering',
-  pool.createOffering(eblId, supply, issuePriceE6, 1_000_000n, transactionOverrides()),
-  poolInterface
-);
-transactions.push(createdTx);
-const created = createdTx.events.find((event) => event.name === 'OfferingCreated');
-assert.ok(created);
-const poolId = Number(created.args.poolId);
-
-const pricingTx = await send(
-  'bind paid report to PricingUpdated',
-  oracle.updatePricing(
-    poolId,
-    issuePriceE6,
-    1,
-    0,
-    x402.report_hash,
-    quote.quote_hash,
-    transactionOverrides()
-  ),
-  oracleInterface
-);
-transactions.push(pricingTx);
-const pricing = pricingTx.events.find((event) => event.name === 'PricingUpdated');
-assert.ok(pricing, 'PricingUpdated event not found');
-assert.equal(pricing.args.evidenceHash.toLowerCase(), x402.report_hash.toLowerCase());
-assert.equal(pricing.args.quoteHash.toLowerCase(), quote.quote_hash.toLowerCase());
-assert.equal(Number(pricing.args.issuePrice), issuePriceE6);
-
-const evidence = {
-  schema: 'agentbl-wave-b-gate-v1',
-  verified_at: new Date().toISOString(),
-  network: 'eip155:1439',
-  trace: [
-    'USDC payment transaction',
-    'PaidReportEnvelope commitment',
-    'PaymentAttested',
-    'PricingUpdated',
-    'RWA offering quote'
-  ],
-  payment: {
-    tx: x402.payment_tx,
-    explorer: x402.payment_explorer,
-    asset: x402.asset,
-    amount_atomic: x402.amount_atomic,
-    amount_usdc: x402.amount_usdc,
-    status: paymentTx.status
-  },
-  paidReportEnvelope: {
-    report_id: x402.report_id,
-    report_hash: x402.report_hash,
-    case_id: x402.case_id,
-    payment_tx: x402.payment_tx,
-    network: x402.network,
-    asset: x402.asset,
-    amount: x402.amount_atomic,
-    settled_at: x402.payment_settled_at,
-    data_snapshot: 'redacted: committed by report_hash',
-    validation: 'Runtime envelope passed assertPaidReportEnvelope during X402-15 live smoke'
-  },
-  paymentAttested: {
-    contract: addresses.PaymentOracle,
-    tx: x402.attestation_tx,
-    explorer: x402.attestation_explorer,
-    report_hash: attested.args.reportHash,
-    payment_tx: attested.args.paymentTxHash,
-    event: 'PaymentAttested'
-  },
-  pricingUpdated: {
-    contract: addresses.RiskPricingOracle,
-    tx: pricingTx.txHash,
-    explorer: pricingTx.explorer,
-    pool_id: poolId,
-    evidence_hash: pricing.args.evidenceHash,
-    quote_hash: pricing.args.quoteHash,
-    issue_price_e6: pricing.args.issuePrice,
-    event: 'PricingUpdated'
-  },
-  offering: {
-    contract: addresses.RWAOfferingPool,
-    pool_id: poolId,
-    ebl_id: eblId,
-    final_issue_price_usd: quote.final_issue_price_usd,
-    final_issue_price_e6: issuePriceE6,
-    risk_level: quote.risk_level,
-    pricing_action: quote.pricing_action,
-    quote_hash: quote.quote_hash
-  },
-  transactions
-};
-
-const output = path.join(root, 'docs', 'evidence', 'wave-b-gate.json');
-await fs.writeFile(output, `${JSON.stringify(serializable(evidence), null, 2)}\n`, 'utf8');
-console.log(`Gate B PASS: payment -> report -> attestation -> pricing -> $${quote.final_issue_price_usd.toFixed(2)} RWA quote`);
-console.log(`Evidence: ${output}`);
