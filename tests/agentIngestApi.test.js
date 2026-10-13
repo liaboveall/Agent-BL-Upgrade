@@ -238,6 +238,7 @@ test('ingest API: in Live, uploads and preferences need the admin token', async 
   const fakeService = {
     config: { uploadMaxBytes: 1_000_000 },
     submitDocuments: async (body) => { calls.push(body); return { job: { job_id: 'job_x', event_id: 'ingest:job_x' }, documents: [], created: true, idempotency_key: 'k' }; },
+    reviewDocuments: async (id, body) => { calls.push({ id, ...body }); return { job: { job_id: 'job_review' } }; },
     setPreferences: async (caseId, body) => ({ preferences: body, updated_at: 'now' }),
     ingest: { getJob: () => ({ job_id: 'job_x', status: 'QUEUED' }) },
     preferences: { describe: () => null }
@@ -257,14 +258,18 @@ test('ingest API: in Live, uploads and preferences need the admin token', async 
     const body = { documents: [{ name: 'a.md', mime_type: 'text/markdown', text: 'x' }] };
     delete process.env.AGENTBL_ADMIN_TOKEN;
     assert.equal((await requestJson(app.base, 'POST', '/api/agent/ingest', body)).status, 403);
+    assert.equal((await requestJson(app.base, 'POST', '/api/agent/jobs/job_old/review', body)).status, 403);
     process.env.AGENTBL_ADMIN_TOKEN = TOKEN;
     assert.equal((await requestJson(app.base, 'POST', '/api/agent/ingest', body)).status, 401);
+    assert.equal((await requestJson(app.base, 'POST', '/api/agent/jobs/job_old/review', body)).status, 401);
     assert.equal((await requestJson(app.base, 'PUT', '/api/agent/cases/C1/preferences', {})).status, 401);
     assert.equal(calls.length, 0, 'nothing reached the service without the token');
     assert.equal((await requestJson(app.base, 'POST', '/api/agent/ingest', body, bearer)).status, 202);
+    assert.equal((await requestJson(app.base, 'POST', '/api/agent/jobs/job_old/review', { ...body, note: 'checked' }, bearer)).status, 202);
     assert.equal((await requestJson(app.base, 'PUT', '/api/agent/cases/C1/preferences', { payout_speed_preference: 'FAST' }, bearer)).status, 200);
     assert.equal((await requestJson(app.base, 'GET', '/api/agent/cases/C1/preferences')).status, 200, 'reading preferences stays public');
-    assert.equal(calls.length, 1);
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[1], { id: 'job_old', ...body, note: 'checked' });
   } finally {
     delete process.env.AGENTBL_ADMIN_TOKEN;
     await app.close();

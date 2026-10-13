@@ -186,6 +186,13 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       return true;
     }
 
+    const reviewMatch = /^\/api\/agent\/jobs\/([^/]+)\/review$/u.exec(pathname);
+    if (method === 'POST' && reviewMatch) {
+      authorizeIntake(request);
+      const body = await readJsonBody(request, { limit: Math.ceil(service.config.uploadMaxBytes * 4) + 65_536 });
+      sendJson(response, 202, { ok: true, ...(await service.reviewDocuments(pathId(reviewMatch[1]), body)) });
+      return true;
+    }
     const jobMatch = /^\/api\/agent\/jobs\/([^/]+)$/u.exec(pathname);
     if (method === 'GET' && jobMatch) {
       const job = service.ingest?.getJob(pathId(jobMatch[1]));

@@ -141,7 +141,7 @@ export class IngestService {
    * @param {{case_id?: string, documents: object[], exporter_preferences?: object}} body
    * @returns {Promise<{job: object, documents: object[], created: boolean}>}
    */
-  async accept(body) {
+  async accept(body, { reviewOf } = {}) {
     await this.init();
     if (!body || typeof body !== 'object' || Array.isArray(body)) throw new IngestError('invalid_request', 'Body must be an object');
     const inputs = body.documents;
@@ -155,7 +155,17 @@ export class IngestService {
     for (const input of inputs) stored.push(await this.#store(input));
     const unique = [...new Map(stored.map((record) => [record.document_id, record])).values()];
 
-    const fingerprint = sha256(JSON.stringify({ case_id: body.case_id ?? null, ids: unique.map((record) => record.sha256).sort() }));
+    const ids = unique.map((record) => record.sha256).sort();
+    if (reviewOf) {
+      const original = this.jobs.get(reviewOf);
+      const originalIds = original?.document_ids.map((id) => this.documents.get(id)?.sha256).sort();
+      if (JSON.stringify(originalIds) === JSON.stringify(ids)) {
+        throw new IngestError('review_unchanged', 'Correct the documents before submitting a review', 409);
+      }
+    }
+    // A review is a new, narrowly scoped attempt even when its corrected bytes occurred in an
+    // older successful upload. Ordinary upload fingerprints remain unchanged.
+    const fingerprint = sha256(JSON.stringify({ case_id: body.case_id ?? null, ids, ...(reviewOf ? { review_of: reviewOf } : {}) }));
     const jobId = `job_${fingerprint.slice(0, 20)}`;
     const caseId = body.case_id ? String(body.case_id) : `CASE-UP-${fingerprint.slice(0, 12).toUpperCase()}`;
     const existing = this.jobs.get(jobId);

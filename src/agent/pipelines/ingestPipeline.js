@@ -46,6 +46,10 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
 
   const opening = result.action === 'OPEN' || result.action === 'OPEN_WITH_WARNING';
   if (opening) await ingest.saveCase(result.case_data);
+  if (job) await ingest.updateJob(job.job_id, {
+    extraction: result.extraction ?? [], findings: result.findings,
+    review_required: result.action === 'HOLD_FOR_REVIEW', result_action: result.action
+  });
 
   const params = opening
     ? {

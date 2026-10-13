@@ -266,6 +266,23 @@ export class AgentService {
     return stored;
   }
 
+  /** A review supplies corrected bytes and re-runs every deterministic check; it cannot waive a block. */
+  async reviewDocuments(jobId, body) {
+    await this.init();
+    const original = this.ingest?.getJob(jobId);
+    if (!original) throw new AgentServiceError('job_not_found', 'Unknown ingest job', 404);
+    if (original.status !== 'DONE' || !original.review_required) throw new AgentServiceError('review_not_required', 'Only a completed HOLD job can receive corrected documents', 409);
+    if (!body || typeof body.note !== 'string' || !body.note.trim() || body.note.length > 500) throw new AgentServiceError('review_note_required', 'A review note (1-500 characters) is required', 400);
+    const result = await this.ingest.accept({ case_id: original.case_id, documents: body.documents }, { reviewOf: jobId });
+    if (!result.created) return { job: result.job, idempotency_key: `event:review:${result.job.job_id}` };
+    await this.ingest.updateJob(result.job.job_id, { reviewed_job_id: jobId });
+    const accepted = await this.submitEvent({
+      event_id: `review:${result.job.job_id}`, type: 'REVIEW_RESOLVED', case_id: original.case_id, source: 'admin',
+      data: { job_id: result.job.job_id, document_ids: result.job.document_ids, reviewed_job_id: jobId, resolution: 'approve', note: body.note.trim() }
+    });
+    return { job: this.ingest.getJob(result.job.job_id), idempotency_key: accepted.idempotency_key };
+  }
+
   /** Wait until an event has been handled (or give up), and say what happened. For the Demo UI and tests. */
   async waitFor(idempotencyKey, timeoutMs = 5000) {
     const deadline = Date.now() + timeoutMs;
@@ -300,7 +317,8 @@ export class AgentService {
       }
       await this.ensurePools();
       const pool = this.store.pools.get(event.pool_id ?? event.case_id) ?? this.#poolByCase(event.case_id);
-      const proposed = event.type === 'DOCUMENTS_INGESTED'
+      const documentEvent = event.type === 'DOCUMENTS_INGESTED' || event.type === 'REVIEW_RESOLVED' && event.data?.job_id;
+      const proposed = documentEvent
         ? await this.#proposeFromUpload(event, pool, run)
         : await run.span('monitor_pipeline', async () => proposeFromEvent(event, { pool, mode, now: () => Date.now() }), { event_type: event.type });
       if (proposed.proposals.length === 0) {
@@ -313,11 +331,11 @@ export class AgentService {
         const decision = await this.#decide(event, pool, proposal, index, run);
         decisions.push(decision.decision_id);
       }
-      if (event.type === 'DOCUMENTS_INGESTED') await this.#finishJob(event, { status: 'DONE', decision_ids: decisions });
+      if (documentEvent) await this.#finishJob(event, { status: 'DONE', decision_ids: decisions });
       await run.end('ok');
       return { decisions };
     } catch (error) {
-      if (event.type === 'DOCUMENTS_INGESTED') {
+      if (event.type === 'DOCUMENTS_INGESTED' || event.type === 'REVIEW_RESOLVED' && event.data?.job_id) {
         await this.#finishJob(event, { status: 'FAILED', error: { code: error.code ?? 'ingest_failed', message: String(error.message ?? error).slice(0, 300) } });
       }
       await run.end('error');
@@ -350,6 +368,7 @@ export class AgentService {
     const jobId = event.data?.job_id;
     if (!jobId || !this.ingest) return;
     await this.ingest.updateJob(jobId, { ...patch, finished_at: this.now().toISOString() });
+    this.#activity('PIPELINE', 'INGEST_FINISHED', null, { job_id: jobId, status: patch.status }, { caseId: event.case_id });
   }
 
   #poolByCase(caseId) {

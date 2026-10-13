@@ -196,12 +196,14 @@ export class AgentOrchestrator {
       });
     }
 
+    let extraction = [];
     const summaryOf = (action, reasoning, extra = {}) => ({
       action,
       reasoning_summary: reasoning,
       findings,
       pipeline,
       documents: input.documents.map(({ name, kind, sha256, mime_type: mimeType }) => ({ name, kind, sha256, mime_type: mimeType })),
+      extraction,
       ...extra
     });
     const holdWithoutCase = (reasoning) => {
@@ -233,6 +235,15 @@ export class AgentOrchestrator {
     if (!parsing) {
       return holdWithoutCase('No uploaded document could be read as an eBL, invoice or insurance policy; a person needs to look at the upload.');
     }
+    const visibleFields = new Set(['bl_id', 'bl_no', 'invoice_no', 'cargo', 'quantity_mt', 'declared_value_usd', 'total_amount_usd', 'unit_price_usd_per_mt', 'currency', 'vessel', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'eta', 'issue_date', 'coverage_ratio', 'insured_value_usd', 'expires_at']);
+    extraction = parsing.documents.map((document) => ({
+      document_type: document.document_type, source: document.source,
+      confidence: document.confidence, requires_human_review: document.requires_human_review,
+      missing_fields: document.missing_fields,
+      fields: Object.fromEntries(Object.entries(document.fields).filter(([name]) => visibleFields.has(name))),
+      provenance: Object.fromEntries(Object.entries(document.provenance).filter(([name]) => visibleFields.has(name))
+        .map(([name, { line, method, confidence }]) => [name, { line, method, confidence }]))
+    }));
 
     // 2. injection screen
     const screen = await run('injection_screen', async () => {
