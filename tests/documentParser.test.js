@@ -3,6 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 import {
   DocumentParseError,
@@ -12,6 +14,16 @@ import {
 import { checkDocumentConsistency } from '../src/agent/documentConsistency.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('written calendar dates keep the same day in Singapore, UTC and US timezones', async () => {
+  const code = "import {parseDocument} from './src/agent/documentParser.js'; const out = await parseDocument({path:'data/uploads/soybean-sh-sg/commercial-invoice.md'}); process.stdout.write(out.fields.invoice_date);";
+  for (const timezone of ['Asia/Singapore', 'UTC', 'America/Los_Angeles']) {
+    const result = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', code], {
+      cwd: root, env: { ...process.env, TZ: timezone }, windowsHide: true
+    });
+    assert.equal(result.stdout, '2026-05-15', timezone);
+  }
+});
 const bolPath = path.join(root, 'data/uploads/copper-sg-shanghai/bill-of-lading.md');
 const invoicePath = path.join(root, 'data/uploads/copper-sg-shanghai/commercial-invoice.md');
 const insurancePath = path.join(root, 'data/uploads/soybean-sh-sg/insurance-policy.md');

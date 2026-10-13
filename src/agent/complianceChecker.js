@@ -30,7 +30,7 @@ export function checkCompliance(caseData = {}) {
   let sanctionEvidence = '';
   for (const ent of entities) {
     const name = (ent.name || '').toLowerCase();
-    if (name.includes('sanctioned') || name.includes('iran') || name.includes('dprk') || name.includes('north korea')) {
+    if (/\b(?:sanctioned|iran|dprk|north\s+korea)\b/u.test(name)) {
       hasSanction = true;
       sanctionEvidence = `${ent.role} (${ent.name}) matched a demo sanctions keyword.`;
       break;

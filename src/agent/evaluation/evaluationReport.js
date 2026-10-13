@@ -1,241 +1,53 @@
-// TRUST-2: Evaluation Report (SYNTHETIC SKELETON, not a measurement)
-// The parser/agent steps below are mocks that copy the gold labels, so the metrics are not evidence
-// of quality. The report is marked `synthetic: true` with a notice; WP5.1 of
-// docs/agent-implementation-plan.md rebuilds it on the real components.
+import { runEvaluation } from './runner.js';
 
-import { GOLD_DATASET } from './goldDataset.js';
+export const runComprehensiveEvaluation = runEvaluation;
+const show = (value) => Number.isInteger(value) ? String(value) : value.toFixed(4);
 
-export async function runComprehensiveEvaluation() {
-  const results = {
-    timestamp: new Date().toISOString(),
-    synthetic: true,
-    notice: 'NOT A MEASUREMENT: this harness echoes the expected/ground-truth values back as the agent output, so these numbers are always perfect and say nothing about the real agent. A real evaluation (real components, labelled data) is docs/agent-implementation-plan.md WP5.1.',
-    metrics: {},
-    failed_cases: [],
-    limitations: []
-  };
+export function renderEvaluationReport(evaluation) {
+  const source = evaluation.source ?? {};
+  return `# AgentBL Agent 评测报告
 
-  // 1. Document Parsing Accuracy
-  const parsingResults = await evaluateDocumentParsing();
-  results.metrics.parsing_accuracy = parsingResults.accuracy;
-  results.failed_cases.push(...parsingResults.failures);
+生成时间：${evaluation.generated_at}（UTC）。模式：${evaluation.mode}。
+代码基线：${source.commit ?? 'unrecorded'}；工作区有改动：${source.dirty ?? 'unrecorded'}。
+代码摘要：${source.sha256 ?? 'unrecorded'}。
+金标版本：${evaluation.dataset_version}；金标与输入摘要：${evaluation.dataset_hash}。
 
-  // 2. Document Consistency (Invoice vs eBL)
-  const consistencyResults = await evaluateDocumentConsistency();
-  results.metrics.consistency_precision = consistencyResults.precision;
-  results.metrics.consistency_recall = consistencyResults.recall;
+这是对真实本地组件的测量。确定性闸门：**${evaluation.passed ? 'PASS' : 'FAIL'}**。
+闸门通过与逐样例全对是两种结果；失败样例照实列出。金标不传入被测组件。
 
-  // 3. Risk Level Monotonicity
-  const riskResults = await evaluateRiskMonotonicity();
-  results.metrics.risk_monotonicity_score = riskResults.score;
-  results.failed_cases.push(...riskResults.violations);
+## 指标与冻结阈值
 
-  // 4. Valuation Error
-  const valuationResults = await evaluateValuationAccuracy();
-  results.metrics.valuation_mae = valuationResults.mae;
-  results.metrics.valuation_mape = valuationResults.mape;
+| 指标 | 实测 | 阈值 | 状态 |
+|---|---:|---:|---|
+${evaluation.gates.map((gate) => `| ${gate.metric} | ${show(gate.actual)} | ${gate.direction} ${show(gate.threshold)} | ${gate.passed ? 'PASS' : 'FAIL'} |`).join('\n')}
 
-  // 5. Tool Call Success Rate
-  const toolResults = await evaluateToolCalls();
-  results.metrics.tool_call_success_rate = toolResults.success_rate;
+## 样本与配置
 
-  // Limitations
-  results.limitations = [
-    'Synthetic: parser and agent steps are mocks that echo the gold labels',
-    'OCR not tested (using structured JSON input)',
-    'No real-time market price feeds in evaluation',
-    'War risk assessment uses static rules, not live intelligence',
-    'Sanctioned entity list is sample data, not OFAC/UN official list'
-  ];
+\`\`\`json
+${JSON.stringify({ counts: evaluation.counts, config: evaluation.config }, null, 2)}
+\`\`\`
 
-  return results;
-}
+抽取 P/R 只覆盖人工标注字段；错值同时计 FP 和 FN，缺失值计 FN。整体精确匹配要求该样例所有标注字段和单证类型一致。
+一致性 P/R 以问题 ID 为单位。约束 F1 按键值与集合元素做微平均；推荐约束检查使用独立判定器。NDCG@3 使用人工给出的相关度，重复候选不能重复得分。
+定价使用固定种子，分别检查三档速度和递增风险严重度；自主循环跑真实场景播放器、策略和 Demo 执行器，再次播放检查去重。
+注入样本进入真实九步接入流水线，要求 HOLD 和注入发现同时成立，并有干净单证对照。
 
-async function evaluateDocumentParsing() {
-  let correct = 0;
-  const failures = [];
+## 失败样例（${evaluation.failed_cases.length}）
 
-  for (const testCase of GOLD_DATASET) {
-    try {
-      // Mock document parser
-      const parsed = {
-        cargo: testCase.ebl.cargo,
-        value_usd: testCase.ebl.value_usd,
-        shipper: testCase.ebl.shipper,
-        consignee: testCase.ebl.consignee
-      };
+${evaluation.failed_cases.length ? evaluation.failed_cases.map((entry) => `- **${entry.suite}/${entry.id}**：${JSON.stringify({ actual: entry.actual ?? entry.issues ?? entry.pool_ids, gold: entry.gold })}`).join('\n') : '本次有限样本没有失败。'}
 
-      const allFieldsMatch =
-        parsed.cargo === testCase.ebl.cargo &&
-        parsed.value_usd === testCase.ebl.value_usd;
+## 局限
 
-      if (allFieldsMatch) {
-        correct++;
-      } else {
-        failures.push({
-          id: testCase.id,
-          issue: 'field_mismatch',
-          expected: testCase.ebl,
-          actual: parsed
-        });
-      }
-    } catch (error) {
-      failures.push({ id: testCase.id, issue: 'parsing_error', error: error.message });
-    }
-  }
+${evaluation.limitations.map((limitation) => `- ${limitation}`).join('\n')}
 
-  return {
-    accuracy: correct / GOLD_DATASET.length,
-    failures
-  };
-}
+## 可选 LLM 对比
 
-async function evaluateDocumentConsistency() {
-  let truePositives = 0;
-  let falsePositives = 0;
-  let falseNegatives = 0;
+${evaluation.live_llm ? `状态：${evaluation.live_llm.status}。${evaluation.live_llm.notice}\n\n${evaluation.live_llm.metrics ? `\`\`\`json\n${JSON.stringify({ metrics: evaluation.live_llm.metrics, counts: evaluation.live_llm.counts }, null, 2)}\n\`\`\`` : ''}` : 'SKIP：未执行真实提供方评测。仅人工运行 `npm run eval:agent -- --live-llm` 时尝试真实 LLM 路径；其指标不阻断 CI。'}
 
-  for (const testCase of GOLD_DATASET) {
-    if (!testCase.invoice) continue;
-
-    const invoiceAmount = testCase.invoice.amount_usd;
-    const eblValue = testCase.ebl.value_usd;
-
-    const isConsistent = invoiceAmount === eblValue;
-    const shouldBeConsistent = testCase.ground_truth.compliant &&
-      !testCase.ground_truth.fraud_indicators.includes('value_mismatch');
-
-    if (isConsistent && shouldBeConsistent) truePositives++;
-    else if (isConsistent && !shouldBeConsistent) falsePositives++;
-    else if (!isConsistent && shouldBeConsistent) falseNegatives++;
-  }
-
-  const precision = truePositives / (truePositives + falsePositives) || 0;
-  const recall = truePositives / (truePositives + falseNegatives) || 0;
-
-  return { precision, recall };
-}
-
-async function evaluateRiskMonotonicity() {
-  const riskOrder = { LOW: 1, MEDIUM: 2, WARNING: 3, CRITICAL: 4 };
-  const violations = [];
-
-  // Check: Higher risk should lead to lower issue price
-  const sortedByRisk = [...GOLD_DATASET]
-    .filter(tc => tc.ground_truth.compliant)
-    .sort((a, b) => riskOrder[a.ground_truth.risk_level] - riskOrder[b.ground_truth.risk_level]);
-
-  for (let i = 0; i < sortedByRisk.length - 1; i++) {
-    const current = sortedByRisk[i];
-    const next = sortedByRisk[i + 1];
-
-    // Mock pricing: higher risk = lower price
-    const currentPrice = 1.0 - riskOrder[current.ground_truth.risk_level] * 0.1;
-    const nextPrice = 1.0 - riskOrder[next.ground_truth.risk_level] * 0.1;
-
-    if (currentPrice < nextPrice) {
-      violations.push({
-        case1: current.id,
-        case2: next.id,
-        issue: 'risk_price_monotonicity_violation'
-      });
-    }
-  }
-
-  const score = 1 - violations.length / (sortedByRisk.length - 1);
-  return { score, violations };
-}
-
-async function evaluateValuationAccuracy() {
-  let totalAbsoluteError = 0;
-  let totalPercentageError = 0;
-  let validCount = 0;
-
-  for (const testCase of GOLD_DATASET) {
-    if (testCase.ground_truth.expected_valuation === null) continue;
-
-    const expected = testCase.ground_truth.expected_valuation;
-    const actual = testCase.ebl.value_usd || 0;
-
-    const absoluteError = Math.abs(expected - actual);
-    const percentageError = Math.abs((expected - actual) / expected);
-
-    totalAbsoluteError += absoluteError;
-    totalPercentageError += percentageError;
-    validCount++;
-  }
-
-  return {
-    mae: totalAbsoluteError / validCount,
-    mape: totalPercentageError / validCount
-  };
-}
-
-async function evaluateToolCalls() {
-  let successCount = 0;
-  const totalCalls = GOLD_DATASET.length * 3; // 假设每个 case 调用 3 个工具
-
-  for (const testCase of GOLD_DATASET) {
-    // Mock tool calls
-    try {
-      // parse_document
-      if (testCase.ebl) successCount++;
-
-      // check_compliance
-      if (testCase.ground_truth) successCount++;
-
-      // assess_risk
-      if (testCase.ground_truth.risk_level) successCount++;
-    } catch {
-      // Tool call failed
-    }
-  }
-
-  return { success_rate: successCount / totalCalls };
-}
-
-// Export evaluation report
-export async function generateEvaluationReport() {
-  const evaluation = await runComprehensiveEvaluation();
-
-  const report = `# AgentBL AI Agent Evaluation Report
-
-**Generated**: ${evaluation.timestamp}
-
-## Executive Summary
-
-This report evaluates the AgentBL AI Agent across 20 gold-standard test cases covering normal trade, fraud, incomplete documents, war zones, and delays.
-
-## Metrics
-
-| Metric | Result | Target | Status |
-|--------|--------|--------|--------|
-| Document Parsing Accuracy | ${(evaluation.metrics.parsing_accuracy * 100).toFixed(1)}% | ≥95% | ${evaluation.metrics.parsing_accuracy >= 0.95 ? '✅ PASS' : '⚠️ BELOW'} |
-| Document Consistency Precision | ${(evaluation.metrics.consistency_precision * 100).toFixed(1)}% | ≥90% | ${evaluation.metrics.consistency_precision >= 0.9 ? '✅ PASS' : '⚠️ BELOW'} |
-| Document Consistency Recall | ${(evaluation.metrics.consistency_recall * 100).toFixed(1)}% | ≥90% | ${evaluation.metrics.consistency_recall >= 0.9 ? '✅ PASS' : '⚠️ BELOW'} |
-| Risk Monotonicity Score | ${(evaluation.metrics.risk_monotonicity_score * 100).toFixed(1)}% | ≥95% | ${evaluation.metrics.risk_monotonicity_score >= 0.95 ? '✅ PASS' : '⚠️ BELOW'} |
-| Valuation MAE | $${evaluation.metrics.valuation_mae.toFixed(0)} | ≤$50,000 | ${evaluation.metrics.valuation_mae <= 50000 ? '✅ PASS' : '⚠️ ABOVE'} |
-| Valuation MAPE | ${(evaluation.metrics.valuation_mape * 100).toFixed(2)}% | ≤5% | ${evaluation.metrics.valuation_mape <= 0.05 ? '✅ PASS' : '⚠️ ABOVE'} |
-| Tool Call Success Rate | ${(evaluation.metrics.tool_call_success_rate * 100).toFixed(1)}% | ≥95% | ${evaluation.metrics.tool_call_success_rate >= 0.95 ? '✅ PASS' : '⚠️ BELOW'} |
-
-## Failed Cases
-
-${evaluation.failed_cases.length === 0 ? 'No failures detected.' : evaluation.failed_cases.map(f => `- **${f.id}**: ${f.issue}`).join('\n')}
-
-## Limitations
-
-${evaluation.limitations.map(l => `- ${l}`).join('\n')}
-
-## Conclusion
-
-${
-  evaluation.metrics.parsing_accuracy >= 0.95 &&
-  evaluation.metrics.tool_call_success_rate >= 0.95 &&
-  evaluation.metrics.risk_monotonicity_score >= 0.95
-    ? '✅ The AI Agent meets all critical quality thresholds.'
-    : '⚠️ Some metrics are below target. Review failed cases and retrain/tune accordingly.'
-}
+完整逐样例结果与代码文件摘要保存在 [evidence/agent-eval.json](evidence/agent-eval.json)。
 `;
+}
 
-  return report;
+export async function generateEvaluationReport(options) {
+  return renderEvaluationReport(await runEvaluation(options));
 }

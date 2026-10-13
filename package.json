@@ -31,6 +31,7 @@
     "mcp:serve": "node src/mcp/standalone-server.js",
     "demo:once": "node scripts/demo-once.mjs",
     "preflight": "node scripts/preflight.mjs",
+    "eval:agent": "node scripts/eval-agent.mjs",
     "compile:contracts": "npm --prefix hardhat run compile",
     "test:contracts": "npm --prefix hardhat test",
     "deploy:protocol": "npm --prefix hardhat run deploy:protocol",

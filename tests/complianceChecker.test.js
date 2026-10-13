@@ -2,6 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { checkCompliance } from '../src/agent/complianceChecker.js';
 
+test('demo sanctions keywords match whole words and never block Miranda as Iran', () => {
+  for (const seller of ['Miranda Trading', 'Tirana Metals', 'Warning Materials']) {
+    const report = checkCompliance({ caseEntry: { seller, cargo: 'Copper' } });
+    assert.equal(report.has_block, false, seller);
+    assert.match(report.disclaimer, /not an OFAC/u);
+  }
+  for (const seller of ['Iran Trading', 'Sanctioned Entity', 'North Korea Trading', 'DPRK Shipping']) {
+    assert.equal(checkCompliance({ caseEntry: { seller, cargo: 'Copper' } }).has_block, true, seller);
+  }
+});
+
 test('AI-18: clean case passes compliance', () => {
   const caseData = {
     caseEntry: { buyer: 'Tech Corp', seller: 'Global Minerals', cargo: 'Copper' },

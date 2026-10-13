@@ -120,6 +120,10 @@ function isoDate(value) {
   if (!value) return null;
   const match = String(value).match(/\b(20\d{2})[-/]([01]?\d)[-/]([0-3]?\d)\b/u);
   if (match) return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+  // A calendar date has no timezone. Date.parse('15 May 2026') uses the host's local midnight,
+  // which becomes May 14 in UTC on Singapore hosts. Parse written dates at explicit UTC midnight.
+  const written = String(value).match(/\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(20\d{2})\b/iu);
+  if (written) return new Date(Date.parse(`${written[1]} ${written[2]} ${written[3]} 00:00:00 GMT`)).toISOString().slice(0, 10);
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? new Date(parsed).toISOString().slice(0, 10) : null;
 }
