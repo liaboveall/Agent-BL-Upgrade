@@ -18,7 +18,10 @@ import { t, tData, toggleLang, onLangChange, applyStaticI18n } from './i18n.js';
 import { initVoyage, renderVoyage, startVoyageClock, stopVoyageClock } from './voyage.js';
 import { initPopupAssistant } from './popup-assistant.js';
 import { hideAgentConsole, initAgentConsole, rerenderAgentConsole, showAgentConsole } from './agent/console.js';
-import { getLlmClient, getLlmStatus } from './llm-client.js';
+import { copilotQuery, resetCopilotSession } from './copilot/api.js';
+import { renderRecommendations, decisionButton, poolStateLabel } from './copilot/ui.js';
+import { initDocumentManagement } from './agent/documents.js';
+import { openAgentDecision } from './agent/console.js';
 import { payV2WithWallet } from './x402-v2.js';
 import { initMysteryExperience, renderMysteryExperience, resetMysteryExperience } from './mystery.js';
 
@@ -73,6 +76,7 @@ function visibleCases() {
   // AI-matched IDs from natural-language filtering.
   if (state._aiMatchedIds) {
     cases = cases.filter(c => state._aiMatchedIds.has(c.case_id));
+    cases.sort((a, b) => (state._aiRanks?.get(a.case_id) ?? 0) - (state._aiRanks?.get(b.case_id) ?? 0));
   }
 
   // Category filter
@@ -211,6 +215,7 @@ async function onModeToggle() {
     state.liveAvailable = data.liveAvailable;
     state.modeGeneration = data.generation;
     resetMysteryExperience();
+    resetCopilotUi();
     refreshDemoModeUi();
     toast(`Switched to ${target.toUpperCase()} mode`);
   } catch (error) {
@@ -232,6 +237,7 @@ async function onDemoReset() {
     state.voyageOffering = null;
     state.voyageEvents = [];
     resetMysteryExperience();
+    resetCopilotUi();
     renderX402FlowReset();
     await selectCase(state.cases[0]?.case_id);
     setView('market');
@@ -304,6 +310,7 @@ async function selectCase(caseId) {
   const entry = state.cases.find((c) => c.case_id === caseId);
   if (!entry) return;
   state.caseId = caseId;
+  window.dispatchEvent(new CustomEvent('agentbl:casechange'));
   await loadExporterPreferences(caseId);
   state.caseData = entry.case;
   state.financingUsd = null;
@@ -475,6 +482,7 @@ function sortMarketCases(cases) {
   const riskOf = (c) => riskRank[quoteOf(c)?.risk_level ?? c.risk_hint] ?? 9;
   const list = [...cases];
   list.sort((a, b) => {
+    if (state._aiRanks) return (state._aiRanks.get(a.case_id) ?? 99) - (state._aiRanks.get(b.case_id) ?? 99);
     if (state.marketSort === 'yield_desc') {
       const yieldOf = (entry) => {
         const quote = quoteOf(entry);
@@ -717,7 +725,7 @@ function renderMarketDetail() {
       el('button', {
         id: 'market-subscribe-btn',
         class: 'btn',
-        disabled: paused,
+        disabled: paused || !state.demoMode,
         onclick: onMarketSubscribe
       }, paused ? t('market_paused_btn') : t('market_subscribe_btn'))
     ),
@@ -754,7 +762,7 @@ function renderMarketSubscribeReadout(quote) {
     const result = state.marketSubscriptionResult;
     box.append(el('div', { class: `market-subscribe-result tone-${f.stateTone(result.final_state)}` },
       el('span', { class: `badge sm tone-${f.stateTone(result.final_state)}`, text: result.final_state }),
-      el('span', { text: t('market_subscribe_result', { n: result.steps?.length ?? 0 }) })
+      el('span', { text: t('cp_subscription_recorded', { price: result.price, shares: f.int(result.tokenCount) }) })
     ));
   } else {
     box.append(el('p', { class: 'sub-foot muted', text: t('market_readout_foot') }));
@@ -763,19 +771,20 @@ function renderMarketSubscribeReadout(quote) {
 
 async function onMarketSubscribe() {
   const quote = selectedQuote();
-  if (!quote || PAUSED_ACTIONS.has(quote.pricing_action)) return;
+  if (!state.demoMode || !quote || PAUSED_ACTIONS.has(quote.pricing_action)) return;
   const amount = Number(state.marketSubscriptionUsd) || 0;
   if (amount <= 0) { toast(t('market_need_amount'), true); return; }
 
   const btn = $('#market-subscribe-btn');
   const old = btn?.textContent;
+  const caseId = state.caseId, modeGeneration = state.modeGeneration, wallet = state.wallet?.address || '0xDemoWallet';
   if (btn) { btn.disabled = true; btn.textContent = t('market_subscribing'); }
   try {
-    state.marketSubscriptionResult = await api.simulateOffering(state.caseData, {
-      payout_speed: state.speed,
-      subscription_usd: amount
-    });
+    const result = await api.subscribePool({ pool_id: caseId, amount_usd: amount, wallet_address: wallet });
+    if (state.caseId !== caseId || state.modeGeneration !== modeGeneration || wallet !== (state.wallet?.address || '0xDemoWallet')) return;
+    state.marketSubscriptionResult = { ...result.investment, final_state: result.poolStatus };
     renderMarketDetail();
+    await renderPortfolio();
     toast(t('market_subscribed_toast'));
   } catch (e) {
     toast(t('market_subscribe_fail', { msg: e.message || e }), true);
@@ -949,12 +958,22 @@ function highlightCategoryBtn() {
 // ===========================================================================
 // Search + AI natural language filter
 // ===========================================================================
-let searchDebounce = null;
+let searchDebounce = null, searchAbort = null, searchGeneration = 0;
+function resetCopilotUi() {
+  resetCopilotSession(); searchGeneration += 1; searchAbort?.abort();
+  state._aiMatchedIds = null; state._aiRanks = null;
+  clear($('#copilot-search-results'));
+  window.dispatchEvent(new CustomEvent('agentbl:runtimechange'));
+}
 function onSearchInput() {
+  searchGeneration += 1; searchAbort?.abort();
+  const button = $('#ai-search-btn');
+  if (button) { button.disabled = false; button.textContent = t('ai_parse'); }
+  clear($('#copilot-search-results'));
   clearTimeout(searchDebounce);
   searchDebounce = setTimeout(() => {
     state.searchQuery = $('#search-input')?.value || '';
-    state._aiMatchedIds = null; // clear AI filter on manual input
+    state._aiMatchedIds = null; state._aiRanks = null; // clear AI filter on manual input
     renderCaseSelector();
     renderMarket();
     const visible = visibleCases();
@@ -967,113 +986,30 @@ function onSearchInput() {
 async function onAiSearch() {
   const query = ($('#search-input')?.value || '').trim();
   if (!query) { toast(t('ai_empty_query'), true); return; }
-
-  // A pending keystroke debounce would fire after the AI answer arrives and wipe
-  // the AI filter (typing then pressing Enter quickly used to show 0 results).
   clearTimeout(searchDebounce);
-
+  searchAbort?.abort(); searchAbort = new AbortController();
+  const requestGeneration = ++searchGeneration, modeGeneration = state.modeGeneration;
   const btn = $('#ai-search-btn');
-  const origText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = t('ai_searching');
-
-  try {
-    const caseList = state.cases.map(c => ({
-      id: c.case_id,
-      label: c.label || c.case_id,
-      cargo: c.cargo || '',
-      route: c.route || '',
-      risk: c.risk_hint || ''
-    }));
-
-    const tools = [{
-      name: 'filter_eBLs',
-      description: 'Return matching electronic bill-of-lading case IDs based on the investor natural-language preference.',
-      parameters: {
-        type: 'object',
-        properties: {
-          matched_ids: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Matched case IDs sorted by relevance'
-          },
-          reasoning: {
-            type: 'string',
-            description: 'Brief English explanation of why these cases match, under 20 words'
-          }
-        },
-        required: ['matched_ids']
-      }
-    }];
-
-    // No provider configured on the server: skip the request that can only fail and go
-    // straight to the keyword fallback in the catch block below.
-    const llmStatus = await getLlmStatus();
-    if (llmStatus.reachable && !llmStatus.configured) throw new Error('LLM relay is not configured');
-
-    const client = getLlmClient();
-    const messages = [
-      { role: 'system', content: `You are an eBL investment-filter assistant. Select the best matching cases from the list below based on the user's natural-language preference.
-
-Available cases:
-${caseList.map(c => `- ID: ${c.id} | Cargo: ${c.cargo} | Route: ${c.route} | Risk: ${c.risk} | Label: ${c.label}`).join('\n')}
-
-Use the filter_eBLs tool. Match risk appetite, cargo type, route, ports, speed, or other preferences. If the request is broad, return several good matches. Keep reasoning in English.` },
-      { role: 'user', content: query }
-    ];
-
-    const result = await client.chat(messages, tools);
-
-    if (result.tool_calls && result.tool_calls.length > 0) {
-      const args = result.tool_calls[0].arguments;
-      const matchedIds = args.matched_ids || [];
-      const reasoning = args.reasoning || '';
-
-      if (matchedIds.length > 0) {
-        state.searchQuery = query;
-        state._aiMatchedIds = new Set(matchedIds);
-        renderCaseSelector();
-        renderMarket();
-        const visible = visibleCases();
-        if (visible.length > 0) {
-          selectCase(visible[0].case_id);
-        }
-        toast(t('ai_match_toast', { reasoning, n: matchedIds.length }));
-      } else {
-        toast(t('ai_no_match'), true);
-      }
-    } else if (result.content) {
-      // No tool call — fallback to keyword
-      state.searchQuery = query;
-      renderCaseSelector();
-      renderMarket();
-      const visible = visibleCases();
-      if (visible.length > 0) {
-        selectCase(visible[0].case_id);
-        toast(t('keyword_match_toast', { n: visible.length }));
-      } else {
-        toast(t('ai_no_match'), true);
-      }
-    } else {
-      // Neither a tool call nor text. A reasoning model that spends all of max_tokens thinking ends like this
-      // (finish_reason "length"); do not fall silent: take the keyword fallback below and say why.
-      throw new Error(result.finish_reason === 'length' ? 'the model ran out of output tokens' : 'the model returned an empty answer');
-    }
-  } catch (e) {
-    // Fallback to keyword search
+  btn.disabled = true; btn.textContent = t('ai_searching');
+  const apply = (result) => {
+    if (requestGeneration !== searchGeneration || modeGeneration !== state.modeGeneration) return;
     state.searchQuery = query;
-    renderCaseSelector();
-    renderMarket();
-    const visible = visibleCases();
-    if (visible.length > 0) {
-      selectCase(visible[0].case_id);
-      toast(t('keyword_ai_unavailable_toast', { n: visible.length }));
-    } else {
-      toast(t('ai_error', { msg: e.message }), true);
+    state._aiMatchedIds = new Set(result.recommendations.map((item) => item.case_id));
+    state._aiRanks = new Map(result.recommendations.map((item) => [item.case_id, item.rank]));
+    renderCaseSelector(); renderMarket();
+    renderRecommendations($('#copilot-search-results'), result, { onSelect: selectCase });
+  };
+  try {
+    const result = await copilotQuery(query, { stateless: true, limit: 10, signal: searchAbort.signal, onResult: apply });
+    apply(result);
+    if (requestGeneration === searchGeneration && modeGeneration === state.modeGeneration) toast(result.clarifying_question || t('cp_found', { n: result.recommendations.length }));
+  } catch (error) {
+    if (error.name !== 'AbortError' && requestGeneration === searchGeneration) {
+      state._aiMatchedIds = null; state._aiRanks = null; clear($('#copilot-search-results')); renderMarket();
+      toast(t('ai_error', { msg: error.message }), true);
     }
   } finally {
-    btn.disabled = false;
-    btn.textContent = origText;
+    if (requestGeneration === searchGeneration) { btn.disabled = false; btn.textContent = t('ai_parse'); }
   }
 }
 
@@ -2613,34 +2549,25 @@ function wireX402Handlers() {
 async function renderPortfolio() {
   const list = $('#portfolio-list');
   if (!list) return;
+  const wallet = state.wallet?.address || '0xDemoWallet', modeGeneration = state.modeGeneration;
   try {
-    const res = await fetch('/api/investors/portfolio?wallet_address=' + encodeURIComponent(state.wallet?.address || '0xDemoWallet'));
-    const data = await res.json();
-    if (!data.ok) return;
-
+    const response = await fetch('/api/investors/portfolio?wallet_address=' + encodeURIComponent(wallet));
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error);
+    if (wallet !== (state.wallet?.address || '0xDemoWallet') || modeGeneration !== state.modeGeneration) return;
     $('#portfolio-total').textContent = '$' + data.summary.totalInvestedUsd.toLocaleString();
     $('#portfolio-yield').textContent = (data.summary.avgYieldBps / 100).toFixed(2) + '%';
-    
-    if (data.investments.length === 0) {
-      list.innerHTML = `<p class="muted" style="text-align: center;">${t('portfolio_empty')}</p>`;
-      return;
+    clear(list);
+    if (!data.investments.length) list.append(el('p', { class: 'muted' }, t('portfolio_empty')));
+    for (const investment of data.investments) {
+      const item = el('article', { class: 'cp-card' }, el('strong', {}, tData(investment.label)),
+        el('p', {}, '$' + investment.amountUsd.toLocaleString() + ' · ' + t('cp_source_' + investment.source_label)),
+        el('p', {}, t('cp_position_current', { status: poolStateLabel(investment.current_status), price: investment.current_price_usd ?? '—', risk: f.riskLabel(investment.current_risk_level) })),
+        el('p', { class: 'muted' }, t('cp_position_demo')));
+      for (const decision of investment.decisions) item.append(decisionButton(decision.decision_id));
+      list.append(item);
     }
-
-    list.innerHTML = data.investments.map(inv => `
-      <div style="border-bottom: 1px solid var(--line-soft); padding: 8px 0; font-size: 13px;">
-        <div style="display:flex; justify-content:space-between;">
-          <strong>${html(inv.label)}</strong>
-          <span style="color:var(--ok)">+$${Number(inv.amountUsd).toLocaleString()}</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; color:var(--text-2); font-size:12px;">
-          <span>${t('portfolio_metrics', { yield: `${(inv.yieldBps/100).toFixed(2)}%`, risk: html(f.riskLabel(inv.riskLevel)) })}</span>
-          <span style="font-family:var(--mono)" title="${html(t('portfolio_demo_ref_title'))}">${html(String(inv.reference ?? '—').slice(0, 24))}</span>
-        </div>
-      </div>
-    `).join('');
-  } catch (err) {
-    console.error('Failed to load portfolio', err);
-  }
+  } catch (error) { if (modeGeneration === state.modeGeneration) list.textContent = t('cp_error', { message: error.message }); }
 }
 
 // ===========================================================================
@@ -2724,6 +2651,7 @@ function subscribeToAgentActivity(caseId, { retry = false } = {}) {
         agentLog(`${emoji} Agent: ${data.action}${data.details?.price ? ` → $${data.details.price}` : ''}`, 'var(--accent)');
 
         logAgentActivityUI(data);
+        if (data.decision_id) renderPortfolio();
 
         // Decision records carry the agent's decision verb in details.decision_action.
         const decisionAction = data.details?.decision_action ?? data.action;
@@ -2832,6 +2760,8 @@ function wireStaticHandlers() {
     refreshWalletUi();
   });
   window.addEventListener('agentbl:portfoliochange', renderPortfolio);
+  window.addEventListener('agentbl:selectcase', (event) => { selectCase(event.detail.case_id); setView('market'); });
+  window.addEventListener('agentbl:decisionopen', async (event) => { setView('agent'); await openAgentDecision(event.detail.decision_id); });
   // Close the wallet menu on an outside click or Escape.
   document.addEventListener('click', (e) => {
     if (isWalletMenuOpen() && !e.target.closest('.wallet-wrap')) closeWalletMenu();
@@ -2876,123 +2806,7 @@ function wireStaticHandlers() {
     if (q && !$('#mint-financing').disabled) renderMintReadout(q);
   });
 
-  // FE-11: eBL Management Upload Listeners
-  const eblBrowseBtn = $('#ebl-browse-btn');
-  const eblFileInput = $('#ebl-file-input');
-  const eblUploadZone = $('#ebl-upload-zone');
-  const eblUploadStatus = $('#ebl-upload-status');
-
-  if (eblBrowseBtn && eblFileInput && eblUploadZone) {
-    // BE-14: Implement eBL document upload with ENI adapter
-    eblBrowseBtn.addEventListener('click', () => eblFileInput.click());
-
-    eblUploadZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      eblUploadZone.style.background = 'rgba(93, 63, 211, 0.1)';
-    });
-
-    eblUploadZone.addEventListener('dragleave', () => {
-      eblUploadZone.style.background = '';
-    });
-
-    eblUploadZone.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      eblUploadZone.style.background = '';
-      const files = Array.from(e.dataTransfer.files);
-      await handleEblUpload(files);
-    });
-
-    eblFileInput.addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files);
-      await handleEblUpload(files);
-      eblFileInput.value = ''; // Reset for reupload
-    });
-  }
-
-  async function handleEblUpload(files) {
-    if (!files || files.length === 0) return;
-
-    eblUploadStatus.innerHTML = `<span style="color: var(--text-accent);">${t('ebl_uploading', { n: files.length })}</span>`;
-
-    const results = [];
-    for (const file of files) {
-      try {
-        const fileData = {
-          name: file.name,
-          type: file.type,
-          size: file.size
-        };
-
-        const response = await fetch('/api/ebl/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            file: fileData,
-            case_id: state.caseId
-          })
-        });
-
-        const data = await response.json();
-
-        if (data.ok) {
-          results.push({
-            name: file.name,
-            success: true,
-            documentId: data.document.documentId,
-            documentHash: data.document.documentHash,
-            eniMode: data.eni_mode
-          });
-
-          // BE-15: Log agent activity for document upload
-          logAgentActivityUI({
-            type: 'DOCUMENT',
-            action: 'eBL_UPLOADED',
-            caseId: state.caseId,
-            details: {
-              fileName: file.name,
-              documentId: data.document.documentId,
-              status: data.document.status
-            }
-          });
-        } else {
-          results.push({ name: file.name, success: false, error: data.error });
-        }
-      } catch (error) {
-        results.push({ name: file.name, success: false, error: error.message });
-      }
-    }
-
-    // Display results
-    const successCount = results.filter(r => r.success).length;
-    const failCount = results.length - successCount;
-
-    let statusHtml = '';
-    if (successCount > 0) {
-      statusHtml += `<div style="color: var(--text-success); margin-bottom: 8px;">${t('ebl_upload_success', { n: successCount })}</div>`;
-    }
-    if (failCount > 0) {
-      statusHtml += `<div style="color: var(--text-error); margin-bottom: 8px;">${t('ebl_upload_failed', { n: failCount })}</div>`;
-    }
-
-    statusHtml += '<div style="font-size: 12px; margin-top: 8px;">';
-    results.forEach(r => {
-      if (r.success) {
-        statusHtml += `<div style="color: var(--text-muted); margin: 4px 0;">
-          📄 ${html(r.name)} → <code style="font-size: 11px;">${html(String(r.documentHash).slice(0, 16))}...</code>
-          <span style="color: var(--text-accent); font-size: 10px;">[${html(String(r.eniMode).toUpperCase())}]</span>
-        </div>`;
-      } else {
-        statusHtml += `<div style="color: var(--text-error); margin: 4px 0;">📄 ${html(r.name)} → ${html(r.error)}</div>`;
-      }
-    });
-    statusHtml += '</div>';
-
-    eblUploadStatus.innerHTML = statusHtml;
-
-    if (successCount > 0) {
-      toast(t('ebl_upload_toast', { n: successCount }));
-    }
-  }
+  initDocumentManagement();
 
   // FE-13: Agent Console Toggle
   if (window.matchMedia?.('(max-width: 760px)').matches) {

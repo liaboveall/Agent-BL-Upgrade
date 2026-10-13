@@ -171,6 +171,8 @@
           <p class="passport-collection-disclaimer" data-i18n="passport_fixed_disclaimer">Product-experience credential only. Not an RWA, cargo title, investment certificate, or performance promise.</p>
         </section>
 
+        <section id="copilot-search-results" class="cp-search-results" aria-live="polite" aria-label="Copilot"></section>
+
         <section class="market-shell">
           <aside class="market-rail" aria-label="Marketplace controls">
             <div class="market-rail-head">
@@ -290,7 +292,7 @@
                   <p class="main-text" data-i18n="ebl_upload_drop">将 eBL、发票和保险单拖放到此处</p>
                   <p class="sub-text"><span data-i18n="ebl_upload_or">或者</span> <button id="ebl-browse-btn" class="inline-upload-btn" data-i18n="ebl_upload_browse">点击选择文件</button> <span data-i18n="ebl_upload_device">从本机上传</span></p>
                 </div>
-                <input type="file" id="ebl-file-input" multiple style="display:none;" />
+                <input type="file" id="ebl-file-input" accept=".md,.txt,.pdf,.png,.jpg,.jpeg" multiple style="display:none;" />
               </div>
               <div id="ebl-upload-status" class="muted" style="margin-top:12px; font-family: var(--mono); font-size: 13px;"></div>
             </div>
@@ -828,6 +830,7 @@
 
     <div id="toast" class="toast" hidden></div>
     <link rel="stylesheet" href="/custom-select.css">
+    <link rel="stylesheet" href="/copilot/styles.css" />
     <script src="/custom-select.js"></script>
     <script type="module" src="/app.js"></script>
   </body>

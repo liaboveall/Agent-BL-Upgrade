@@ -38,6 +38,11 @@ export function initAgentConsole({ getCases }) {
   view.getCases = getCases;
 }
 
+export async function openAgentDecision(id) {
+  await showAgentConsole();
+  await openDrawer(id);
+}
+
 // ------------------------------------------------------------------ status + controls
 
 function statusCard(status) {
