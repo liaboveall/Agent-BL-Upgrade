@@ -1,8 +1,8 @@
 # AgentBL Agent 全量实现规划
 
-> 版本：v1.6（2026-10-13；P1 WP3.6 / WP3.8 与 WP0.6 可重复 Wave B）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
+> 版本：v1.7（2026-10-14；WP2.2 PDF/可选视觉/文本补全/仓单）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
 > 基线：`main` @ `2292906`。该基线下 `npm test` 541 个用例全部通过，合约测试 74 个通过。
-> 状态：**开发中**（P0 与 P1 WP3.6 / WP3.8 / WP0.6 本地实现及验收已完成；WP0.6 另有实链只读复验，无新交易。下一入口 WP2.2 PDF/视觉等 P1 余项。真实提供方、钱包/链上写入与用户人工验收另有证据边界，见 §13）。开发会话按本文推进，并随时更新 §13 的状态表。
+> 状态：**开发中**（P0 与 P1 WP3.6 / WP3.8 / WP0.6 / WP2.2 已完成本地实现与验收；WP0.6 另有实链只读复验。下一入口 WP2.3 合规 v2。WP2.2 的视觉提供方是 mock 验证；真实提供方、钱包/链上写入与用户人工验收另有证据边界，见 §13）。开发会话按本文推进，并随时更新 §13 的状态表。
 > 范围：项目里所有“应有的 Agent 功能”：`docs/tasks.md`、`docs/PRD.md`、`docs/injective-hackathon-gap-analysis2.md` 和 README 中承诺过的 Agent 能力，以及顺带的改进与优化。
 
 ---
@@ -1034,7 +1034,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 1.6 | 追踪 | P1 | 1.5 | S | Done（2026-10-12；瀑布图在 4.1） |
 | 1.7 | PoolRegistry | P1 | 1.5 | S | Done（2026-10-12；Live 的 pool #2 映射用假链测过，真链核对在首次 Live 启动时发生） |
 | 2.1 | 单证接入 v2 | P0 | 1.5 | M | Done（2026-10-13；旧 `/api/ebl/upload` 带内容时转发） |
-| 2.2 | 解析器增强（文本 P0；PDF 和视觉 P1） | P0/P1 | 2.1 | L | 文本部分 Done（2026-10-13：注入筛查、保单样例、桶计原油）；PDF 与视觉 Todo；`WAREHOUSE_RECEIPT` Todo |
+| 2.2 | 解析器增强（文本 P0；PDF 和视觉 P1） | P0/P1 | 2.1 | L | Done（2026-10-14；PDF 文本层/页码、可选视觉和文本补全、中文仓单与 CNY 保真；17 项新增行为测试、118 项浏览器检查；视觉为 mock，扫描 OCR/真实模型准确率未验收；见 document-extraction.md） |
 | 2.3 | 合规 v2 | P1 | — | M | Todo |
 | 2.4 | 编排器 v2 | P0 | 2.1、2.2 | M | Demo 部分 Done（2026-10-13：`processDocuments`）；Live 开盘的 3 笔 owner 交易与 `isUnique` 检查 Todo |
 | 2.5 | 持续监控与场景播放器 | P0 | 1.5 | L | Done（2026-10-13；航程只派生保险，离港和到港来自场景或人工证明） |
@@ -1153,6 +1153,15 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 - 实链只读复验（2026-10-13 20:05 SGT）重新核验旧 USDC 转账、PaymentAttested、cargoHash、池状态及 Oracle 记录：eBL #2 / pool #2 为 Open、价格 800000 micros（$0.80），报告/报价已处理，零交易。见 [evidence/wave-b-repeatable-readonly-2026-10-13.json](evidence/wave-b-repeatable-readonly-2026-10-13.json)。这不代表新的链上写入验收。
 - 13 项离线行为测试见 `tests/waveBGate.test.js`，包括未登记、复用、暂停/终态、重复承诺、支付/存证日志伪配、只读密钥隔离、历史文件保护、确认各步骤与中途失败。最终工程证据见 [evidence/wave-b-repeatable-local.json](evidence/wave-b-repeatable-local.json)。下一入口 WP2.2 PDF/视觉；建议单独提交 `fix(chain): make Wave B verification replay-safe and preserve evidence`，本轮仍未提交/推送。
 - 最终全量 926/926、零跳过；lint/check 通过；覆盖率 94.33% / 82.93% / 91.63%；61 项 preflight 为 56 PASS / 0 WARN / 5 SKIP / 0 FAIL（含 74 个合约测试）。同时补强 Copilot 删除会话与其他订阅隔离的回归。之前的 110 项浏览器证据单独保留，测试服务器已停止。
+
+### P1 WP2.2 单证抽取与复核（2026-10-14）
+
+- PDF 使用精确锁定的 `unpdf@1.7.0`，逐页读取文本层，提供来源页码/页内行号。独立可终止 Worker 限制 30 页、200,000 字符和 10 秒；扫描/混合空白页、加密、损坏和超限都挂起复核，不模拟成功。
+- 图片和文本模型分别受 `AGENT_VISION_ENABLED` / `AGENT_DOCUMENT_LLM` 控制，默认关闭。只给模型严格 JSON schema，不给工具；类型/日期/范围与原文支持校验，确定性值优先，冲突保留发现。视觉置信度最多 0.75，始终要求人工复核；这比“通过一致性即可免复核”的可选路径更保守。
+- 全部可读单证在首次模型调用前筛查；扩充中英、零宽、常见同形字和 `payTo`。命中时不调用模型，也不让后续估值走 LLM。图片首次请求前只能筛查元数据，输出后继续筛查；强制人工复核保留此边界。
+- 中文 `WAREHOUSE_RECEIPT` 与发票核对仓单号、吨数、HS、币种和货值；人民币字段保持 CNY，不推测美元价格，不伪造海运提单。铜/原油虚构保单复用先前文本阶段的样例。
+- 实测 Node 20.11.1 / 22.23.3 / 24.21.0 与 Alpine 3.22.0 / Node 22.23.2 均通过 17 项新增抽取测试；依赖审计零漏洞。CI 增加 Node 20.11.1 专项，但没有因此声称远端已通过。浏览器为本机 Edge、1440/390px、中英与 mock 视觉，共 118 项检查；见 [document-extraction.md](document-extraction.md)。
+- 不读取或打印 `.env` 值，不调用真实视觉提供方，不执行链上写入。用户已于 2026-10-14 授权提交并推送；本地验收 JSON 保留提交前快照，提交、远端一致性与 CI 以实际 Git/Actions 记录为准。下一入口 **WP2.3 合规 v2**。提交建议为 `feat(agent): extract PDF text and review model document fields`。
 
 ## 14. 测试策略
 

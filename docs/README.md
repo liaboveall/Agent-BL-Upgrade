@@ -14,6 +14,7 @@
 | [tasks.md](./tasks.md) | 任务清单与状态（Agent 相关的 Done 标记以下一行的审计为准） |
 | [agent-implementation-plan.md](./agent-implementation-plan.md) | Agent 全量实现规划：现状审计、目标架构、分阶段工作包与验收标准（开发中随时更新状态表） |
 | [copilot.md](./copilot.md) | Phase 3 P0/P1：多轮偏好、检索排序、主动重排、确认动作、会话 API、验收和 Live 边界 |
+| [document-extraction.md](./document-extraction.md) | WP2.2：PDF 文本层、可选视觉/文本模型、中文仓单、人工复核、安全和本地证据 |
 | [frontend-acceptance.md](./frontend-acceptance.md) | WP4.6：全站中英/1440px/390px、键盘与焦点、通知播报、复现脚本和 40 个页面/弹窗组合的本地证据 |
 | [agent-reliability.md](./agent-reliability.md) | Phase 5 P0：故障矩阵、重启/对账边界、真实组件评测、61 项发布闸门与后续入口 |
 | [evaluation-report.md](./evaluation-report.md) | 可复现的本地确定性评测；代码与金标摘要、分母、失败样例及局限 |

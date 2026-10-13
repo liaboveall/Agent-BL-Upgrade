@@ -31,7 +31,7 @@ function quoteSummary(comparison) {
  * @param {object} [deps.worldRisk]
  * @param {() => number} [deps.now]
  */
-export async function proposeFromIngest(event, { ingest, orchestrator, preferences, pool, onStep, forceDeterministic, valuation, worldRisk, now }) {
+export async function proposeFromIngest(event, { ingest, orchestrator, preferences, pool, onStep, forceDeterministic, valuation, worldRisk, now, parser }) {
   const job = ingest.getJob(event.data?.job_id);
   const ids = event.data?.document_ids ?? job?.document_ids ?? [];
   if (ids.length === 0) return { proposals: [], ignored: 'The ingest event names no documents' };
@@ -42,7 +42,7 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
     documents,
     template_case: pool?.caseData,
     exporter_preferences: preferences.get(event.case_id)
-  }, { onStep, forceDeterministic, valuation, worldRisk, now });
+  }, { onStep, forceDeterministic, valuation, worldRisk, now, parser });
 
   const opening = result.action === 'OPEN' || result.action === 'OPEN_WITH_WARNING';
   if (opening) await ingest.saveCase(result.case_data);

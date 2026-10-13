@@ -11,7 +11,7 @@
 import { checkCompliance } from './complianceChecker.js';
 import { checkDocumentConsistency } from './documentConsistency.js';
 import { DecisionLogger, createDecisionId, hashSnapshot } from './decisionLogger.js';
-import { DocumentParseError, parseDocument, parseDocuments } from './documentParser.js';
+import { DocumentParseError, extractDocumentInput, mergeParsedDocuments, parseDocument, parseDocuments } from './documentParser.js';
 import { screenDocuments } from './ingest/injectionScreen.js';
 import { runValuationAgent } from './valuationAgent.js';
 import { assessWorldRisk } from './worldRiskAgent.js';
@@ -187,14 +187,7 @@ export class AgentOrchestrator {
       return outcome?.value;
     };
 
-    const textDocuments = input.documents.filter((document) => typeof document.text === 'string');
-    for (const document of input.documents.filter((item) => typeof item.text !== 'string')) {
-      findings.push({
-        kind: 'OCR_REQUIRED',
-        severity: 'warning',
-        detail: `${document.name} has no text layer this build can read (${document.mime_type}); it is stored and needs a person or a later OCR/vision pass.`
-      });
-    }
+    const textDocuments = [];
 
     let extraction = [];
     const summaryOf = (action, reasoning, extra = {}) => ({
@@ -218,41 +211,90 @@ export class AgentOrchestrator {
 
     // 1. parse
     const parsing = await run('document_parse', async () => {
-      const readable = [];
-      for (const document of textDocuments) {
+      const extracted = [], images = [];
+      const extractionFailure = (document, error) => {
+        findings.push({ kind: error.code === 'PROMPT_INJECTION_SUSPECTED' ? error.code
+          : error.code === 'OCR_REQUIRED' ? 'OCR_REQUIRED' : 'DOCUMENT_UNPARSEABLE',
+        severity: error.code === 'PROMPT_INJECTION_SUSPECTED' ? 'high' : 'warning', code: error.code,
+        detail: `${document.name}: ${error.message}` });
+      };
+      for (const document of input.documents) {
+        if (document.kind === 'image') { images.push(document); continue; }
         try {
-          await parseDocument({ text: document.text, filename: document.name });
-          readable.push({ text: document.text, filename: document.name });
+          const resolved = await extractDocumentInput(document, options.parser);
+          extracted.push(resolved);
+          textDocuments.push({ name: document.name, text: `${document.name}\n${resolved.text}` });
         } catch (error) {
           if (!(error instanceof DocumentParseError)) throw error;
-          findings.push({ kind: 'DOCUMENT_UNPARSEABLE', severity: 'warning', detail: `${document.name}: ${error.message}` });
+          extractionFailure(document, error);
+        }
+      }
+      // Screen the WHOLE readable bundle before the first model request, including later documents.
+      const preScreen = screenDocuments([...textDocuments, ...images.map((document) => ({ name: document.name, text: document.name }))]);
+      if (preScreen.suspicious) findings.push(...preScreen.findings);
+      for (const document of images) {
+        if (preScreen.suspicious) {
+          findings.push({ kind: 'OCR_REQUIRED', severity: 'warning', detail: `${document.name}: vision was blocked because the bundle contains suspected instructions.` });
+          continue;
+        }
+        try {
+          const resolved = await extractDocumentInput(document, options.parser);
+          extracted.push(resolved);
+          textDocuments.push({ name: document.name, text: resolved.text });
+        } catch (error) {
+          if (!(error instanceof DocumentParseError)) throw error;
+          extractionFailure(document, error);
+        }
+      }
+      const readable = [];
+      const anySuspicion = preScreen.suspicious || findings.some((item) => item.kind === 'PROMPT_INJECTION_SUSPECTED');
+      for (const resolved of extracted) {
+        try {
+          const document = await parseDocument(null, { ...(options.parser ?? {}), extracted: resolved,
+            ...(anySuspicion ? { aiExtractor: undefined } : {}) });
+          findings.push(...document.findings);
+          readable.push(document);
+        } catch (error) {
+          if (!(error instanceof DocumentParseError)) throw error;
+          extractionFailure({ name: resolved.filename }, error);
         }
       }
       if (readable.length === 0) return { status: 'REVIEW', value: null };
-      const parsed = await this.parseDocuments(readable, { ...(options.parser ?? {}), templateCase: input.template_case ?? {} });
+      const parsed = mergeParsedDocuments(readable, { templateCase: input.template_case ?? {} });
       return { status: parsed.requires_human_review || findings.length > 0 ? 'REVIEW' : 'PASS', value: parsed };
     });
     if (!parsing) {
       return holdWithoutCase('No uploaded document could be read as an eBL, invoice or insurance policy; a person needs to look at the upload.');
     }
-    const visibleFields = new Set(['bl_id', 'bl_no', 'invoice_no', 'cargo', 'quantity_mt', 'declared_value_usd', 'total_amount_usd', 'unit_price_usd_per_mt', 'currency', 'vessel', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'eta', 'issue_date', 'coverage_ratio', 'insured_value_usd', 'expires_at']);
+    const visibleFields = new Set(['bl_id', 'bl_no', 'invoice_no', 'invoice_date', 'incoterms', 'carrier', 'shipper', 'consignee', 'document_hash', 'policy_no', 'provider', 'title_ref', 'cargo', 'quantity_mt', 'quantity_bbl', 'declared_value_usd', 'total_amount_usd', 'unit_price_usd_per_mt', 'unit_price_usd_per_bbl', 'currency', 'vessel', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'eta', 'issue_date', 'coverage_ratio', 'insured_value_usd', 'expires_at', 'receipt_no', 'warehouse', 'storage_date', 'pickup_deadline', 'hs_code', 'declared_value_cny', 'total_amount_cny', 'unit_price_cny_per_mt']);
     extraction = parsing.documents.map((document) => ({
       document_type: document.document_type, source: document.source,
       confidence: document.confidence, requires_human_review: document.requires_human_review,
       missing_fields: document.missing_fields,
       fields: Object.fromEntries(Object.entries(document.fields).filter(([name]) => visibleFields.has(name))),
       provenance: Object.fromEntries(Object.entries(document.provenance).filter(([name]) => visibleFields.has(name))
-        .map(([name, { line, method, confidence }]) => [name, { line, method, confidence }]))
+        .map(([name, { line, page, method, confidence }]) => [name, { line, ...(page ? { page } : {}), method, confidence }]))
     }));
 
     // 2. injection screen
     const screen = await run('injection_screen', async () => {
       const result = screenDocuments(textDocuments.map((document) => ({ name: document.name, text: document.text })));
-      findings.push(...result.findings);
+      for (const item of result.findings) if (!findings.some((existing) => existing.evidence === item.evidence && existing.detail === item.detail)) findings.push(item);
+      result.suspicious ||= findings.some((item) => item.kind === 'PROMPT_INJECTION_SUSPECTED');
       return { status: result.suspicious ? 'REVIEW' : 'PASS', value: result };
     });
 
     let caseData = { ...parsing.case_data, case_id: input.case_id };
+    if (caseData.commercial_invoice?.currency && caseData.commercial_invoice.currency !== 'USD') {
+      findings.push({ kind: 'CURRENCY_REVIEW_REQUIRED', severity: 'high', detail: 'The uploaded invoice is not in USD. No currency conversion or USD financing is inferred.' });
+      // Run warehouse/invoice checks even though this bundle cannot be priced in USD.
+      await run('document_consistency', async () => {
+        const report = this.checkDocuments(caseData);
+        findings.push(...report.checks.filter((check) => check.status !== 'ok').map((check) => ({ kind: 'DOCUMENT_MISMATCH', severity: check.status === 'critical' ? 'high' : 'warning', detail: `${check.label}: ${check.detail}` })));
+        return { status: report.has_critical ? 'FAIL' : report.ok ? 'PASS' : 'WARN', value: report };
+      });
+      return holdWithoutCase('The warehouse and invoice fields were extracted; currency and financing need human review.');
+    }
     if (!caseData.financing) caseData.financing = defaultFinancing(caseData, preferences);
     try {
       validateCaseForPricing(caseData);
@@ -288,8 +330,8 @@ export class AgentOrchestrator {
     // 5. valuation
     const valuation = await run('cargo_valuation', async () => {
       const report = await this.runValuation(caseData, {
-        forceDeterministic: options.forceDeterministic ?? true,
-        ...(options.valuation ?? {})
+        ...(options.valuation ?? {}),
+        forceDeterministic: screen.suspicious ? true : options.forceDeterministic ?? true
       });
       return { status: 'PASS', provider: report.provider, value: report };
     });
@@ -297,7 +339,7 @@ export class AgentOrchestrator {
 
     // 6. world risk (offline fixtures unless xAPI is configured)
     const worldRisk = await run('world_risk', async () => {
-      const assessment = await this.assessWorldRisk(caseData, { forceFallback: options.forceDeterministic ?? true, ...(options.worldRisk ?? {}) });
+      const assessment = await this.assessWorldRisk(caseData, { ...(options.worldRisk ?? {}), forceFallback: screen.suspicious ? true : options.forceDeterministic ?? true });
       // The offline fixture is one generic feed for every cargo, not evidence about THIS cargo: it is
       // recorded but never folded into the price. Only live signals change the quote.
       const fresh = assessment.live === true ? newWorldEvents(caseData, assessment.events ?? []) : [];

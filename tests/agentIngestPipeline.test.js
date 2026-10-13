@@ -7,6 +7,7 @@ import { resetStore, storeState } from '../src/app/store.js';
 import { AgentOrchestrator } from '../src/agent/orchestrator.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
 import { createAgentService, loadChainConfig } from '../src/agent/runtime/factory.js';
+import { pdfFixture } from './helpers/pdf.js';
 
 const UPLOADS = new URL('../data/uploads/', import.meta.url);
 const COPPER = ['bill-of-lading.md', 'commercial-invoice.md', 'insurance-policy.md'];
@@ -252,8 +253,9 @@ test('ingest pipeline: documents that disagree on the quantity are held for a pe
 
 test('ingest pipeline: a scanned PDF is stored and held as needing OCR, not guessed at', async () => {
   const { service } = await runtime();
-  const pdf = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n');
+  const pdf = pdfFixture([''], { imageOnly: true });
   const result = await upload(service, { case_id: 'CASE-UP-PDF-1', documents: [{ name: 'scan.pdf', mime_type: 'application/pdf', content_base64: pdf.toString('base64') }] });
+  assert.equal(service.ingest.getJob(result.job.job_id).status, 'DONE', JSON.stringify(service.ingest.getJob(result.job.job_id).error));
   const [decision] = await decisionsOf(service);
   assert.equal(decision.action, 'HOLD_FOR_REVIEW');
   assert.ok(decision.findings.some((f) => f.kind === 'OCR_REQUIRED'));

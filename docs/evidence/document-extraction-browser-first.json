@@ -1,0 +1,28 @@
+{
+  "scope": "Historical acceptance-harness polling failure; not a successful product acceptance",
+  "result": {
+    "checked_at": "2026-10-13T15:47:08.464Z",
+    "browser": "155.0.4283.45",
+    "mode": "demo",
+    "vision_provider": "mock-fixture",
+    "checks": [
+      {
+        "name": "Isolated server is in Demo mode",
+        "passed": true
+      },
+      {
+        "name": "Browser submitted actual file contents",
+        "passed": true
+      },
+      {
+        "name": "Job job_7b16264108c018c2036c completed",
+        "passed": false
+      }
+    ],
+    "screenshots": [],
+    "page_errors": [],
+    "jobs": [],
+    "passed": false,
+    "error": "Job job_7b16264108c018c2036c completed"
+  }
+}

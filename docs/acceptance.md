@@ -4,6 +4,8 @@
 
 当前主线：**AI 动态定价的 eBL-backed RWA 折价发行协议**（见 `docs/PRD.md` v0.2）。
 
+2026-10-14 WP2.2：PDF 文本层/页码、扫描/异常文件复核、可选视觉和文本补全、中文仓单与 CNY 保真已接入。`node --test tests/documentExtraction.test.js` 的 17 项行为测试在 Node 20.11/22/24 与 Alpine/Node 22 通过；中英 × 1440/390px 的 118 项浏览器检查通过，视觉上游为 mock。真实模型识别准确率、扫描 PDF OCR 与用户人工试用仍需单独证据。见 [document-extraction.md](document-extraction.md)。
+
 2026-10-13 Copilot P1（WP3.6/WP3.8）：中文/英文 × 1440px/390px、110 项浏览器检查通过，覆盖双面板独立重排、台风暂停/恢复、决策链接、焦点、确认/取消、重复点击只记一次 Demo 持仓、报告解锁与语言切换。Live 只用链/钱包桩验证读取、签名边界和匹配回执，没有真实钱包/交易验收。源码摘要、检查和失败诊断见 [copilot.md](copilot.md) 与 [evidence/copilot-p1-local.json](evidence/copilot-p1-local.json)。
 
 2026-10-13 WP4.6：全站中文/英文 × 1440px/390px，本地 40 个页面/弹窗组合与 255 项浏览器检查通过；覆盖原生选择器、导航、单证上传、SSE 焦点/播报、Tab/Escape、proof、分享和 reduced-motion。复现脚本、修复前失败记录和当前证据见 [frontend-acceptance.md](frontend-acceptance.md)。这不替代真实读屏器、实体设备、Live 钱包或用户人工试用。

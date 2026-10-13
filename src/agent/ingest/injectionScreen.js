@@ -28,7 +28,8 @@ const INSTRUCTION_PATTERNS = [
   { id: 'override_marker', re: /\b(?:OVERRIDE_[A-Z_]+|PAYMENT_TO|PAY_TO|PAYTO)\s*[:=]/u },
   { id: 'secret_request', re: /\b(?:print|reveal|show|dump|leak|send)\b[^\n]{0,24}\b(?:api[_ ]?key|private[_ ]?key|secret|mnemonic|seed phrase|password|token)\b/iu },
   { id: 'tool_markup', re: /<\s*(?:execute|tool_call|function_call|script|system)\b/iu },
-  { id: 'tool_call_syntax', re: /\b(?:grant_admin_access|call_admin|run_command|exec)\s*\(/iu }
+  { id: 'tool_call_syntax', re: /\b(?:grant_admin_access|call_admin|run_command|exec)\s*\(/iu },
+  { id: 'payment_destination', re: /\bpay[_ ]?to\b|收款地址|转账至/iu }
 ];
 
 /** Fields whose content is a wallet address by nature; an address anywhere else is suspicious. */
@@ -44,7 +45,9 @@ function lineOf(text, index) {
 
 /** Strip characters that hide text, and fold look-alike letters, before pattern matching. */
 export function normalizeForScreening(text) {
-  return [...String(text ?? '')].filter((char) => !isInvisible(char)).join('').normalize('NFKC');
+  const confusables = { а: 'a', е: 'e', о: 'o', р: 'p', с: 'c', у: 'y', х: 'x', і: 'i', ј: 'j', ѕ: 's', ԁ: 'd', ѵ: 'v',
+    А: 'A', Е: 'E', О: 'O', Р: 'P', С: 'C', Х: 'X', І: 'I' };
+  return [...String(text ?? '')].filter((char) => !isInvisible(char)).map((char) => confusables[char] ?? char).join('').normalize('NFKC');
 }
 
 /**

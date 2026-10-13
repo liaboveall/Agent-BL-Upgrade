@@ -33,7 +33,7 @@
 
 消息使用 `Accept: text/event-stream` 时按 `result → narrative → done` 返回：先显示结构化卡片，再显示完整、通过数字核对的解释。服务中断、会话过期或模式变化不会当成成功完成。TTL 默认一天，上限默认500个活跃会话；存结构化约束、意图增量、公开候选词汇中的检索词项、排序摘要、最新变更快照和有界动作卡片，不存聊天原文或钱包。切换模式或重置 Demo 会使旧会话失效。
 
-单证页面已改为上传真实内容，并展示作业步骤、抽取字段、来源行号、方法、置信度和相关决策。HOLD 作业的“提交修正单证”会创建新作业和 `REVIEW_RESOLVED` 事件，再跑全部检查，保留原 HOLD 证据；恢复以前用过的正确内容也会创建独立复核作业，相同补件重复提交则返回同一作业。当前 PDF/图片的接收不代表已实现 OCR。市场的“模拟认购”在 Demo 下向服务器记录持仓并显示服务器实际价格/份额；市场和助手的持仓都读取 `/api/investors/portfolio`，显示原始成本、来源、当前池状态/价格/风险和关联决策。这些 Demo 持仓在重启后清空。
+单证页面已改为上传真实内容，并展示作业步骤、抽取字段、来源行号、方法、置信度和相关决策。HOLD 作业的“提交修正单证”会创建新作业和 `REVIEW_RESOLVED` 事件，再跑全部检查，保留原 HOLD 证据；恢复以前用过的正确内容也会创建独立复核作业，相同补件重复提交则返回同一作业。WP2.2 已接入 PDF 文本层/来源页码与可选图片视觉抽取；扫描 PDF 的 OCR 仍未实现，图片结果始终人工复核，详见 [document-extraction.md](document-extraction.md)。市场的“模拟认购”在 Demo 下向服务器记录持仓并显示服务器实际价格/份额；市场和助手的持仓都读取 `/api/investors/portfolio`，显示原始成本、来源、当前池状态/价格/风险和关联决策。这些 Demo 持仓在重启后清空。
 
 ### 主动重排与确认动作（WP3.6 / WP3.8）
 
@@ -59,7 +59,7 @@ Live 卡片只用于已映射池：先读链上报价、状态和剩余份额，
 
 复现时跳过本机 `.env`，使用独立 `AGENTBL_RUNTIME_DIR`、`DEMO_MODE=true`、`X402_MODE=demo`、`AGENT_ENABLED=true`、`LLM_PROXY_ENABLED=false`、`AGENT_VALUATION_LLM=false`、空 `XAPI_KEY`。四组连续自动化使用 `LLM_RATE_LIMIT_PER_MIN=120`，默认仍是 30。启动服务器后执行 `playwright-cli -s=agentbl-copilot-p1 --raw run-code --filename=scripts/copilot-p1-acceptance.playwright.js`。脚本重置 Demo、播放场景、模拟认购和解锁报告，只可针对隔离 Demo 数据运行；结束后停掉自己启动的服务。
 
-内置浏览器面板返回 queued，交互在本机 Edge/Playwright 完成。没有真实 LLM、钱包签名、链上写入或用户人工试用；浏览器可读取公开测试网部署信息。本批次后的 WP0.6 已完成本地及只读实链验收，见 [wave-b.md](wave-b.md)；下一入口为 PDF/视觉、Live USDC 回执和监听等 P1 余项。
+内置浏览器面板返回 queued，交互在本机 Edge/Playwright 完成。没有真实 LLM、钱包签名、链上写入或用户人工试用；浏览器可读取公开测试网部署信息。本批次后的 WP0.6 已完成本地及只读实链验收，见 [wave-b.md](wave-b.md)；后续 WP2.2 的 PDF/可选视觉已完成本地验收，见 [document-extraction.md](document-extraction.md)；当前入口为 WP2.3 合规 v2，Live USDC 回执和监听等仍待完成。
 
 ### 历史 Phase 3 P0 验证
 

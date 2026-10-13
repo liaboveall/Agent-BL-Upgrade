@@ -276,7 +276,9 @@ export class IngestService {
         if (blob) this.blobs.set(id, blob);
       }
       if (!blob) throw new IngestError('document_missing', `The bytes of ${id} are no longer stored`, 410);
-      out.push({ ...record, text: record.kind === 'text' ? blob.toString('utf8') : null });
+      // Binary bytes stay internal to the pipeline; HTTP job/document records never expose them.
+      out.push({ ...record, text: record.kind === 'text' ? blob.toString('utf8') : null,
+        ...(record.kind === 'text' ? {} : { buffer: Buffer.from(blob) }) });
     }
     return out;
   }

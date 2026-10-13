@@ -58,7 +58,7 @@ export class SimExecutor {
     const params = cmd.params ?? {};
 
     if (!pool && (cmd.action === 'OPEN' || cmd.action === 'OPEN_WITH_WARNING') && params.case_data && params.quote) {
-      pool = createPool(poolId, params.case_data, params.quote, { createdAt: at });
+      pool = createPool(poolId, params.case_data, params.quote, { createdAt: at, store: this.store });
     }
     if (!pool && (cmd.action === 'HOLD_FOR_REVIEW' || cmd.action === 'REJECT')) {
       // A case that was held or rejected before any pool existed: nothing to change, the record is the result.

@@ -45,6 +45,19 @@ jobs:
         if: matrix.os != 'ubuntu-latest' || matrix.node != 24
         run: npm test
 
+  document-node20:
+    name: Document extraction · Node 20.11.1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20.11.1
+          cache: npm
+      # ESLint has a newer runtime requirement; the parser's compatibility promise is separate.
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/documentExtraction.test.js
+
   contracts:
     name: Contracts · Node ${{ matrix.node }}
     runs-on: ubuntu-latest

@@ -1,0 +1,1191 @@
+{
+  "checked_at": "2026-10-13T16:02:51.306Z",
+  "browser": "155.0.4283.45",
+  "mode": "demo",
+  "vision_provider": "mock-fixture",
+  "checks": [
+    {
+      "name": "Isolated server is in Demo mode",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/zh: PDF bundle opens in Demo",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: three PDF sources and actual page counts",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: invoice amount is exact",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: PDF source and page 2 are visible",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/zh: repeated upload is idempotent",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_b1c751d78fc9c2294b49 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/zh: scan is held and explains OCR",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_98ecff26245a0fbc8916 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/zh: fixture vision stays in review",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: image review warning is translated",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/vision: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "1440/zh: corrected files are accepted",
+      "passed": true
+    },
+    {
+      "name": "Job job_88df5b3d1e78ba1c7396 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/zh: review has a new job and reruns all nine steps",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: corrected text can open",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: original image HOLD remains",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_8a15ace4d203bc935001 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/zh: missing invoice date requires review",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: missing fields are translated",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: language change updates existing PDF sources",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: no unresolved translation keys",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/en: PDF bundle opens in Demo",
+      "passed": true
+    },
+    {
+      "name": "1440/en: three PDF sources and actual page counts",
+      "passed": true
+    },
+    {
+      "name": "1440/en: invoice amount is exact",
+      "passed": true
+    },
+    {
+      "name": "1440/en: PDF source and page 2 are visible",
+      "passed": true
+    },
+    {
+      "name": "1440/en: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/en: repeated upload is idempotent",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_b1c751d78fc9c2294b49 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/en: scan is held and explains OCR",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_98ecff26245a0fbc8916 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/en: fixture vision stays in review",
+      "passed": true
+    },
+    {
+      "name": "1440/en: image review warning is translated",
+      "passed": true
+    },
+    {
+      "name": "1440/en/vision: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "1440/en: corrected files are accepted",
+      "passed": true
+    },
+    {
+      "name": "Job job_88df5b3d1e78ba1c7396 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/en: review has a new job and reruns all nine steps",
+      "passed": true
+    },
+    {
+      "name": "1440/en: corrected text can open",
+      "passed": true
+    },
+    {
+      "name": "1440/en: original image HOLD remains",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_8a15ace4d203bc935001 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "1440/en: missing invoice date requires review",
+      "passed": true
+    },
+    {
+      "name": "1440/en: missing fields are translated",
+      "passed": true
+    },
+    {
+      "name": "1440/en: language change updates existing PDF sources",
+      "passed": true
+    },
+    {
+      "name": "1440/en: no unresolved translation keys",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/zh: PDF bundle opens in Demo",
+      "passed": true
+    },
+    {
+      "name": "390/zh: three PDF sources and actual page counts",
+      "passed": true
+    },
+    {
+      "name": "390/zh: invoice amount is exact",
+      "passed": true
+    },
+    {
+      "name": "390/zh: PDF source and page 2 are visible",
+      "passed": true
+    },
+    {
+      "name": "390/zh: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/zh: repeated upload is idempotent",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_b1c751d78fc9c2294b49 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/zh: scan is held and explains OCR",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_98ecff26245a0fbc8916 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/zh: fixture vision stays in review",
+      "passed": true
+    },
+    {
+      "name": "390/zh: image review warning is translated",
+      "passed": true
+    },
+    {
+      "name": "390/zh/vision: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "390/zh: corrected files are accepted",
+      "passed": true
+    },
+    {
+      "name": "Job job_88df5b3d1e78ba1c7396 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/zh: review has a new job and reruns all nine steps",
+      "passed": true
+    },
+    {
+      "name": "390/zh: corrected text can open",
+      "passed": true
+    },
+    {
+      "name": "390/zh: original image HOLD remains",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_8a15ace4d203bc935001 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/zh: missing invoice date requires review",
+      "passed": true
+    },
+    {
+      "name": "390/zh: missing fields are translated",
+      "passed": true
+    },
+    {
+      "name": "390/zh: language change updates existing PDF sources",
+      "passed": true
+    },
+    {
+      "name": "390/zh: no unresolved translation keys",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/en: PDF bundle opens in Demo",
+      "passed": true
+    },
+    {
+      "name": "390/en: three PDF sources and actual page counts",
+      "passed": true
+    },
+    {
+      "name": "390/en: invoice amount is exact",
+      "passed": true
+    },
+    {
+      "name": "390/en: PDF source and page 2 are visible",
+      "passed": true
+    },
+    {
+      "name": "390/en: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_7b16264108c018c2036c completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/en: repeated upload is idempotent",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_b1c751d78fc9c2294b49 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/en: scan is held and explains OCR",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_98ecff26245a0fbc8916 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/en: fixture vision stays in review",
+      "passed": true
+    },
+    {
+      "name": "390/en: image review warning is translated",
+      "passed": true
+    },
+    {
+      "name": "390/en/vision: documents fit the viewport",
+      "passed": true,
+      "detail": {
+        "page_overflow": 0,
+        "fields_overflow": false
+      }
+    },
+    {
+      "name": "390/en: corrected files are accepted",
+      "passed": true
+    },
+    {
+      "name": "Job job_88df5b3d1e78ba1c7396 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/en: review has a new job and reruns all nine steps",
+      "passed": true
+    },
+    {
+      "name": "390/en: corrected text can open",
+      "passed": true
+    },
+    {
+      "name": "390/en: original image HOLD remains",
+      "passed": true
+    },
+    {
+      "name": "Browser submitted actual file contents",
+      "passed": true
+    },
+    {
+      "name": "Job job_8a15ace4d203bc935001 completed",
+      "passed": true,
+      "detail": {
+        "status": "DONE"
+      }
+    },
+    {
+      "name": "390/en: missing invoice date requires review",
+      "passed": true
+    },
+    {
+      "name": "390/en: missing fields are translated",
+      "passed": true
+    },
+    {
+      "name": "390/en: language change updates existing PDF sources",
+      "passed": true
+    },
+    {
+      "name": "390/en: no unresolved translation keys",
+      "passed": true
+    },
+    {
+      "name": "No page script errors",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/document-extraction-1440-zh.png",
+    "docs/evidence/document-extraction-1440-en.png",
+    "docs/evidence/document-extraction-390-zh.png",
+    "docs/evidence/document-extraction-390-en.png"
+  ],
+  "page_errors": [],
+  "jobs": [
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_b1c751d78fc9c2294b49",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": []
+    },
+    {
+      "job_id": "job_98ecff26245a0fbc8916",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        },
+        {
+          "source": {
+            "filename": "invoice.png",
+            "mime_type": "image/png",
+            "extractor": "llm-vision",
+            "provider": "custom",
+            "model": "fixture-vision-no-real-provider"
+          },
+          "confidence": 0.75
+        }
+      ]
+    },
+    {
+      "job_id": "job_88df5b3d1e78ba1c7396",
+      "result_action": "OPEN",
+      "reviewed_job_id": "job_98ecff26245a0fbc8916",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_8a15ace4d203bc935001",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "incomplete-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.88
+        }
+      ]
+    },
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_b1c751d78fc9c2294b49",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": []
+    },
+    {
+      "job_id": "job_98ecff26245a0fbc8916",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        },
+        {
+          "source": {
+            "filename": "invoice.png",
+            "mime_type": "image/png",
+            "extractor": "llm-vision",
+            "provider": "custom",
+            "model": "fixture-vision-no-real-provider"
+          },
+          "confidence": 0.75
+        }
+      ]
+    },
+    {
+      "job_id": "job_88df5b3d1e78ba1c7396",
+      "result_action": "OPEN",
+      "reviewed_job_id": "job_98ecff26245a0fbc8916",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_8a15ace4d203bc935001",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "incomplete-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.88
+        }
+      ]
+    },
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_b1c751d78fc9c2294b49",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": []
+    },
+    {
+      "job_id": "job_98ecff26245a0fbc8916",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        },
+        {
+          "source": {
+            "filename": "invoice.png",
+            "mime_type": "image/png",
+            "extractor": "llm-vision",
+            "provider": "custom",
+            "model": "fixture-vision-no-real-provider"
+          },
+          "confidence": 0.75
+        }
+      ]
+    },
+    {
+      "job_id": "job_88df5b3d1e78ba1c7396",
+      "result_action": "OPEN",
+      "reviewed_job_id": "job_98ecff26245a0fbc8916",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_8a15ace4d203bc935001",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "incomplete-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.88
+        }
+      ]
+    },
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_7b16264108c018c2036c",
+      "result_action": "OPEN",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 2
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_b1c751d78fc9c2294b49",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": []
+    },
+    {
+      "job_id": "job_98ecff26245a0fbc8916",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        },
+        {
+          "source": {
+            "filename": "invoice.png",
+            "mime_type": "image/png",
+            "extractor": "llm-vision",
+            "provider": "custom",
+            "model": "fixture-vision-no-real-provider"
+          },
+          "confidence": 0.75
+        }
+      ]
+    },
+    {
+      "job_id": "job_88df5b3d1e78ba1c7396",
+      "result_action": "OPEN",
+      "reviewed_job_id": "job_98ecff26245a0fbc8916",
+      "sources": [
+        {
+          "source": {
+            "filename": "bill-of-lading.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.986
+        },
+        {
+          "source": {
+            "filename": "commercial-invoice.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.989
+        },
+        {
+          "source": {
+            "filename": "insurance-policy.md",
+            "mime_type": "text/markdown",
+            "extractor": "provided-text"
+          },
+          "confidence": 0.993
+        }
+      ]
+    },
+    {
+      "job_id": "job_8a15ace4d203bc935001",
+      "result_action": "HOLD_FOR_REVIEW",
+      "sources": [
+        {
+          "source": {
+            "filename": "incomplete-invoice.pdf",
+            "mime_type": "application/pdf",
+            "extractor": "pdf-text",
+            "total_pages": 1
+          },
+          "confidence": 0.88
+        }
+      ]
+    }
+  ],
+  "passed": true
+}

@@ -33,6 +33,7 @@ export function checkDocumentConsistency(caseData = {}) {
   const insurance = caseData.insurance ?? {};
   const cargo = caseData.cargo ?? {};
   const market = caseData.market ?? {};
+  const warehouse = caseData.warehouse_receipt ?? {};
 
   const checks = [];
   const add = (id, label, status, detail, penalty = 0) =>
@@ -42,6 +43,7 @@ export function checkDocumentConsistency(caseData = {}) {
   const qtys = [
     ['eBL', num(bl.quantity_mt)],
     ['invoice', num(invoice.quantity_mt)],
+    ['warehouse', num(warehouse.quantity_mt)],
     ['cargo', num(cargo.quantity_mt ?? cargo.quantity)]
   ].filter(([, v]) => v !== undefined);
   if (qtys.length >= 2) {
@@ -132,6 +134,30 @@ export function checkDocumentConsistency(caseData = {}) {
       'No HS code on cargo/invoice — historical comparables unavailable', 40);
   } else {
     add('hs_code_present', 'HS code present for valuation', 'ok', `HS ${cargo.hs_code ?? invoice.hs_code}`);
+  }
+
+  if (warehouse.receipt_no && invoice.receipt_no) {
+    const match = warehouse.receipt_no.trim() === invoice.receipt_no.trim();
+    add('warehouse_receipt_match', 'Warehouse receipt referenced by invoice', match ? 'ok' : 'critical',
+      match ? 'The receipt reference agrees.' : 'The invoice references a different warehouse receipt.', 250);
+  }
+  if (warehouse.hs_code && invoice.hs_code) {
+    const match = String(warehouse.hs_code) === String(invoice.hs_code);
+    add('warehouse_hs_match', 'Warehouse/invoice HS code', match ? 'ok' : 'critical',
+      match ? 'The HS codes agree.' : 'Warehouse and invoice HS codes differ.', 250);
+  }
+  if (warehouse.currency && invoice.currency) {
+    const match = warehouse.currency === invoice.currency;
+    add('warehouse_currency_match', 'Warehouse/invoice currency', match ? 'ok' : 'critical',
+      match ? `Both ${invoice.currency}` : 'The documents use different currencies; no conversion is inferred.', 250);
+  }
+  if (warehouse.currency === 'CNY' && invoice.currency === 'CNY') {
+    const value = num(warehouse.declared_value_cny), total = num(invoice.total_amount_cny);
+    if (value !== undefined && total !== undefined) {
+      const match = relDiff(value, total) <= 0.02;
+      add('warehouse_value_match', 'Warehouse/invoice CNY value', match ? 'ok' : 'warning',
+        match ? `Both approximately CNY ${total}` : `Warehouse CNY ${value} vs invoice CNY ${total}`, 120);
+    }
   }
 
   const issues = checks.filter((c) => c.status !== 'ok').map((c) => `${c.label}: ${c.detail}`);

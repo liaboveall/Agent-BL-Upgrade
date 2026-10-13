@@ -62,6 +62,6 @@ Windows 下直接执行包含空格路径的 `node.exe`，仅 npm.cmd 后备启�
 
 ## 后续入口与提交建议
 
-WP4.6 和后续 P1 WP3.6/WP3.8/WP0.6 均已于 2026-10-13 完成本地验收，见 [frontend-acceptance.md](frontend-acceptance.md)、[copilot.md](copilot.md) 和 [wave-b.md](wave-b.md)。WP0.6 另有只读实链复核，下一批为 WP2.2 等 P1 余项。Live 钱包路径仅经桩验证；真实链上写入仍逐笔遵守实施规划 §16。
+WP4.6 和后续 P1 WP3.6/WP3.8/WP0.6 均已于 2026-10-13 完成本地验收，见 [frontend-acceptance.md](frontend-acceptance.md)、[copilot.md](copilot.md) 和 [wave-b.md](wave-b.md)。WP0.6 另有只读实链复核，后续 WP2.2 已完成 PDF/可选视觉/仓单本地验收，见 [document-extraction.md](document-extraction.md)；下一入口为 WP2.3 合规 v2。Live 钱包路径仅经桩验证；真实链上写入仍逐笔遵守实施规划 §16。
 
 本地验收记录在提交前生成，保留当时的未提交快照。用户已于 2026-10-13 授权提交并推送；按依赖分为：① `feat(agent): harden event ordering and execution recovery`；② `feat(eval): measure Agent components against isolated gold fixtures`（含评测发现的解析/合规修复）；③ `test(release): gate agent reliability and measured quality`（含文档与验收证据）。具体提交、远端一致性与 CI 结果以本次 Git 操作和对应提交的 Actions 运行记录为准；部署不包含在该授权内。

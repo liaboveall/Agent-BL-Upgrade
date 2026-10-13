@@ -212,7 +212,9 @@ Copilot WP3.6 使用额外的 `/api/copilot/sessions/:id/stream` 长连接，与
 - 文件按内容的 SHA-256 保存在运行时目录的 `uploads/`（**不在 `public/` 下**），元数据和作业在 `ingest-documents.json`、`ingest-jobs.json`，由单证生成的案例在 `cases/`。同一内容重复上传返回同一个作业，不会产生第二个决策。
 - 返回的 ENI 记录是 **mock**（`mode: "mock"`、`verified: false`），只表示服务器收到了文件，不代表任何登记机构核验过。
 - Demo 下无需令牌；Live 下需要 `AGENTBL_ADMIN_TOKEN`。进度从 `GET /api/agent/jobs/:id` 查看，加 `?wait=1` 可以等流水线跑完再返回。
-- 当前只读取文本和 Markdown；PDF 和图片会被保存并挂起为 `OCR_REQUIRED`（转人工），没有抽取。怀疑含有“对机器下指令”的文本、关键单据互相矛盾、解析不全，都会得到 `HOLD_FOR_REVIEW` 且**不开池**；合规关键字阻断得到 `REJECT`。
+- 文本、Markdown 和 PDF 文本层已接入；PDF 保留页码/页内行号，30 页、200,000 字符、10 秒上限，由独立 Worker 解析。无文本层（含混合 PDF 的扫描页）标 `OCR_REQUIRED`；损坏、加密和超限保留独立错误码并挂起。怀疑含有“对机器下指令”的文本、关键单据互相矛盾、解析不全，都会得到 `HOLD_FOR_REVIEW` 且**不开池**；合规关键字阻断得到 `REJECT`。
+- `AGENT_VISION_ENABLED=false`（默认）：设 true 且已配置支持内联图片和严格 JSON 的模型时，对 PNG/JPEG 调用视觉抽取；`AGENT_DOCUMENT_LLM=false`（默认）：设 true 时为缺字段的文本调用模型补全。开启后相应单证内容会发送至配置的提供方。模型无工具、字段经 zod 和原文证据校验；视觉置信度最多 0.75，始终复核；模型失败或冲突也复核，确定性结果不被覆盖。详细流程、依赖选型及验收见 [document-extraction.md](document-extraction.md)。
+- 中文仓单输出独立 `warehouse_receipt`；与发票核对数量、仓单号、HS、币种和货值。人民币金额保持 CNY，不推测为 USD 融资，需人工复核。
 - `AGENT_VALUATION_LLM`（默认 `true`）决定估值步骤是否使用已配置的 LLM；LLM 失败或未配置时自动回退确定性路径，决策里会记录 provider。
 
 **监控**：服务器入口每 `AGENT_MONITOR_INTERVAL_SEC` 秒检查一次。世界风险只在**变化**时产生事件（第一次观察只是基线；连续 `AGENT_RISK_CLEAR_TICKS` 次平静才算解除，避免来回抖动）。保险在到期前 `AGENT_INSURANCE_WARN_DAYS` 天提醒，过期且池子活跃时提议暂停；Demo 下只在场景时钟下检查，Live 下用真实时钟并且只看已映射到链上的池子。没有配置 xAPI 时世界风险来自离线夹具，**夹具信号只记录，不进入价格**。

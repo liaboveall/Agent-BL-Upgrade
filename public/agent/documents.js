@@ -32,15 +32,24 @@ export function initDocumentManagement() {
       for (const step of job.steps ?? []) card.append(el('div', {}, `${t(`ebld_step_${step.step}`)} · ${t(`ebld_step_status_${step.status}`)}`));
       if (job.result_action) card.append(el('p', {}, t(`ebld_action_${job.result_action}`)));
       for (const document of job.extraction ?? []) {
-        const details = el('details', {}, el('summary', {}, `${document.source?.filename ?? document.document_type} · ${t('ebld_confidence')}: ${Math.round(document.confidence * 100)}%`));
+        const extractor = document.source?.extractor;
+        const sourceLabel = t(extractor === 'pdf-text' ? 'ebld_source_pdf' : extractor === 'llm-vision' ? 'ebld_source_vision' : 'ebld_source_text');
+        const details = el('details', {}, el('summary', {}, `${document.source?.filename ?? document.document_type} · ${sourceLabel} · ${t('ebld_confidence')}: ${Math.round(document.confidence * 100)}%`));
+        if (extractor === 'llm-vision') details.append(el('p', { class: 'cp-warning' }, t('ebld_vision_review_hint')));
+        if (document.source?.total_pages) details.append(el('p', {}, `${t('ebld_pages')}: ${document.source.total_pages}`));
+        if (document.missing_fields?.length) details.append(el('p', { class: 'cp-warning' }, `${t('ebld_missing_fields')}: ${document.missing_fields.map((name) => t(`ebld_field_${name}`)).join(', ')}`));
         const fields = el('dl', { class: 'ebl-fields' });
         for (const [name, value] of Object.entries(document.fields)) {
           const source = document.provenance[name];
-          fields.append(el('dt', {}, t(`ebld_field_${name}`)), el('dd', {}, `${value} (${t('ebld_line')}: ${source?.line ?? '—'} · ${source?.method ?? '—'})`));
+          const location = source?.page ? `${t('ebld_page')}: ${source.page} · ` : '';
+          fields.append(el('dt', {}, t(`ebld_field_${name}`)), el('dd', {}, `${value} (${location}${t('ebld_line')}: ${source?.line ?? '—'} · ${source?.method ?? '—'})`));
         }
         details.append(fields); card.append(details);
       }
-      for (const finding of job.findings ?? []) card.append(el('p', { class: finding.severity === 'info' ? 'muted' : 'cp-warning' }, finding.detail));
+      for (const finding of job.findings ?? []) {
+        const key = `ebld_reason_${finding.code ?? finding.kind}`, translated = t(key);
+        card.append(el('p', { class: finding.severity === 'info' ? 'muted' : 'cp-warning' }, translated === key ? finding.detail : translated));
+      }
       for (const id of job.decision_ids ?? []) card.append(decisionButton(id));
       if (job.error) card.append(el('p', { class: 'cp-warning' }, job.error.message));
       if (job.review_required) card.append(el('p', {}, t('ebld_review_hint')), el('button', { type: 'button', class: 'ghost', disabled: busy,

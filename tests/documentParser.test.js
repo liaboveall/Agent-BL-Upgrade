@@ -78,6 +78,7 @@ test('AI-17: PDF/image extraction is injectable and AI failure falls back determ
     mimeType: 'image/png'
   }, {
     textExtractor: async () => invoiceText,
+    completeAllFields: true,
     aiExtractor: async () => { throw new Error('provider unavailable'); }
   });
   assert.equal(result.source.extractor, 'injected-ocr');
@@ -91,10 +92,10 @@ test('AI-17: PDF/image extraction is injectable and AI failure falls back determ
   assert.equal(insurance.fields.coverage_ratio, 1.1);
 });
 
-test('AI-17: binary input without OCR requests human-capable extraction explicitly', async () => {
+test('WP2.2: an invalid binary PDF is distinguished from a scan needing OCR', async () => {
   await assert.rejects(
     () => parseDocument({ buffer: Buffer.from([0, 1, 2]), filename: 'scan.pdf', mimeType: 'application/pdf' }),
-    (error) => error instanceof DocumentParseError && error.code === 'OCR_REQUIRED'
+    (error) => error instanceof DocumentParseError && error.code === 'PDF_INVALID'
   );
 });
 

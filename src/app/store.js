@@ -17,11 +17,12 @@ export function resetStore() {
 }
 
 export function createPool(poolId, caseData, quote, options = {}) {
+  const pools = (options.store ?? storeState).pools;
   const createdAt = options.createdAt ?? new Date().toISOString();
   const status = options.status
     ?? STATE_BY_PRICING_ACTION[quote.pricing_action]
     ?? 'Open';
-  storeState.pools.set(poolId, {
+  pools.set(poolId, {
     poolId,
     caseData,
     quote,
@@ -33,7 +34,7 @@ export function createPool(poolId, caseData, quote, options = {}) {
     complianceStatus: options.complianceStatus ?? 'CLEARED',
     investorEligible: options.investorEligible ?? true
   });
-  return storeState.pools.get(poolId);
+  return pools.get(poolId);
 }
 
 /**

@@ -90,6 +90,7 @@ export class AgentService {
       preferences: deps.preferences ?? new PreferenceStore(),
       ingest: deps.ingest ?? null,
       orchestrator: deps.orchestrator ?? new AgentOrchestrator(),
+      documentParser: deps.documentParser ?? {},
       scenarios: deps.scenarios ?? null,
       riskTracker: deps.riskTracker ?? null,
       env: deps.env ?? process.env
@@ -374,6 +375,7 @@ export class AgentService {
       forceDeterministic: !this.config.valuationLlm,
       valuation: { env: this.env },
       worldRisk: { env: this.env },
+      parser: this.documentParser,
       onStep: async (step) => {
         if (jobId) await this.ingest.recordStep(jobId, step);
         this.#activity('PIPELINE', 'PIPELINE_STEP', null, { job_id: jobId ?? null, ...step }, { caseId: event.case_id, poolId: pool?.poolId });

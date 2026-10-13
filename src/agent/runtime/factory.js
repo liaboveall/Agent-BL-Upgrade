@@ -11,6 +11,7 @@ import { runtimeDir } from '../../runtimePaths.js';
 import { storeState } from '../../app/store.js';
 import { DecisionLogger } from '../decisionLogger.js';
 import { IngestService } from '../ingest/ingestService.js';
+import { createDocumentModel } from '../ingest/modelExtraction.js';
 import { ActivityLog } from './activityLog.js';
 import { AgentService } from './agentService.js';
 import { ApprovalQueue } from './approvals.js';
@@ -78,6 +79,12 @@ export function createAgentService(options = {}) {
   });
   const sim = options.sim ?? new SimExecutor({ store, now: options.now });
   const ingest = options.ingest ?? new IngestService({ dir, maxBytes: config.uploadMaxBytes, now: options.now });
+  const documentModel = createDocumentModel({ env, completion: options.documentCompletion });
+  const documentParser = {
+    visionEnabled: config.visionEnabled,
+    ...(config.visionEnabled && documentModel.configured ? { visionExtractor: documentModel.vision } : {}),
+    ...(config.documentLlm && documentModel.configured ? { aiExtractor: documentModel.complete } : {})
+  };
   const preferences = options.preferences ?? new PreferenceStore({ file: file('agent-preferences.json'), now: options.now });
   const riskTracker = options.riskTracker ?? new RiskTracker({ clearTicks: config.riskClearTicks, file: file('agent-risk-snapshots.json') });
   let service = null;
@@ -125,7 +132,7 @@ export function createAgentService(options = {}) {
 
   service = new AgentService({
     config, env, store, getMode, getGeneration, activity, logger, approvals, registry, bus, tracer, sim,
-    ingest, scenarios, riskTracker,
+    ingest, scenarios, riskTracker, documentParser,
     getChain, getChainContext, chainConfig, signerRoles,
     ensurePools: options.ensurePools,
     now: options.now,

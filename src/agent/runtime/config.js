@@ -67,6 +67,8 @@ export function loadAgentConfig(env = process.env) {
     uploadMaxBytes: int(env.AGENT_UPLOAD_MAX_BYTES, 8_388_608, { min: 1024, max: 25_000_000 }),
     // Use the configured LLM for the valuation step of the ingest pipeline (it falls back to the
     // deterministic path when no LLM is configured or the call fails).
-    valuationLlm: bool(env.AGENT_VALUATION_LLM, true)
+    valuationLlm: bool(env.AGENT_VALUATION_LLM, true),
+    visionEnabled: bool(env.AGENT_VISION_ENABLED, false),
+    documentLlm: bool(env.AGENT_DOCUMENT_LLM, false)
   };
 }

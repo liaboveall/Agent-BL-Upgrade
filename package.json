@@ -62,6 +62,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ethers": "6.17.0",
     "express": "5.2.1",
+    "unpdf": "1.7.0",
     "zod": "^4.3.6"
   },
   "overrides": {
