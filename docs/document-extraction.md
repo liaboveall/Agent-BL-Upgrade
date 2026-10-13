@@ -34,6 +34,8 @@
 
 最终应用测试 **943/943**；覆盖率 **lines 94.11% / branches 83.11% / functions 91.60%**，高于 88/72/86 门槛；lint 零警告，仓库 check 通过。61 项 preflight 为 **56 PASS / 0 WARN / 5 SKIP / 0 FAIL**，其中合约 74 项通过，Live 五项明确跳过。浏览器 **118** 项通过，页面脚本错误为零。截图复查发现步骤状态漏翻译，保留原截图和 DOM 证据，补齐状态/缺字段翻译并扩大原先过窄的翻译检查。
 
+2026-10-14 提交阶段补充 Windows 专项：初次 16/17 通过，仓单测试把文件 URL 的 `pathname` 当作本地路径，导致重复盘符和 ENOENT。改为 `fileURLToPath()` 后，Windows / Linux 均 17/17 通过，lint 仍为零警告；原阶段 JSON 保留初始快照，失败与修复后的独立证据见 [Windows 路径复验](evidence/document-extraction-windows-path.json)。
+
 ## 复现与证据
 
 ```bash

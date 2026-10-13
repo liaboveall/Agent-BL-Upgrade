@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { parseDocument, parseDocuments } from '../src/agent/documentParser.js';
 import { checkDocumentConsistency } from '../src/agent/documentConsistency.js';
@@ -238,7 +239,7 @@ test('injection: Chinese, zero-width, homoglyphs, wallet fields and payTo are fl
 });
 
 test('warehouse: bilingual receipt and CNY invoice retain original units and detect mismatches', async () => {
-  const result = await parseDocuments(['warehouse-receipt.md', 'commercial-invoice.md'].map((name) => ({ path: new URL(`alu-fs-wh-00014/${name}`, uploads).pathname })));
+  const result = await parseDocuments(['warehouse-receipt.md', 'commercial-invoice.md'].map((name) => ({ path: fileURLToPath(new URL(`alu-fs-wh-00014/${name}`, uploads)) })));
   const warehouse = result.documents[0];
   assert.equal(warehouse.document_type, 'WAREHOUSE_RECEIPT');
   assert.equal(warehouse.fields.receipt_no, 'EWR-2026-FS-AL0-00014');
