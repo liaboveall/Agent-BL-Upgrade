@@ -54,7 +54,9 @@ import { ActivityLog } from '../agent/runtime/activityLog.js';
 import { attachActivityPersistence, createAgentService } from '../agent/runtime/factory.js';
 import { loadAgentConfig } from '../agent/runtime/config.js';
 import { createAgentRoutes } from './agentRoutes.js';
-import { runtimeDir } from '../runtimePaths.js';
+import { runtimeDir, runtimePath } from '../runtimePaths.js';
+import { CopilotService } from '../copilot/service.js';
+import { createCopilotRoutes } from './copilotRoutes.js';
 import { createStaticHandler } from './static.js';
 import { llmStatus, relayChat } from './llmProxy.js';
 import { isRecord, looksLikeCase } from './shapes.js';
@@ -112,7 +114,8 @@ function enforceRateLimits(request, response, url) {
   const key = clientIp(request);
   enforceLimit(limiters.api, key, response);
   if (request.method === 'POST') enforceLimit(limiters.write, key, response);
-  if (url.pathname === '/api/llm/chat') enforceLimit(limiters.llm, key, response);
+  if (url.pathname === '/api/llm/chat' || request.method === 'POST' &&
+      (url.pathname === '/api/copilot/query' || /^\/api\/copilot\/sessions\/[^/]+\/messages$/u.test(url.pathname))) enforceLimit(limiters.llm, key, response);
 }
 
 // ---------------------------------------------------------------------------
@@ -485,6 +488,14 @@ const handleAgentRoute = createAgentRoutes({
   activityLog
 });
 
+export const copilotService = new CopilotService({
+  getPools: async () => { await ensureMockPools(); return [...storeState.pools.values()]; },
+  getDecisions: async () => (await getAgentService().listDecisions({ limit: 5000 })).decisions,
+  runtimeMode: () => demoModeController.snapshot(),
+  file: process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href ? runtimePath('copilot-sessions.json') : null
+});
+const handleCopilotRoute = createCopilotRoutes({ service: copilotService });
+
 export function logAgentActivity(activity) {
   return activityLog.append(activity);
 }
@@ -649,8 +660,9 @@ async function routeRequest(request, response, url) {
     const body = await readJsonBody(request);
     const requested = body?.mode;
     if (requested === 'demo' || requested === 'live') authorizeModeChange(request, requested);
+    let snapshot;
     try {
-      sendJson(response, 200, { ok: true, ...demoModeController.setMode(requested) });
+      snapshot = demoModeController.setMode(requested);
     } catch (error) {
       sendJson(response, error instanceof LiveModeUnavailableError ? 409 : 400, {
         ok: false,
@@ -658,7 +670,10 @@ async function routeRequest(request, response, url) {
         error: error.message,
         missing: error.missing
       });
+      return;
     }
+    await copilotService.invalidateSessions();
+    sendJson(response, 200, { ok: true, ...snapshot });
     return;
   }
 
@@ -674,6 +689,7 @@ async function routeRequest(request, response, url) {
     // mode. Live records are never touched.
     resetStore();
     await getAgentService().resetDemo();
+    await copilotService.invalidateSessions();
     sendJson(response, 200, { ok: true, ...snapshot });
     return;
   }
@@ -983,9 +999,20 @@ async function routeRequest(request, response, url) {
   if (method === 'GET' && pathname === '/api/investors/portfolio') {
     const walletAddress = url.searchParams.get('wallet_address') || '0xDemoWallet';
     const normalizedWalletAddress = walletAddress.toLowerCase();
-    const myInvestments = storeState.investments.filter(
+    const recorded = storeState.investments.filter(
       (investment) => String(investment.walletAddress).toLowerCase() === normalizedWalletAddress
     );
+    const decisions = (await getAgentService().listDecisions({ limit: 5000 })).decisions;
+    const myInvestments = recorded.map((investment) => {
+      const pool = storeState.pools.get(investment.poolId);
+      const affected = decisions.filter((decision) => decision.pool_id === investment.poolId || decision.case_id === investment.poolId).slice(0, 3);
+      return { ...investment,
+        source_label: investment.source?.kind === 'MYSTERY_VOYAGE' ? 'Mystery' : investment.source?.kind === 'COPILOT' ? 'Copilot' : 'Market',
+        current_status: pool?.status ?? 'Unknown', current_price_usd: pool?.quote.final_issue_price_usd ?? null,
+        current_risk_level: pool?.quote.risk_level ?? null,
+        decisions: affected.map(({ decision_id, action, status, created_at }) => ({ decision_id, action, status, created_at }))
+      };
+    });
 
     let totalInvested = 0;
     let weightedYieldSum = 0;
@@ -1399,6 +1426,7 @@ async function routeRequest(request, response, url) {
 
   // Agent runtime: status, control, events, decisions, approvals, pools.
   if (await handleAgentRoute(request, response, url)) return;
+  if (await handleCopilotRoute(request, response, url)) return;
 
   // BE-15: Agent Activity Query API
   if (method === 'GET' && pathname === '/api/agent/activity') {
@@ -1475,7 +1503,7 @@ function printStartupNotes(port, host) {
   const llm = llmStatus();
   console.log(llm.configured
     ? `LLM relay: ${llm.provider} / ${llm.model} (key stays on the server)`
-    : 'LLM relay: no provider configured (assistant falls back to keyword search)');
+    : 'LLM relay: no provider configured (Copilot uses deterministic preferences, ranking and templates)');
   const token = String(process.env.AGENTBL_ADMIN_TOKEN ?? '').trim();
   if (token && token.length < MIN_ADMIN_TOKEN_LENGTH) {
     console.warn(`WARNING: AGENTBL_ADMIN_TOKEN is shorter than ${MIN_ADMIN_TOKEN_LENGTH} characters and is ignored.`);

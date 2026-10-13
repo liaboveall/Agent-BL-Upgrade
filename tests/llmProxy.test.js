@@ -10,6 +10,15 @@ const { chatCompletion, reasoningEffort } = await import('../src/agent/llm/opena
 
 const RELAY_KEY = 'sk-unit-test-relay-key-0123';
 
+test('Copilot model adapter: an explicit token budget reaches the provider; no budget stays omitted', async (t) => {
+  const upstream = await startUpstream(); t.after(upstream.close);
+  const env = { LLM_BASE_URL: upstream.base, LLM_API_KEY: RELAY_KEY, LLM_MODEL: 'test-model' };
+  await chatCompletion({ messages: [{ role: 'user', content: 'test' }], maxTokens: 8192 }, env);
+  assert.equal(upstream.state.received.at(-1).body.max_tokens, 8192);
+  await chatCompletion({ messages: [{ role: 'user', content: 'test' }], maxTokens: null }, env);
+  assert.equal(upstream.state.received.at(-1).body.max_tokens, undefined);
+});
+
 /** A scriptable OpenAI-compatible upstream. */
 async function startUpstream() {
   const state = { mode: 'json', received: [], closedEarly: 0 };

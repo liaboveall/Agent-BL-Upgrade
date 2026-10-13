@@ -164,11 +164,12 @@ export function configuredProviders(env = process.env) {
  * Single /chat/completions call with optional tools.
  * Returns the raw assistant message object: { role, content, tool_calls? }.
  */
-export async function chatCompletion({ messages, tools, toolChoice = 'auto', temperature = 0.2, timeoutMs = 45000 }, env = process.env) {
+export async function chatCompletion({ messages, tools, toolChoice = 'auto', temperature = 0.2, timeoutMs = 45000, maxTokens }, env = process.env) {
   const cfg = resolveProvider(env);
   if (!cfg) throw new Error('No LLM provider configured. Set DEEPSEEK_API_KEY / DASHSCOPE_API_KEY / OPENAI_API_KEY / AZURE_OPENAI_* or LLM_BASE_URL+LLM_API_KEY.');
 
   const body = { model: cfg.model, messages, temperature };
+  if (Number.isSafeInteger(maxTokens) && maxTokens > 0) body.max_tokens = maxTokens;
   const effort = reasoningEffort(env);
   if (effort) body.reasoning_effort = effort;
   if (tools && tools.length > 0) {
