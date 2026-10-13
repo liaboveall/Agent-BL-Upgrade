@@ -10,6 +10,7 @@ import { resolveSignerKey } from '../../chain/signerKeys.js';
 import { runtimeDir } from '../../runtimePaths.js';
 import { storeState } from '../../app/store.js';
 import { DecisionLogger } from '../decisionLogger.js';
+import { IngestService } from '../ingest/ingestService.js';
 import { ActivityLog } from './activityLog.js';
 import { AgentService } from './agentService.js';
 import { ApprovalQueue } from './approvals.js';
@@ -18,6 +19,11 @@ import { EventBus } from './eventBus.js';
 import { ChainExecutor, createChainContext } from './executors/chainExecutor.js';
 import { SimExecutor } from './executors/simExecutor.js';
 import { PoolRegistry } from './poolRegistry.js';
+import { PreferenceStore } from './preferences.js';
+import { RiskTracker } from './sources/riskTracker.js';
+import { ScenarioPlayer } from './sources/scenarioPlayer.js';
+import { createVoyageMonitor } from './sources/voyageMonitor.js';
+import { createWorldRiskMonitor } from './sources/worldRiskMonitor.js';
 import { Tracer } from './trace.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -43,6 +49,7 @@ export function loadChainConfig(network = CHAIN_NETWORK) {
  * @param {{snapshot:()=>{mode:string, generation:number}}} [options.demoModeController]
  * @param {() => Promise<void>} [options.ensurePools]
  * @param {ActivityLog} [options.activity]     share the server's feed so REST/SSE and the agent show one history
+ * @param {boolean} [options.monitors]         run the world-risk and insurance monitors on every tick (default: when persisting)
  * @param {object} [options.chainConfig]
  * @param {Function} [options.getChainContext] override how the Live chain context is built (tests)
  */
@@ -68,6 +75,17 @@ export function createAgentService(options = {}) {
     indexFile: file('agent-event-index.json')
   });
   const sim = options.sim ?? new SimExecutor({ store });
+  const ingest = options.ingest ?? new IngestService({ dir, maxBytes: config.uploadMaxBytes, now: options.now });
+  const preferences = options.preferences ?? new PreferenceStore({ file: file('agent-preferences.json'), now: options.now });
+  const riskTracker = options.riskTracker ?? new RiskTracker({ clearTicks: config.riskClearTicks, file: file('agent-risk-snapshots.json') });
+  let service = null;
+  const scenarios = options.scenarios ?? new ScenarioPlayer({ getService: () => service, clearTicks: config.riskClearTicks, speed: config.scenarioSpeed });
+  // The monitors poll on every tick, so they run in the real server; a plain createServer() / test
+  // runtime stays quiet unless asked.
+  const monitorsOn = options.monitors ?? Boolean(options.persist);
+  const sources = options.sources ?? (monitorsOn
+    ? [createWorldRiskMonitor({ tracker: riskTracker, env: () => env }), createVoyageMonitor({ getClock: () => scenarios.clockMs })]
+    : []);
 
   // The Live context (provider, contracts, signers) is built on first use and rebuilt when the runtime
   // mode generation changes. A failure is remembered briefly so a down RPC is not hammered.
@@ -103,15 +121,18 @@ export function createAgentService(options = {}) {
     AGENT_EXECUTOR: Boolean(resolveSignerKey('AGENT_EXECUTOR', env, { warn: () => {} }))
   });
 
-  return new AgentService({
+  service = new AgentService({
     config, env, store, getMode, getGeneration, activity, logger, approvals, registry, bus, tracer, sim,
+    ingest, scenarios, riskTracker,
     getChain, getChainContext, chainConfig, signerRoles,
     ensurePools: options.ensurePools,
     now: options.now,
     sleep: options.sleep,
-    sources: options.sources,
-    preferences: options.preferences
+    sources,
+    preferences,
+    orchestrator: options.orchestrator
   });
+  return service;
 }
 
 /** Turn on persistence for the shared activity feed (the server entry point calls this once). */

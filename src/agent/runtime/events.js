@@ -12,11 +12,11 @@ export const EVENT_TYPES = Object.freeze([
   'WORLD_RISK_UPDATED', 'RISK_CLEARED',
   'INSURANCE_EXPIRING', 'INSURANCE_EXPIRED',
   'CARGO_DEPARTED', 'CARGO_ARRIVED',
-  'PAYMENT_RECEIVED', 'SUBSCRIPTION_RECEIVED',
+  'PAYMENT_RECEIVED', 'SUBSCRIPTION_RECEIVED', 'SETTLEMENT_READY',
   'CHAIN_STATE_CHANGED', 'EMERGENCY_STOP_CHANGED', 'REVIEW_RESOLVED'
 ]);
 
-export const EVENT_SOURCES = Object.freeze(['ingest', 'world-risk-monitor', 'voyage-monitor', 'chain-watcher', 'scenario', 'admin']);
+export const EVENT_SOURCES = Object.freeze(['ingest', 'world-risk-monitor', 'voyage-monitor', 'chain-watcher', 'scenario', 'admin', 'agent']);
 export const SOURCE_MODES = Object.freeze(['live', 'fixture', 'demo']);
 
 const HASH_RE = /^0x[0-9a-f]{64}$/u;
@@ -43,6 +43,7 @@ const DATA_SCHEMAS = {
     proof_source: z.string().max(64).optional()
   }),
   SUBSCRIPTION_RECEIVED: looseData({ amount_usd: z.number().positive().finite().optional() }),
+  SETTLEMENT_READY: looseData({ repayment_amount: z.number().positive().finite() }),
   CHAIN_STATE_CHANGED: looseData(),
   EMERGENCY_STOP_CHANGED: looseData({ stopped: z.boolean() }),
   REVIEW_RESOLVED: looseData({ resolution: z.enum(['approve', 'reject']).optional(), approval_id: z.string().max(128).optional() })

@@ -1,6 +1,6 @@
 // Agent runtime configuration (docs/agent-implementation-plan.md §4.7). Only variables something reads
-// today are here; the rest of §4.7 (risk-clear ticks, insurance window, scenario speed, upload limit,
-// vision, ...) is added together with the work package that uses it.
+// today are here; the rest of §4.7 (chain watcher, vision, ...) is added together with the work package
+// that uses it.
 //
 // Everything is read from the environment in one place so tests can pass a plain object, and so the
 // safety-relevant defaults (Live only ever proposes; irreversible actions never run unattended) live
@@ -60,6 +60,13 @@ export function loadAgentConfig(env = process.env) {
     chainConfirmations: int(env.AGENT_CHAIN_CONFIRMATIONS, 1, { min: 1 }),
     maxDecisions: int(env.AGENT_MAX_DECISIONS, 5000, { min: 100 }),
     retentionDays: int(env.AGENT_RETENTION_DAYS, 90, { min: 1 }),
-    approvalTtlSec: int(env.AGENT_APPROVAL_TTL_SEC, 24 * 60 * 60, { min: 60 })
+    approvalTtlSec: int(env.AGENT_APPROVAL_TTL_SEC, 24 * 60 * 60, { min: 60 }),
+    riskClearTicks: int(env.AGENT_RISK_CLEAR_TICKS, 2, { min: 1, max: 20 }),
+    insuranceWarnDays: int(env.AGENT_INSURANCE_WARN_DAYS, 7, { min: 1, max: 365 }),
+    scenarioSpeed: int(env.AGENT_SCENARIO_SPEED, 1, { min: 1, max: 1000 }),
+    uploadMaxBytes: int(env.AGENT_UPLOAD_MAX_BYTES, 8_388_608, { min: 1024, max: 25_000_000 }),
+    // Use the configured LLM for the valuation step of the ingest pipeline (it falls back to the
+    // deterministic path when no LLM is configured or the call fails).
+    valuationLlm: bool(env.AGENT_VALUATION_LLM, true)
   };
 }

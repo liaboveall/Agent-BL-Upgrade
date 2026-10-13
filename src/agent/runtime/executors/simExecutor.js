@@ -60,6 +60,20 @@ export class SimExecutor {
     if (!pool && (cmd.action === 'OPEN' || cmd.action === 'OPEN_WITH_WARNING') && params.case_data && params.quote) {
       pool = createPool(poolId, params.case_data, params.quote, { createdAt: at });
     }
+    if (!pool && (cmd.action === 'HOLD_FOR_REVIEW' || cmd.action === 'REJECT')) {
+      // A case that was held or rejected before any pool existed: nothing to change, the record is the result.
+      const result = {
+        success: true,
+        mode: 'demo',
+        reference: demoReference(cmd.decision_id),
+        signer_role: null,
+        attempts: 1,
+        executed_at: at,
+        effects: { pool_id: null, state_before: null, state_after: null, issue_price_before_usd: null, issue_price_after_usd: null }
+      };
+      this.done.set(cmd.idempotency_key, result);
+      return structuredClone(result);
+    }
     if (!pool) throw new SimExecutionError('pool_not_found', `No offchain pool ${String(poolId)} to apply ${cmd.action} to`);
 
     const view = stateOf(pool);

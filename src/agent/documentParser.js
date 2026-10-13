@@ -135,6 +135,17 @@ function vesselVoyage(value) {
   return { vessel: stripMarkdown(vessel), voyage_no: stripMarkdown(rest.join('/')) || null };
 }
 
+const BARREL_UNIT = /\b(?:bbl|bbls|barrels?)\b/iu;
+const BARREL_QUANTITY = /\d[\d,.]*\s*(?:net\s+(?:US\s+)?)?(?:bbl|bbls|barrels?)\b/iu;
+
+/** Tonnes for a cargo quoted in barrels: stated on the document ("78,221 MT"), never converted by guess. */
+function tonnesStatedInText(text, entries) {
+  const stated = entryFor(entries, ['Metric Tonnes (in air)', 'Metric Tonnes', 'Net Weight (MT)']);
+  if (stated && numeric(stated.value) !== null) return { value: numeric(stated.value), line: stated.line, method: stated.method, confidence: 0.9 };
+  const inline = regexValue(text, /\(\s*([\d,.]+)\s*MT\s*\)/iu, 0.88);
+  return inline && numeric(inline.value) !== null ? { ...inline, value: numeric(inline.value) } : null;
+}
+
 function goodsRow(text) {
   const lines = text.split(/\r?\n/u);
   for (let index = 0; index < lines.length; index += 1) {
@@ -142,16 +153,18 @@ function goodsRow(text) {
     if (!line.trim().startsWith('|')) continue;
     const cells = line.split('|').slice(1, -1).map(stripMarkdown);
     const joined = cells.join(' ');
-    if (!/\b\d{4}[.]?\d{2}\b/u.test(joined) || !/\bMT\b/iu.test(joined)) continue;
+    if (!/\b\d{4}[.]?\d{2}\b/u.test(joined) || !(/\bMT\b/iu.test(joined) || BARREL_UNIT.test(joined))) continue;
     const description = cells.find((cell) => /copper|soy|oil|ore|rubber|aluminium|aluminum|goods/iu.test(cell))
       ?? cells.find((cell) => cell.length > 20)
       ?? null;
     const quantityCell = cells.find((cell) => /\d[\d,.]*\s*MT\b/iu.test(cell));
-    const amountCell = [...cells].reverse().find((cell) => /\d[\d,.]*/u.test(cell) && !/MT\b/iu.test(cell));
+    const barrelCell = cells.find((cell) => BARREL_QUANTITY.test(cell));
+    const amountCell = [...cells].reverse().find((cell) => /\d[\d,.]*/u.test(cell) && !/MT\b/iu.test(cell) && !BARREL_UNIT.test(cell));
     return {
       description,
       hs_code: hsCode(joined),
       quantity_mt: numeric(quantityCell),
+      quantity_bbl: barrelCell ? numeric(barrelCell) : null,
       amount_usd: money(amountCell),
       cells,
       line: index + 1,
@@ -205,9 +218,9 @@ function parseEbl(text, entries) {
     c.add('vessel', { ...vv, value: parsed.vessel });
     c.add('voyage_no', { ...vv, value: parsed.voyage_no });
   }
-  c.add('port_of_loading', get('Port of Loading'));
+  c.add('port_of_loading', get('Port of Loading', 'Place / Terminal of Loading', 'Terminal of Loading'));
   c.add('port_of_discharge', get('Port of Discharge'));
-  c.add('shipped_on_board', get('Shipped on Board'), isoDate);
+  c.add('shipped_on_board', get('Shipped on Board', 'Loaded on Board (B/L date)', 'Loaded on Board'), isoDate);
   c.add('eta', get('Estimated Time of Arrival (ETA)', 'ETA'), isoDate);
   c.add('issue_date', get('Place & Date of Issue'), isoDate);
   c.add('document_hash', get('Document Hash (SHA-256)', 'Document Hash'));
@@ -216,7 +229,8 @@ function parseEbl(text, entries) {
     const source = (value) => ({ ...goods, value });
     c.add('cargo', source(goods.description));
     c.add('hs_code', source(goods.hs_code));
-    c.add('quantity_mt', source(goods.quantity_mt), Number);
+    c.add('quantity_mt', source(goods.quantity_mt ?? tonnesStatedInText(text, entries)?.value), Number);
+    c.add('quantity_bbl', source(goods.quantity_bbl), Number);
   }
   c.add('declared_value_usd', regexValue(text, /Declared Cargo Value[^\n]*?USD\s*([\d,.]+)/iu, 0.97), money);
   c.add('incoterms', regexValue(text, /Declared Cargo Value[^\n]*?\(((?:CIF|CFR|FOB|DAP|DDP)[^)]+)\)/iu, 0.75));
@@ -239,7 +253,7 @@ function parseInvoice(text, entries) {
     c.add('vessel', { ...vv, value: parsed.vessel });
     c.add('voyage_no', { ...vv, value: parsed.voyage_no });
   }
-  c.add('port_of_loading', get('Port of Loading'));
+  c.add('port_of_loading', get('Port of Loading', 'Place / Terminal of Loading', 'Terminal of Loading'));
   c.add('port_of_discharge', get('Port of Discharge'));
   c.add('seller', regexValue(text, /\*\*Seller \(Beneficiary\):\*\*\s*([^\n]+)/iu, 0.95));
   c.add('buyer', regexValue(text, /\*\*Buyer \(Applicant\):\*\*\s*([^\n]+)/iu, 0.95));
@@ -248,10 +262,12 @@ function parseInvoice(text, entries) {
     const source = (value) => ({ ...goods, value });
     c.add('cargo', source(goods.description));
     c.add('hs_code', source(goods.hs_code));
-    c.add('quantity_mt', source(goods.quantity_mt), Number);
+    c.add('quantity_mt', source(goods.quantity_mt ?? tonnesStatedInText(text, entries)?.value), Number);
+    c.add('quantity_bbl', source(goods.quantity_bbl), Number);
     const numericCells = goods.cells.map((cell) => numeric(cell)).filter((value) => value !== null);
     if (numericCells.length >= 2) {
-      c.add('unit_price_usd_per_mt', source(numericCells.at(-2)), Number);
+      // The unit price is quoted in the cargo's own unit: per barrel for crude, per tonne otherwise.
+      c.add(goods.quantity_bbl && goods.quantity_mt === null ? 'unit_price_usd_per_bbl' : 'unit_price_usd_per_mt', source(numericCells.at(-2)), Number);
       c.add('total_amount_usd', source(numericCells.at(-1)), Number);
     }
   }
@@ -308,6 +324,7 @@ function toCaseFragment(type, fields, textHash) {
         port_of_discharge: fields.port_of_discharge,
         cargo: fields.cargo,
         quantity_mt: fields.quantity_mt,
+        quantity_bbl: fields.quantity_bbl,
         declared_value_usd: fields.declared_value_usd,
         incoterms: fields.incoterms,
         issue_date: fields.issue_date ?? fields.shipped_on_board,
@@ -330,6 +347,8 @@ function toCaseFragment(type, fields, textHash) {
         seller: fields.seller,
         buyer: fields.buyer,
         unit_price_usd_per_mt: fields.unit_price_usd_per_mt,
+        unit_price_usd_per_bbl: fields.unit_price_usd_per_bbl,
+        quantity_bbl: fields.quantity_bbl,
         quantity_mt: fields.quantity_mt,
         total_amount_usd: fields.total_amount_usd,
         currency: fields.currency,

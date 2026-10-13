@@ -85,3 +85,43 @@ test('AI-17: binary input without OCR requests human-capable extraction explicit
     (error) => error instanceof DocumentParseError && error.code === 'OCR_REQUIRED'
   );
 });
+
+test('WP2.2: a crude cargo quoted in barrels parses completely, using the tonnes the document states', async () => {
+  const folder = path.join(root, 'data/uploads/crude-sg-ulsan');
+  const bundle = await parseDocuments([
+    { path: path.join(folder, 'bill-of-lading.md') },
+    { path: path.join(folder, 'commercial-invoice.md') },
+    { path: path.join(folder, 'insurance-policy.md') }
+  ]);
+  assert.equal(bundle.requires_human_review, false);
+  assert.deepEqual(bundle.documents.map((document) => document.missing_fields), [[], [], []]);
+  const bl = bundle.case_data.bill_of_lading;
+  assert.equal(bl.port_of_loading, 'Universal Terminal, Jurong Island, Singapore (SGSIN)');
+  assert.equal(bl.shipped_on_board, '2026-06-01');
+  assert.equal(bl.quantity_bbl, 600_000);
+  assert.equal(bl.quantity_mt, 78_221, 'tonnes are read from the document, not converted from barrels');
+  const invoice = bundle.case_data.commercial_invoice;
+  assert.equal(invoice.unit_price_usd_per_bbl, 96.5, 'the unit price keeps the unit it was quoted in');
+  assert.equal(invoice.unit_price_usd_per_mt, undefined);
+  assert.equal(invoice.total_amount_usd, 57_900_000);
+  assert.equal(bundle.case_data.insurance.insured_value_usd, 63_690_000);
+  assert.equal(bundle.case_data.insurance.expires_at, '2026-07-02');
+  assert.equal(checkDocumentConsistency(bundle.case_data).has_critical, false);
+});
+
+test('WP2.2: a barrel quantity with no stated tonnes is left unfilled rather than guessed', async () => {
+  const text = [
+    '# Bill of Lading',
+    '| Field | Value |',
+    '|---|---|',
+    '| **B/L No.** | X-1 |',
+    '| Description | HS Code | Quantity |',
+    '|---|---|---|',
+    '| Crude oil, light sweet | 2709.00 | 600,000 bbl |'
+  ].join('\n');
+  const result = await parseDocument({ text, filename: 'bl.md' });
+  assert.equal(result.fields.quantity_bbl, 600_000);
+  assert.equal(result.fields.quantity_mt, undefined);
+  assert.ok(result.missing_fields.includes('quantity_mt'));
+  assert.equal(result.requires_human_review, true);
+});

@@ -16,6 +16,8 @@
 
 import { createDecisionId } from '../decisionLogger.js';
 import { executeWithRetry } from '../executionReliability.js';
+import { AgentOrchestrator } from '../orchestrator.js';
+import { proposeFromIngest } from '../pipelines/ingestPipeline.js';
 import { proposeFromEvent } from '../pipelines/monitorPipeline.js';
 import { ApprovalError, APPROVAL_STATUS } from './approvals.js';
 import { effectiveAutonomy } from './config.js';
@@ -23,6 +25,7 @@ import { normalizeEvent } from './events.js';
 import { EXECUTOR_METHOD_FOR, PRICING_ACTION_FOR, ExecutionPendingError } from './executors/chainExecutor.js';
 import { buildOwnerPlan, verifyOwnerTx } from './ownerTxPlan.js';
 import { INFORMATIONAL_ACTIONS, evaluatePolicy } from './policy.js';
+import { PreferenceStore } from './preferences.js';
 import { Scheduler } from './scheduler.js';
 
 /** Event types an operator may inject through the API while the runtime is Live: only ones that carry a proof. */
@@ -84,7 +87,11 @@ export class AgentService {
       sleep: deps.sleep,
       sources: deps.sources ?? [],
       signerRoles: deps.signerRoles ?? (() => ({})),
-      preferences: deps.preferences ?? new Map(),
+      preferences: deps.preferences ?? new PreferenceStore(),
+      ingest: deps.ingest ?? null,
+      orchestrator: deps.orchestrator ?? new AgentOrchestrator(),
+      scenarios: deps.scenarios ?? null,
+      riskTracker: deps.riskTracker ?? null,
       env: deps.env ?? process.env
     });
     this.mutex = new KeyedMutex();
@@ -106,7 +113,7 @@ export class AgentService {
 
   async init() {
     if (this.initialized) return this;
-    await Promise.all([this.logger.init(), this.approvals.init(), this.registry.init(), this.bus.init()]);
+    await Promise.all([this.logger.init(), this.approvals.init(), this.registry.init(), this.bus.init(), this.preferences.init?.(), this.ingest?.init(), this.riskTracker?.init()]);
     await this.syncPools();
     this.initialized = true;
     return this;
@@ -199,6 +206,7 @@ export class AgentService {
       pending_approvals: this.approvals.pendingCount(),
       awaiting_owner_signature: this.approvals.list({ status: APPROVAL_STATUS.AWAITING_OWNER_SIGNATURE }).length,
       protected_chain_pools: this.config.protectedChainPools,
+      scenario: this.scenarios ? (({ loaded, name, next_step: next, total_steps: total, finished }) => ({ loaded, name, next_step: next, total_steps: total, finished }))(this.scenarios.status()) : null,
       last_error: this.lastError,
       activity: { last_seq: this.activity.seq, persist_error: this.activity.lastPersistError }
     };
@@ -226,6 +234,36 @@ export class AgentService {
     }
     const result = await this.bus.submit(event);
     return { ...result, event_type: event.type, case_id: event.case_id, mode };
+  }
+
+  /**
+   * Accept uploaded documents: validate and store them, open a job and queue the DOCUMENTS_INGESTED
+   * event that the ingest pipeline answers. Uploading the same bytes for the same case again returns
+   * the same job instead of a second decision.
+   */
+  async submitDocuments(body) {
+    await this.init();
+    if (!this.ingest) throw new AgentServiceError('ingest_unavailable', 'This runtime has no document intake', 503);
+    const { job, documents, created } = await this.ingest.accept(body);
+    if (body.exporter_preferences !== undefined) await this.preferences.put(job.case_id, body.exporter_preferences);
+    let accepted = null;
+    if (created) {
+      accepted = await this.submitEvent({
+        event_id: job.event_id,
+        type: 'DOCUMENTS_INGESTED',
+        case_id: job.case_id,
+        source: 'ingest',
+        data: { job_id: job.job_id, document_ids: job.document_ids }
+      });
+    }
+    return { job: this.ingest.getJob(job.job_id), documents, created, idempotency_key: accepted?.idempotency_key ?? `event:${job.event_id}` };
+  }
+
+  async setPreferences(caseId, input) {
+    await this.init();
+    const stored = await this.preferences.put(caseId, input);
+    this.#activity('SYSTEM', 'EXPORTER_PREFERENCES_SET', null, { preferences: stored.preferences }, { caseId });
+    return stored;
   }
 
   /** Wait until an event has been handled (or give up), and say what happened. For the Demo UI and tests. */
@@ -262,7 +300,9 @@ export class AgentService {
       }
       await this.ensurePools();
       const pool = this.store.pools.get(event.pool_id ?? event.case_id) ?? this.#poolByCase(event.case_id);
-      const proposed = await run.span('monitor_pipeline', async () => proposeFromEvent(event, { pool, mode, now: () => Date.now() }), { event_type: event.type });
+      const proposed = event.type === 'DOCUMENTS_INGESTED'
+        ? await this.#proposeFromUpload(event, pool, run)
+        : await run.span('monitor_pipeline', async () => proposeFromEvent(event, { pool, mode, now: () => Date.now() }), { event_type: event.type });
       if (proposed.proposals.length === 0) {
         this.#activity('SYSTEM', 'EVENT_IGNORED', null, { event_id: event.event_id, type: event.type, reason: proposed.ignored }, { caseId: event.case_id, poolId: pool?.poolId });
         await run.end('ok');
@@ -273,12 +313,43 @@ export class AgentService {
         const decision = await this.#decide(event, pool, proposal, index, run);
         decisions.push(decision.decision_id);
       }
+      if (event.type === 'DOCUMENTS_INGESTED') await this.#finishJob(event, { status: 'DONE', decision_ids: decisions });
       await run.end('ok');
       return { decisions };
     } catch (error) {
+      if (event.type === 'DOCUMENTS_INGESTED') {
+        await this.#finishJob(event, { status: 'FAILED', error: { code: error.code ?? 'ingest_failed', message: String(error.message ?? error).slice(0, 300) } });
+      }
       await run.end('error');
       throw error;
     }
+  }
+
+  /** The ingest pipeline for a DOCUMENTS_INGESTED event: reports each step to the job, the feed and the trace. */
+  async #proposeFromUpload(event, pool, run) {
+    if (!this.ingest) return { proposals: [], ignored: 'This runtime has no document intake' };
+    const jobId = event.data?.job_id;
+    if (jobId) await this.ingest.updateJob(jobId, { status: 'RUNNING', started_at: this.now().toISOString() });
+    this.#activity('PIPELINE', 'INGEST_STARTED', null, { job_id: jobId ?? null, documents: event.data?.document_ids?.length ?? 0 }, { caseId: event.case_id, poolId: pool?.poolId });
+    return run.span('ingest_pipeline', async () => proposeFromIngest(event, {
+      ingest: this.ingest,
+      orchestrator: this.orchestrator,
+      preferences: this.preferences,
+      pool,
+      forceDeterministic: !this.config.valuationLlm,
+      valuation: { env: this.env },
+      worldRisk: { env: this.env },
+      onStep: async (step) => {
+        if (jobId) await this.ingest.recordStep(jobId, step);
+        this.#activity('PIPELINE', 'PIPELINE_STEP', null, { job_id: jobId ?? null, ...step }, { caseId: event.case_id, poolId: pool?.poolId });
+      }
+    }), { event_type: event.type });
+  }
+
+  async #finishJob(event, patch) {
+    const jobId = event.data?.job_id;
+    if (!jobId || !this.ingest) return;
+    await this.ingest.updateJob(jobId, { ...patch, finished_at: this.now().toISOString() });
   }
 
   #poolByCase(caseId) {
@@ -512,6 +583,7 @@ export class AgentService {
 
   async #complete(decision, execution, approval = null) {
     const updated = await this.logger.update(decision.decision_id, { status: 'COMPLETED', execution, error: undefined });
+    await this.#maybeProposeSettlement(updated);
     if (approval) await this.approvals.markExecuted(approval.approval_id, { reference: execution.reference, tx_hash: execution.tx_hash ?? null });
     this.#activity('EXECUTION', 'EXECUTION_CONFIRMED', updated, {
       decision_action: updated.action,
@@ -525,6 +597,27 @@ export class AgentService {
       explorer_url: execution.explorer_url
     });
     return updated;
+  }
+
+  /**
+   * Once both settlement proofs are on record the pool can be settled. The agent proposes SETTLE as its
+   * own event, so the policy engine (which always asks for approval) decides what happens next.
+   */
+  async #maybeProposeSettlement(decision) {
+    if (!['RECORD_PAYMENT', 'RECORD_ARRIVAL'].includes(decision.action)) return;
+    const pool = this.store.pools.get(decision.pool_id) ?? this.#poolByCase(decision.case_id);
+    const settlement = pool?.settlement;
+    if (!settlement?.payment_proof || !settlement?.arrival_proof || settlement.settled_at) return;
+    const event = normalizeEvent({
+      event_id: `settlement-ready:${decision.mode}:${pool.poolId}`,
+      type: 'SETTLEMENT_READY',
+      case_id: decision.case_id,
+      pool_id: pool.poolId,
+      source: 'agent',
+      source_mode: decision.mode,
+      data: { repayment_amount: settlement.repayment_amount, trigger_decision: decision.decision_id }
+    }, { now: this.now, defaultMode: decision.mode });
+    await this.bus.submit(event).catch((error) => this.#noteError(error));
   }
 
   async #fail(decision, error, approval = null) {
@@ -763,6 +856,10 @@ export class AgentService {
     await this.activity.clearMode('demo');
     await this.registry.clearOffchain();
     this.sim.done.clear();
+    await this.ingest?.clear();
+    await this.riskTracker?.clear();
+    await this.scenarios?.stop();
+    await this.preferences.clear?.();
     this.emergencyStopped = false;
     await this.syncPools();
     return { removed_decisions: removed };

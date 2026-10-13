@@ -159,6 +159,11 @@ async function loadCaseCatalog() {
     }
   } catch { /* no cases dir */ }
 
+  // Cases the agent built from uploaded documents (they survive a restart in the runtime directory).
+  try {
+    for (const data of await getAgentService().ingest?.listCases() ?? []) add(data);
+  } catch { /* the catalog never fails because of the upload store */ }
+
   const cases = [...files.values()].map((data) => {
     const bl = data.bill_of_lading ?? {};
     const meta = CASE_META[data.case_id] ?? {};
@@ -1334,11 +1339,31 @@ async function routeRequest(request, response, url) {
     const caseId = body.case_id === undefined ? null : String(body.case_id).slice(0, 128);
     const result = await eniAdapter.uploadDocument(body.file);
 
-    // Remember which case a document belongs to. The orchestrator is NOT triggered from here yet
-    // (see docs/agent-implementation-plan.md WP2.1/WP2.4); recording the link is all this does.
+    // Remember which case a document belongs to.
     if (caseId) {
       if (!storeState.eblDocuments) storeState.eblDocuments = new Map();
       storeState.eblDocuments.set(result.documentId, { ...result, caseId });
+    }
+
+    // A browser that sends only name/type/size has nothing to read, so it stays a mock acknowledgement.
+    // When the upload carries its content for a case, the same bytes go through the agent's ingest
+    // pipeline (docs/agent-implementation-plan.md WP2.1); what that did is reported, never assumed.
+    let ingest = null;
+    if (caseId && typeof body.file.content === 'string' && body.file.content.length > 0) {
+      const textual = ['text/markdown', 'text/plain'].includes(body.file.type);
+      try {
+        const submitted = await getAgentService().submitDocuments({
+          case_id: caseId,
+          documents: [{
+            name: result.fileName,
+            mime_type: body.file.type,
+            ...(textual ? { text: body.file.content } : { content_base64: body.file.content })
+          }]
+        });
+        ingest = { accepted: true, job_id: submitted.job.job_id, status: submitted.job.status, created: submitted.created };
+      } catch (error) {
+        ingest = { accepted: false, error: String(error?.message ?? error).slice(0, 200), code: error?.code ?? null };
+      }
     }
     logAgentActivity({
       type: 'DOCUMENT',
@@ -1351,7 +1376,8 @@ async function routeRequest(request, response, url) {
       ok: true,
       document: result,
       message: 'Document uploaded successfully',
-      eni_mode: eniAdapter.mode
+      eni_mode: eniAdapter.mode,
+      ...(ingest ? { ingest } : {})
     });
     return;
   }

@@ -48,7 +48,8 @@ test('events: invalid events are refused with a readable reason', () => {
   bad({ type: 'EMERGENCY_STOP_CHANGED', case_id: 'C1', data: {} }, /stopped/u);
   assert.throws(() => normalizeEvent(null), EventValidationError);
   assert.throws(() => normalizeEvent([]), EventValidationError);
-  assert.equal(EVENT_TYPES.length, 14);
+  assert.equal(EVENT_TYPES.length, 15);
+  assert.ok(EVENT_TYPES.includes('SETTLEMENT_READY'), 'the agent proposes settlement as its own event');
 });
 
 test('events: payload keys beyond the checked ones are preserved but never trusted blindly', () => {

@@ -49,6 +49,14 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
 
   const caller = (request) => (checkAdminToken(request).authorized ? 'admin' : 'demo');
 
+  /** Uploads and preferences are open in Demo (zero setup) and need the admin token in Live. */
+  function authorizeIntake(request) {
+    if (runtimeMode().mode === 'live') authorizeAdmin(request);
+  }
+
+  const CASE_PATH = /^\/api\/agent\/cases\/([^/]+)\/preferences$/u;
+  const SCENARIO_PATH = /^\/api\/agent\/scenarios\/([^/]+)\/(start|step|run|stop)$/u;
+
   return async function handleAgentRoute(request, response, url) {
     const { pathname } = url;
     const method = request.method;
@@ -154,6 +162,76 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         }
         return true;
       }
+    }
+
+    if (method === 'POST' && pathname === '/api/agent/ingest') {
+      authorizeIntake(request);
+      // A request may carry a few maximum-size documents; base64 inflates them by a third.
+      const limit = Math.ceil(service.config.uploadMaxBytes * (4 / 3) * 3) + 65_536;
+      const body = await readJsonBody(request, { limit });
+      if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object with a documents array');
+      const result = await service.submitDocuments(body);
+      const wait = ['1', 'true'].includes(url.searchParams.get('wait') ?? '');
+      if (wait && result.idempotency_key) await service.waitFor(result.idempotency_key, 30_000);
+      const job = service.ingest.getJob(result.job.job_id);
+      sendJson(response, result.created ? 202 : 200, {
+        ok: true,
+        created: result.created,
+        job,
+        documents: result.documents.map((document) => ({
+          document_id: document.document_id, name: document.name, mime_type: document.mime_type, kind: document.kind,
+          size: document.size, sha256: document.sha256, eni: document.eni
+        }))
+      });
+      return true;
+    }
+
+    const jobMatch = /^\/api\/agent\/jobs\/([^/]+)$/u.exec(pathname);
+    if (method === 'GET' && jobMatch) {
+      const job = service.ingest?.getJob(pathId(jobMatch[1]));
+      if (!job) throw new HttpError(404, 'job_not_found', 'Unknown ingest job');
+      sendJson(response, 200, { ok: true, job });
+      return true;
+    }
+    if (method === 'GET' && pathname === '/api/agent/jobs') {
+      sendJson(response, 200, { ok: true, jobs: service.ingest?.listJobs({ case_id: url.searchParams.get('case_id') ?? undefined, limit: intParam(url, 'limit', { fallback: 50 }) }) ?? [] });
+      return true;
+    }
+
+    const caseMatch = CASE_PATH.exec(pathname);
+    if (caseMatch) {
+      const caseId = pathId(caseMatch[1]);
+      if (method === 'GET') {
+        sendJson(response, 200, { ok: true, case_id: caseId, ...(service.preferences.describe(caseId) ?? { preferences: {}, updated_at: null }) });
+        return true;
+      }
+      if (method === 'PUT') {
+        authorizeIntake(request);
+        const body = await readJsonBody(request);
+        if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object of exporter preferences');
+        sendJson(response, 200, { ok: true, case_id: caseId, ...(await service.setPreferences(caseId, body)) });
+        return true;
+      }
+    }
+
+    if (method === 'GET' && pathname === '/api/agent/scenarios') {
+      sendJson(response, 200, { ok: true, scenarios: await service.scenarios.list(), current: service.scenarios.status() });
+      return true;
+    }
+    const scenarioMatch = SCENARIO_PATH.exec(pathname);
+    if (method === 'POST' && scenarioMatch) {
+      authorizeAdmin(request);
+      const name = scenarioMatch[1];
+      const verb = scenarioMatch[2];
+      const body = (await readJsonBody(request)) ?? {};
+      if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object');
+      if (verb === 'start') sendJson(response, 200, { ok: true, ...(await service.scenarios.start(name, { reset: body.reset === true })) });
+      else if (verb === 'step') sendJson(response, 200, { ok: true, ...(await service.scenarios.step()) });
+      else if (verb === 'run') {
+        if (service.scenarios.status().name !== name) await service.scenarios.start(name, { reset: body.reset === true });
+        sendJson(response, 200, { ok: true, ...(await service.scenarios.run()) });
+      } else sendJson(response, 200, { ok: true, ...(await service.scenarios.stop()) });
+      return true;
     }
 
     if (method === 'GET' && pathname === '/api/agent/pools') {

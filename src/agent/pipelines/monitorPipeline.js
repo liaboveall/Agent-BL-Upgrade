@@ -219,6 +219,21 @@ export function proposeFromEvent(event, { pool, mode, now = () => Date.now() }) 
       };
     }
 
+    case 'SETTLEMENT_READY': {
+      const settlement = pool.settlement ?? {};
+      if (pool.status === 'Repaid' || settlement.settled_at) return ignored('The pool is already settled');
+      if (!settlement.payment_proof || !settlement.arrival_proof) return ignored('Both the payment proof and the arrival proof must be recorded before settling');
+      const amount = Number(event.data.repayment_amount);
+      return {
+        proposals: [proposal(event, pool, {
+          action: 'SETTLE',
+          reasoning_summary: `Payment proof and arrival proof are both on record; settle the pool at ${amount}. The contract only records the repayment, it does not distribute funds.`,
+          params: { repayment_amount: amount, payment_proof: settlement.payment_proof, arrival_proof: settlement.arrival_proof },
+          findings: [{ kind: 'SETTLEMENT_READY', severity: 'info', detail: 'Both settlement proofs recorded' }]
+        })]
+      };
+    }
+
     case 'SUBSCRIPTION_RECEIVED':
     case 'CHAIN_STATE_CHANGED':
       return ignored(`${event.type} is informational for the monitor pipeline`);

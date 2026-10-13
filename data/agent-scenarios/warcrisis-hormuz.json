@@ -1,0 +1,20 @@
+{
+  "name": "warcrisis-hormuz",
+  "title": { "en": "Hormuz crisis on a crude cargo: warning, then pause", "zh": "霍尔木兹危机（原油货）：先预警，后暂停" },
+  "description": { "en": "A war-risk escalation near the Strait of Hormuz hits a crude cargo whose price already carries a war discount: the agent warns first (the price has no room left to fall), then pauses the pool when the strait closes. It stays paused until risk clears. Simulated.", "zh": "霍尔木兹海峡附近战争风险升级，冲击一批价格已含战争折价的原油货：Agent 先预警（价格已无下调空间），海峡封闭后暂停资金池，风险解除前保持暂停。全程为模拟。" },
+  "case_id": "CASE-EBL-2026-OIL-SG-ULS",
+  "start_at": "2026-06-20T00:00:00Z",
+  "steps": [
+    { "kind": "risk_snapshot", "after_hours": 0, "label": { "en": "Baseline", "zh": "建立基线" }, "events": [] },
+    {
+      "kind": "risk_snapshot", "after_hours": 12,
+      "label": { "en": "Naval activity reported near Hormuz", "zh": "霍尔木兹附近出现军事活动" },
+      "events": [{ "type": "war_risk", "region": "Strait of Hormuz", "severity": "warning", "description": "Naval activity reported near the Strait of Hormuz", "date": "2026-06-20" }]
+    },
+    {
+      "kind": "risk_snapshot", "after_hours": 12,
+      "label": { "en": "Strait declared closed", "zh": "海峡被宣布封闭" },
+      "events": [{ "type": "war_risk", "region": "Strait of Hormuz", "severity": "critical", "description": "Strait of Hormuz declared closed to commercial shipping", "date": "2026-06-21" }]
+    }
+  ]
+}
