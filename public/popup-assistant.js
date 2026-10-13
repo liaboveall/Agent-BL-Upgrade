@@ -51,12 +51,15 @@ export function initPopupAssistant() {
     closeDialog();
     window.dispatchEvent(new CustomEvent('agentbl:selectcase', { detail: { case_id } }));
   };
+  const renderEntry = (entry) => renderRecommendations(entry.cards, entry.result, { onSelect: openAsset, scope: 'assistant', onRefresh: (result) => {
+    entry.result = result; entry.narrative.textContent = tTradeText(result.narrative); renderEntry(entry);
+  } });
   function localize() {
     title.textContent = t('cp_title'); launcher.textContent = t('cp_title');
     input.placeholder = t('cp_placeholder'); input.setAttribute('aria-label', t('cp_placeholder'));
     send.textContent = t(busy ? 'cp_loading' : 'cp_send'); close.textContent = t('cp_close');
     reset.textContent = t('cp_reset'); welcome.textContent = t('cp_welcome');
-    for (const entry of entries) if (entry.result) renderRecommendations(entry.cards, entry.result, { onSelect: openAsset });
+    for (const entry of entries) if (entry.result) renderEntry(entry);
   }
   async function submit(message) {
     if (busy || !String(message).trim()) return;
@@ -64,17 +67,17 @@ export function initPopupAssistant() {
     input.value = ''; send.disabled = true; reset.disabled = true; localize();
     transcript.append(el('p', { class: 'cp-user' }, message));
     const narrative = el('p', { class: 'cp-narrative', role: 'status', 'aria-live': 'polite' }, t('cp_loading'));
-    const cards = el('div', {}), entry = { cards, result: null };
+    const cards = el('div', {}), entry = { cards, narrative, result: null };
     transcript.append(narrative, cards); entries.push(entry);
     try {
       const result = await copilotQuery(message, { onResult: (structured) => {
         if (requestGeneration !== generation) return;
-        entry.result = structured; renderRecommendations(cards, structured, { onSelect: openAsset });
+        entry.result = structured; renderEntry(entry);
         narrative.textContent = t('cp_explaining');
       } });
       if (requestGeneration !== generation) return;
       narrative.textContent = tTradeText(result.narrative); entry.result = result;
-      renderRecommendations(cards, result, { onSelect: openAsset });
+      renderEntry(entry);
       if (result.intent === 'PORTFOLIO') {
         const portfolio = await serverJson(`/api/investors/portfolio?wallet_address=${encodeURIComponent(state.wallet?.address || '0xDemoWallet')}`);
         if (requestGeneration !== generation) return;
@@ -100,6 +103,14 @@ export function initPopupAssistant() {
   window.addEventListener('agentbl:runtimechange', () => {
     generation += 1; resetCopilotSession(); busy = false; send.disabled = false; reset.disabled = false;
     entries.length = 0; clear(transcript); transcript.append(welcome); localize();
+  });
+  window.addEventListener('agentbl:copilotupdate', ({ detail }) => {
+    if (detail.scope !== 'assistant' || busy) return;
+    const entry = entries.at(-1), update = detail.update;
+    if (!entry?.result || entry.result.context.session_id !== update.result.context.session_id) return;
+    entry.result = { ...update.result, rerank: update };
+    entry.narrative.textContent = t('cp_current_update');
+    renderEntry(entry);
   });
   onLangChange(localize); localize(); document.body.append(launcher, dialog);
 }

@@ -14,7 +14,7 @@ export function tokenize(text) {
 export function bm25(query, texts) {
   const documents = texts.map(tokenize);
   const average = documents.reduce((sum, terms) => sum + terms.length, 0) / Math.max(1, documents.length) || 1;
-  const terms = [...new Set(tokenize(query))];
+  const terms = [...new Set(Array.isArray(query) ? query : tokenize(query))];
   return documents.map((document) => terms.reduce((score, term) => {
     const frequency = document.filter((token) => token === term).length;
     if (!frequency) return score;
@@ -63,7 +63,7 @@ export function exclusionReasons(candidate, constraints) {
   if (constraints.regions_include.some((name) => !c.geography.includes(name))) reasons.push('regions_include');
   if (constraints.regions_exclude.some((name) => c.geography.includes(name))) reasons.push('regions_exclude');
   if (constraints.chokepoints_avoid.some((name) => c.geography.includes(name))) reasons.push('chokepoints_avoid');
-  if (constraints.ticket_usd !== undefined && (constraints.ticket_usd > c.remaining_usd || !['Open', 'Repriced'].includes(c.status))) reasons.push('ticket_usd');
+  if (constraints.ticket_usd !== undefined && (constraints.ticket_usd > c.remaining_usd || !['Open', 'Repriced', 'Subscribed'].includes(c.status))) reasons.push('ticket_usd');
   if (constraints.financing_max_usd !== undefined && q.requested_cash_usd > constraints.financing_max_usd) reasons.push('financing_max_usd');
   if (constraints.insurance_coverage_min !== undefined && (c.insurance_coverage === null || c.insurance_coverage < constraints.insurance_coverage_min)) reasons.push('insurance_coverage_min');
   if (constraints.payout_speed && constraints.payout_speed !== q.payout_speed) reasons.push('payout_speed');

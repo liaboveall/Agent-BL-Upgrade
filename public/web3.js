@@ -787,6 +787,48 @@ export async function readBalance(poolId, address) {
   return Number(bal);
 }
 
+/** Issue share certificates through the user's EVM wallet. This contract transfers no funds. */
+export async function subscribeOffering(action, { assertCurrent = () => {}, getSession = () => _session,
+  getConfig = loadChainConfig, ethersFn = loadEthers } = {}) {
+  assertCurrent();
+  const session = getSession(), cfg = await getConfig(), chain = action.chain;
+  if (!session || session.kind !== 'evm') throw err('EVM_WALLET_REQUIRED', 'Connect an EVM wallet before confirming');
+  if (!chain || chain.chain_id !== cfg.chainIdDecimal || chain.contract.toLowerCase() !== cfg.contracts.RWAOfferingPool?.toLowerCase()
+    || !isAddress(chain.contract) || !Array.isArray(cfg.abis?.RWAOfferingPool)) throw err('NETWORK', 'Offering deployment or network changed');
+  const check = async () => {
+    assertCurrent();
+    if (getSession() !== session) throw err('NO_SESSION', 'Wallet session changed');
+    const [network, accounts] = await Promise.all([session.provider.request({ method: 'eth_chainId' }), session.provider.request({ method: 'eth_accounts' })]);
+    assertCurrent();
+    if (getSession() !== session || BigInt(network) !== BigInt(chain.chain_id) || accounts[0]?.toLowerCase() !== session.address.toLowerCase()) throw err('NETWORK', 'Wallet account or network changed');
+  };
+  await check();
+  const ethers = await ethersFn();
+  const contract = new ethers.Contract(chain.contract, cfg.abis.RWAOfferingPool, session.signer);
+  const [offering, stopped, eligible] = await Promise.all([contract.offerings(chain.pool_id), contract.emergencyStopped(), contract.isInvestorEligible(session.address, chain.pool_id)]);
+  const shares = BigInt(action.shares), price = BigInt(chain.price_e6);
+  if (shares <= 0n || !offering.exists || stopped || !eligible || ![2, 3, 6].includes(Number(offering.state))) throw err('POOL_UNAVAILABLE', 'Offering is no longer available to this wallet');
+  if (BigInt(offering.issuePrice) !== price || BigInt(offering.tokenSupply) - BigInt(offering.subscribed) < shares) throw err('QUOTE_CHANGED', 'Price or available shares changed; request a new card');
+  await contract.subscribe.staticCall(BigInt(chain.pool_id), shares);
+  await check();
+  const tx = await contract.subscribe(BigInt(chain.pool_id), shares);
+  try {
+    const receipt = await tx.wait();
+    if (Number(receipt.status) !== 1 || !/^0x[0-9a-f]{64}$/iu.test(tx.hash)) throw new Error('Subscription receipt was not successful');
+    const subscribed = (receipt.logs ?? []).filter((log) => log.address?.toLowerCase() === chain.contract.toLowerCase()).map((log) => {
+      try { return contract.interface.parseLog(log); } catch { return null; }
+    }).find((event) => event?.name === 'Subscribed' && BigInt(event.args.poolId) === BigInt(chain.pool_id)
+      && event.args.investor.toLowerCase() === session.address.toLowerCase() && BigInt(event.args.amount) === shares);
+    if (!subscribed || BigInt(subscribed.args.paidAmount) !== shares * price) throw new Error('Subscription event or confirmed price differs from the card');
+    assertCurrent();
+    return { mode: 'chain', txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash), tokenCount: action.shares,
+      amountUsd: Number(subscribed.args.paidAmount) / 1_000_000, blockNumber: receipt.blockNumber };
+  } catch (cause) {
+    const failure = new Error(`Transaction ${tx.hash} was submitted; verify its receipt before trying again: ${cause.message}`, { cause });
+    failure.txHash = tx.hash; failure.code = 'subscription_reconciliation_required'; throw failure;
+  }
+}
+
 export async function protocolDeploymentInfo() {
   const cfg = await loadChainConfig();
   return {

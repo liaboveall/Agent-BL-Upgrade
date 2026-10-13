@@ -4,6 +4,15 @@
 .cp-card p { margin:7px 0; font-size:13px; overflow-wrap:anywhere; }
 .cp-warning { color:var(--warn); }
 .cp-question { padding:10px; background:var(--card); border-left:3px solid var(--accent); }
+.cp-update { padding:10px; border:1px solid var(--accent); border-radius:10px; margin:10px 0; overflow-wrap:anywhere; }
+.cp-update p { margin:6px 0; font-size:13px; }
+.cp-action-card { padding:12px; border:1px solid var(--accent); border-radius:12px; margin:12px 0; min-width:0; overflow-wrap:anywhere; }
+.cp-action-card p { margin:8px 0; font-size:13px; }
+.cp-dialog .cp-action-form,.cp-action-form { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; padding:0; border:0; }
+.cp-action-form select,.cp-action-form input { width:100%; box-sizing:border-box; min-width:0; }
+.cp-action-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+.cp-action-buttons button:disabled { opacity:.55; cursor:default; }
+.cp-report-body { white-space:pre-wrap; overflow-wrap:anywhere; font-size:11px; max-height:240px; overflow:auto; }
 .cp-hash { display:block; overflow-wrap:anywhere; font-size:11px; margin:8px 0; }
 .cp-link { font-size:12px; }
 .cp-launcher { position:fixed; bottom:24px; right:24px; z-index:1200; border-radius:30px; padding:13px 18px; background:var(--accent); color:white; border:0; cursor:pointer; box-shadow:0 5px 20px #0003; }

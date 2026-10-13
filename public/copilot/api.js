@@ -1,8 +1,15 @@
 import { getLang } from '../i18n.js';
 import { state } from '../store.js';
 
-let session = null, pendingSession = null, epoch = 0;
-export function resetCopilotSession() { session = null; pendingSession = null; epoch += 1; }
+const sessions = new Map();
+let epoch = 0;
+export function resetCopilotSession(scope) {
+  for (const [key, entry] of sessions) if (!scope || key === scope) {
+    entry.stream?.close(); sessions.delete(key);
+    if (scope && entry.id) fetch(`/api/copilot/sessions/${entry.id}`, { method: 'DELETE' }).catch(() => {});
+  }
+  if (!scope) epoch += 1;
+}
 
 async function json(url, body) {
   const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -11,17 +18,49 @@ async function json(url, body) {
   return result;
 }
 
-async function sessionId() {
-  if (session) return session;
+async function sessionId(scope) {
+  let entry = sessions.get(scope);
+  if (entry?.id) return entry.id;
   const currentEpoch = epoch;
-  if (!pendingSession) pendingSession = json('/api/copilot/sessions', { locale: getLang() });
-  const pending = pendingSession;
+  if (!entry) { entry = {}; sessions.set(scope, entry); }
+  if (!entry.pending) entry.pending = json('/api/copilot/sessions', { locale: getLang() });
+  const pending = entry.pending;
   try {
     const created = await pending;
-    if (epoch !== currentEpoch) throw new Error('Copilot session changed');
-    session = created.context.session_id;
-    return session;
-  } finally { if (pendingSession === pending) pendingSession = null; }
+    if (epoch !== currentEpoch || sessions.get(scope) !== entry) throw new Error('Copilot session changed');
+    entry.id = created.context.session_id;
+    return entry.id;
+  } finally { if (entry.pending === pending) entry.pending = null; }
+}
+
+function connectUpdates(scope, result) {
+  const entry = sessions.get(scope);
+  if (!entry || typeof EventSource === 'undefined') return;
+  entry.stream?.close();
+  entry.seq = result.context.update_seq ?? 0;
+  const currentEpoch = epoch, mode = result.mode, generation = result.generation;
+  const stream = new EventSource(`/api/copilot/sessions/${entry.id}/stream?last_event_id=${entry.seq}`);
+  entry.stream = stream;
+  stream.addEventListener('COPILOT_RERANK', (event) => {
+    if (currentEpoch !== epoch || sessions.get(scope) !== entry) return;
+    try {
+      const update = JSON.parse(event.data);
+      if (update.mode !== mode || update.generation !== generation || state.modeGeneration !== generation || state.demoMode !== (mode === 'demo') || update.seq <= entry.seq) return;
+      entry.seq = update.seq;
+      window.dispatchEvent(new CustomEvent('agentbl:copilotupdate', { detail: { scope, update } }));
+    } catch { /* A malformed frame never changes the displayed recommendation. */ }
+  });
+  stream.addEventListener('SESSION_CLOSED', () => { stream.close(); if (sessions.get(scope) === entry) sessions.delete(scope); });
+}
+
+export async function watchPool(context, poolId) {
+  const pool_ids = context.watchlist.includes(poolId) ? context.watchlist.filter((id) => id !== poolId) : [...context.watchlist, poolId];
+  const response = await fetch(`/api/copilot/sessions/${context.session_id}/watchlist`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pool_ids })
+  });
+  const result = await response.json();
+  if (!response.ok) throw Object.assign(new Error(result.error), { code: result.code });
+  return result.context;
 }
 
 /** Parse framed SSE, including split UTF-8 characters and split event boundaries. */
@@ -51,24 +90,26 @@ export async function readCopilotStream(response, onEvent) {
   } finally { reader.releaseLock(); }
 }
 
-export async function copilotQuery(message, { stateless = false, limit = 5, pool_ids, onResult, signal } = {}) {
+export async function copilotQuery(message, { stateless = false, scope = 'assistant', limit = 5, pool_ids, service_id, onResult, signal } = {}) {
   const currentEpoch = epoch;
   const generation = state.modeGeneration, mode = state.demoMode ? 'demo' : 'live';
-  const path = stateless ? '/api/copilot/query' : `/api/copilot/sessions/${await sessionId()}/messages`;
+  const id = stateless ? null : await sessionId(scope);
+  const path = stateless ? '/api/copilot/query' : `/api/copilot/sessions/${id}/messages`;
   const response = await fetch(path, { method: 'POST', signal,
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-    body: JSON.stringify({ message, locale: getLang(), limit, pool_ids }) });
+    body: JSON.stringify({ message, locale: getLang(), limit, pool_ids, service_id }) });
   if (!response.ok) {
     const error = await response.json();
     if (!stateless && [404, 409].includes(response.status) && currentEpoch === epoch) resetCopilotSession();
     throw Object.assign(new Error(error.error), { status: response.status, code: error.code });
   }
   const result = await readCopilotStream(response, (event, result) => {
-    if (epoch !== currentEpoch) return;
+    if (epoch !== currentEpoch || !stateless && sessions.get(scope)?.id !== id) return;
     if (event === 'result' && result.generation === generation && result.mode === mode) onResult?.(result);
   });
-  if (epoch !== currentEpoch || state.modeGeneration !== generation || result.generation !== generation || result.mode !== mode) {
+  if (epoch !== currentEpoch || !stateless && sessions.get(scope)?.id !== id || state.modeGeneration !== generation || result.generation !== generation || result.mode !== mode) {
     throw Object.assign(new Error('Runtime mode changed; start a new query'), { status: 409, code: 'session_mode_changed' });
   }
+  if (!stateless) connectUpdates(scope, result);
   return result;
 }

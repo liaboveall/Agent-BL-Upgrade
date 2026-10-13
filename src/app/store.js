@@ -47,7 +47,7 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
   }
   const pool = storeState.pools.get(poolId);
   if (!pool) throw new HttpError(404, 'pool_not_found', 'Pool not found');
-  if (pool.status !== 'Open') {
+  if (!['Open', 'Repriced', 'Subscribed'].includes(pool.status)) {
     throw new HttpError(409, 'pool_not_open', `Cannot subscribe to pool in status: ${pool.status}`);
   }
   if (pool.subscribedUsd + amountUsd > pool.targetUsd) {

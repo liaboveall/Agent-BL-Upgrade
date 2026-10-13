@@ -19,6 +19,7 @@ import {
   PAYOUT_SPEEDS
 } from '../core/pricingSchema.js';
 import { X402_SERVICES } from '../x402/config.js';
+import { chainStateName } from '../agent/runtime/poolRules.js';
 import { demoModeController, LiveModeUnavailableError } from '../demo/mode.js';
 import { DEFAULT_MYSTERY_QUOTE_MAX_AGE_SECONDS } from '../mystery/policy.js';
 import { storeState, createPool, resetStore, subscribeToPool } from './store.js';
@@ -492,9 +493,27 @@ export const copilotService = new CopilotService({
   getPools: async () => { await ensureMockPools(); return [...storeState.pools.values()]; },
   getDecisions: async () => (await getAgentService().listDecisions({ limit: 5000 })).decisions,
   runtimeMode: () => demoModeController.snapshot(),
+  subscribeDemo: (wallet, poolId, amount, source) => {
+    const result = subscribeToPool(wallet, poolId, amount, { source });
+    logAgentActivity({ type: 'INVESTMENT', action: 'SUBSCRIPTION', caseId: poolId, poolId,
+      details: { amountUsd: result.investment.amountUsd, price: result.investment.price, source: 'COPILOT' } });
+    return result;
+  },
+  getLiveOffering: async (poolId) => {
+    const agent = getAgentService(); await agent.init();
+    const mapping = agent.registry.get(poolId);
+    if (!mapping?.chain) return null;
+    const live = await agent.getChainContext();
+    if (!live) return null;
+    const [offering, stopped] = await Promise.all([live.pool.offerings(mapping.chain.pool_id), live.pool.emergencyStopped()]);
+    return { pool_id: mapping.chain.pool_id, chain_id: Number(agent.chainConfig.chainIdDecimal), contract: agent.chainConfig.contracts.RWAOfferingPool,
+      price_e6: offering.issuePrice.toString(), remaining_shares: (offering.tokenSupply - offering.subscribed).toString(),
+      exists: offering.exists, status: chainStateName(offering.state), emergency_stopped: stopped };
+  },
   file: process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href ? runtimePath('copilot-sessions.json') : null
 });
 const handleCopilotRoute = createCopilotRoutes({ service: copilotService });
+activityLog.onAppend((activity) => { copilotService.notifyDecision(activity).catch(() => {}); });
 
 export function logAgentActivity(activity) {
   return activityLog.append(activity);
@@ -925,6 +944,12 @@ async function routeRequest(request, response, url) {
   // BE-12: Pool Subscribe
   if (method === 'POST' && pathname === '/api/pool/subscribe') {
     const body = requireRecordBody(await readJsonBody(request), 'pool_id, amount_usd and optional wallet_address');
+    if (body.copilot_action) {
+      if (!isRecord(body.copilot_action)) throw new HttpError(400, 'invalid_request', 'copilot_action must contain session_id and action_id');
+      const { session_id, action_id } = body.copilot_action;
+      const result = await copilotService.confirmAction(session_id, action_id, { confirm: body.confirm, wallet_address: body.wallet_address });
+      sendJson(response, 200, { ok: true, ...result }); return;
+    }
     await ensureMockPools();
     if (typeof body.pool_id !== 'string' || body.pool_id === '') {
       throw new HttpError(400, 'invalid_request', 'pool_id must be a non-empty string');
@@ -1520,6 +1545,7 @@ function installGracefulShutdown(server) {
     closing = true;
     console.log(`${signal} received, shutting down...`);
     closeActivityStreams();
+    copilotService.closeStreams();
     // Let the agent finish the event it is on and write its state before the process ends.
     const agentStopped = (agentService?.stop() ?? Promise.resolve()).catch(() => {});
     agentStopped.finally(() => activityLog.flush().catch(() => {})).finally(() => {

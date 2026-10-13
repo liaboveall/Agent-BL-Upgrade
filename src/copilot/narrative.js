@@ -4,7 +4,7 @@ export function templateNarrative(result, locale) {
   if (result.intent === 'OUT_OF_SCOPE') return zh ? '我可以帮助筛选和比较贸易资产、解释风险，以及查看持仓。' : 'I can filter and compare trade assets, explain risks, and show your portfolio.';
   if (result.intent === 'RESET') return zh ? '偏好已清空。可以从货物、风险或预算重新开始。' : 'Preferences cleared. Start again with a commodity, risk limit or budget.';
   if (result.intent === 'PORTFOLIO') return zh ? '请查看下方持仓，数据来自服务器上的 Demo 记录。' : 'See your portfolio below, from the server’s Demo records.';
-  if (result.intent.startsWith('ACTION_')) return zh ? '操作需要你确认。请打开对应标的或付费情报面板查看报价并操作。' : 'Your confirmation is required. Open the asset or paid intelligence panel to review the quote and proceed.';
+  if (result.intent.startsWith('ACTION_')) return zh ? '请核对下方动作卡片。只有点击确认才会执行；认购仅生成份额凭证，没有资金托管或保本承诺。' : 'Review the action card below. Execution requires your confirmation; subscription creates share certificates without custody or a capital guarantee.';
   if (!result.recommendations.length) return zh ? '没有符合全部条件的活跃标的。下方列出了排除原因。' : 'No active assets meet every constraint. Exclusion reasons are shown below.';
   return result.recommendations.map((item) => `${item.rank}. ${item.label} · ${item.route}\n${zh ? '发行价' : 'Price'} USD ${item.price_usd.toFixed(4)} · ${zh ? '指示性毛收益' : 'Indicative gross yield'} ${(item.yield_bps / 100).toFixed(2)}% · ${item.risk_level}`).join('\n\n');
 }

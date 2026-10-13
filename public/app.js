@@ -978,6 +978,7 @@ function resetCopilotUi() {
   window.dispatchEvent(new CustomEvent('agentbl:runtimechange'));
 }
 function onSearchInput() {
+  resetCopilotSession('search');
   searchGeneration += 1; searchAbort?.abort();
   const button = $('#ai-search-btn');
   if (button) { button.disabled = false; button.textContent = t('ai_parse'); }
@@ -998,6 +999,7 @@ function onSearchInput() {
 async function onAiSearch() {
   const query = ($('#search-input')?.value || '').trim();
   if (!query) { toast(t('ai_empty_query'), true); return; }
+  resetCopilotSession('search');
   clearTimeout(searchDebounce);
   searchAbort?.abort(); searchAbort = new AbortController();
   const requestGeneration = ++searchGeneration, modeGeneration = state.modeGeneration;
@@ -1009,10 +1011,10 @@ async function onAiSearch() {
     state._aiMatchedIds = new Set(result.recommendations.map((item) => item.case_id));
     state._aiRanks = new Map(result.recommendations.map((item) => [item.case_id, item.rank]));
     renderCaseSelector(); renderMarket();
-    renderRecommendations($('#copilot-search-results'), result, { onSelect: selectCase });
+    renderRecommendations($('#copilot-search-results'), result, { onSelect: selectCase, scope: 'search', onRefresh: apply });
   };
   try {
-    const result = await copilotQuery(query, { stateless: true, limit: 10, signal: searchAbort.signal, onResult: apply });
+    const result = await copilotQuery(query, { scope: 'search', limit: 10, signal: searchAbort.signal, onResult: apply });
     apply(result);
     if (requestGeneration === searchGeneration && modeGeneration === state.modeGeneration) toast(result.clarifying_question || t('cp_found', { n: result.recommendations.length }));
   } catch (error) {
@@ -1024,6 +1026,17 @@ async function onAiSearch() {
     if (requestGeneration === searchGeneration) { btn.disabled = false; btn.textContent = t('ai_parse'); }
   }
 }
+
+window.addEventListener('agentbl:copilotupdate', ({ detail }) => {
+  if (detail.scope !== 'search' || !state._aiMatchedIds || $('#ai-search-btn')?.disabled) return;
+  const result = detail.update.result;
+  state._aiMatchedIds = new Set(result.recommendations.map((item) => item.case_id));
+  state._aiRanks = new Map(result.recommendations.map((item) => [item.case_id, item.rank]));
+  renderCaseSelector(); renderMarket();
+  renderRecommendations($('#copilot-search-results'), { ...result, rerank: detail.update }, { onSelect: selectCase, scope: 'search' });
+});
+
+window.addEventListener('agentbl:copilotaction', () => { renderPortfolio(); });
 
 // ===========================================================================
 // Hero + deal strip

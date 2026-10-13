@@ -12,7 +12,7 @@ export function rankCandidates(candidates, context) {
     const c = candidate, q = c.quote;
     const warnings = [];
     if (q.risk_level === 'WARNING' || q.risk_level === 'CRITICAL') warnings.push('elevated_risk');
-    if (!['Open', 'Repriced'].includes(c.status)) warnings.push('not_subscribable');
+    if (!['Open', 'Repriced', 'Subscribed'].includes(c.status)) warnings.push('not_subscribable');
     if (c.compliance !== 'CLEARED') warnings.push('compliance_review');
     if (c.stale) warnings.push('stale_quote');
     const breakdown = {
