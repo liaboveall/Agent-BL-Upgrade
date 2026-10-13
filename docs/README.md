@@ -13,6 +13,7 @@
 | [PRD.md](./PRD.md) | 产品需求文档（v0.2） |
 | [tasks.md](./tasks.md) | 任务清单与状态（Agent 相关的 Done 标记以下一行的审计为准） |
 | [agent-implementation-plan.md](./agent-implementation-plan.md) | Agent 全量实现规划：现状审计、目标架构、分阶段工作包与验收标准（开发中随时更新状态表） |
+| [copilot.md](./copilot.md) | Phase 3 P0：多轮偏好、检索排序、解释、会话 API、单证复核和现有边界 |
 | [Instruction.md](./Instruction.md) | 团队协作手册（原根目录 README） |
 | [evidence/](./evidence/) | 链上证据（JSON）：Wave B 协议部署与冒烟、x402 实链冒烟、MCP 冒烟、precompile 探测。`npm run preflight` 会校验其中一部分 |
 

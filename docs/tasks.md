@@ -2,6 +2,8 @@
 
 任务状态：`Todo` / `In Progress` / `Review` / `Done` / `Blocked` / `Partial`（有代码和测试，但没有接入运行时或存在已知的不实之处；以 [agent-implementation-plan.md](agent-implementation-plan.md) 为准）
 
+**2026-10-13 当前增量**：Phase 3 P0 已接入运行时（多轮偏好、最新池检索排序、搜索/助手统一）；WP4.2 已上传真实内容并展示抽取来源与复核补件，WP4.3 已展示当前 Demo 持仓镜像与关联决策。P1 的主动重排、确认动作卡片、Live 持仓和 PDF/OCR 仍待完成。详见 [copilot.md](copilot.md) 和规划 §13。
+
 每个任务都必须有 Owner 和可验证方式。没有验证方式的任务不要认领。  
 当前主线：**Web3 原生贸易融资协议：出口商 tokenize eBL，AI 自主定价与执行，全球投资者直接出资，Injective 全程上链审计**。
 
@@ -131,7 +133,7 @@ AI 的目标不是"写一段解释"，而是产出可被后端、前端和合约
 | AI-16 | 实现决策审计日志 `src/agent/decisionLogger.js`：保存输入快照、推理摘要、证据哈希、决策与链上 tx，并支持 tx 回填 | Bowen | Partial | `node --test tests/decisionLogger.test.js`，`decision_id` 可重算且日志重启后仍可读取 | canonical hash 生成稳定 `decision_id`；原子 JSON 持久化、幂等 upsert、状态/tx 回填与重启读取；4 tests passed<br>**2026-10-12 复核（Partial）**：决策日志已由 AgentService 写入（重启后可读，带策略结论、审批和执行记录）；决策锚定与重放校验尚未做（WP5.5、WP7.1）。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP1.5。 |
 | AI-17 | 实现 AI 文档解析器 `src/agent/documentParser.js`：从 eBL / 发票 / 保险单图片或 PDF 提取结构化字段，并保留字段级来源与置信度 | Bowen | Partial | `node --test tests/documentParser.test.js`，固定扫描件 fixtures 的关键字段准确率达到验收阈值，LLM 失败可回退/报人工复核 | Markdown/text 原生解析；PDF/image 走可注入 OCR；字段级 line/method/confidence、bundle merge、AI 失败确定性 fallback/人工复核；5 tests passed<br>**2026-10-12 复核（Partial）**：只有文本/Markdown 的确定性解析；PDF/图片的 OCR 与 AI 抽取器没有实现，只留了可注入接口。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.2。<br>**2026-10-13**：解析器新增桶计货物（读取单证写明的吨数，不做换算），补了铜/原油的保单样例；PDF 和图片会被存储并标为 OCR_REQUIRED 转人工，仍无抽取。 |
 | AI-18 | 实现合规标注引擎 `src/agent/complianceChecker.js`：制裁、出口管制、MLETR、eUCP、DCSA、ICC DSI；只标注风险，不按企业规模拒绝服务 | Agent | Partial | `node --test tests/complianceChecker.test.js`，通过、警告、阻断级风险 fixtures 均有证据引用 | `npm test` passed<br>**2026-10-12 复核（Partial）**：是关键字匹配的演示规则，不是真实名单筛查；输出措辞已更正为“demo keyword rule”。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.3。 |
-| AI-19 | 将现有浏览器端 `recommendEBL` 提炼为可测试的服务端投资顾问 `src/agent/investmentAdvisor.js`，支持自然语言偏好、排序理由与确定性 fallback | Agent | Done | `node --test tests/investmentAdvisor.test.js`，同一偏好返回稳定 Top 3，popup 与市场搜索复用同一结果 | `npm test` passed |
+| AI-19 | 将现有浏览器端 `recommendEBL` 提炼为可测试的服务端投资顾问 `src/agent/investmentAdvisor.js`，支持自然语言偏好、排序理由与确定性 fallback | Agent | Done | `node --test tests/investmentAdvisor.test.js`，旧投资顾问保留兼容；2026-10-13 搜索框和 popup 统一使用 src/copilot，多轮与排序测试见 tests/copilot*.test.js | `npm test` passed |
 | AI-20 | 实现多 LLM 竞争评估：同一 case 由 3 个 provider 独立输出结构化评估，以中位数/共识聚合，分歧过大时降级为确定性引擎并标警告 | Agent | Partial | `node --test tests/llmConsensus.test.js`，覆盖全成功、单 provider 失败、极端离群、全部失败四种情况 | `npm test` passed<br>**2026-10-12 复核（Partial）**：只有测试引用；已去掉对未配置 provider 注入 dummy key 的做法，provider 取自实际配置。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，Phase 7 的 7.2。 |
 
 ---
@@ -176,7 +178,7 @@ AI 的目标不是"写一段解释"，而是产出可被后端、前端和合约
 | FE-8 | Subscribe mock：投资者输入认购金额，显示获得 RWA 数量 | Bowen | Done | 手动访问 `npm run dev` | `app.js` renderSubscribe/computeSubscription：USDC 输入 → RWA tokens + cost / target redemption / target upside / gross yield；暂停态(PAUSE/FREEZE)禁用并提示 |
 | FE-9 | Evidence hash / quote hash 展示 | Bowen | Done | 手动访问 `npm run dev` | `app.js` #oracle-panel 展示 quote_hash + evidence_hash + `updatePricing(...)`（来自 `POST /api/oracle/pricing-update`）；"Push to RiskPricingOracle" → MCP push_pricing_to_oracle 返回 PricingUpdated tx（headless 验证） |
 | FE-10 | 合规提示 UI：target redemption is not guaranteed | Bowen | Done | 文案 review | investor 面板合规框 + subscribe 脚注："$1.00 是 target 非保本，依赖进口商付款/货物结算/保险" + "permissioned investors only" |
-| FE-11 | 开发 eBL 管理 View ③：上传 eBL/发票/保险单、查看解析与合规结果、tokenize 状态、质押/流转历史 | Bowen | Partial | `npm run dev` + 前端验收清单；上传 fixture 后可追踪 Parser → Checker → Mint → Open 全过程 | index.html + app.js updated<br>**2026-10-12 复核（Partial）**：上传不发内容，也不展示解析或合规结果。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP4.2。 |
+| FE-11 | 开发 eBL 管理 View ③：上传 eBL/发票/保险单、查看解析与合规结果、tokenize 状态、质押/流转历史 | Bowen | Partial | `npm run dev` + 前端验收清单；上传 fixture 后可追踪 Parser → Checker → Mint → Open 全过程 | index.html + app.js updated<br>**2026-10-12 复核（Partial）**：该历史缺口已在 2026-10-13 的 WP4.2 修复：真实内容上传、作业步骤、抽取字段/来源、发现及决策、修正补件重跑。Live tokenize/质押/流转历史仍未实现。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP4.2。 |
 | FE-12 | 开发投资组合 View ④：展示钱包持仓、成本、当前估值、目标收益、风险状态与兑付记录，替换 popup 内存数组 | Bowen | Partial | 连接测试钱包手动验收 + UI 测试；刷新页面后持仓不丢失 | index.html + app.js updated<br>**2026-10-12 复核（Partial）**：持仓来自服务器的 Demo 模拟认购记录（内存）；助手已不再使用本地数组，也不再说“认购成功”。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP4.3。 |
 | FE-13 | 开发 Agent 活动 View ⑤：展示真实决策日志、Agent 当前状态、触发源、推理摘要、证据与链上 tx；移除随机 tx 的模拟记录 | Bowen | Partial | 注入 xAPI 风险事件后，页面实时出现与后端/链上相同的 REPRICE 或 PAUSE 记录 | index.html + app.js updated<br>**2026-10-12 复核（Partial）**：Agent 控制台已上线（状态、决策时间线、审批、Demo 事件注入器、决策详情与追踪），只显示服务器真实记录；监控源产生的自动决策尚未实现（WP2.5）。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP4.1。 |
 | FE-14 | 增加出口商偏好参数面板：最低可接受发行价、到账速度偏好、目标融资额，并在自主开盘前校验约束 | Bowen | Done | 三组参数化用例；低于最低价时 Agent 不开盘并给出可解释原因 | wired pref-min-price<br>**2026-10-13**：偏好保存到服务器（`PUT /api/agent/cases/:id/preferences`）；接入流水线按偏好选速度，价格低于底价时 HOLD_FOR_REVIEW，之后的自动改价低于底价时转审批（策略 PRICE_GUARD）。`tests/agentIngestPipeline.test.js`。 |

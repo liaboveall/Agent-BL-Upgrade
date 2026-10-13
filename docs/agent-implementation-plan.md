@@ -1,8 +1,8 @@
 # AgentBL Agent 全量实现规划
 
-> 版本：v1.1（2026-10-12）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
+> 版本：v1.2（2026-10-13；Phase 3 P0、单证界面与 Demo 持仓已接线）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
 > 基线：`main` @ `2292906`。该基线下 `npm test` 541 个用例全部通过，合约测试 74 个通过。
-> 状态：**开发中**（Phase 0、Phase 1 和 Phase 2 的 Demo 部分已完成，见 §13 状态表；Phase 2 的实现说明在 §13 之后）。开发会话按本文推进，并随时更新 §13 的状态表。
+> 状态：**开发中**（Phase 0、Phase 1、Phase 2 的 Demo 部分和 Phase 3 P0 已完成；§13 状态表之后有阶段实现说明）。开发会话按本文推进，并随时更新 §13 的状态表。
 > 范围：项目里所有“应有的 Agent 功能”：`docs/tasks.md`、`docs/PRD.md`、`docs/injective-hackathon-gap-analysis2.md` 和 README 中承诺过的 Agent 能力，以及顺带的改进与优化。
 
 ---
@@ -1041,17 +1041,17 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 2.7 | 链上监听 | P1 | 1.7 | M | Todo |
 | 2.8 | 出口商偏好 | P0 | 2.4 | S | Done（2026-10-13；前端已保存到服务器） |
 | 2.9 | PRD §9.2 Agent API | P1 | 2.4 | S | Todo |
-| 3.1 | InvestorContext | P0 | — | M | Todo |
-| 3.2 | 意图路由 | P0 | 3.1 | M | Todo |
-| 3.3 | 检索 | P0 | 3.1 | M | Todo |
-| 3.4 | 排序 | P0 | 3.3 | S | Todo |
-| 3.5 | 推荐与解释 | P0 | 3.2–3.4 | M | Todo |
+| 3.1 | InvestorContext | P0 | — | M | Done（2026-10-13） |
+| 3.2 | 意图路由 | P0 | 3.1 | M | Done（2026-10-13；区间需澄清，LLM 提供方未实测） |
+| 3.3 | 检索 | P0 | 3.1 | M | Done（2026-10-13） |
+| 3.4 | 排序 | P0 | 3.3 | S | Done（2026-10-13） |
+| 3.5 | 推荐与解释 | P0 | 3.2–3.4 | M | Done（2026-10-13；先结构化结果，再核对后的叙述；LLM 用假提供方验证） |
 | 3.6 | 动态重排推送 | P1 | 3.5、1.5 | M | Todo |
-| 3.7 | 前端统一 | P0 | 3.5 | M | Todo |
+| 3.7 | 前端统一 | P0 | 3.5 | M | Done（2026-10-13） |
 | 3.8 | 动作提案 | P1 | 3.7 | M | Todo |
 | 4.1 | Agent 控制台 | P0 | 1.5 | L | Done（2026-10-12；暂缺：重放校验按钮（5.5）、模型用量（接入 LLM 后）、点击决策联动价格瀑布图（4.4）） |
-| 4.2 | eBL 管理 | P0 | 2.1 | M | Todo |
-| 4.3 | 持仓 | P0 | 0.1 | S | Todo |
+| 4.2 | eBL 管理 | P0 | 2.1 | M | Done（2026-10-13；文本上传、字段来源、SSE、修正补件重跑） |
+| 4.3 | 持仓 | P0 | 0.1 | S | Done（2026-10-13；Demo 服务器持仓、当前镜像与决策；Live 持仓不在本包） |
 | 4.4 | ID 贯通 | P1 | 4.1 | S | Todo |
 | 4.5 | 一键全流程演示 | P1 | 2.5、4.1 | M | Todo |
 | 4.6 | 国际化、无障碍、移动端 | P0 | 4.x | S | Todo |
@@ -1091,12 +1091,27 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 3. **`warcrisis-hormuz` 用原油案例**，不是规划里的铜战争案例：后者在目录里本来就是 `Paused`，播放不出任何变化。原油的价格已含战争折价，所以第一步是 `WARNING`（价格没有下调空间），第二步才是 `PAUSE`。
 4. **保险监控在 Demo 里只认场景时钟。** Demo 世界是 2026 年 6 月，用真实时钟看每张保单都已过期。Live 用真实时钟，并且只看已映射到链上池的池子。
 5. **Live 的 `OPEN` 只有记录，没有签名路线。** Live 下上传会得到 `OPEN` 提案，策略要求审批，但 `mintEBLV2 → pledge → createOffering` 的 owner 计划还没做，所以决策以 `SKIPPED` 结束并写明原因，不会假装有交易。这是 WP2.4 剩下的 Live 部分。
-6. **`HOLD_FOR_REVIEW` 还没有“复核通过”的出口。** 事件类型 `REVIEW_RESOLVED` 已定义，但没有接线；目前被挂起的单证需要修正后重新上传。
+6. **修正补件入口已在 WP4.2 接线（2026-10-13）**：`POST /api/agent/jobs/:id/review` 接收修正内容，创建新作业与 `REVIEW_RESOLVED` 事件，保留旧 HOLD 并重跑全部检查；不能直接强制放行。
 7. **桶计原油**：解析器现在读取 `bbl`，吨数只取单证上写明的（`78,221 MT`），不做换算；没有写明吨数时保持缺失并转人工复核。单价保留原单位（`unit_price_usd_per_bbl`）。
-8. **旧 `/api/ebl/upload`**：只带元数据（浏览器目前的做法）时仍只是 mock 确认；带 `content` 和 `case_id` 时同一份内容进入接入流水线，响应里多一个 `ingest` 字段如实说明结果。前端真正读取并上传文件内容属于 WP4.2。
+8. **旧 `/api/ebl/upload`**：只带元数据仍只是 mock 确认；带 `content` 和 `case_id` 时进入接入流水线。WP4.2 已将浏览器改为 FileReader 读取真实内容，直接上传 `/api/agent/ingest`，旧接口保留兼容。
 9. 新增 `AGENT_VALUATION_LLM`（默认 `true`）：接入流水线的估值步骤是否使用已配置的 LLM（失败或未配置时回退确定性路径）。
 
 **各阶段完成后**：给用户汇报，并按阶段给出建议的提交分组。
+
+---
+
+### Phase 3 P0 与 WP4.2 / WP4.3 实现说明（2026-10-13）
+
+- 新增 `src/copilot/`：结构化会话、偏好合并、中英文意图路由、最新池 BM25 检索、硬约束、分项排序、探索多样性和数字核对后的解释。搜索框与 `public/popup-assistant.js` 使用同一实现，旧市场搜索接口保留兼容。
+- 会话写入 `copilot-sessions.json`，默认一天 / 500 个活跃会话。仅存结构化偏好和排序摘要；消息串行，删除、过期或 Demo/Live 世代变化后，正在运行的请求不能恢复旧会话。
+- LLM 输出按 zod 校验；显式数字由确定性解析决定。模型关闭、繁忙、失败或超时会回退。遵守 `LLM_PROXY_ENABLED`、`LLM_MAX_TOKENS_CAP` 和 `LLM_PROXY_MAX_CONCURRENCY`，消息接口使用现有 llm 限流桶。SSE 先发 `result`，再发完整且核对数字的 `narrative`，最后 `done`。
+- WP4.2：实际文件内容上传、作业步骤、字段来源/置信度、发现及决策入口；复核以修正补件创建新作业，事件为 `REVIEW_RESOLVED`，全部检查重跑，旧证据保留。WP4.3：持仓取同一个服务器接口，显示原成本、来源、当前镜像和相关决策。
+- 当前边界：期限按单证的发货日期到 ETA 计算；地区和港口使用内置词典；单一数值上限/下限可执行，区间先澄清。候选是链下镜像，风险情报 fixture 只作参考；持仓是重启会清空的 Demo 记录。
+- P1 仍未完成：WP3.6 主动重排推送；WP3.8 金额/价格/份额确认卡片、Live 钱包认购；当前动作意图仅引导用户到现有面板，绝不自动执行。Phase 2 的 PDF/视觉、Live 开盘、链上监听等待办保持原状态。
+- **本地验证通过**：`npm run lint` 零警告、`npm run check` 通过、`npm test` **857/857**（零跳过）、`npm run test:coverage` **857/857**，lines **94.12%** / branches **82.48%** / functions **91.50%**。测试使用假 LLM/本地链桩，没有真实提供方调用或链上交易。证据与代码摘要见 [evidence/copilot-phase3-local.json](evidence/copilot-phase3-local.json)。
+- **浏览器自动化通过**：Chromium 153，中英文、1440px / 390px、Enter / Escape、多轮条件、搜索、市场 Demo 认购及持仓、真实文件上传、字段来源、复核补件和决策详情跳转，零页面脚本错误；Windows `curl.exe` 也确认了本机入口。桌面控制工具因 WSL 路径 URI 错误无法启动，所以使用本机 Playwright Chromium；没有声称完成内置窗格控制或用户人工试用。
+- **下一批入口**：按既定顺序推进 WP5.4 可靠性矩阵 → WP5.1 评测体系 → WP5.8 preflight 扩充。P1 和真实链上操作仍按 §16 的边界安排。
+- 本次提交分组（按依赖顺序）：① `feat(agent): connect document management and safe review resubmission`；② `feat(copilot): persistent investor context and explainable server ranking`；③ `feat(frontend): unify investor search and assistant with Copilot`；④ `docs: record Phase 3 P0 evidence and remaining P1 scope`。本地验收 JSON 保留验收当时的未提交状态；提交、推送和远端 CI 另行确认。
 
 ---
 

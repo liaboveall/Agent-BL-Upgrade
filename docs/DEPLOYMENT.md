@@ -134,12 +134,12 @@ HTTPS：`sudo certbot --nginx -d your-domain.com`
 
 ### LLM 中继
 
-AI 助手通过同源接口 `/api/llm/chat` 调用 LLM：key 留在服务器，服务器决定模型、限制 `max_tokens`（≤ 2048）、消息数和工具数，并发上限由 `LLM_PROXY_MAX_CONCURRENCY` 控制（默认 4），每个客户端每分钟的调用数由 `LLM_RATE_LIMIT_PER_MIN` 控制（默认 30）。
+投资者 Copilot 通过同源的 `/api/copilot/query` 或 `/api/copilot/sessions/:id/messages` 请求服务器。服务器负责偏好解析、最新池检索、排序和解释；旧 `/api/llm/chat` 保留为兼容中继。key 留在服务器。Copilot 遵守 `LLM_PROXY_ENABLED`、`LLM_MAX_TOKENS_CAP`（默认 2048，推理模型可调高或设为 0）和 `LLM_PROXY_MAX_CONCURRENCY`（默认 4；繁忙时使用确定性回退）；消息接口和旧中继共用 `LLM_RATE_LIMIT_PER_MIN` 的每客户端限流桶（默认 30）。每轮最多两次模型调用，分别用于偏好解析和解释，单次超时 15 秒。金额、收益等明确数值始终取自确定性解析；模型解释的数字未经结构化结果核对不会展示。
 
 但这个接口**本身没有登录**：任何能访问站点的人都能在限流范围内消耗你的 LLM 额度。公开部署时请：
 
 1. 在 LLM 提供方的控制台给这个 key 设置**消费上限**；
-2. 或者不想承担这个风险时设置 `LLM_PROXY_ENABLED=false`，AI 助手会退回到关键词搜索；
+2. 或者设置 `LLM_PROXY_ENABLED=false`，Copilot 仍可使用确定性偏好解析、检索排序和模板解释；
 3. 确保设置了正确的 `TRUST_PROXY`，否则所有用户会共用同一个限流桶（或被伪造 IP 绕过）。
 
 ### 运行模式与 Live
@@ -160,6 +160,10 @@ AI 助手通过同源接口 `/api/llm/chat` 调用 LLM：key 留在服务器，�
 `DEPLOYER_PRIVATE_KEY`（合约 owner）只在你运行 `cd hardhat && npm run deploy:all`（或 `deploy:protocol`、`deploy:payment-oracle`）的机器上需要，**不要放到对公网的服务器上**。设置 `SIGNER_KEYS_STRICT=true` 后，上面两个角色不会再回退到 owner 密钥。
 
 ### Agent 运行时
+
+**Copilot 会话**：服务器入口把结构化偏好保存在 `AGENTBL_RUNTIME_DIR/copilot-sessions.json`，默认有效期 `COPILOT_SESSION_TTL_SEC=86400`、最多 `COPILOT_MAX_SESSIONS=500` 个活跃会话。会话 ID 不可猜，作为读取和删除该会话的凭据；不保存原始聊天、钱包或个人信息。切换 Demo/Live 或重置 Demo 会清空并持久化会话失效，旧会话返回 404/409，重启后也不能恢复为有效会话。`createServer()` 的测试实例只使用内存。搜索框用无状态单轮接口，悬浮助手用多轮会话。消息的 SSE 先发结构化结果，再发完整且已核对数字的解释；当前不支持推荐变化推送（WP3.6）。
+
+**单证界面**：上传文件的真实 base64 内容进入 `/api/agent/ingest`，作业进度通过现有活动 SSE 刷新，显示抽取字段及行号、方法、置信度。文本、Markdown 支持抽取；PDF、图片只接收存储并挂起复核。`POST /api/agent/jobs/:id/review` 用于给 HOLD 作业提交修正单证，Live 需要管理员令牌；产生新作业和 `REVIEW_RESOLVED` 事件，保留旧记录，并重跑全部检查，不能强制跳过注入或合规阻断。持仓始终是服务器的 Demo 内存记录，并显示当前镜像状态和关联决策；服务器重启后清空。
 
 服务器入口会自动启动 Agent 运行时（`AGENT_ENABLED=false` 可关闭，决策和活动仍可读取）。`createServer()` 本身不启动任何定时器。
 

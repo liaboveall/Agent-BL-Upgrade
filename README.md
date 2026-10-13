@@ -44,7 +44,8 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 | Pricing, risk, RAG, MCP tools, dashboard / 定价、风险、RAG、MCP 工具、前端 | Working. Deterministic fallback keeps the demo running without any key. / 可用，没有任何 Key 也能完整演示 |
 | x402 paid intelligence / x402 付费情报 | **Demo:** simulated locally (no real funds). **Live:** x402 V2 (EIP-3009) through a facilitator, exercised end-to-end with a mock facilitator, the official `@injectivelabs/x402` client and the browser wallet flow; it needs a facilitator that lists `eip155:1439`, a payee address and a funded wallet; a real testnet payment and its on-chain attestation were re-verified on 2026-10-12 ([`docs/x402-integration.md`](docs/x402-integration.md)). / Demo 为本地模拟；Live 走 x402 V2，需要支持 `eip155:1439` 的 Facilitator、收款地址和有余额的钱包；2026-10-12 已用真实测试网付款和链上证明复验 |
 | Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The Injective testnet contracts were **redeployed as v2 on 2026-10-12**: `npm run verify:bytecode` confirms the on-chain code matches the source. / 源码已加固为 v2，测试网已于 2026-10-12 重新部署；`npm run verify:bytecode` 可确认链上代码与源码一致 |
-| Autonomous agent / 自主 Agent | **Runtime, document intake, monitoring and a Demo scenario player are in place.** Uploaded documents (`POST /api/agent/ingest`) run a nine-step pipeline (parse, injection screen, consistency, compliance, valuation, world risk, three-speed pricing, exporter constraints, decision) and end in OPEN, HOLD_FOR_REVIEW or REJECT; scheduled monitors turn *changes* in world risk and insurance deadlines into events; Demo scenarios replay a whole cargo story. Events (also injectable through `POST /api/agent/events`) become decisions with a recorded policy verdict; in Demo they run as simulated actions on the offchain pool (a `demo:` reference, never a tx hash), in Live they only wait in an approval queue and run after a human approves (pricing actions by the server's authorised key, owner-signed ones through `npm run agent:approve`). The Agent console (status, decision timeline, approvals, Demo event injector) is live. Not built yet: PDF/image extraction, Live opening (the three owner transactions), the chain watcher and the investor Copilot. Plan: [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md). / **运行时、单证接入、监控和 Demo 场景播放器已就绪**：上传的单证（`POST /api/agent/ingest`）走九步流水线（解析、注入筛查、一致性、合规、估值、世界风险、三档定价、出口商约束、决策），结果是开盘、挂起复核或拒绝；定时监控把世界风险和保险到期的**变化**变成事件；Demo 场景可以回放一整批货的故事。通过 `POST /api/agent/events` 注入的事件也会变成带策略结论的决策；Demo 下是对链下池子的模拟执行（`demo:` 引用，没有交易哈希），Live 下只进审批队列，批准后才执行（定价类动作由服务器的已授权密钥发送，需要 owner 的动作用 `npm run agent:approve`）。Agent 控制台（状态、决策时间线、审批、Demo 事件注入器）已上线。尚未完成：PDF/图片抽取、Live 开盘（三笔 owner 交易）、链上监听、投资者 Copilot。规划见 [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md) |
+| Autonomous agent / 自主 Agent | **Runtime, document intake, monitoring and a Demo scenario player are in place.** Uploaded documents (`POST /api/agent/ingest`) run a nine-step pipeline (parse, injection screen, consistency, compliance, valuation, world risk, three-speed pricing, exporter constraints, decision) and end in OPEN, HOLD_FOR_REVIEW or REJECT; scheduled monitors turn *changes* in world risk and insurance deadlines into events; Demo scenarios replay a whole cargo story. Events (also injectable through `POST /api/agent/events`) become decisions with a recorded policy verdict; in Demo they run as simulated actions on the offchain pool (a `demo:` reference, never a tx hash), in Live they only wait in an approval queue and run after a human approves (pricing actions by the server's authorised key, owner-signed ones through `npm run agent:approve`). The Agent console (status, decision timeline, approvals, Demo event injector) is live. Not built yet: PDF/image extraction, Live opening (the three owner transactions), the chain watcher. Plan: [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md). / **运行时、单证接入、监控和 Demo 场景播放器已就绪**：上传的单证（`POST /api/agent/ingest`）走九步流水线（解析、注入筛查、一致性、合规、估值、世界风险、三档定价、出口商约束、决策），结果是开盘、挂起复核或拒绝；定时监控把世界风险和保险到期的**变化**变成事件；Demo 场景可以回放一整批货的故事。通过 `POST /api/agent/events` 注入的事件也会变成带策略结论的决策；Demo 下是对链下池子的模拟执行（`demo:` 引用，没有交易哈希），Live 下只进审批队列，批准后才执行（定价类动作由服务器的已授权密钥发送，需要 owner 的动作用 `npm run agent:approve`）。Agent 控制台（状态、决策时间线、审批、Demo 事件注入器）已上线。尚未完成：PDF/图片抽取、Live 开盘（三笔 owner 交易）、链上监听。规划见 [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md) |
+| Investor Copilot / 投资者 Copilot | **Phase 3 P0 implemented.** Multi-turn preferences, deterministic/validated LLM parsing, current offchain-pool retrieval, explainable ranking and SSE responses; search and the floating assistant share the server implementation. No action executes from chat. Dynamic rerank notifications and confirmed action cards remain P1. [Guide](docs/copilot.md). / **Phase 3 P0 已实现**：多轮偏好、确定性与经校验的 LLM 解析、当前链下池检索、可解释排序和 SSE；搜索框与悬浮助手共用服务器逻辑。聊天不会执行操作。主动重排通知与确认动作卡片仍属 P1。 |
 | Investor payments for RWA shares / 投资者认购的真实付款 | **Not implemented.** Subscriptions mint share receipts and record the amount owed; no stablecoin is escrowed. / **未实现**，认购只铸造份额凭证并记录应付金额 |
 
 ---
@@ -1182,7 +1183,7 @@ Important limitations include:
 - Demo Mode does not represent real investment execution;
 - the smart contracts have **no payment leg for RWA subscriptions**: `subscribe` mints a share receipt and records the amount owed, but no stablecoin is escrowed and `settle` does not distribute repayments (see [`docs/contracts.md`](docs/contracts.md) §0.6);
 - the Injective testnet contracts are owned by a single deployer key (no multisig); ownership transfer is two-step (see [`docs/contracts.md`](docs/contracts.md) §0);
-- offering, pool and subscription state lives in server memory and resets on restart (only x402 receipts, cached reports and Mystery reveals are persisted; the agent decision log is not written at runtime yet, see the status table);
+- offering, pool and subscription state lives in server memory and resets on restart (x402 receipts, cached reports, Mystery reveals, Agent decisions and Copilot preferences are persisted; see the status table);
 - real-world legal ownership requires jurisdiction-specific integration;
 - production eBL infrastructure requires recognized eBL systems and standards;
 - real logistics feeds are not yet fully integrated;
@@ -1199,7 +1200,7 @@ AgentBL 当前仍然是一个 **Hackathon Prototype**。
 - Demo Mode 不代表真实投资执行；
 - 合约**没有认购的付款环节**：`subscribe` 只铸造份额凭证并记录应付金额，不托管稳定币，`settle` 也不向投资者分配回款；
 - 测试网合约的 owner 是单个部署者密钥（没有多签），所有权转移是两步式的（见 [`docs/contracts.md`](docs/contracts.md) §0）；
-- 池子、认购等状态保存在服务器内存里，重启后清空（只有 x402 收据、报告缓存、决策日志和 Mystery 记录会持久化）；
+- 池子、认购等状态保存在服务器内存里，重启后清空（x402 收据、报告缓存、决策日志、Copilot 偏好和 Mystery 记录会持久化）；
 - 现实世界法律所有权需要针对司法辖区进行进一步集成；
 - Production eBL 需要接入被认可的 eBL 系统与行业标准；
 - 真实物流数据尚未完整接入；
@@ -1296,11 +1297,13 @@ Web3 Settlement
 - Solidity Smart Contracts
 - Injective Testnet Evidence
 - Local Demo Mode
+- Multi-turn Investor Copilot with explainable current-pool ranking
+- Document jobs, extraction provenance and corrected-document review
 
 ### Next Stage | 下一阶段
 
-- Conversational Investor Preference Modelling
-- Dynamic Opportunity Ranking
+- Proactive Opportunity Re-ranking Notifications
+- Confirmed Action Cards and Live Wallet Subscriptions
 - Richer Logistics Context
 - Real-world Data Integration
 - Stronger Recommendation Explainability
