@@ -25,7 +25,8 @@ export const EVENT_STATUS = Object.freeze({
 });
 
 const KEEP_PAYLOAD = new Set([EVENT_STATUS.RECEIVED, EVENT_STATUS.PROCESSING, EVENT_STATUS.DEAD]);
-const stream = (event) => `${event.case_id}::${event.type}`;
+const riskTypes = new Set(['WORLD_RISK_UPDATED', 'RISK_CLEARED']);
+const stream = (event) => `${event.case_id}::${riskTypes.has(event.type) ? 'WORLD_RISK' : event.type}`;
 
 export class EventBus {
   /**
@@ -72,6 +73,15 @@ export class EventBus {
       const saved = await readJson(this.indexFile, null);
       for (const entry of saved?.entries ?? []) this.entries.set(entry.idempotency_key, entry);
       for (const [key, occurred] of Object.entries(saved?.last_occurred ?? {})) this.lastOccurred.set(key, occurred);
+      // Older indexes kept clearing and escalation in separate streams. Preserve both high-water marks.
+      for (const [key, occurred] of this.lastOccurred) {
+        const split = key.lastIndexOf('::');
+        if (!riskTypes.has(key.slice(split + 2))) continue;
+        const combined = `${key.slice(0, split)}::WORLD_RISK`;
+        if (!this.lastOccurred.has(combined) || Date.parse(occurred) > Date.parse(this.lastOccurred.get(combined))) {
+          this.lastOccurred.set(combined, occurred);
+        }
+      }
     }
     // Anything that was in flight when the process stopped is picked up again, oldest first.
     const unfinished = [...this.entries.values()]

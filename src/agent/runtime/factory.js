@@ -64,17 +64,19 @@ export function createAgentService(options = {}) {
   const getGeneration = options.getGeneration ?? (() => modeController?.snapshot().generation ?? 1);
   const chainConfig = options.chainConfig === undefined ? loadChainConfig() : options.chainConfig;
 
-  const activity = options.activity ?? new ActivityLog({ store, mode: getMode });
-  const logger = options.logger ?? new DecisionLogger({ filePath: file('agent-decisions.json') });
-  const approvals = options.approvals ?? new ApprovalQueue({ file: file('agent-approvals.json'), ttlSec: config.approvalTtlSec });
-  const registry = options.registry ?? new PoolRegistry({ file: file('agent-pools.json'), protectedChainPools: config.protectedChainPools });
+  const activity = options.activity ?? new ActivityLog({ store, mode: getMode, now: options.now });
+  const logger = options.logger ?? new DecisionLogger({ filePath: file('agent-decisions.json'), clock: options.now });
+  const approvals = options.approvals ?? new ApprovalQueue({ file: file('agent-approvals.json'), ttlSec: config.approvalTtlSec, now: options.now });
+  const registry = options.registry ?? new PoolRegistry({ file: file('agent-pools.json'), protectedChainPools: config.protectedChainPools, now: options.now });
   const tracer = options.tracer ?? new Tracer({ file: file('agent-traces.jsonl') });
   const bus = options.bus ?? new EventBus({
     handler: async () => {}, // replaced by the service
     eventsFile: file('agent-events.jsonl'),
-    indexFile: file('agent-event-index.json')
+    indexFile: file('agent-event-index.json'),
+    now: options.now,
+    sleep: options.sleep
   });
-  const sim = options.sim ?? new SimExecutor({ store });
+  const sim = options.sim ?? new SimExecutor({ store, now: options.now });
   const ingest = options.ingest ?? new IngestService({ dir, maxBytes: config.uploadMaxBytes, now: options.now });
   const preferences = options.preferences ?? new PreferenceStore({ file: file('agent-preferences.json'), now: options.now });
   const riskTracker = options.riskTracker ?? new RiskTracker({ clearTicks: config.riskClearTicks, file: file('agent-risk-snapshots.json') });

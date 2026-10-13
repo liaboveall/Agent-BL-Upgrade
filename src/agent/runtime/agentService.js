@@ -22,7 +22,7 @@ import { proposeFromEvent } from '../pipelines/monitorPipeline.js';
 import { ApprovalError, APPROVAL_STATUS } from './approvals.js';
 import { effectiveAutonomy } from './config.js';
 import { normalizeEvent } from './events.js';
-import { EXECUTOR_METHOD_FOR, PRICING_ACTION_FOR, ExecutionPendingError } from './executors/chainExecutor.js';
+import { EXECUTOR_METHOD_FOR, PRICING_ACTION_FOR, ExecutionPendingError, isTransientRpcError } from './executors/chainExecutor.js';
 import { buildOwnerPlan, verifyOwnerTx } from './ownerTxPlan.js';
 import { INFORMATIONAL_ACTIONS, evaluatePolicy } from './policy.js';
 import { PreferenceStore } from './preferences.js';
@@ -222,6 +222,8 @@ export class AgentService {
     await this.init();
     const mode = this.getMode();
     const event = normalizeEvent(raw, { now: this.now, defaultMode: mode === 'live' ? 'live' : 'demo' });
+    event.runtime_generation = this.getGeneration();
+    event.runtime_mode = mode;
     if (origin === 'api' && mode === 'live' && !LIVE_ADMIN_EVENT_TYPES.includes(event.type)) {
       throw new AgentServiceError('event_not_allowed_in_live',
         `${event.type} cannot be injected by hand in Live mode; allowed: ${LIVE_ADMIN_EVENT_TYPES.join(', ')}`, 403);
@@ -309,18 +311,33 @@ export class AgentService {
   /** Bus handler: one event → zero or more decisions. Idempotent by decision id. */
   async #handleEvent(event) {
     const mode = this.getMode();
+    const generation = this.getGeneration();
     const run = this.tracer.startRun({ name: 'agent.event', attributes: { event_type: event.type, case_id: event.case_id, source: event.source, mode } });
     try {
+      if (event.runtime_mode !== undefined && (event.runtime_mode !== mode || event.runtime_generation !== generation)) {
+        await run.end('ok');
+        return { ignored: 'Runtime changed since the event was queued', decisions: [] };
+      }
       if (event.type === 'EMERGENCY_STOP_CHANGED') {
         await run.end('ok');
         return { ignored: 'handled at submission' };
       }
       await this.ensurePools();
+      // Reconcile from the saved proposal, never re-price a replay against a pool changed by its first execution.
+      const recorded = (await this.logger.list({ case_id: event.case_id })).filter((decision) => decision.event_id === event.event_id);
+      if (recorded.length) {
+        for (const decision of recorded) {
+          if (decision.status === 'DECIDED') await this.#route(decision, event, null, run);
+        }
+        await run.end('ok');
+        return { decisions: recorded.map((decision) => decision.decision_id), recovered: true };
+      }
       const pool = this.store.pools.get(event.pool_id ?? event.case_id) ?? this.#poolByCase(event.case_id);
       const documentEvent = event.type === 'DOCUMENTS_INGESTED' || event.type === 'REVIEW_RESOLVED' && event.data?.job_id;
       const proposed = documentEvent
         ? await this.#proposeFromUpload(event, pool, run)
-        : await run.span('monitor_pipeline', async () => proposeFromEvent(event, { pool, mode, now: () => Date.now() }), { event_type: event.type });
+        : await run.span('monitor_pipeline', async () => proposeFromEvent(event, { pool, mode, now: () => this.now().getTime() }), { event_type: event.type });
+      if (mode !== this.getMode() || generation !== this.getGeneration()) throw new AgentServiceError('mode_changed', 'Runtime changed while processing this event', 409);
       if (proposed.proposals.length === 0) {
         this.#activity('SYSTEM', 'EVENT_IGNORED', null, { event_id: event.event_id, type: event.type, reason: proposed.ignored }, { caseId: event.case_id, poolId: pool?.poolId });
         await run.end('ok');
@@ -382,6 +399,7 @@ export class AgentService {
 
   async #decide(event, pool, proposal, index, run) {
     const mode = this.getMode();
+    const generation = this.getGeneration();
     const poolId = pool?.poolId ?? event.pool_id ?? event.case_id;
     const idempotencyKey = index === 0 ? event.idempotency_key : `${event.idempotency_key}#${index}`;
     const core = {
@@ -435,6 +453,7 @@ export class AgentService {
         }
       }
     ));
+    this.#assertCurrent({ mode, generation });
     const action = policy.action_override ?? proposal.action;
     const record = await this.logger.record({
       ...core,
@@ -443,7 +462,7 @@ export class AgentService {
       proposed_action: proposal.action,
       reasoning_summary: proposal.reasoning_summary,
       mode,
-      generation: this.getGeneration(),
+      generation,
       chain_pool_id: chainPoolId,
       pipeline: [...proposal.pipeline, { step: 'policy', status: policy.verdict === 'REJECTED' ? 'FAIL' : 'PASS', duration_ms: Date.now() - policyStarted }],
       findings: proposal.findings,
@@ -528,11 +547,21 @@ export class AgentService {
       pool_id: decision.pool_id,
       chain_pool_id: decision.chain_pool_id ?? null,
       params: decision.proposal?.params ?? {},
-      onSubmitted
+      onSubmitted,
+      assertCurrent: () => this.#assertCurrent(decision)
     };
   }
 
+  #isCurrent(decision) {
+    return decision.mode === this.getMode() && (decision.generation === undefined || decision.generation === this.getGeneration());
+  }
+
+  #assertCurrent(decision) {
+    if (!this.#isCurrent(decision)) throw new AgentServiceError('mode_changed', 'Runtime mode or generation changed since this proposal was made', 409);
+  }
+
   async #execute(decision, run, approval = null) {
+    if (!this.#isCurrent(decision)) return this.#fail(decision, { code: 'mode_changed', message: 'Runtime mode or generation changed before execution' }, approval);
     const informational = INFORMATIONAL_ACTIONS.includes(decision.action);
     if (informational && this.getMode() === 'live') {
       // A Live record changes nothing on-chain. The offchain mirror is updated and nothing is claimed as executed.
@@ -541,6 +570,7 @@ export class AgentService {
     }
 
     const route = await this.#executorFor(decision);
+    if (!this.#isCurrent(decision)) return this.#fail(decision, { code: 'mode_changed', message: 'Runtime changed while resolving the executor' }, approval);
     if (!route) {
       return this.#fail(decision, {
         code: this.getMode() === 'live' ? 'chain_unavailable' : 'no_executor',
@@ -573,8 +603,8 @@ export class AgentService {
     } catch (thrown) {
       // executeWithRetry wraps whatever the executor threw; the executor's own error is what matters.
       const error = thrown?.name === 'RetryExhaustedError' && thrown.cause ? thrown.cause : thrown;
-      if (error instanceof ExecutionPendingError) {
-        await this.logger.update(decision.decision_id, { status: 'EXECUTING', execution: { mode: 'chain', tx_hash: error.tx_hash, pending: true } });
+      if (error instanceof ExecutionPendingError || error.code === 'broadcast_uncertain') {
+        await this.logger.update(decision.decision_id, { status: 'EXECUTING', execution: { mode: 'chain', ...(error.tx_hash ? { tx_hash: error.tx_hash } : {}), pending: true, reconciliation_required: !error.tx_hash, note: error.message } });
         this.#activity('EXECUTION', 'EXECUTION_PENDING', decision, { decision_action: decision.action }, { tx_hash: error.tx_hash });
         return this.logger.get(decision.decision_id);
       }
@@ -601,9 +631,13 @@ export class AgentService {
   }
 
   async #complete(decision, execution, approval = null) {
-    const updated = await this.logger.update(decision.decision_id, { status: 'COMPLETED', execution, error: undefined });
+    const updated = await this.logger.update(decision.decision_id, { status: 'COMPLETED', execution, error: undefined,
+      ...(approval ? { approval: { ...decision.approval, status: 'EXECUTED' } } : {}) });
     await this.#maybeProposeSettlement(updated);
-    if (approval) await this.approvals.markExecuted(approval.approval_id, { reference: execution.reference, tx_hash: execution.tx_hash ?? null });
+    // A separate approval-store write must not turn a verified execution into a failure. A later
+    // tick repairs this checkpoint from the completed decision if the process/write stops here.
+    if (approval) await this.approvals.markExecuted(approval.approval_id, { reference: execution.reference, tx_hash: execution.tx_hash ?? null })
+      .catch((error) => this.#noteError(error));
     this.#activity('EXECUTION', 'EXECUTION_CONFIRMED', updated, {
       decision_action: updated.action,
       mode: execution.mode,
@@ -623,6 +657,7 @@ export class AgentService {
    * own event, so the policy engine (which always asks for approval) decides what happens next.
    */
   async #maybeProposeSettlement(decision) {
+    if (!this.#isCurrent(decision)) return;
     if (!['RECORD_PAYMENT', 'RECORD_ARRIVAL'].includes(decision.action)) return;
     const pool = this.store.pools.get(decision.pool_id) ?? this.#poolByCase(decision.case_id);
     const settlement = pool?.settlement;
@@ -650,6 +685,7 @@ export class AgentService {
 
   /** Keep the offchain mirror of a Live pool in step with what just happened on-chain. Best effort. */
   async #mirror(decision) {
+    if (!this.#isCurrent(decision)) return;
     try {
       await this.sim.execute({
         ...this.#command(decision),
@@ -663,6 +699,7 @@ export class AgentService {
   // ---------------------------------------------------------------- approvals
 
   async #requestApproval(decision) {
+    this.#assertCurrent(decision);
     const mode = this.getMode();
     let route = 'sim';
     let plan = null;
@@ -681,6 +718,7 @@ export class AgentService {
         });
       }
     }
+    this.#assertCurrent(decision);
     const approval = await this.approvals.create({
       decision_id: decision.decision_id,
       route,
@@ -705,7 +743,7 @@ export class AgentService {
     this.#activity('APPROVAL', 'APPROVAL_GRANTED', decision, { decision_action: decision.action, approval_id: approvalId, by });
     await this.logger.update(decision.decision_id, { approval: { approval_id: approvalId, status: 'APPROVED', route: approval.route, decided_by: by, decided_at: approval.decided_at } });
 
-    if (approval.mode !== this.getMode()) {
+    if (approval.mode !== this.getMode() || !this.#isCurrent(decision)) {
       await this.approvals.markFailed(approvalId, { code: 'mode_changed', message: `Approved in ${this.getMode()} but created in ${approval.mode}` });
       await this.#fail(decision, { code: 'mode_changed', message: `The runtime mode changed from ${approval.mode} to ${this.getMode()} before this was approved` });
       throw new AgentServiceError('mode_changed', 'The runtime mode changed since this proposal was made; it was not executed', 409);
@@ -743,9 +781,12 @@ export class AgentService {
     }
     const step = approval.plan?.steps?.[stepIndex];
     if (!step) throw new ApprovalError('unknown_step', `Approval ${approvalId} has no step ${stepIndex}`, 400);
+    const decision = await this.logger.get(approval.decision_id);
+    this.#assertCurrent(decision);
 
     const verifier = verify ?? ((input) => this.#verifyOwnerStep(input));
     const verdict = await verifier({ step, txHash });
+    this.#assertCurrent(decision);
     if (!verdict.ok) {
       this.#activity('APPROVAL', 'OWNER_TX_REJECTED', null, { approval_id: approvalId, step: stepIndex, errors: verdict.errors }, { caseId: approval.case_id, poolId: approval.pool_id });
       throw new ApprovalError('tx_verification_failed', `The transaction does not match the approved plan: ${verdict.errors.join('; ')}`, 422);
@@ -754,7 +795,6 @@ export class AgentService {
     const recorded = await this.approvals.recordStep(approvalId, {
       index: stepIndex, tx_hash: txHash, block_number: verdict.block_number, from: verdict.from, confirmed_events: verdict.confirmed_events, verified_at: this.now().toISOString()
     });
-    const decision = await this.logger.get(approval.decision_id);
     if (!recorded.complete) return { approval: recorded.approval, decision, complete: false };
 
     const base = String(this.chainConfig?.explorerBase ?? '').replace(/\/$/u, '');
@@ -797,7 +837,7 @@ export class AgentService {
   async tick() {
     await this.init();
     const expired = await this.approvals.expireStale();
-    for (const approval of expired) {
+    for (const approval of this.approvals.list({ status: APPROVAL_STATUS.EXPIRED, limit: 2000 })) {
       const decision = await this.logger.get(approval.decision_id);
       if (decision && ['PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE'].includes(decision.status)) {
         const updated = await this.logger.update(decision.decision_id, { status: 'SKIPPED', note: 'The approval expired before anyone acted on it', approval: { ...decision.approval, status: 'EXPIRED' } });
@@ -805,6 +845,31 @@ export class AgentService {
       }
     }
     await this.#reconcilePending();
+    // Approval was durably granted but the process stopped before recording EXECUTING.
+    for (const approval of this.approvals.list({ status: APPROVAL_STATUS.APPROVED })) {
+      const decision = await this.logger.get(approval.decision_id);
+      if (decision?.status === 'COMPLETED') {
+        await this.approvals.markExecuted(approval.approval_id, { reference: decision.execution?.reference ?? null, tx_hash: decision.execution?.tx_hash ?? null });
+        await this.#maybeProposeSettlement(decision);
+        continue;
+      }
+      if (decision?.status === 'FAILED') {
+        await this.approvals.markFailed(approval.approval_id, decision.error ?? 'Execution failed before approval checkpoint');
+        continue;
+      }
+      if (!decision || !['DECIDED', 'PENDING_APPROVAL'].includes(decision.status)) continue;
+      if (!this.#isCurrent(decision)) {
+        await this.#fail(decision, { code: 'mode_changed', message: 'Runtime changed before approved action recovery' }, approval);
+      } else if (approval.route === 'owner_cli') {
+        await this.approvals.markAwaitingOwner(approval.approval_id);
+        await this.logger.update(decision.decision_id, { status: 'AWAITING_OWNER_SIGNATURE' });
+      } else {
+        await this.mutex.run(decision.pool_id, async () => {
+          const current = await this.logger.get(decision.decision_id);
+          if (['DECIDED', 'PENDING_APPROVAL'].includes(current.status)) await this.#execute(current, null, approval);
+        });
+      }
+    }
     for (const source of this.sources) {
       try {
         const events = await source({ service: this });
@@ -819,20 +884,50 @@ export class AgentService {
 
   async #reconcilePending() {
     if (this.getMode() !== 'live') return;
-    const pending = (await this.logger.list({ status: 'EXECUTING' })).filter((decision) => decision.execution?.tx_hash && decision.mode === 'live');
+    const pending = (await this.logger.list({ status: 'EXECUTING' })).filter((decision) => decision.mode === 'live');
     if (!pending.length) return;
-    const chain = await this.getChain();
+    const chain = await this.getChain().catch((error) => { this.#noteError(error); return null; });
     if (!chain) return;
     for (const decision of pending) {
-      try {
-        const result = await chain.findTransaction(decision.execution.tx_hash, decision.action);
-        if (!result) continue;
-        const approval = this.approvals.list({ decision_id: decision.decision_id })[0] ?? null;
-        await this.#mirror(decision);
-        await this.#complete(decision, this.#executionRecord(result, 1, Date.now()), approval && approval.status === APPROVAL_STATUS.APPROVED ? approval : null);
-      } catch (error) {
-        await this.#fail(decision, error);
-      }
+      await this.mutex.run(decision.pool_id, async () => {
+        const current = await this.logger.get(decision.decision_id);
+        if (current.status !== 'EXECUTING') return;
+        if (!current.execution?.tx_hash) {
+          try {
+            const recovered = await chain.reconcileCommand?.(this.#command(current));
+            if (recovered) {
+              const approval = this.approvals.list({ decision_id: current.decision_id }).find((entry) => entry.status === APPROVAL_STATUS.APPROVED);
+              await this.#mirror(current);
+              await this.#complete(current, this.#executionRecord(recovered, 0, Date.now()), approval);
+              return;
+            }
+          } catch (error) {
+            if (error instanceof ExecutionPendingError) {
+              await this.logger.update(current.decision_id, { execution: { ...current.execution, tx_hash: error.tx_hash, pending: true, reconciliation_required: false } });
+              return;
+            }
+            this.#noteError(error);
+          }
+          await this.logger.update(current.decision_id, { execution: { ...current.execution, mode: 'chain', pending: true, reconciliation_required: true,
+            note: 'Execution was interrupted without a durable transaction hash; operator reconciliation is required before any resubmission' } });
+          return;
+        }
+        try {
+          const result = await chain.findTransaction(current.execution.tx_hash, current.action);
+          if (!result) return;
+          const approval = this.approvals.list({ decision_id: current.decision_id })[0] ?? null;
+          await this.#mirror(current);
+          await this.#complete(current, this.#executionRecord(result, 1, Date.now()), approval && approval.status === APPROVAL_STATUS.APPROVED ? approval : null);
+        } catch (error) {
+          if (isTransientRpcError(error)) {
+            this.#noteError(error);
+            await this.logger.update(current.decision_id, { execution: { ...current.execution, pending: true, last_error: { code: error.code, message: String(error.message).slice(0, 300) } } });
+          } else {
+            const approval = this.approvals.list({ decision_id: current.decision_id }).find((entry) => entry.status === APPROVAL_STATUS.APPROVED);
+            await this.#fail(current, error, approval);
+          }
+        }
+      });
     }
   }
 

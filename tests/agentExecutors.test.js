@@ -296,10 +296,13 @@ test('ChainExecutor: an action that is already in effect is skipped, not retried
 test('ChainExecutor: a decision the oracle already processed is reconciled by its event, not re-sent', async () => {
   const args = toChainPricingArgs({ ...baseQuote, pricing_action: 'PAUSE_OFFERING' }, { pool_id: 2 });
   const context = fakeChain({
-    processed: true, txHash: TX,
+    processed: true, txHash: TX, state: 7,
     processedLogs: [{
+      transactionHash: `0x${'ff'.repeat(32)}`,
+      args: { poolId: 2n, issuePrice: BigInt(args.issue_price_e6 + 1), evidenceHash: args.evidence_hash, quoteHash: args.quote_hash, action: 3n }
+    }, {
       transactionHash: TX,
-      args: { evidenceHash: args.evidence_hash, quoteHash: args.quote_hash, action: 3n }
+      args: { poolId: 2n, issuePrice: BigInt(args.issue_price_e6), evidenceHash: args.evidence_hash, quoteHash: args.quote_hash, action: 3n }
     }]
   });
   const result = await makeExecutor(context).execute(chainCmd('PAUSE'));

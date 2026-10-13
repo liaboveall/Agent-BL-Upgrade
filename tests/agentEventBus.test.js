@@ -120,7 +120,7 @@ test('bus: an event older than the last handled one for the same case and type i
   await bus.submit(risk({ event_id: 'new', occurred_at: '2026-10-12T11:00:00Z' }));
   await bus.idle();
   await bus.submit(risk({ event_id: 'old', occurred_at: '2026-10-12T09:00:00Z' }));
-  await bus.submit(norm({ type: 'RISK_CLEARED', case_id: 'C1', event_id: 'other-type', occurred_at: '2026-10-12T09:00:00Z' }));
+  await bus.submit(norm({ type: 'CARGO_ARRIVED', case_id: 'C1', event_id: 'other-type', occurred_at: '2026-10-12T09:00:00Z' }));
   await bus.submit(risk({ event_id: 'other-case', case_id: 'C2', occurred_at: '2026-10-12T09:00:00Z' }));
   await bus.idle();
   assert.deepEqual(handled, ['new', 'other-type', 'other-case']);

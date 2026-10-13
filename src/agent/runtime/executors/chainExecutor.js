@@ -67,6 +67,11 @@ export class ExecutionPendingError extends Error {
   }
 }
 
+/** Only failures that identify an unavailable RPC are retryable before broadcast. */
+export function isTransientRpcError(error) {
+  return ['TIMEOUT', 'NETWORK_ERROR', 'SERVER_ERROR', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'rpc_unavailable'].includes(error?.code);
+}
+
 /** Free-text proofs ("bol-123", a tx hash from elsewhere) become bytes32; a 32-byte hex stays as is. */
 export async function proofToBytes32(value) {
   const text = String(value ?? '').trim();
@@ -138,16 +143,30 @@ export class ChainExecutor {
     return null;
   }
 
+  /** Read-only recovery when a send failed before its hash was recorded. Never broadcasts. */
+  async reconcileCommand(cmd) {
+    if (!PRICING_ACTION_FOR[cmd.action] || !cmd.params?.quote || !cmd.chain_pool_id) return null;
+    const ctx = await this.getContext();
+    const args = toChainPricingArgs({ ...cmd.params.quote, pricing_action: PRICING_ACTION_FOR[cmd.action] }, { pool_id: cmd.chain_pool_id });
+    if (!await ctx.oracle.isDecisionProcessed(await oracleDecisionId(args))) return null;
+    return this.#reconcileProcessed(cmd, ctx, cmd.chain_pool_id, args);
+  }
+
   async execute(cmd) {
     if (!cmd?.decision_id || !cmd.idempotency_key) throw new TypeError('command needs decision_id and idempotency_key');
     const chainPoolId = Number(cmd.chain_pool_id);
     if (!Number.isSafeInteger(chainPoolId) || chainPoolId < 1) {
       throw new ChainExecutionError('no_chain_pool', 'This pool has no on-chain pool id mapped; nothing can be executed on-chain');
     }
-    const ctx = await this.getContext();
-    if (PRICING_ACTION_FOR[cmd.action]) return this.#runPricing(cmd, chainPoolId, ctx);
-    if (EXECUTOR_METHOD_FOR[cmd.action]) return this.#runExecutorMethod(cmd, chainPoolId, ctx);
-    throw new ChainExecutionError('unsupported_action', `${cmd.action} cannot be executed by the server`);
+    try {
+      const ctx = await this.getContext();
+      if (PRICING_ACTION_FOR[cmd.action]) return await this.#runPricing(cmd, chainPoolId, ctx);
+      if (EXECUTOR_METHOD_FOR[cmd.action]) return await this.#runExecutorMethod(cmd, chainPoolId, ctx);
+      throw new ChainExecutionError('unsupported_action', `${cmd.action} cannot be executed by the server`);
+    } catch (error) {
+      if (isTransientRpcError(error)) throw new ChainExecutionError('rpc_unavailable', 'RPC unavailable before broadcast', { retryable: true, cause: error });
+      throw error;
+    }
   }
 
   /** Resolve a previously submitted transaction: null while pending, a success result once confirmed. */
@@ -170,6 +189,12 @@ export class ChainExecutor {
     if (!quote) throw new ChainExecutionError('quote_required', `${cmd.action} needs the quote it is based on`);
     const args = toChainPricingArgs({ ...quote, pricing_action: pricingAction }, { pool_id: chainPoolId });
 
+    // Check replay protection before state preconditions: a mined PAUSE/REPRICE changed those already.
+    const decisionId = await oracleDecisionId(args);
+    if (await ctx.oracle.isDecisionProcessed(decisionId)) {
+      return this.#reconcileProcessed(cmd, ctx, chainPoolId, args);
+    }
+
     const state = await this.#readPool(ctx, chainPoolId);
     if (state.emergencyStopped) throw new ChainExecutionError('emergency_stopped', 'The pool contract is in emergency stop; no pricing action can be applied');
     const plan = planTransition(cmd.action, state);
@@ -185,11 +210,6 @@ export class ChainExecutor {
       if (state.targetRedemptionE6 && args.issue_price_e6 > state.targetRedemptionE6) {
         throw new ChainExecutionError('price_above_target', 'The proposed price is above the redemption value');
       }
-    }
-
-    const decisionId = await oracleDecisionId(args);
-    if (await ctx.oracle.isDecisionProcessed(decisionId)) {
-      return this.#reconcileProcessed(cmd, ctx, chainPoolId, args);
     }
 
     const send = () => ctx.oracle.updatePricing(
@@ -210,7 +230,9 @@ export class ChainExecutor {
       const logs = await ctx.oracle.queryFilter(ctx.oracle.filters.PricingUpdated(chainPoolId), Math.max(0, latest - this.eventScanBlocks), latest);
       found = logs.find((log) => String(log.args?.evidenceHash).toLowerCase() === args.evidence_hash
         && String(log.args?.quoteHash).toLowerCase() === args.quote_hash
-        && Number(log.args?.action) === args.pricing_action);
+        && Number(log.args?.action) === args.pricing_action
+        && Number(log.args?.poolId) === Number(args.pool_id)
+        && Number(log.args?.issuePrice) === Number(args.issue_price_e6));
     } catch {
       // RPC log limits: fall through to "processed, transaction not located".
     }
@@ -221,7 +243,9 @@ export class ChainExecutor {
         note: 'The oracle already processed this decision; its transaction could not be located in the scanned range.'
       };
     }
-    return this.findTransaction(found.transactionHash, cmd.action);
+    const confirmed = await this.findTransaction(found.transactionHash, cmd.action);
+    if (!confirmed) throw new ExecutionPendingError(found.transactionHash, 'Replay protection confirms processing but the receipt is not available yet');
+    return confirmed;
   }
 
   // ---- executor-role path (only with the optional AGENT_EXECUTOR key) ----
@@ -278,6 +302,7 @@ export class ChainExecutor {
     try {
       await staticCall();
     } catch (error) {
+      if (isTransientRpcError(error)) throw error;
       const reason = error?.reason ?? error?.shortMessage ?? error?.message ?? 'reverted';
       throw new ChainExecutionError('would_revert', `The contract would reject this transaction: ${reason}`, { cause: error });
     }
@@ -295,9 +320,17 @@ export class ChainExecutor {
     const key = String(signer);
     const previous = this.queues.get(key) ?? Promise.resolve();
     const run = previous.catch(() => {}).then(async () => {
-      const tx = await send();
+      await cmd.assertCurrent?.();
+      let tx;
+      try { tx = await send(); }
+      catch (error) {
+        if (error?.code === 'NONCE_EXPIRED') throw new ChainExecutionError('nonce_conflict', 'Nonce was already mined; retry with a fresh provider nonce', { retryable: true, cause: error });
+        if (isTransientRpcError(error)) throw new ChainExecutionError('broadcast_uncertain', 'RPC failed while sending; reconcile before another submission', { cause: error });
+        throw error;
+      }
       // Persist the hash before waiting: if we crash now the next run reconciles by hash.
-      await cmd.onSubmitted?.({ tx_hash: tx.hash, signer_role: signerRole });
+      try { await cmd.onSubmitted?.({ tx_hash: tx.hash, signer_role: signerRole }); }
+      catch { throw new ExecutionPendingError(tx.hash, 'Broadcast succeeded but recording the submission failed; reconcile by hash'); }
       let receipt;
       let timer;
       try {
@@ -307,7 +340,11 @@ export class ChainExecutor {
         ]);
       } catch (error) {
         if (error instanceof ExecutionPendingError) throw error;
-        throw new ChainExecutionError('tx_failed', `Transaction ${tx.hash} failed: ${error?.shortMessage ?? error?.message}`, { cause: error });
+        if (error?.code === 'CALL_EXCEPTION' && error.receipt?.status === 0) {
+          throw new ChainExecutionError('tx_reverted', `Transaction ${tx.hash} reverted`, { cause: error });
+        }
+        // A failed receipt lookup does not prove that the transaction failed, and must never re-send it.
+        throw new ExecutionPendingError(tx.hash, 'Receipt unavailable after broadcast; reconcile by hash');
       } finally {
         clearTimeout(timer);
       }
