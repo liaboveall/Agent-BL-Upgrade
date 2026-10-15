@@ -9,6 +9,7 @@
 // an upload was verified. The ENI record is a MOCK acknowledgement and says so (`mode: 'mock'`).
 
 import crypto from 'node:crypto';
+import { evidenceMetadata } from '../runtime/freshness.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createWriteQueue, readJson, writeFileAtomic, writeJsonAtomic } from '../../lib/jsonStore.js';
@@ -86,6 +87,23 @@ function bytesOf(document, maxBytes) {
   return Buffer.from(document.content_base64, 'base64');
 }
 
+/** Validate bytes without storing an upload or creating a job (also used by the stateless API). */
+export function validateDocumentInput(input, maxBytes = 8_388_608) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new IngestError('invalid_document', 'Each document must be an object');
+  const name = safeFileName(input.name);
+  if (!name) throw new IngestError('invalid_document', 'Each document needs a name');
+  const mime = String(input.mime_type ?? '').toLowerCase().split(';')[0].trim();
+  const allowed = ALLOWED_MIME_TYPES[mime];
+  if (!allowed) {
+    throw new IngestError('unsupported_media_type', `Unsupported mime_type ${mime || '(missing)'}; allowed: ${Object.keys(ALLOWED_MIME_TYPES).join(', ')}`, 415);
+  }
+  const buffer = bytesOf(input, maxBytes);
+  if (buffer.length === 0) throw new IngestError('empty_document', `${name} is empty`);
+  if (buffer.length > maxBytes) throw new IngestError('document_too_large', `${name} exceeds ${maxBytes} bytes`, 413);
+  if (!magicMatches(mime, buffer)) throw new IngestError('content_type_mismatch', `${name} does not look like ${mime}`, 415);
+  return { name, mime, allowed, buffer };
+}
+
 export class IngestService {
   /**
    * @param {object} options
@@ -93,10 +111,11 @@ export class IngestService {
    * @param {number} options.maxBytes
    * @param {() => Date} [options.now]
    */
-  constructor({ dir = null, maxBytes = 8_388_608, now = () => new Date() } = {}) {
+  constructor({ dir = null, maxBytes = 8_388_608, now = () => new Date(), getMode = () => 'demo' } = {}) {
     this.dir = dir;
     this.maxBytes = maxBytes;
     this.now = now;
+    this.getMode = getMode;
     this.documents = new Map(); // document_id -> record
     this.blobs = new Map();     // document_id -> Buffer (memory mode, and a cache)
     this.jobs = new Map();      // job_id -> job
@@ -114,7 +133,8 @@ export class IngestService {
     this.initialized = true;
     if (!this.dir) return this;
     const documents = await readJson(this.documentsFile, {});
-    for (const record of Object.values(documents ?? {})) this.documents.set(record.document_id, record);
+    for (const record of Object.values(documents ?? {})) this.documents.set(record.document_id, { ...record,
+      ...evidenceMetadata({ ...record, observed_at: record.observed_at ?? record.created_at ?? null }, { mode: record.source_status ?? 'fixture' }) });
     const jobs = await readJson(this.jobsFile, {});
     for (const job of Object.values(jobs ?? {})) {
       // A job that was running when the process stopped never finished: say so instead of leaving it "running".
@@ -192,20 +212,7 @@ export class IngestService {
   }
 
   async #store(input) {
-    if (!input || typeof input !== 'object' || Array.isArray(input)) throw new IngestError('invalid_document', 'Each document must be an object');
-    const name = safeFileName(input.name);
-    if (!name) throw new IngestError('invalid_document', 'Each document needs a name');
-    const mime = String(input.mime_type ?? '').toLowerCase().split(';')[0].trim();
-    const allowed = ALLOWED_MIME_TYPES[mime];
-    if (!allowed) {
-      throw new IngestError('unsupported_media_type', `Unsupported mime_type ${mime || '(missing)'}; allowed: ${Object.keys(ALLOWED_MIME_TYPES).join(', ')}`, 415);
-    }
-    const buffer = bytesOf(input, this.maxBytes);
-    if (buffer.length === 0) throw new IngestError('empty_document', `${name} is empty`);
-    if (buffer.length > this.maxBytes) throw new IngestError('document_too_large', `${name} exceeds ${this.maxBytes} bytes`, 413);
-    if (!magicMatches(mime, buffer)) {
-      throw new IngestError('content_type_mismatch', `${name} does not look like ${mime}`, 415);
-    }
+    const { name, mime, allowed, buffer } = validateDocumentInput(input, this.maxBytes);
 
     const digest = sha256(buffer);
     const documentId = `doc_${digest.slice(0, 16)}`;
@@ -215,6 +222,7 @@ export class IngestService {
       return existing;
     }
     const record = {
+      ...evidenceMetadata({}, { now: this.now().getTime(), mode: this.getMode() }),
       document_id: documentId,
       sha256: `0x${digest}`,
       name,

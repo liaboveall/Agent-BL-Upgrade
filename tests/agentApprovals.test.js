@@ -127,7 +127,7 @@ test('approvals: state survives a restart and the record cap never drops open ap
 
 // ---------------- owner plan ----------------
 
-test('owner plan: markInTransit, payment, arrival and settle are planned with exact bytes32 and uint arguments', async () => {
+test('owner plan: departure and cancellation encode exact proofs; settlement refuses context-free legacy plans', async () => {
   const proof = keccak256(toUtf8Bytes('dep-1'));
   const mark = await buildOwnerPlan({ action: 'MARK_IN_TRANSIT', chain_pool_id: 5, params: { departure_proof: 'dep-1' }, chainConfig });
   assert.equal(mark.network, 'injective_testnet');
@@ -137,13 +137,9 @@ test('owner plan: markInTransit, payment, arrival and settle are planned with ex
     description: mark.steps[0].description, expected_events: ['DepartureRecorded']
   }]);
 
-  const pay = await buildOwnerPlan({ action: 'RECORD_PAYMENT', chain_pool_id: 5, params: { payment_proof: 'pay-1', repayment_amount: 1_100_000_000 }, chainConfig });
-  assert.deepEqual(pay.steps[0].args, ['5', keccak256(toUtf8Bytes('pay-1')), '1100000000']);
-  const arrive = await buildOwnerPlan({ action: 'RECORD_ARRIVAL', chain_pool_id: 5, params: { arrival_proof: `0x${'AA'.repeat(32)}` }, chainConfig });
-  assert.deepEqual(arrive.steps[0].args, ['5', `0x${'aa'.repeat(32)}`]);
-  const settle = await buildOwnerPlan({ action: 'SETTLE', chain_pool_id: 5, params: { repayment_amount: 7 }, chainConfig });
-  assert.deepEqual(settle.steps[0].args, ['5', '7']);
-  assert.equal(settle.steps[0].method, 'settle');
+  for (const action of ['RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE']) {
+    await assert.rejects(buildOwnerPlan({ action, chain_pool_id: 5, params: { payment_proof: 'pay-1', repayment_amount: 7 }, chainConfig }), { code: 'chain_unavailable' });
+  }
   const cancel = await buildOwnerPlan({ action: 'CANCEL', chain_pool_id: 5, chainConfig });
   assert.equal(cancel.steps[0].method, 'cancelOffering');
 });

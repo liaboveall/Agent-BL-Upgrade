@@ -13,7 +13,7 @@ test('measured Agent suites meet every frozen deterministic threshold using real
   assert.equal(evaluation.mode, 'deterministic');
   assert.equal(evaluation.passed, true, JSON.stringify(evaluation.gates.filter((gate) => !gate.passed)));
   assert.equal(evaluation.gates.length, Object.keys(EVAL_THRESHOLDS).length);
-  assert.deepEqual(new Set(evaluation.results.map((result) => result.suite)), new Set(['extraction', 'consistency', 'compliance', 'pricing', 'loop', 'copilot', 'ranking', 'injection']));
+  assert.deepEqual(new Set(evaluation.results.map((result) => result.suite)), new Set(['extraction', 'consistency', 'compliance', 'pricing', 'loop', 'copilot', 'ranking', 'injection', 'redteam']));
   assert.ok(evaluation.counts.copilot.dialogues >= 40);
   assert.ok(evaluation.counts.copilot.turns >= 80);
   assert.ok(dataset.copilot.some((entry) => entry.input.locale === 'zh') && dataset.copilot.some((entry) => entry.input.locale === 'en'));

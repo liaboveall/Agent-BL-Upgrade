@@ -16,12 +16,14 @@ import {
   handlePreviewMysteryVoyage,
   handleVerifyMysteryReveal
 } from './tools.js';
+import { AGENT_MCP_TOOLS, AGENT_MCP_HANDLERS } from './agentTools.js';
 
 // ============================================================
 // MCP-1: Tools Manifest
 // ============================================================
 
 export const MCP_TOOLS_MANIFEST = [
+  ...AGENT_MCP_TOOLS,
   {
     name: 'get_trade_case',
     description: 'Retrieve a trade financing case by case ID. Returns the full TradeCase object including bill_of_lading, insurance, financing, market data, and shipment events. Use this tool first to load the case data before performing risk analysis or pricing.',
@@ -225,6 +227,7 @@ export const MCP_TOOLS_MANIFEST = [
 // ============================================================
 
 export const MCP_TOOL_HANDLERS = {
+  ...AGENT_MCP_HANDLERS,
   get_trade_case: handleGetTradeCase,
   generate_pricing_quote: handleGeneratePricingQuote,
   simulate_offering: handleSimulateOffering,
@@ -248,15 +251,15 @@ export const MCP_TOOL_HANDLERS = {
  * @returns {Promise<{tool: string, result: Object}>}
  * @throws {Error} if tool is unknown or execution fails
  */
-export async function callTool(toolName, params = {}) {
-  const handler = MCP_TOOL_HANDLERS[toolName];
+export async function callTool(toolName, params = {}, context) {
+  const handler = Object.hasOwn(MCP_TOOL_HANDLERS, toolName) ? MCP_TOOL_HANDLERS[toolName] : null;
   if (!handler) {
     const available = Object.keys(MCP_TOOL_HANDLERS).join(', ');
     throw new Error(`Unknown tool: "${toolName}". Available tools: ${available}`);
   }
 
   try {
-    const result = await handler(params);
+    const result = await handler(params, context);
     // Ensure result has the tool name
     if (!result.tool) {
       result.tool = toolName;
@@ -264,7 +267,9 @@ export async function callTool(toolName, params = {}) {
     return result;
   } catch (error) {
     // Re-throw with tool context
-    throw new Error(`Tool "${toolName}" failed: ${error.message}`, { cause: error });
+    const wrapped = new Error(`Tool "${toolName}" failed: ${error.message}`, { cause: error });
+    Object.assign(wrapped, { code: error.code, status: error.status, expose: error.expose, issues: error.issues });
+    throw wrapped;
   }
 }
 

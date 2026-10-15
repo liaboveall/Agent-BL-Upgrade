@@ -13,6 +13,7 @@
 // seam and an offline fixture fallback so the demo always runs with no key.
 
 import crypto from 'node:crypto';
+import { EVIDENCE_TTL_MS } from './runtime/freshness.js';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { isXapiConfigured } from './xapi/xapiClient.js';
@@ -265,6 +266,13 @@ export async function assessWorldRisk(caseData, opts = {}) {
   const live = results.some((r) => r.live === true);
   const events = scoreWorldSignals(signals, profile);
   const summary = buildSummary(events, profile, live);
+  const clockMs = opts.now?.() ?? Date.now();
+  const publicationTimes = results.filter((result) => result.live).flatMap((result) => (result.items ?? []).map((item) => Date.parse(item.created_at ?? item.date ?? '')));
+  const dated = publicationTimes.length > 0 && publicationTimes.every(Number.isFinite);
+  const observedMs = live ? (dated ? Math.min(...publicationTimes) : null) : clockMs;
+  const metadata = { observed_at: observedMs === null ? null : new Date(observedMs).toISOString(),
+    expires_at: observedMs === null ? null : new Date(observedMs + EVIDENCE_TTL_MS).toISOString(),
+    source_status: live ? (dated && observedMs <= clockMs && clockMs < observedMs + EVIDENCE_TTL_MS ? 'live' : 'stale') : 'fixture' };
   const evidence_hash = hashEvidence({
     case_id: caseData.case_id,
     queries: profile.queries,
@@ -272,6 +280,7 @@ export async function assessWorldRisk(caseData, opts = {}) {
   });
 
   return {
+    ...metadata,
     events,
     signals,
     sources,

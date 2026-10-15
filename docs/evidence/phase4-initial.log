@@ -1,0 +1,56 @@
+▶ agent API (Demo)
+  ✔ GET /api/agent/status is public and reports the runtime without exposing keys (39.794764ms)
+  ✔ an injected world-risk event produces a decision, an executed simulated reprice and a trace (41.380666ms)
+  ✔ the same event again is a duplicate and does not execute twice (30.601412ms)
+  ✔ without ?wait the event is accepted (202) and processed in the background (15.238589ms)
+  ✔ invalid input is refused with a 4xx and a readable reason (28.369551ms)
+  ✔ control: autonomy and emergency stop change what the agent does (56.32031ms)
+  ✔ approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx (113.314942ms)
+  ✔ the admin token protects control, events and the approval queue once it is configured (42.356272ms)
+  ✔ the activity stream sends an id per event and replays what a reconnecting client missed (30.997384ms)
+  ✔ POST /api/demo/reset clears what the agent recorded in Demo and rebuilds the pools (81.757124ms)
+✔ agent API (Demo) (504.282641ms)
+✔ agent API: in Live the admin token is mandatory even for actions Demo leaves open (23.216199ms)
+✖ scenarios: the catalog lists every shipped scenario with a bilingual title (81.309927ms)
+✔ copper-typhoon: the whole cargo story runs through the real policy and the simulated executor (105.352713ms)
+✔ copper-typhoon: approving the payment makes the agent propose settlement, and settlement needs its own approval (107.218953ms)
+✔ copper-typhoon: rejecting the payment leaves the pool unsettled and proposes nothing further (97.743622ms)
+✔ copper-typhoon: playing it twice does not duplicate anything; reset gives a clean run (198.353803ms)
+✔ copper-typhoon: can be played one step at a time, and says when it is over (96.012225ms)
+✔ warcrisis-hormuz: a crude cargo is warned first (no price room left), paused when the strait closes, and stays paused (35.74945ms)
+✔ scenarios: a case whose pool is already paused ignores a pause, with the reason on record (5.861933ms)
+✔ insurance-gap: a warning a week ahead, then a pause once cover has lapsed (37.997387ms)
+✔ scenarios: Demo only, only known names, and the case must be in the market (8.829125ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 21
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8967.204114
+
+✖ failing tests:
+
+test at tests/agentScenarios.test.js:48:1
+✖ scenarios: the catalog lists every shipped scenario with a bilingual title (81.309927ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'copper-lifecycle',
+      'copper-typhoon',
+      'insurance-gap',
+      'warcrisis-hormuz'
+    ]
+  
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentScenarios.test.js:51:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'copper-lifecycle', 'copper-typhoon', 'insurance-gap', 'warcrisis-hormuz' ],
+    expected: [ 'copper-typhoon', 'insurance-gap', 'warcrisis-hormuz' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

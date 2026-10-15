@@ -1,0 +1,21 @@
+{
+  "phase": "WP2.9",
+  "attempt": 1,
+  "kind": "focused-test-initial-attempt",
+  "test_count": 22,
+  "passed": 14,
+  "failed": 8,
+  "failures": [
+    {
+      "reason": "Test fixture tried to read storeState.agentActivities.length before that optional buffer existed.",
+      "resolution": "Snapshot the absent buffer as empty; leave runtime behavior unchanged."
+    },
+    {
+      "reason": "Polish fixture declared only WaveBL, so existing compliance correctly returned STANDARD_UNDECLARED and prevented model calls.",
+      "resolution": "Keep the review rule; declare dcsa only on the dedicated clean test fixture."
+    }
+  ],
+  "log_sha256": "8f799b7f81598230134e710e5a96b222ee7a1003cccc4b7b89cbb03832c4a35a",
+  "real_provider_calls": 0,
+  "real_transactions": 0
+}

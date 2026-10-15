@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { Interface } from 'ethers';
 import { quoteFromCase } from '../src/core/pricingEngine.js';
 import { createAgentService, loadChainConfig } from '../src/agent/runtime/factory.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
@@ -21,20 +22,28 @@ const storm = [{ type: 'severe_weather', severity: 'critical', region: 'East Chi
 function fakeChain() {
   const faults = { reads: 0, nonce: 0, wait: false, lookup: false, reverted: false, send: false };
   const calls = { sends: 0, lookups: 0, attempts: 0 };
-  const receipt = () => ({ status: faults.reverted ? 0 : 1, blockNumber: 3, logs: ['PricingUpdated', 'OfferingPaused'].map((name) => ({ name })) });
-  const parser = { parseLog: ({ name }) => ({ name }) };
-  const updatePricing = Object.assign(async () => {
+  const oracle = '0x1111111111111111111111111111111111111111', pool = '0x2222222222222222222222222222222222222222';
+  const updater = '0x3333333333333333333333333333333333333333', blockHash = `0x${'ab'.repeat(32)}`;
+  const iface = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32)']);
+  let data;
+  const receipt = () => ({ hash: TX, from: updater, to: oracle, status: faults.reverted ? 0 : 1, blockNumber: 3, blockHash,
+    logs: ['PricingUpdated', 'OfferingPaused'].map((name) => ({ name, address: name === 'PricingUpdated' ? oracle : pool })) });
+  const parser = { parseLog: ({ name }) => ({ name }), encodeFunctionData: iface.encodeFunctionData.bind(iface) };
+  const updatePricing = Object.assign(async (...args) => {
     calls.attempts++;
     if (faults.nonce-- > 0) throw Object.assign(new Error('nonce too low'), { code: 'NONCE_EXPIRED' });
     calls.sends++;
+    data = iface.encodeFunctionData('updatePricing', args);
     if (faults.send) throw timeout();
     return { hash: TX, wait: async () => { faults.onWait?.(); if (faults.wait) throw timeout(); return receipt(); } };
-  }, { staticCall: async () => { if (faults.reads-- > 0) throw timeout(); } });
+  }, { staticCall: async () => { faults.onPreflight?.(); if (faults.reads-- > 0) throw timeout(); } });
   return { faults, calls, ctx: {
-    signers: { PRICING_UPDATER: 'fake-updater' }, explorerBase: 'https://example.invalid',
-    provider: { getTransactionReceipt: async () => { calls.lookups++; if (faults.lookup) throw timeout(); return receipt(); } },
-    oracle: { updatePricing, isDecisionProcessed: async () => false, interface: parser },
-    pool: { interface: parser, emergencyStopped: async () => false, stateOf: async () => 2,
+    signers: { PRICING_UPDATER: updater }, explorerBase: 'https://example.invalid',
+    provider: { send: async () => '0x59f', getBlockNumber: async () => 10, getBlock: async () => ({ hash: blockHash }),
+      getTransaction: async () => ({ hash: TX, from: updater, to: oracle, chainId: 1439n, value: 0n, data }),
+      getTransactionReceipt: async () => { calls.lookups++; if (faults.lookup) throw timeout(); return receipt(); } },
+    oracle: { target: oracle, updatePricing, isDecisionProcessed: async () => false, interface: parser },
+    pool: { target: pool, interface: parser, emergencyStopped: async () => false, stateOf: async () => 2,
       offerings: async () => ({ exists: true, eblId: 2, issuePrice: 800000, targetRedemptionValue: 1000000, subscribed: 0 }) }
   } };
 }
@@ -260,4 +269,16 @@ test('matrix: unavailable LLM and xAPI use labelled deterministic fallbacks and 
   assert.equal(risk.live, false);
   assert.equal(risk.provider, 'xapi-empty->fixtures');
   assert.ok(risk.events.length > 0);
+});
+
+// Phase 5 freshness must be checked after a slow preflight, at the actual broadcast boundary.
+test('matrix: evidence expiring during RPC preflight blocks the signer before any broadcast', async (t) => {
+  const chain = fakeChain();
+  const { service, clock } = await runtime(t, { chain });
+  const approval = await propose(service);
+  chain.faults.onPreflight = () => clock.advance(24 * 3600 * 1000);
+  const result = await service.approve(approval.approval_id);
+  assert.equal(result.decision.status, 'FAILED');
+  assert.equal(result.decision.error.code, 'evidence_expired');
+  assert.equal(chain.calls.sends, 0);
 });

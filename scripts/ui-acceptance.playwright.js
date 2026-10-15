@@ -48,9 +48,14 @@ async page => {
         unnamed_controls: elements.filter((element) => element.matches('button, input, select, textarea, [role="button"]') && !label(element)).map(describe),
         nested_controls: elements.filter((element) => element.matches('button button, button a, button input')).map(describe),
         untranslated_keys: elements.filter((element) => !element.childElementCount && /^(?:ac|cp|ebld|a11y)_[a-zA-Z0-9_]+$/u.test(element.textContent.trim())).map(describe),
-        english_mixed_copy: locale === 'en' ? elements.filter((element) => !element.childElementCount
-          && !element.closest('#lang-btn, .cp-user, pre, code, textarea, .ebl-fields dd')
-          && /[\u3400-\u9fff]/u.test(element.textContent)).map(describe) : [] };
+        source_document_fields: elements.filter((element) => element.matches('[data-source-document-field]'))
+          .map((element) => ({ field: element.getAttribute('data-source-document-field'), text: element.textContent })),
+        english_mixed_copy: locale === 'en' ? elements.flatMap((element) => {
+          if (element.closest('#lang-btn, .cp-user, pre, code, textarea, .ebl-fields dd, '
+            + '[data-source-document-field="bill_of_lading.incoterms"], [data-source-document-field="commercial_invoice.incoterms"]')) return [];
+          return [...element.childNodes].filter((node) => node.nodeType === 3 && /[\u3400-\u9fff]/u.test(node.textContent))
+            .map((node) => ({ ...describe(element), text: node.textContent.slice(0, 90) }));
+        }) : [] };
     }, { name, selector, locale, width });
     report.measurements.push(result);
     await page.evaluate((report) => { globalThis.__agentPhase4Report = report; }, report);
@@ -66,6 +71,11 @@ async page => {
     check(`${selector}: reverse Tab stays in modal`, await page.evaluate((selector) => globalThis.document.activeElement.closest(selector) !== null, selector));
     await page.keyboard.press('Escape');
     check(`${selector}: Escape closes`, !await page.locator(selector).evaluate((element) => element.open));
+    // The native close event restores focus in a queued task after `open` becomes false.
+    await page.waitForFunction((selector) => {
+      const doc = globalThis.document, dialog = doc.querySelector(selector);
+      return !dialog.open && doc.activeElement !== doc.body && !dialog.contains(doc.activeElement);
+    }, selector);
   }
   try {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -110,6 +120,17 @@ async page => {
         const button = page.locator('[data-focus-key="inject:typhoon"]'); await button.click();
         await page.waitForFunction((old) => [...globalThis.document.querySelectorAll('.ac-row-open')].some((node) => !old.includes(node.getAttribute('data-focus-key'))), oldDecisions);
         check(`${width}/${locale}: SSE update keeps control focus`, (await active()).key === 'inject:typhoon');
+        // A new row can arrive while execution is still changing. Establish the completed
+        // history before checking that an unchanged poll emits no new announcement.
+        await page.waitForFunction(async () => {
+          const { t } = await import('/i18n.js');
+          const { decisions } = await (await fetch('/api/agent/decisions?limit=1')).json();
+          const decision = decisions?.[0];
+          if (!decision || ['RECEIVED', 'PROPOSED', 'EXECUTING'].includes(decision.status)) return false;
+          const label = t(`ac_status_${decision.status}`);
+          return globalThis.document.querySelector('.ac-row .ac-row-state')?.textContent.includes(label)
+            && globalThis.document.querySelector('#ac-announcement')?.textContent.includes(label);
+        });
         const announcement = await page.locator('#ac-announcement').textContent();
         const oldControl = await page.locator('#ac-autonomy').elementHandle();
         await page.locator('#ac-autonomy').focus(); await jsonPost('/api/agent/control', { action: 'tick' });
@@ -134,7 +155,7 @@ async page => {
         check(`${width}/${locale}: activity disclosure works with Enter`, await page.locator('#agent-activity-console').getAttribute('open') !== null);
         check(`${width}/${locale}: activity terminal stays in page flow`, await page.locator('#agent-activity-console').evaluate((element) => globalThis.getComputedStyle(element).position === 'static'));
         await page.keyboard.press('Enter');
-        await page.locator('.market-card [data-focus-key]').first().click();
+        await page.locator('.market-card [data-focus-key^="market-track:"]').first().click();
         await page.locator('#deal-detail-modal[open]').waitFor();
         await page.locator('#ship').focus();
         await measure('voyage-and-x402-reports', '#deal-detail-modal', locale, width);
@@ -143,8 +164,18 @@ async page => {
         check(`${width}/${locale}: voyage focus returns to project`, (await active()).key?.startsWith('market-track:'));
         await page.locator('#mystery-preview-btn').click(); await page.locator('#mystery-modal[open]').waitFor();
         await measure('mystery-commit', '#mystery-modal', locale, width);
+        const mysteryResponse = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/x402/mystery/voyage'
+          && response.request().method() === 'POST' && response.ok());
         await page.locator('#mystery-open-btn').click();
+        const mysteryReport = await (await mysteryResponse).json();
         await page.locator('#mystery-subscribe-btn:not([disabled])').waitFor({ timeout: 20000 });
+        const sourceEvidence = await page.locator('#mystery-report-risks [data-source-document-field]').evaluateAll((nodes) => nodes.map((node) =>
+          ({ field: node.getAttribute('data-source-document-field'), text: node.textContent })));
+        const expectedSource = (mysteryReport.risk?.factors || []).flatMap((factor) => {
+          const match = factor.match(/^doc: Incoterms agreement \(eBL\/invoice\): eBL "([^"]*)" vs invoice "([^"]*)"$/u);
+          return match ? [{ field: 'bill_of_lading.incoterms', text: match[1] }, { field: 'commercial_invoice.incoterms', text: match[2] }] : [];
+        });
+        check(`${width}/${locale}: original document quotes are preserved in marked evidence`, JSON.stringify(sourceEvidence) === JSON.stringify(expectedSource), sourceEvidence);
         await measure('mystery-reveal-and-proof', '#mystery-modal', locale, width);
         if (width === 390 && locale === 'zh') { await page.locator('#mystery-risk-passport').scrollIntoViewIfNeeded(); await save('mobile-mystery-zh'); }
         const originalProof = await page.locator('#mystery-proof-json').inputValue();

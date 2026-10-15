@@ -1,0 +1,238 @@
+{
+  "phase": 6,
+  "checked_at": "2026-10-15T02:53:15.888Z",
+  "browser": "153.0.8010.12",
+  "checks": [
+    {
+      "name": "Isolated Demo runtime has no configured signer",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: wallet menu arrows move focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: wallet menu returns focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: tab arrows activate mint",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: payout radios follow arrow keys",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: SSE update keeps control focus",
+      "passed": true
+    },
+    {
+      "name": "Demo setup /api/agent/control",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: refreshed select retains focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: announcement is polite",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: unchanged history is silent",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/decision-drawer: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/decision-drawer: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/decision-drawer: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Demo setup /api/agent/control",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: drawer refresh does not steal focus",
+      "passed": true
+    },
+    {
+      "name": "#ac-drawer: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#ac-drawer: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: decision focus returns to opener",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: Home activates market",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: activity disclosure works with Enter",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: activity terminal stays in page flow",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/voyage-and-x402-reports: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/voyage-and-x402-reports: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/voyage-and-x402-reports: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "#deal-detail-modal: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#deal-detail-modal: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "Established Chinese/English and 1440/390px browser workflow",
+      "passed": false
+    }
+  ],
+  "screenshots": [],
+  "real_transactions": 0,
+  "real_provider_calls": 0,
+  "human_acceptance": false,
+  "builtin_browser_control": false,
+  "builtin_browser_limitation": "node_repl rejects the WSL cwd as a non-local file URI; initialization retried and kernel reset without success",
+  "measurements": [
+    {
+      "name": "market-and-portfolio",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "mint-and-document-extraction",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "agent-console",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "decision-drawer",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 519,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "voyage-and-x402-reports",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1298,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    }
+  ],
+  "page_errors": [],
+  "unexpected_http_errors": [],
+  "passed": false,
+  "error": "Established Chinese/English and 1440/390px browser workflow"
+}

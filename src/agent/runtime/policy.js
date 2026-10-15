@@ -22,6 +22,7 @@ export const PROTECTED_POOL_BLOCKED_ACTIONS = IRREVERSIBLE_ACTIONS;
 export const POLICY_VERDICTS = Object.freeze(['AUTO', 'NEEDS_APPROVAL', 'OBSERVE_ONLY', 'REJECTED']);
 
 export const POLICY_RULES = Object.freeze([
+  'CHAIN_OBSERVATION_UNAVAILABLE',
   'EMERGENCY_STOP',
   'PROTECTED_POOL',
   'AUTONOMY',
@@ -85,6 +86,10 @@ export function evaluatePolicy(proposal, ctx) {
   const hits = [];
   const hit = (rule, verdict, message, extra = {}) => hits.push({ rule, verdict, message, ...extra });
   const informational = INFORMATIONAL_ACTIONS.includes(action);
+
+  if (ctx.mode === 'live' && ctx.chainObservationUnavailable && !informational) {
+    hit('CHAIN_OBSERVATION_UNAVAILABLE', 'REJECTED', 'Confirmed chain monitoring is unavailable or still syncing.');
+  }
 
   // 1. Emergency stop: nothing may run except a PAUSE (which only reduces exposure). Pure records
   //    (warnings) change nothing, so an emergency stop does not hide them.

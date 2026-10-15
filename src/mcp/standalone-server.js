@@ -17,7 +17,7 @@ export const MCP_SERVER_INFO = Object.freeze({
   version: '2.0.0'
 });
 
-export function createAgentBlMcpServer() {
+export function createAgentBlMcpServer({ context } = {}) {
   const server = new Server(MCP_SERVER_INFO, {
     capabilities: {
       tools: { listChanged: false },
@@ -36,17 +36,17 @@ export function createAgentBlMcpServer() {
       description,
       inputSchema,
       annotations: {
-        readOnlyHint: !['push_pricing_to_oracle', 'purchase_premium_analysis'].includes(name),
+        readOnlyHint: !['push_pricing_to_oracle', 'purchase_premium_analysis', 'submit_agent_event', 'preview_mystery_voyage'].includes(name),
         destructiveHint: false,
-        idempotentHint: name !== 'purchase_premium_analysis',
-        openWorldHint: name === 'purchase_premium_analysis'
+        idempotentHint: !['purchase_premium_analysis', 'submit_agent_event', 'preview_mystery_voyage'].includes(name),
+        openWorldHint: ['purchase_premium_analysis', 'recommend_trade_assets', 'submit_agent_event'].includes(name)
       }
     }))
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
-      const result = await callTool(request.params.name, request.params.arguments ?? {});
+      const result = await callTool(request.params.name, request.params.arguments ?? {}, context);
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         structuredContent: result
@@ -68,7 +68,7 @@ export function createAgentBlMcpServer() {
   });
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: MCP_RESOURCES }));
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => readMcpResource(request.params.uri));
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => readMcpResource(request.params.uri, context));
   return server;
 }
 

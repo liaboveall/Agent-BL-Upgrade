@@ -1,0 +1,5 @@
+
+> agentbl-agent-starter@0.1.0 smoke
+> node scripts/smoke.mjs
+
+smoke passed: health, demo data, risk, workflow, scenarios, pricing quote, offering, merged workflow, oracle update, MCP, RAG and Skill harness work.

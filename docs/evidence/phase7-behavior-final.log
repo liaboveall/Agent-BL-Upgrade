@@ -1,0 +1,51 @@
+✔ anchor preflight requires the deployed testnet, exact version, explicit signer role and continuous head (23.341832ms)
+✔ anchor broadcast shares the signer lock, static-preflights and persists hash before waiting (1.837161ms)
+✔ confirmed anchors require exact calldata, sender, receipt event, current canonical block and chain batch (21.025462ms)
+✔ pending or underconfirmed anchors are never reported as confirmed; changed deployment bindings fail closed (2.475741ms)
+✔ broadcast recovery uses one exact event in a bounded scan, with no send or inferred hash (1.728919ms)
+✔ chain verification rechecks finality and inclusion instead of trusting a stored ANCHORED label (3.36841ms)
+✔ pricing and anchoring serialize by signer and a failed task cannot poison the shared queue (0.53884ms)
+✔ deployment plan validation rejects altered commitments and its default does not touch chain or files (0.639633ms)
+✔ anchor leaves use canonical JSON, domain separation and explicit terminal fields (5.685334ms)
+✔ approval identity, route, time, outcome and transaction are committed without source text or credentials (2.095626ms)
+✔ Merkle tree proves every leaf in a 1-record batch and rejects alterations (0.534823ms)
+✔ Merkle tree proves every leaf in a 2-record batch and rejects alterations (0.379646ms)
+✔ Merkle tree proves every leaf in a 3-record batch and rejects alterations (0.470352ms)
+✔ Merkle tree proves every leaf in a 5-record batch and rejects alterations (0.687483ms)
+✔ Merkle tree proves every leaf in a 16-record batch and rejects alterations (2.069296ms)
+✔ Merkle tree proves every leaf in a 255-record batch and rejects alterations (58.474464ms)
+✔ Merkle tree proves every leaf in a 256-record batch and rejects alterations (43.558357ms)
+✔ invalid or oversized tree/proof inputs fail closed (0.400244ms)
+✔ enabling anchoring does not change the agent version; policy, model and source changes do (1.070271ms)
+✔ concurrent finalizations allocate a continuous durable sequence; duplicates and restart keep it (59.753764ms)
+✔ a second OS process cannot take the active anchor sequence lock (44.67546ms)
+✔ a dead process lock is recovered without resetting sequence (41.517498ms)
+✔ failed persistence consumes no finalization sequence and leaves the prior state intact (4.88018ms)
+✔ tampered terminal data fails verification; finalized entries cannot be silently overwritten (1.568045ms)
+✔ corrupted sequence, leaf, version and batch root are rejected on load (4.155654ms)
+✔ legacy journals are explicitly marked with an unrecorded version (0.650655ms)
+✔ Demo and disabled Live form local trees without contacting a chain adapter (1.783114ms)
+✔ minimum batch, interval and version boundaries keep each batch homogeneous and continuous (6.012542ms)
+✔ Live batches persist intent and hash before confirmation; repeat ticks do not broadcast twice (1.970662ms)
+✔ uncertain send survives restart and recovers by observed hash without a repeat broadcast (5.769556ms)
+✔ preflight failure is retryable but a mode change before send never broadcasts (0.970198ms)
+✔ a failed hash checkpoint after broadcast stays uncertain until read-only recovery and never re-sends (6.004429ms)
+✔ runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick (443.220535ms)
+▶ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq
+  ✔ EXECUTED (19.296034ms)
+  ✔ REJECTED (18.028693ms)
+  ✔ EXPIRED (18.413651ms)
+✔ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq (56.445415ms)
+✔ failed approved execution preserves the operator and terminal failure in its commitment (18.361412ms)
+✔ an autonomy override creates a new policy version without relabeling already created decisions (17.542003ms)
+✔ retention preserves independent proofs and live sequences; Demo reset discards only Demo proofs (17.929279ms)
+✔ HTTP exposes public proofs and behavioral tamper failures, with missing IDs returning 404 (62.379303ms)
+✔ CLI rechecks a disk audit without reading keys or mutating journals and exits nonzero for tampering (5204.634784ms)
+ℹ tests 42
+ℹ suites 0
+ℹ pass 42
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16596.202918

@@ -1,0 +1,11 @@
+
+> agentbl-agent-starter@0.1.0 lint
+> eslint . --max-warnings=0
+
+
+E:\NUS\BlockChain\Project\Agent-BL-Upgrade\scripts\phase5-acceptance-runner.mjs
+  63:89   error  'innerWidth' is not defined  no-undef
+  63:111  error  'document' is not defined    no-undef
+
+✖ 2 problems (2 errors, 0 warnings)
+

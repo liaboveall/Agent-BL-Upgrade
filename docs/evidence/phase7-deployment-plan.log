@@ -1,0 +1,40 @@
+{
+  "schema": "agentbl-anchor-deployment-plan-v1",
+  "network": "injective-testnet",
+  "chain_id": 1439,
+  "deploy_new_contract": "AgentDecisionLog",
+  "existing_contract_mutations": 0,
+  "confirmation_required": true,
+  "versions": [
+    {
+      "policy_hash": "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+      "code_commit": "0xaf301a344a486934f02fd8ab296f160fee844d89e99aaf8a97e31fb73a0b222d",
+      "model_id": "x-test-2",
+      "version_id": "0xd868e0c64ea87602f33e2e1e5f9e3d172a453ab888a23e6f2e805bb216577b85"
+    }
+  ],
+  "transactions": [
+    {
+      "method": "deploy AgentDecisionLog",
+      "signer": "owner"
+    },
+    {
+      "method": "registerAgentVersion",
+      "signer": "owner",
+      "version": {
+        "policy_hash": "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+        "code_commit": "0xaf301a344a486934f02fd8ab296f160fee844d89e99aaf8a97e31fb73a0b222d",
+        "model_id": "x-test-2",
+        "version_id": "0xd868e0c64ea87602f33e2e1e5f9e3d172a453ab888a23e6f2e805bb216577b85"
+      }
+    },
+    {
+      "method": "setAnchorer",
+      "signer": "owner",
+      "role": "existing dedicated PRICING_UPDATER",
+      "allowed": true
+    }
+  ],
+  "live_finalized_decisions": 0,
+  "broadcasts": 0
+}

@@ -7,11 +7,39 @@ import { clear, el, toast } from '../dom.js';
 import { t } from '../i18n.js';
 import { agent } from './api.js';
 import { badge, copyButton, formatDateTime, statusBadge, usd } from './ui.js';
+import { settlementSummary, settlementReasoning, settlementPolicyReason } from './settlement.js';
 
 const WAITING = ['PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE'];
 
-function command(approvalId) {
-  return `npm run agent:approve -- --id ${approvalId}`;
+function command(approvalId, step) {
+  return `npm run agent:approve -- --id ${approvalId}${step === undefined ? '' : ` --step ${step}`}`;
+}
+
+const STEP_KEYS = ['ac_open_mint', 'ac_open_pledge', 'ac_open_create'];
+function argumentText(arg, bindings) {
+  if (arg?.ref) return bindings?.[arg.ref] ?? t('ac_open_dependency');
+  return arg && typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+}
+
+function openingSummary(decision) {
+  const opening = decision.opening;
+  if (!opening || opening.kind === 'unavailable') return null;
+  return el('div', { class: 'ac-opening-summary' },
+    el('strong', {}, t(opening.kind === 'link' ? 'ac_open_existing' : 'ac_open_new')),
+    el('p', { class: 'muted ac-small' }, t(opening.kind === 'link' ? 'ac_open_link_hint' : 'ac_open_three_hint')),
+    opening.kind === 'create' ? el('p', {}, t('ac_open_progress', { count: opening.steps_verified ?? 0 })) : null);
+}
+
+function transactionPlan(approval) {
+  const done = new Set((approval.steps_done ?? []).map((step) => step.index));
+  const opening = approval.plan?.kind === 'create';
+  return el('ol', { class: 'ac-steps ac-owner-plan' }, (approval.plan?.steps ?? []).map((step) =>
+    el('li', {},
+      el('strong', {}, opening ? t(STEP_KEYS[step.index]) : `${step.contract}.${step.method}`),
+      ' ', badge(t(done.has(step.index) ? 'ac_open_verified' : 'ac_open_pending'), done.has(step.index) ? 'tone-ok' : 'tone-warn'),
+      step.args.some((arg) => arg?.ref && !approval.plan.bindings?.[arg.ref]) ? el('p', { class: 'muted ac-small' }, t('ac_open_dependency')) : null,
+      el('details', {}, el('summary', {}, t('ac_open_arguments')),
+        el('code', {}, `${step.contract}.${step.method}(${step.args.map((arg) => argumentText(arg, approval.plan.bindings)).join(', ')})`)))));
 }
 
 async function guarded(action, onChanged, doneKey) {
@@ -28,13 +56,14 @@ async function guarded(action, onChanged, doneKey) {
 export function approvalControls(approval, decision, onChanged) {
   const wrap = el('div', { class: 'ac-approval-controls' });
   const route = approval.route;
+  const stale = decision.freshness_status === 'stale' || decision.freshness?.fresh === false;
   if (approval.status === 'PENDING') {
     wrap.append(
       el('div', { class: 'ac-actions' },
         el('button', {
-          class: 'btn', type: 'button', 'data-focus-key': `approve:${approval.approval_id}`,
+          class: 'btn', type: 'button', disabled: stale, title: stale ? t('ac_evidence_expired') : '', 'data-focus-key': `approve:${approval.approval_id}`,
           onclick: () => guarded(() => agent.approve(approval.approval_id), onChanged, 'ac_approved_toast')
-        }, t('ac_approve')),
+        }, t(route === 'link' ? 'ac_open_link_button' : 'ac_approve')),
         el('button', {
           class: 'btn ghost', type: 'button', 'data-focus-key': `reject:${approval.approval_id}`,
           onclick: () => {
@@ -43,12 +72,16 @@ export function approvalControls(approval, decision, onChanged) {
             return guarded(() => agent.reject(approval.approval_id, note.trim() || undefined), onChanged, 'ac_rejected_toast');
           }
         }, t('ac_reject'))),
-      el('p', { class: 'muted ac-small' }, route === 'owner_cli' ? t('ac_route_owner') : route === 'server' ? t('ac_route_server') : t('ac_route_sim')));
+      stale ? el('p', { class: 'ac-error ac-small' }, t('ac_evidence_expired')) : null,
+      el('p', { class: 'muted ac-small' }, route === 'link' ? t('ac_open_link_hint') : route === 'owner_cli' ? t('ac_route_owner') : route === 'server' ? t('ac_route_server') : t('ac_route_sim')));
   } else if (approval.status === 'AWAITING_OWNER_SIGNATURE') {
+    const opening = decision.opening?.kind === 'create';
+    const next = opening ? (approval.steps_done?.length ?? decision.opening.steps_verified ?? 0) : undefined;
+    const cli = command(approval.approval_id, next);
     wrap.append(
-      el('p', {}, t('ac_owner_waiting')),
-      el('div', { class: 'ac-command' }, el('code', {}, command(approval.approval_id)), copyButton(command(approval.approval_id))),
-      el('p', { class: 'muted ac-small' }, t('ac_owner_hint')),
+      el('p', {}, t(opening && next >= 3 ? 'ac_open_reconcile' : 'ac_owner_waiting')),
+      opening && next >= 3 ? null : el('div', { class: 'ac-command' }, el('code', {}, cli), copyButton(cli)),
+      el('p', { class: 'muted ac-small' }, t(opening ? 'ac_open_three_hint' : 'ac_owner_hint')),
       el('button', {
         class: 'btn ghost', type: 'button',
         onclick: async (event) => {
@@ -56,8 +89,7 @@ export function approvalControls(approval, decision, onChanged) {
           try {
             const detail = await agent.approvals('AWAITING_OWNER_SIGNATURE');
             const mine = detail.approvals.find((item) => item.approval_id === approval.approval_id);
-            button.replaceWith(el('ol', { class: 'ac-steps' }, (mine?.plan?.steps ?? []).map((step) =>
-              el('li', {}, el('code', {}, `${step.contract}.${step.method}(${step.args.join(', ')})`), el('div', { class: 'muted ac-small' }, step.description)))));
+            button.replaceWith(transactionPlan(mine ?? approval));
           } catch (error) {
             toast(error.message, true);
           }
@@ -73,7 +105,7 @@ export function approvalControls(approval, decision, onChanged) {
 export function approvalCard(decision, { protectedPools, onChanged, onOpen }) {
   const approval = decision.approval ?? {};
   const proposal = decision.proposal ?? {};
-  const reasons = (decision.policy?.reasons ?? []).filter((reason) => reason.verdict === 'NEEDS_APPROVAL').map((reason) => reason.message);
+  const reasons = (decision.policy?.reasons ?? []).filter((reason) => reason.verdict === 'NEEDS_APPROVAL').map((reason) => settlementPolicyReason(decision, reason));
   const card = el('article', { class: 'ac-approval-card' },
     el('header', {},
       el('div', {},
@@ -81,7 +113,9 @@ export function approvalCard(decision, { protectedPools, onChanged, onOpen }) {
         ' ', el('strong', {}, decision.case_id),
         protectedPools?.has(decision.case_id) ? [' ', badge(t('ac_protected'), 'tone-warn', t('ac_protected_hint'))] : null),
       el('div', { class: 'muted ac-small' }, formatDateTime(decision.created_at), approval.expires_at ? ` · ${t('ac_expires', { time: formatDateTime(approval.expires_at) })}` : '')),
-    el('p', {}, decision.reasoning_summary),
+    el('p', {}, settlementReasoning(decision)),
+    openingSummary(decision),
+    settlementSummary(decision),
     proposal.new_issue_price_usd !== null && proposal.new_issue_price_usd !== undefined
       ? el('p', { class: 'ac-price' }, t('ac_price_move', { price: usd(proposal.new_issue_price_usd), bps: proposal.price_move_bps ?? 0 }))
       : null,

@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { subscribeToPool } from '../../../app/store.js';
 import { RiskTracker } from './riskTracker.js';
 import { insuranceEvents } from './voyageMonitor.js';
+import { hashSnapshot } from '../../decisionLogger.js';
 
 const SCENARIO_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../data/agent-scenarios');
 const NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/u;
@@ -38,7 +39,7 @@ function validateScenario(data, name) {
   if (typeof data.case_id !== 'string' || !Array.isArray(data.steps) || data.steps.length === 0) {
     throw new ScenarioError('invalid_scenario', `Scenario ${name} needs a case_id and steps`, 500);
   }
-  const kinds = new Set(['risk_snapshot', 'event', 'subscribe', 'clock']);
+  const kinds = new Set(['risk_snapshot', 'event', 'subscribe', 'clock', 'documents']);
   for (const [index, step] of data.steps.entries()) {
     if (!kinds.has(step.kind)) throw new ScenarioError('invalid_scenario', `Scenario ${name} step ${index} has an unknown kind`, 500);
   }
@@ -60,6 +61,10 @@ export class ScenarioPlayer {
     this.speed = speed;
     this.current = null;
     this.catalog = null;
+    this.playback = null;
+    this.playTask = null;
+    this.stepTask = null;
+    this.stepDelayMs = 1000;
   }
 
   /** The virtual clock (epoch ms) while a scenario is loaded, else null. */
@@ -108,17 +113,22 @@ export class ScenarioPlayer {
   }
 
   /** Load a scenario. `reset: true` first clears everything the agent recorded in Demo, for a clean run. */
-  async start(name, { reset = false } = {}) {
+  async start(name, { reset = false, runId } = {}) {
+    this.#manualGuard(runId);
     const service = this.getService();
     if (service.getMode() !== 'demo') throw new ScenarioError('demo_only', 'Scenarios only run in Demo mode', 409);
+    const generation = service.getGeneration();
     const scenario = await this.#load(name);
+    if (service.getMode() !== 'demo' || generation !== service.getGeneration()) throw new ScenarioError('mode_changed', 'Runtime changed while loading the scenario', 409);
     if (reset) await service.resetDemo();
     await service.ensurePools();
+    if (service.getMode() !== 'demo' || generation !== service.getGeneration()) throw new ScenarioError('mode_changed', 'Runtime changed while loading pools', 409);
     if (!service.store.pools.has(scenario.case_id)) {
       throw new ScenarioError('case_not_in_market', `Scenario ${name} needs the case ${scenario.case_id}, which is not in the Demo market`, 409);
     }
     this.current = {
       scenario,
+      generation,
       index: 0,
       clock_ms: Date.parse(scenario.start_at ?? '2026-06-10T00:00:00Z'),
       tracker: new RiskTracker({ clearTicks: this.clearTicks }),
@@ -128,16 +138,33 @@ export class ScenarioPlayer {
   }
 
   async stop() {
+    await this.stopPlayback();
+    await this.stepTask;
     this.current = null;
+    this.playback = null;
+    this.playTask = null;
     return this.status();
   }
 
   /** Play the next step. Returns what happened, or `{done: true}` when the scenario is over. */
-  async step() {
+  async step({ runId } = {}) {
+    this.#manualGuard(runId);
+    if (this.stepTask) throw new ScenarioError('scenario_busy', 'A scenario step is already in progress', 409);
+    this.stepTask = this.#step();
+    try { return await this.stepTask; } finally { this.stepTask = null; }
+  }
+
+  async #step() {
     const run = this.current;
     if (!run) throw new ScenarioError('no_scenario', 'Start a scenario first', 409);
     const service = this.getService();
     if (service.getMode() !== 'demo') throw new ScenarioError('demo_only', 'Scenarios only run in Demo mode', 409);
+    const assertCurrent = () => {
+      if (service.getMode() !== 'demo' || service.getGeneration() !== run.generation || this.current !== run) {
+        throw new ScenarioError('mode_changed', 'The scenario belongs to an older runtime', 409);
+      }
+    };
+    assertCurrent();
     if (run.index >= run.scenario.steps.length) return { done: true, ...this.status() };
 
     const { scenario } = run;
@@ -151,6 +178,7 @@ export class ScenarioPlayer {
     const eventId = `scn:${scenario.name}:${index}`;
 
     const submit = async (raw, suffix = '') => {
+      assertCurrent();
       const accepted = await service.submitEvent({
         ...raw,
         event_id: `${eventId}${suffix}`,
@@ -178,6 +206,24 @@ export class ScenarioPlayer {
     };
 
     switch (step.kind) {
+      case 'documents': {
+        const documents = await Promise.all(['bill-of-lading.md', 'commercial-invoice.md', 'insurance-policy.md'].map(async (name) => ({
+          name, mime_type: 'text/markdown', text: await fs.readFile(new URL(`../../../../data/uploads/copper-sg-shanghai/${name}`, import.meta.url), 'utf8')
+        })));
+        assertCurrent();
+        const uploaded = await service.submitDocuments({ case_id: caseId, documents }, { source: 'scenario', occurredAt, generation: run.generation });
+        const settled = await service.waitFor(uploaded.idempotency_key, 30_000);
+        const job = service.ingest.getJob(uploaded.job.job_id);
+        entry.job_id = job.job_id;
+        entry.events.push({ type: 'DOCUMENTS_INGESTED', status: settled.status, decisions: await Promise.all((job.decision_ids ?? []).map(async (id) => {
+          const decision = await service.getDecision(id);
+          return { decision_id: id, action: decision.action, status: decision.status, verdict: decision.policy?.verdict };
+        })) });
+        if (job.status !== 'DONE' || job.review_required || !['OPEN', 'OPEN_WITH_WARNING'].includes(job.result_action)) {
+          throw new ScenarioError('scenario_review_required', 'Documents need review; playback stopped before subscription', 409);
+        }
+        break;
+      }
       case 'risk_snapshot': {
         const change = await run.tracker.observe(caseId, step.events ?? []);
         entry.change = change ? change.type : null;
@@ -194,7 +240,10 @@ export class ScenarioPlayer {
           break;
         }
         const amount = Math.round(pool.targetUsd * Number(step.fraction ?? 0.4));
-        const result = subscribeToPool(SCENARIO_WALLET, caseId, amount, { source: { kind: 'scenario', scenario: scenario.name } });
+        const prior = service.store.investments.find((investment) => investment.source?.scenario_step === eventId);
+        if (prior) { entry.skipped = 'This scenario subscription is already recorded'; break; }
+        assertCurrent();
+        const result = subscribeToPool(SCENARIO_WALLET, caseId, amount, { source: { kind: 'scenario', scenario: scenario.name, scenario_step: eventId } });
         service.activity.append({ type: 'SUBSCRIPTION', action: 'DEMO_SUBSCRIBED', caseId, poolId: pool.poolId, mode: 'demo', reference: result.reference, details: { amount_usd: amount, scenario: scenario.name } });
         entry.subscribed_usd = amount;
         break;
@@ -223,5 +272,73 @@ export class ScenarioPlayer {
       if (result.done) break;
     }
     return { entries, ...this.status() };
+  }
+
+  #manualGuard(runId) {
+    if (this.playback?.active && runId !== this.playback.run_id) throw new ScenarioError('demo_run_active', 'Stop the current playback before changing scenarios', 409);
+  }
+
+  playbackStatus() {
+    if (!this.playback) return { active: false, state: 'idle' };
+    const { cancelled: _cancelled, wake: _wake, ...run } = this.playback;
+    return { ...structuredClone(run), scenario: this.status() };
+  }
+
+  #publish(action) {
+    const run = this.playback;
+    this.getService().activity.append({ type: 'SCENARIO', action, caseId: this.current?.scenario.case_id,
+      mode: 'demo', details: { run: this.playbackStatus() } });
+    return run;
+  }
+
+  /** Starts a paced background playback. speed changes wall-clock pacing, never evidence timestamps. */
+  async play(name, { speed = 1 } = {}) {
+    if (typeof speed !== 'number' || !Number.isFinite(speed) || speed < 0.25 || speed > 10) throw new ScenarioError('invalid_speed', 'speed must be a number between 0.25 and 10');
+    const service = this.getService();
+    if (service.getMode() !== 'demo') throw new ScenarioError('demo_only', 'Playback only runs in Demo mode', 409);
+    this.#manualGuard();
+    if (this.stepTask) throw new ScenarioError('scenario_busy', 'A manual scenario step is in progress', 409);
+    if (service.autonomy().effective !== 'auto') throw new ScenarioError('demo_autonomy_required', 'Set Demo autonomy to auto before playback', 409);
+    const run = { run_id: `demo-run:${hashSnapshot({ name, generation: service.getGeneration() }).slice(2, 26)}`,
+      name, speed, generation: service.getGeneration(), active: true, state: 'starting', cancelled: false };
+    this.playback = run;
+    // Reserve the run before the first await, including its preparation, so two POSTs cannot race.
+    this.playTask = (async () => {
+      await this.start(name, { runId: run.run_id });
+      if (run.cancelled) return;
+      if (!service.running) await service.start();
+      if (run.cancelled || service.getMode() !== 'demo' || service.getGeneration() !== run.generation) return;
+      run.state = 'running'; this.#publish('DEMO_RUN_STARTED');
+      while (!run.cancelled && service.getMode() === 'demo' && service.getGeneration() === run.generation) {
+        const result = await this.step({ runId: run.run_id });
+        this.#publish('DEMO_RUN_STEP');
+        if (result.done) { run.state = 'completed'; break; }
+        await new Promise((resolve) => {
+          const timer = setTimeout(resolve, this.stepDelayMs / speed);
+          run.wake = () => { clearTimeout(timer); resolve(); };
+        });
+        run.wake = null;
+      }
+      if (run.state !== 'completed') run.state = 'stopped';
+    })().catch((error) => {
+      run.state = run.cancelled || error.code === 'mode_changed' || error.code === 'demo_only' ? 'stopped' : 'failed';
+      run.error = { code: error.code ?? 'scenario_failed', message: String(error.message).slice(0, 300) };
+    }).finally(() => {
+      run.active = false; run.wake = null;
+      if (run.state === 'starting') run.state = 'stopped';
+      this.#publish('DEMO_RUN_FINISHED');
+    });
+    // Validate the name before accepting the request; task errors are also retained for observers.
+    await this.#load(name).catch(async (error) => { await this.stopPlayback(); throw error; });
+    return this.playbackStatus();
+  }
+
+  async stopPlayback() {
+    if (this.playback?.active) {
+      this.playback.cancelled = true;
+      this.playback.wake?.();
+    }
+    await this.playTask;
+    return this.playbackStatus();
   }
 }

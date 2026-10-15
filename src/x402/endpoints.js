@@ -4,6 +4,7 @@ import { runValuationAgent } from '../agent/valuationAgent.js';
 import { assessWorldRisk } from '../agent/worldRiskAgent.js';
 import { quoteFromCase } from '../core/pricingEngine.js';
 import { runScenario } from '../core/scenarioRunner.js';
+import { simulatePricingWorkflow } from '../core/pricingWorkflow.js';
 import { repriceWithWorldRisk } from '../core/worldRiskPricing.js';
 import { buildMysteryRiskPassport } from '../mystery/riskPassport.js';
 
@@ -87,7 +88,12 @@ export async function buildPremiumValuation(caseData, options = {}) {
 export async function buildPremiumFraudReview(caseData) {
   const consistency = checkDocumentConsistency(caseData);
   const quote = quoteFromCase(caseData);
-  const scenario = runScenario(caseData, { assertExpectations: false });
+  // Curated v2 cases use requested_cash_usd and do not carry legacy LTV/yield fields.
+  // A successful pricing preflight must not be followed by a legacy-schema failure after payment.
+  const modern = caseData.financing?.requested_cash_usd !== undefined && caseData.financing?.requested_amount_usd === undefined;
+  const scenario = modern ? simulatePricingWorkflow(caseData) : runScenario(caseData, { assertExpectations: false });
+  const lifecycle = { final_state: scenario.final_state, contract_action: scenario.risk_report.contract_action ?? null,
+    ...(modern ? { pricing_action: scenario.risk_report.pricing_action, workflow_version: 'pricing-v2' } : {}) };
   return {
     ok: true,
     kind: 'document-fraud-review',
@@ -99,10 +105,7 @@ export async function buildPremiumFraudReview(caseData) {
       invoice_integrity: consistency.checks.filter((item) => ['declared_vs_invoice', 'invoice_vs_market'].includes(item.id)),
       trade_terms: consistency.checks.filter((item) => item.id === 'incoterms_match'),
       insurance: consistency.checks.filter((item) => item.id.startsWith('insurance_')),
-      lifecycle: {
-        final_state: scenario.final_state,
-        contract_action: scenario.risk_report.contract_action
-      }
+      lifecycle
     },
     checks: consistency.checks,
     issues: consistency.issues,
@@ -117,7 +120,8 @@ export async function buildPremiumFraudReview(caseData) {
     },
     scenario: {
       final_state: scenario.final_state,
-      steps: scenario.steps
+      steps: modern ? scenario.offering.steps : scenario.steps,
+      ...(modern ? { workflow_version: 'pricing-v2' } : {})
     }
   };
 }

@@ -6,10 +6,14 @@
 // that changes state, and the approval queue itself, needs the admin token -- except that in Demo mode,
 // when no admin token is configured at all, they are open so the Demo works with zero setup.
 
+import { proposeLiveSmoke } from '../agent/runtime/liveSmoke.js';
+import { sanitizeAudit } from '../agent/security/privacy.js';
 import { checkAdminToken, MIN_ADMIN_TOKEN_LENGTH } from './security.js';
 import { HttpError, readJsonBody, sendJson } from './http.js';
 import { createChainReader } from '../agent/runtime/poolRegistry.js';
 import { isRecord } from './shapes.js';
+import { withReferences } from '../agent/runtime/references.js';
+import { publicAgentPolicy } from '../mcp/agentTools.js';
 
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
 
@@ -63,6 +67,11 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     if (!pathname.startsWith('/api/agent/')) return false;
     const service = getService();
 
+    if (method === 'GET' && pathname === '/api/agent/policy') {
+      sendJson(response, 200, { ok: true, policy: await publicAgentPolicy(service) });
+      return true;
+    }
+
     if (method === 'GET' && pathname === '/api/agent/status') {
       sendJson(response, 200, { ok: true, ...(await service.status()) });
       return true;
@@ -73,6 +82,14 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       const body = await readJsonBody(request);
       if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object with an action');
       sendJson(response, 200, { ok: true, ...(await service.control(body)) });
+      return true;
+    }
+
+    if (method === 'POST' && pathname === '/api/agent/smoke/propose') {
+      authorizeAdmin(request);
+      const body = await readJsonBody(request);
+      if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must contain a smoke action and run_id');
+      sendJson(response, 200, { ok: true, ...(await proposeLiveSmoke(service, body)) });
       return true;
     }
 
@@ -97,13 +114,37 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         limit: intParam(url, 'limit', { fallback: 50 }),
         cursor: url.searchParams.get('cursor') ?? undefined
       });
-      sendJson(response, 200, { ok: true, ...result });
+      sendJson(response, 200, { ok: true, ...result, decisions: result.decisions.map(withReferences) });
       return true;
     }
 
-    const decisionMatch = /^\/api\/agent\/decisions\/([^/]+)(?:\/(trace))?$/u.exec(pathname);
+    if (method === 'GET' && pathname === '/api/agent/references') {
+      const { decisions } = await service.listDecisions({ limit: service.config.maxDecisions });
+      const seen = new Set();
+      const current = decisions.filter((decision) => {
+        if (decision.mode !== service.getMode() || decision.generation !== undefined && decision.generation !== service.getGeneration() || seen.has(decision.case_id)) return false;
+        seen.add(decision.case_id); return true;
+      });
+      sendJson(response, 200, { ok: true, mode: service.getMode(), generation: service.getGeneration(), decisions: current.map(withReferences),
+        pools: [...service.store.pools.values()]
+          .filter((pool) => service.getMode() === 'demo' || service.registry.get(pool.caseData?.case_id ?? pool.poolId)?.chain)
+          .map((pool) => ({ case_id: pool.caseData?.case_id ?? pool.poolId, status: pool.status, quote: pool.quote,
+            source_mode: service.getMode() === 'demo' ? 'demo' : 'chain-mirror' })) });
+      return true;
+    }
+
+    const decisionMatch = /^\/api\/agent\/decisions\/([^/]+)(?:\/(trace|replay|anchor))?$/u.exec(pathname);
     if (method === 'GET' && decisionMatch) {
       const id = pathId(decisionMatch[1]);
+      if (decisionMatch[2] === 'anchor') {
+        sendJson(response, 200, { ok: true, anchor: await service.getDecisionAnchor(id) });
+        return true;
+      }
+      if (decisionMatch[2] === 'replay') {
+        if (runtimeMode().mode === 'live') authorizeAdmin(request);
+        sendJson(response, 200, { ok: true, replay: await service.replayDecision(id) });
+        return true;
+      }
       if (decisionMatch[2] === 'trace') {
         const trace = await service.getTrace(id);
         if (!trace) throw new HttpError(404, 'trace_not_found', 'No trace is recorded for this decision');
@@ -114,8 +155,8 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       if (!decision) throw new HttpError(404, 'decision_not_found', 'Unknown decision');
       sendJson(response, 200, {
         ok: true,
-        decision,
-        approvals: service.approvals.list({ decision_id: id }),
+        decision: withReferences(decision),
+        approvals: sanitizeAudit(service.approvals.list({ decision_id: id })),
         activity: activityLog.list({ limit: 1000 }).filter((record) => record.decision_id === id)
       });
       return true;
@@ -180,7 +221,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         job,
         documents: result.documents.map((document) => ({
           document_id: document.document_id, name: document.name, mime_type: document.mime_type, kind: document.kind,
-          size: document.size, sha256: document.sha256, eni: document.eni
+          size: document.size, sha256: document.sha256, eni: document.eni, observed_at: document.observed_at, expires_at: document.expires_at, source_status: document.source_status
         }))
       });
       return true;
@@ -223,6 +264,25 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
 
     if (method === 'GET' && pathname === '/api/agent/scenarios') {
       sendJson(response, 200, { ok: true, scenarios: await service.scenarios.list(), current: service.scenarios.status() });
+      return true;
+    }
+    if (pathname === '/api/agent/demo/run' && (method === 'GET' || method === 'POST')) {
+      if (method === 'GET') {
+        sendJson(response, 200, { ok: true, run: service.scenarios.playbackStatus() });
+      } else {
+        authorizeAdmin(request);
+        const body = await readJsonBody(request);
+        if (!isRecord(body) || Object.keys(body).some((key) => !['scenario', 'speed'].includes(key))) {
+          throw new HttpError(400, 'invalid_request', 'Expected {scenario, speed}');
+        }
+        sendJson(response, 202, { ok: true, run: await service.scenarios.play(body.scenario ?? 'copper-lifecycle', { speed: body.speed ?? 1 }) });
+      }
+      return true;
+    }
+    if (pathname === '/api/agent/demo/stop' && method === 'POST') {
+      authorizeAdmin(request);
+      if (runtimeMode().mode !== 'demo') throw new HttpError(409, 'demo_only', 'Demo playback is disabled in Live');
+      sendJson(response, 200, { ok: true, run: await service.scenarios.stopPlayback() });
       return true;
     }
     const scenarioMatch = SCENARIO_PATH.exec(pathname);

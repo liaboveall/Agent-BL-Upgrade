@@ -50,6 +50,24 @@ const requiredFiles = [
   'src/agent/evaluation/goldDataset.js',
   'tests/agentEvaluation.test.js',
   'tests/agentReliability.test.js',
+  'src/agent/runtime/sources/chainWatcher.js',
+  'public/agent/chain-watcher.js',
+  'tests/agentChainWatcher.test.js',
+  'docs/chain-watcher.md',
+  'src/agent/api.js',
+  'src/app/agentApiRoutes.js',
+  'tests/agentStatelessApi.test.js',
+  'tests/llmProjectModel.test.js',
+  'docs/agent-api.md',
+  'src/agent/runtime/anchoring.js',
+  'src/agent/runtime/anchorChain.js',
+  'hardhat/contracts/AgentDecisionLog.sol',
+  'hardhat/scripts/deploy-agent-log.js',
+  'scripts/agent-verify-anchor.mjs',
+  'scripts/agent-anchor-plan.mjs',
+  'tests/agentAnchoring.test.js',
+  'tests/agentAnchorChain.test.js',
+  'docs/phase7-decision-anchoring.md',
   'tests/riskEngine.test.js',
   'tests/scenarioRunner.test.js',
   'tests/chainConfig.test.js',
@@ -65,7 +83,7 @@ const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'));
 for (const script of [
   'postinstall', 'dev', 'test', 'check', 'demo', 'smoke', 'scenarios', 'mcp',
   'mcp:stdio', 'deploy:protocol', 'verify:wave-b', 'smoke:mcp:injective',
-  'migrate:chain-config', 'eval:agent'
+  'migrate:chain-config', 'eval:agent', 'agent:verify-anchor', 'agent:anchor-plan'
 ]) {
   assert.ok(pkg.scripts[script], `Missing package script: ${script}`);
 }
@@ -116,6 +134,10 @@ assert.ok(scenarioResults.some((scenario) => scenario.contract_action === 'FREEZ
 assert.ok(scenarioResults.some((scenario) => scenario.contract_action === 'CONTINUE_WITH_WARNING'));
 
 // Validate RAG knowledge base
+const { COMPLIANCE_DATA } = await import('../src/agent/compliance/data.js');
+assert.equal(COMPLIANCE_DATA.list.mode, 'demo', 'Bundled screening must remain explicitly demo');
+assert.ok(COMPLIANCE_DATA.list.entities.every((entry) => entry.fictional), 'Every demo screening entity must be fictional');
+
 const { validateKnowledgeBase } = await import('../src/rag/knowledgeBase.js');
 const kbErrors = validateKnowledgeBase();
 assert.equal(kbErrors.length, 0, `Knowledge base validation errors: ${kbErrors.join('; ')}`);
@@ -123,8 +145,10 @@ assert.equal(kbErrors.length, 0, `Knowledge base validation errors: ${kbErrors.j
 // Validate MCP manifest
 const { MCP_TOOLS_MANIFEST, MCP_TOOL_HANDLERS } = await import('../src/mcp/mcpServer.js');
 const { MCP_RESOURCES } = await import('../src/mcp/resources.js');
-assert.equal(MCP_TOOLS_MANIFEST.length, 9, 'MCP manifest must have exactly 9 tools');
+assert.equal(MCP_TOOLS_MANIFEST.length, 15, 'MCP manifest must have exactly 15 tools');
 assert.deepEqual(MCP_RESOURCES.map((resource) => resource.uri).sort(), [
+  'agentbl://agent/decisions/recent',
+  'agentbl://agent/policy',
   'agentbl://cases/catalog',
   'agentbl://contracts/deployments',
   'agentbl://risk/methodology'

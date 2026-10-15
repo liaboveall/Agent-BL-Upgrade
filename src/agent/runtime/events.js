@@ -4,6 +4,7 @@
 // guess what it was given. Event data is untrusted: it can carry values, never instructions.
 
 import { z } from 'zod';
+import { evidenceMetadata, SOURCE_STATUSES } from './freshness.js';
 import { hashSnapshot } from '../decisionLogger.js';
 import { eventIdempotencyKey } from '../executionReliability.js';
 
@@ -22,6 +23,7 @@ export const SOURCE_MODES = Object.freeze(['live', 'fixture', 'demo']);
 const HASH_RE = /^0x[0-9a-f]{64}$/u;
 const isoDate = z.string().refine((value) => Number.isFinite(Date.parse(value)), 'must be an ISO date-time');
 const proof = z.string().min(1).max(300);
+const repayment = z.union([z.number().positive().finite(), z.string().max(85).regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,6})?$/u)]);
 const looseData = (shape = {}) => z.looseObject(shape);
 
 // Per-type payloads. Unknown extra keys are kept (loose) but the keys the pipelines rely on are checked.
@@ -39,11 +41,11 @@ const DATA_SCHEMAS = {
   CARGO_ARRIVED: looseData({ arrival_proof: proof.optional(), payment_received: z.boolean().optional() }),
   PAYMENT_RECEIVED: looseData({
     payment_proof: proof,
-    repayment_amount: z.number().positive().finite(),
+    repayment_amount: repayment,
     proof_source: z.string().max(64).optional()
   }),
   SUBSCRIPTION_RECEIVED: looseData({ amount_usd: z.number().positive().finite().optional() }),
-  SETTLEMENT_READY: looseData({ repayment_amount: z.number().positive().finite() }),
+  SETTLEMENT_READY: looseData({ repayment_amount: repayment }),
   CHAIN_STATE_CHANGED: looseData(),
   EMERGENCY_STOP_CHANGED: looseData({ stopped: z.boolean() }),
   REVIEW_RESOLVED: looseData({ resolution: z.enum(['approve', 'reject']).optional(), approval_id: z.string().max(128).optional() })
@@ -57,6 +59,8 @@ const eventSchema = z.object({
   chain_pool_id: z.number().int().positive().optional(),
   occurred_at: isoDate.optional(),
   observed_at: isoDate.optional(),
+  expires_at: isoDate.optional(),
+  source_status: z.enum(SOURCE_STATUSES).optional(),
   source: z.enum(EVENT_SOURCES),
   source_mode: z.enum(SOURCE_MODES).optional(),
   data: z.record(z.string(), z.unknown()).optional(),
@@ -103,7 +107,7 @@ export function normalizeEvent(raw, { now = () => new Date(), defaultMode = 'dem
     ...event,
     data: dataResult.data,
     occurred_at: occurredAt,
-    observed_at: observedAt,
+    ...evidenceMetadata({ ...event, observed_at: observedAt }, { now: now().getTime(), mode: event.source_mode ?? defaultMode }),
     source_mode: event.source_mode ?? defaultMode
   };
   normalized.event_id = event.event_id

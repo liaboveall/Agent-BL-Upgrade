@@ -43,6 +43,9 @@ export function snapshotOf(event, pool) {
     occurred_at: event.occurred_at,
     source: event.source,
     source_mode: event.source_mode,
+    observed_at: event.observed_at ?? null,
+    expires_at: event.expires_at ?? null,
+    source_status: event.source_status ?? null,
     data_hash: hashSnapshot(event.data ?? {}),
     pool_state: pool?.status ?? null,
     quote_hash: pool?.quote?.quote_hash ?? null,
@@ -200,7 +203,8 @@ export function proposeFromEvent(event, { pool, mode, now = () => Date.now() }) 
           params: {
             payment_proof: event.data.payment_proof,
             repayment_amount: event.data.repayment_amount,
-            proof_source: event.data.proof_source ?? null
+            proof_source: event.data.proof_source ?? null,
+            ...(mode === 'live' ? { repayment_amount_atomic: event.data.repayment_amount_atomic, payment_verification: event.data.payment_verification } : {})
           },
           findings: [{ kind: 'PAYMENT_RECEIVED', severity: 'info', detail: `Proof source: ${event.data.proof_source ?? 'unspecified'}` }]
         })]
@@ -223,12 +227,14 @@ export function proposeFromEvent(event, { pool, mode, now = () => Date.now() }) 
       const settlement = pool.settlement ?? {};
       if (pool.status === 'Repaid' || settlement.settled_at) return ignored('The pool is already settled');
       if (!settlement.payment_proof || !settlement.arrival_proof) return ignored('Both the payment proof and the arrival proof must be recorded before settling');
-      const amount = Number(event.data.repayment_amount);
+      if (mode === 'live' && !settlement.payment_verification) return ignored('Confirmed USDC evidence is required before proposing Live settlement');
+      const amount = mode === 'live' ? settlement.repayment_amount : Number(event.data.repayment_amount);
       return {
         proposals: [proposal(event, pool, {
           action: 'SETTLE',
           reasoning_summary: `Payment proof and arrival proof are both on record; settle the pool at ${amount}. The contract only records the repayment, it does not distribute funds.`,
-          params: { repayment_amount: amount, payment_proof: settlement.payment_proof, arrival_proof: settlement.arrival_proof },
+          params: { repayment_amount: amount, payment_proof: settlement.payment_proof, arrival_proof: settlement.arrival_proof,
+            ...(mode === 'live' ? { repayment_amount_atomic: settlement.repayment_amount_atomic, payment_verification: settlement.payment_verification } : {}) },
           findings: [{ kind: 'SETTLEMENT_READY', severity: 'info', detail: 'Both settlement proofs recorded' }]
         })]
       };

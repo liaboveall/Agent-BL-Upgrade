@@ -64,6 +64,15 @@ test('live rendering restores replaced controls without stealing focus from a co
   preserveFocus(root, () => {}); assert.equal(moves, 1);
 });
 
+test('live rendering restores focus when the same control is detached and reinserted', () => {
+  let moves = 0;
+  const active = { id: 'replay', isConnected: true, getAttribute: () => null, focus: () => { moves++; } };
+  const doc = { activeElement: active };
+  const root = { ownerDocument: doc, contains: () => true };
+  preserveFocus(root, () => { doc.activeElement = {}; });
+  assert.equal(moves, 1);
+});
+
 test('modal Tab and reverse Tab wrap at the edges while ordinary navigation is untouched', () => {
   let keydown, focused = -1, prevented = 0;
   const items = [0, 1, 2].map((index) => ({ tabIndex: 0, getClientRects: () => [1], closest: () => null, focus: () => { focused = index; } }));

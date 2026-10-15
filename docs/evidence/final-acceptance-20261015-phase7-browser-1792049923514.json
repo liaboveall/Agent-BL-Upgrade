@@ -1,0 +1,149 @@
+{
+  "phase": 7,
+  "checked_at": "2026-10-15T07:38:43.514Z",
+  "browser": "153.0.8010.12",
+  "checks": [
+    {
+      "name": "Isolated Demo runtime has no configured signer",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: wallet menu arrows move focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: wallet menu returns focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: tab arrows activate mint",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: payout radios follow arrow keys",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: SSE update keeps control focus",
+      "passed": true
+    },
+    {
+      "name": "Demo setup /api/agent/control",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: refreshed select retains focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: announcement is polite",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: unchanged history is silent",
+      "passed": false
+    },
+    {
+      "name": "Established bilingual and narrow-screen workflow",
+      "passed": false,
+      "detail": "1440/zh: unchanged history is silent"
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/final-acceptance-20261015-phase7-browser-1792049923514-failure.png"
+  ],
+  "measurements": [
+    {
+      "name": "market-and-portfolio",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "source_document_fields": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "mint-and-document-extraction",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "source_document_fields": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "agent-console",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "source_document_fields": [],
+      "english_mixed_copy": []
+    }
+  ],
+  "real_transactions": 0,
+  "real_provider_calls": 0,
+  "human_acceptance": false,
+  "builtin_browser_control": false,
+  "page_errors": [],
+  "unexpected_http_errors": [],
+  "passed": false,
+  "error": "Established bilingual and narrow-screen workflow"
+}

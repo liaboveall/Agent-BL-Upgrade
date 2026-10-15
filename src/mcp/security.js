@@ -73,14 +73,14 @@ function assertRawEvmSelector(operation, calldata) {
   return selector;
 }
 
-function assertHumanApproval(request) {
+export function assertHumanApproval(request, env = process.env) {
   if (request.approved !== true) {
     throw new McpWritePolicyError(
       'human_approval_required',
-      'A real MCP chain write requires approved=true from the human caller'
+      'An MCP write requires approved=true from the human caller'
     );
   }
-  const expected = process.env.MCP_HUMAN_APPROVAL_TOKEN?.trim();
+  const expected = env.MCP_HUMAN_APPROVAL_TOKEN?.trim();
   if (!expected) {
     throw new McpWritePolicyError(
       'approval_channel_not_configured',

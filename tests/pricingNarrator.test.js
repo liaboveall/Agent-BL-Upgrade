@@ -26,6 +26,16 @@ test('BE-10: narratePricing without an LLM returns the deterministic narrative',
   assert.equal(out.text, out.grounded);
 });
 
+test('BE-10: disabling the project LLM switch prevents narrator requests', async () => {
+  let calls = 0;
+  const out = await narratePricing(comparison, { useLlm: true,
+    env: { Tencent_API_KEY: 'fixture-only', LLM_PROXY_ENABLED: 'false' },
+    chat: async () => { calls += 1; throw new Error('unexpected model request'); } });
+  assert.equal(calls, 0);
+  assert.equal(out.provider, 'deterministic');
+  assert.equal(out.text, out.grounded);
+});
+
 test('BE-10: a failing LLM falls back to the grounded narrative', async () => {
   const failingChat = async () => { throw new Error('provider 500: upstream timeout'); };
   const out = await narratePricing(comparison, { useLlm: true, env: { Tencent_API_KEY: 'x' }, chat: failingChat });

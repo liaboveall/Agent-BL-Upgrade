@@ -228,6 +228,7 @@ function parseEbl(text, entries) {
     c.add('voyage_no', { ...vv, value: parsed.voyage_no });
   }
   if (!c.fields.vessel) c.add('vessel', get('Vessel'));
+  c.add('vessel_imo', get('Vessel IMO', 'IMO Number', 'IMO No', '船舶 IMO', '船舶IMO'));
   if (!c.fields.voyage_no) c.add('voyage_no', get('Voyage No.', 'Voyage Number'));
   c.add('port_of_loading', get('Port of Loading', 'Place / Terminal of Loading', 'Terminal of Loading'));
   c.add('port_of_discharge', get('Port of Discharge'));
@@ -264,6 +265,7 @@ function parseInvoice(text, entries) {
   c.add('payment_terms', get('Payment Terms'));
   c.add('bl_no', get('B/L No.'));
   c.add('receipt_no', get('Warehouse Receipt No.', '仓单编号'));
+  c.add('vessel_imo', get('Vessel IMO', 'IMO Number', 'IMO No', '船舶 IMO', '船舶IMO'));
   const vv = get('Vessel / Voyage');
   if (vv) {
     const parsed = vesselVoyage(vv.value);
@@ -374,10 +376,12 @@ function toCaseFragment(type, fields, textHash) {
         notify_party: fields.notify_party,
         carrier: fields.carrier,
         vessel: fields.vessel,
+        vessel_imo: fields.vessel_imo,
         voyage_no: fields.voyage_no,
         port_of_loading: fields.port_of_loading,
         port_of_discharge: fields.port_of_discharge,
         cargo: fields.cargo,
+        hs_code: fields.hs_code,
         quantity_mt: fields.quantity_mt,
         quantity_bbl: fields.quantity_bbl,
         declared_value_usd: fields.declared_value_usd,
@@ -409,7 +413,11 @@ function toCaseFragment(type, fields, textHash) {
         currency: fields.currency,
         is_provisional: fields.is_provisional,
         hs_code: fields.hs_code,
+        port_of_loading: fields.port_of_loading,
+        port_of_discharge: fields.port_of_discharge,
+        vessel_imo: fields.vessel_imo,
         receipt_no: fields.receipt_no,
+        vessel: fields.vessel,
         total_amount_cny: fields.total_amount_cny,
         unit_price_cny_per_mt: fields.unit_price_cny_per_mt
       },

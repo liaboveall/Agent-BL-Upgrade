@@ -36,6 +36,7 @@ test('verifyDeployment reports each configured contract against the local artifa
   write('EBLRegistry', code('6003'));
   write('RWAToken', code('6004'));
   write('RWAOfferingPool', code('6005'));
+  write('AgentDecisionLog', code('6006'));
   // RiskPricingOracle has no artifact on purpose.
 
   const remote = new Map();
@@ -49,6 +50,7 @@ test('verifyDeployment reports each configured contract against the local artifa
   remote.set(addressOf('AgentBLRWA'), code('6001'));
   remote.set(addressOf('PaymentOracle'), code('6002', 'ffffffff'));
   remote.set(addressOf('EBLRegistry'), code('60ff'));
+  remote.set(addressOf('AgentDecisionLog'), code('6006'));
   // RWAToken is not deployed (no code); RWAOfferingPool likewise.
 
   const second = await verifyDeployment({ artifactsDir: artifacts, getCode });
@@ -59,7 +61,8 @@ test('verifyDeployment reports each configured contract against the local artifa
     EBLRegistry: 'DIFFERENT',
     RWAToken: 'NOT_DEPLOYED',
     RWAOfferingPool: 'NOT_DEPLOYED',
-    RiskPricingOracle: 'NO_ARTIFACT'
+    RiskPricingOracle: 'NO_ARTIFACT',
+    AgentDecisionLog: 'MATCH'
   });
   assert.equal(second.chainId, 1439);
 });

@@ -5,6 +5,8 @@
 // chain-of-thought. Writes are serialized and atomically replace the JSON file.
 
 import crypto from 'node:crypto';
+import path from 'node:path';
+import { sanitizeAudit, stripSecretFields, sealRecords, openRecords } from './security/privacy.js';
 import fs from 'node:fs/promises';
 import { createWriteQueue, writeFileAtomic } from '../lib/jsonStore.js';
 import { runtimePath } from '../runtimePaths.js';
@@ -65,6 +67,8 @@ export class DecisionLogger {
     this.records = [];
     this.initialized = false;
     this.enqueueWrite = createWriteQueue();
+    this.agentVersion = options.agentVersion;
+    this.onRecord = options.onRecord;
   }
 
   async init() {
@@ -73,13 +77,22 @@ export class DecisionLogger {
       try {
         const body = JSON.parse(await fs.readFile(this.filePath, 'utf8'));
         if (!Array.isArray(body)) throw new Error('decision log root must be an array');
-        this.records = body;
+        this.records = [];
+        this.needsMigration = body.some((record) => !record._private);
+        for (const stored of body) {
+          if (!stored._private) { this.records.push(stripSecretFields(stored)); continue; }
+          const { _private: sealed, ...audit } = stored;
+          const decoded = openRecords(sealed, await this.storageKey(false));
+          if (stableStringify(sanitizeAudit(decoded)) !== stableStringify(audit)) throw new Error('Audit journal differs from its authenticated operational snapshot');
+          this.records.push(decoded);
+        }
       } catch (error) {
         if (error?.code !== 'ENOENT') throw error;
         this.records = [];
       }
     }
     this.initialized = true;
+    if (this.needsMigration) { await this.persist(); this.needsMigration = false; }
     return this;
   }
 
@@ -89,9 +102,27 @@ export class DecisionLogger {
 
   async persist() {
     if (!this.filePath) return;
-    const body = `${JSON.stringify(this.records, null, 2)}\n`;
-    const target = this.filePath;
-    await this.enqueueWrite(() => writeFileAtomic(target, body));
+    const records = clone(this.records);
+    await this.enqueueWrite(async () => {
+      const key = await this.storageKey(true);
+      const stored = records.map((record) => ({ ...sanitizeAudit(record), _private: sealRecords(record, key) }));
+      await writeFileAtomic(this.filePath, `${JSON.stringify(stored, null, 2)}\n`);
+    });
+  }
+
+  async storageKey(create) {
+    if (this.key) return this.key;
+    const file = `${this.filePath}.key`;
+    try { this.key = Buffer.from(await fs.readFile(file, 'utf8'), 'base64'); }
+    catch (error) {
+      if (error.code !== 'ENOENT' || !create) throw error;
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      try { await fs.writeFile(file, crypto.generateKeySync('aes', { length: 256 }).export().toString('base64'), { flag: 'wx', mode: 0o600 }); }
+      catch (race) { if (race.code !== 'EEXIST') throw race; }
+      this.key = Buffer.from(await fs.readFile(file, 'utf8'), 'base64');
+    }
+    if (this.key.length !== 32) throw new Error('Invalid operational journal encryption key');
+    return this.key;
   }
 
   async record(decision) {
@@ -99,7 +130,8 @@ export class DecisionLogger {
     validateRecord(decision);
     const timestamp = this.now();
     const record = {
-      ...clone(decision),
+      ...stripSecretFields(clone(decision)),
+      ...(this.agentVersion ? { agent_version: decision.agent_version ?? this.agentVersion } : {}),
       decision_id: decision.decision_id ?? createDecisionId(decision),
       status: decision.status ?? 'DECIDED',
       created_at: decision.created_at ?? timestamp,
@@ -113,13 +145,16 @@ export class DecisionLogger {
         ...existing,
         ...record,
         created_at: existing.created_at,
+        agent_version: existing.agent_version ?? null,
         transaction: record.transaction ?? existing.transaction ?? null
       };
     } else {
       this.records.push(record);
     }
     await this.persist();
-    return clone(this.records.find((item) => item.decision_id === record.decision_id));
+    const saved = clone(this.records.find((item) => item.decision_id === record.decision_id));
+    await this.onRecord?.(saved);
+    return saved;
   }
 
   async update(decisionId, patch) {
@@ -129,13 +164,15 @@ export class DecisionLogger {
     const immutable = this.records[index];
     this.records[index] = {
       ...immutable,
-      ...clone(patch),
+      ...stripSecretFields(clone(patch)),
       decision_id: immutable.decision_id,
       created_at: immutable.created_at,
       updated_at: this.now()
     };
     await this.persist();
-    return clone(this.records[index]);
+    const saved = clone(this.records[index]);
+    await this.onRecord?.(saved);
+    return saved;
   }
 
   async attachTransaction(decisionId, transaction) {

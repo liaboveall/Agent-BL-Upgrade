@@ -31,7 +31,8 @@
         "EBLRegistry": "0x8152FE274497C84850Ce79822feA3B885295cf53",
         "RWAToken": "0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C",
         "RWAOfferingPool": "0x38c52c33FEC5cc430f19F573768671c47E63b310",
-        "RiskPricingOracle": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC"
+        "RiskPricingOracle": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC",
+        "AgentDecisionLog": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec"
       },
       "abis": {
         "AgentBLRWA": [
@@ -3526,6 +3527,427 @@
             "stateMutability": "nonpayable",
             "type": "function"
           }
+        ],
+        "AgentDecisionLog": [
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "versionId",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "policyHash",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "codeCommit",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "string",
+                "name": "modelId",
+                "type": "string"
+              }
+            ],
+            "name": "AgentVersionRegistered",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "anchorer",
+                "type": "address"
+              },
+              {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "allowed",
+                "type": "bool"
+              }
+            ],
+            "name": "AnchorerSet",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "batchId",
+                "type": "uint256"
+              },
+              {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "merkleRoot",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "fromSeq",
+                "type": "uint256"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "toSeq",
+                "type": "uint256"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "count",
+                "type": "uint256"
+              },
+              {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "versionId",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "address",
+                "name": "anchorer",
+                "type": "address"
+              }
+            ],
+            "name": "DecisionBatchAnchored",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "merkleRoot",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint256",
+                "name": "fromSeq",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "toSeq",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "count",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "versionId",
+                "type": "bytes32"
+              }
+            ],
+            "name": "anchorBatch",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "name": "anchorers",
+            "outputs": [
+              {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "batchCount",
+            "outputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ],
+            "name": "batches",
+            "outputs": [
+              {
+                "internalType": "bytes32",
+                "name": "merkleRoot",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "uint256",
+                "name": "fromSeq",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "toSeq",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "count",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "versionId",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "address",
+                "name": "anchorer",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "anchoredAt",
+                "type": "uint256"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "lastSeq",
+            "outputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "owner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "versionId",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "policyHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "codeCommit",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "string",
+                "name": "modelId",
+                "type": "string"
+              }
+            ],
+            "name": "registerAgentVersion",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "anchorer",
+                "type": "address"
+              },
+              {
+                "internalType": "bool",
+                "name": "allowed",
+                "type": "bool"
+              }
+            ],
+            "name": "setAnchorer",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "transferOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "uint256",
+                "name": "batchId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "leaf",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32[]",
+                "name": "proof",
+                "type": "bytes32[]"
+              }
+            ],
+            "name": "verifyInclusion",
+            "outputs": [
+              {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "name": "versions",
+            "outputs": [
+              {
+                "internalType": "bytes32",
+                "name": "policyHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "codeCommit",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "string",
+                "name": "modelId",
+                "type": "string"
+              },
+              {
+                "internalType": "uint256",
+                "name": "registeredAt",
+                "type": "uint256"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          }
         ]
       },
       "deployments": {
@@ -3563,6 +3985,24 @@
           "deployTx": "0x90c08062b2050e851ad3562d7815cbca277f0e9267ca2eb3e26e77ed7cfa5072",
           "blockNumber": 143331465,
           "deployedAt": "2026-10-12T02:28:30.699Z"
+        },
+        "AgentDecisionLog": {
+          "address": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+          "deployTx": "0x27208e6af3ec24c543d5566ea215fea725d0093bb6f36a6fd5b0849bbdc4ac3b",
+          "deployedAt": "2026-10-15T05:41:07.496Z",
+          "blockNumber": 143820823,
+          "initializations": [
+            "0xaad5df123c763ec5443efd121d123e7075c57c9cdeee90c85c56eb2b70ed663f",
+            "0xe20002c73f75e67dc30f0e50ee759cba1ed9162f84514818292f0a187ecabd97"
+          ],
+          "versions": [
+            {
+              "policy_hash": "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+              "code_commit": "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
+              "model_id": "x-test-2",
+              "version_id": "0xa365b230c8fec402b51d3291f3cd1623da1f93acc674515d471171be0558d49a"
+            }
+          ]
         }
       },
       "deployedAt": "2026-06-29T09:08:01.232Z",

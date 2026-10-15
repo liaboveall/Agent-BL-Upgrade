@@ -14,7 +14,7 @@
 |---|---|
 | 链上（Injective inEVM 测试网，chainId 1439） | 运行的是 **v2 字节码**：2026-10-12（UTC）重新部署，`npm run verify:bytecode` 确认六个合约都与本地构建一致；部署者与 owner 是 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，构造函数把它设为初始的 attestor / updater；服务器专用密钥已另行授权：attestor `0x0dAaa9093971eE7F0BD15f184E86C4fDAE6a1b70`、updater `0xEB43623667f1Add616D0FbdEBbbE067a0F195F79` |
 | 本仓库源码 | 已包含 v2 加固（见 0.3），**已在链上生效**；之后再改合约仍需重新部署 |
-| 重新部署 | `cd hardhat && npm run deploy:all`（需要持有测试网 INJ 的 `DEPLOYER_PRIVATE_KEY`），部署脚本会自动更新 `public/chain-config.json` |
+| 重新部署（未来另行授权） | 原六份当前不改、不重部署；未来明确授权协议升级后才执行 `cd hardhat && npm run deploy:all`（需要持有测试网 INJ 的 `DEPLOYER_PRIVATE_KEY`），部署脚本会自动更新 `public/chain-config.json` |
 | 对比链上与源码 | `npm run verify:bytecode`（只读，调用 `eth_getCode`）；加 `-- --strict` 可在两者不一致时返回非零退出码 |
 
 重新部署之后需要的运维动作：
@@ -464,3 +464,9 @@ MVP 可以先把第 2 步放在 JS mock 或测试脚本中完成；Solidity 最�
 | WEB3-4 | `RiskPricingOracle` interface、`PricingUpdated` event、updater 权限明确 | `docs/contracts.md` §6 |
 
 后续 WEB3-5 的 JS contract mock 和 WEB3-6 ~ WEB3-9 的 Hardhat 合约必须对齐本文件。
+
+## Phase 7 独立扩展：AgentDecisionLog（已部署并初始化）
+
+新合约继承 `Owned`，不会改变原有六份协议合约的源码、地址或资产权限。owner 只能登记不可覆盖的 Agent 版本及显式授权/撤销 anchorer；已有专用 pricing 地址可提交最多 256 条、无空隙和重叠的决策 Merkle 批次。公开 `verifyInclusion` 核对包含证明，合约无转账或池操作。
+
+`AgentVersionRegistered` 固定策略/源码承诺与模型标识；`DecisionBatchAnchored` 记录批次、根、序号范围、条数、版本和发送者。owner 自己也需显式 anchorer 授权。JS 与 Solidity 已在本地互验；2026-10-15 按用户授权在 chain 1439 部署至 [`0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec`](https://testnet.blockscout.injective.network/address/0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec)，完成审阅版本注册及现有专用 pricing 地址的 anchorer 授权。三笔精确交易、回执、事件及字节码均通过独立只读核验，见 [实链证据](evidence/phase7-live-deployment-verification.json)。当前 `batchCount=lastSeq=0`；后台启用及首次批次仍需单独授权。完整接口、叶子算法、部署恢复和证据局限见 [Phase 7 指南](phase7-decision-anchoring.md)。

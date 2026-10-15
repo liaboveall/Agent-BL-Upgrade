@@ -1,0 +1,30 @@
+{
+  "version": "demo-screening-v2.0",
+  "as_of": "2026-10-14",
+  "mode": "demo",
+  "description": "演示名单 / Demonstration list. All entity and vessel names are fictional. Synthetic IMO identifiers are test values and make no claim about a real vessel. Jurisdiction and HS rules are illustrative workflow rules, not legal restrictions or official screening.",
+  "sources": [
+    { "title": "OFAC program information (context only; no official entity list imported)", "url": "https://ofac.treasury.gov/sanctions-programs-and-country-information" },
+    { "title": "OFAC Syria program termination (SY is not in this demo jurisdiction block list)", "url": "https://ofac.treasury.gov/faqs/topic/1571/print" },
+    { "title": "Export classification guidance (HS is not an ECCN determination)", "url": "https://www.trade.gov/how-do-i-determine-my-export-control-classification-number-eccn" }
+  ],
+  "entities": [
+    { "id": "DEMO-ENTITY-001", "name": "Demo Cobalt Lantern Trading", "aliases": ["Demo Cobalt Lantern Exports"], "fictional": true },
+    { "id": "DEMO-ENTITY-002", "name": "Demo Ember Reed Logistics", "aliases": [], "fictional": true },
+    { "id": "DEMO-ENTITY-003", "name": "Demo Azure Kestrel Finance", "aliases": ["演示蔚蓝隼贸易"], "fictional": true }
+  ],
+  "jurisdictions": [
+    { "id": "DEMO-JUR-IR", "country": "IR", "name": "Iran", "status": "BLOCK" },
+    { "id": "DEMO-JUR-KP", "country": "KP", "name": "North Korea", "status": "BLOCK" },
+    { "id": "DEMO-JUR-CU", "country": "CU", "name": "Cuba", "status": "BLOCK" }
+  ],
+  "vessels": [
+    { "id": "DEMO-VESSEL-001", "name": "Demo Ember Kite", "imo": "9999993", "fictional": true }
+  ],
+  "hs_rules": [
+    { "id": "DEMO-HS-9301", "prefix": "9301", "category": "military", "status": "BLOCK" },
+    { "id": "DEMO-HS-9306", "prefix": "9306", "category": "military", "status": "BLOCK" },
+    { "id": "DEMO-HS-8542", "prefix": "8542", "category": "dual_use", "status": "REVIEW" },
+    { "id": "DEMO-HS-8806", "prefix": "8806", "category": "dual_use", "status": "REVIEW" }
+  ]
+}

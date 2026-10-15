@@ -153,6 +153,38 @@ export class PoolRegistry {
     return this.get(caseOrPoolId)?.chain?.pool_id ?? null;
   }
 
+  getByChainPoolId(id) {
+    const entry = [...this.entries.values()].find((item) => item.chain?.contract === 'RWAOfferingPool' && item.chain.pool_id === Number(id));
+    return entry ? structuredClone(entry) : null;
+  }
+
+  /** A confirmed log discovers active pools and terminal history; it never replaces a CLI mapping. */
+  async discoverChain({ case_id: caseId, chain_pool_id: id, snapshot }) {
+    await this.init();
+    if (!caseId || !Number.isSafeInteger(id) || id < 1 || !snapshot?.exists || snapshot.pool_id !== id) {
+      throw new RegistryError('invalid_discovery', 'A confirmed pool snapshot is required');
+    }
+    const existing = this.getByChainPoolId(id);
+    if (existing) {
+      if (existing.chain.ebl_id !== snapshot.ebl_id) throw new RegistryError('ebl_mismatch', 'Discovered collateral conflicts with the saved pool mapping');
+      const history = HISTORY_CHAIN_POOLS.includes(id) || ![...ACTIVE_STATES, 'Paused'].includes(snapshot.state);
+      if (existing.history_only !== history) {
+        existing.history_only = history;
+        this.entries.set(existing.case_id, existing);
+        await this.#persist();
+      }
+      return existing;
+    }
+    if (this.get(caseId)?.chain) throw new RegistryError('case_already_linked', 'The case already maps to another on-chain pool');
+    const entry = { case_id: caseId, pool_id: this.get(caseId)?.pool_id ?? caseId,
+      chain: { pool_id: id, ebl_id: snapshot.ebl_id, contract: 'RWAOfferingPool' },
+      protected: this.protectedChainPools.has(id), history_only: HISTORY_CHAIN_POOLS.includes(id) || ![...ACTIVE_STATES, 'Paused'].includes(snapshot.state),
+      source: 'chain-watcher', linked_at: this.now().toISOString(), note: null };
+    this.entries.set(caseId, entry);
+    await this.#persist();
+    return structuredClone(entry);
+  }
+
   isProtected(caseOrPoolId) {
     const entry = this.get(caseOrPoolId);
     if (!entry) return false;

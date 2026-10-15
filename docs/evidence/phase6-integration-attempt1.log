@@ -1,0 +1,174 @@
+✔ delegated quotations match the canonical engine at every payout speed, without touching a runtime (158.453178ms)
+✔ delegation preserves document mismatch and demo compliance blocks instead of granting execution (18.740668ms)
+✔ delegation rejects ambiguous source selection, missing cases, unsupported fields and unsafe numbers (6.062378ms)
+✔ only unexpired, case-bound server-delivered reports become neutral quote provenance (41.750897ms)
+✔ pricing concurrency is bounded and recovers after a failed lookup (5.36558ms)
+✔ MCP dry-run is side-effect free and invalid approval cannot change the queue (36.221208ms)
+✔ MCP operator events retain Live restrictions even with a valid host token (1.432633ms)
+✔ MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots (28.678366ms)
+✔ stateless MCP recommendations preserve hard filters, never create sessions or execute actions (27.606914ms)
+✔ Agent Card uses the verified A2A 1.0 required fields, advertises one implemented skill and no unsupported transports (94.274251ms)
+✔ public origins reject credentials and cleartext remote URLs, and never trust Host or forwarded headers (33.52825ms)
+✔ A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation (73.428418ms)
+✔ A2A validates JSON-RPC framing, protocol negotiation, media and structured inputs before pricing (109.636523ms)
+✔ delegation input errors remain JSON-RPC errors without reflecting internal exception messages (47.635588ms)
+✔ discovery and card never publish Live payment accepts while the application is Demo (49.337761ms)
+✔ Live discovery, card and 402 header/body derive identical exact V2 requirements from the catalog (6.219611ms)
+✔ interoperability rate limits are applied before delegated work (46.874669ms)
+✔ untrusted JSON rejects reserved keys and complexity before schema traversal (63.2424ms)
+✔ stdio backend adapter rejects redirects, oversized or invalid replies and reports backend loss without local fallback (50.822665ms)
+▶ MCP Tool Manifest
+  ✔ has exactly 15 tools (0.649721ms)
+  ✔ all tools have required fields (0.285673ms)
+  ✔ all manifest tools have handlers (0.174191ms)
+✔ MCP Tool Manifest (2.107606ms)
+▶ MCP Tool Handlers
+  ✔ get_trade_case — loads demo case (14.397162ms)
+  ✔ get_trade_case — throws on missing case_id (0.675022ms)
+  ✔ get_trade_case — throws on unknown case (26.000426ms)
+  ✔ generate_pricing_quote — prices demo case (24.452924ms)
+  ✔ search_knowledge_base — finds results (1.512721ms)
+  ✔ search_knowledge_base — respects limit (0.54495ms)
+  ✔ simulate_offering — runs full lifecycle (8.150428ms)
+  ✔ push_pricing_to_oracle — produces oracle payload (23.467337ms)
+✔ MCP Tool Handlers (100.177902ms)
+▶ MCP callTool Dispatcher
+  ✔ dispatches known tool (7.164261ms)
+  ✔ throws on unknown tool (0.280757ms)
+✔ MCP callTool Dispatcher (7.628294ms)
+▶ MCP Tool Chain
+  ✔ pricing chain runs end-to-end (13.961524ms)
+✔ MCP Tool Chain (14.190266ms)
+✔ MCP tools manifest has exactly 15 tools (1.170598ms)
+✔ manifest contains all expected tool names (0.280261ms)
+✔ each tool in manifest has required fields (0.253123ms)
+✔ each tool in manifest has a registered handler (0.1516ms)
+✖ each manifest tool has required fields in inputSchema.properties (1.051477ms)
+✔ get_trade_case: returns valid trade case for demo ID (16.790102ms)
+✔ get_trade_case: returns low-risk scenario (19.335004ms)
+✔ get_trade_case: returns critical-liquidation scenario (13.621643ms)
+✔ get_trade_case: throws for unknown case ID (28.424821ms)
+✔ get_trade_case: throws when case_id is missing (0.520776ms)
+✔ generate_pricing_quote: returns full PricingQuote for demo case (26.638054ms)
+✔ generate_pricing_quote: low-risk case has higher price than critical case (42.603674ms)
+✔ generate_pricing_quote: approved case returns OPEN_OFFERING action (29.415168ms)
+✔ generate_pricing_quote: critical case returns TRIGGER_LIQUIDATION action (11.677613ms)
+✔ generate_pricing_quote: works with inline trade_case (5.930047ms)
+✔ generate_pricing_quote: throws when no case_id or trade_case provided (0.365308ms)
+✔ simulate_offering: returns workflow result (7.731032ms)
+✔ simulate_offering: final_state matches workflow expectation (33.591479ms)
+✔ simulate_offering: has all workflow step states (4.94596ms)
+✔ simulate_offering: offers inline trade_case (5.058791ms)
+✔ push_pricing_to_oracle: defaults to a policy-checked dry run (16.837772ms)
+✔ push_pricing_to_oracle: repeated dry runs are deterministic and never invent tx hashes (29.901902ms)
+✔ push_pricing_to_oracle: requires pricing_quote (0.409239ms)
+✔ push_pricing_to_oracle: requires case_id (0.202333ms)
+✔ search_knowledge_base MCP tool returns formatted results (1.520542ms)
+✔ search_knowledge_base MCP tool requires query (0.147069ms)
+✔ search_knowledge_base MCP tool rejects empty query (0.11325ms)
+✔ callTool throws for unknown tool name (0.13309ms)
+✔ callTool error message includes available tools (0.102144ms)
+✔ full MCP tool chain executes end-to-end (19.196194ms)
+✔ low-risk → warning → critical scenarios form an increasing risk gradient (48.626999ms)
+✔ runToolChain executes a 3-step pricing chain (7.368076ms)
+✔ push_pricing_to_oracle: an unknown risk level or action is rejected, not defaulted (WP0.2) (33.305101ms)
+✔ push_pricing_to_oracle: RESUME_OFFERING is encoded as action 6 (WP0.2) (16.657778ms)
+✔ MCP/WP6: official SDK stdio lifecycle executes 15 tools + reads 5 resources against the shared backend (19863.840225ms)
+[agentbl] c8d97ddff6dc 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: Facilitator /supported returned HTTP 503
+▶ x402 live gateway on the real app server
+  ✔ an unavailable facilitator is a 503, and the gateway recovers once it is back (203.984942ms)
+  ✔ unpaid requests get a decodable V2 challenge priced from the service catalog (15.877605ms)
+  ✔ the personal-sign (demo) headers do not unlock anything in Live mode (4.309686ms)
+  ✔ a verified payment settles once, delivers the report, and attests it on-chain (63.612035ms)
+  ✔ replaying the same signed authorization re-delivers without a second charge or attestation (18.253414ms)
+  ✔ the paid report can be re-read from the cache without paying again (15.31845ms)
+  ✔ payments that do not match the protected resource never reach the facilitator (11.891886ms)
+  ✔ a facilitator settlement failure never delivers the report (321.809905ms)
+  ✔ malformed input is refused BEFORE the buyer is charged (4.199159ms)
+[agentbl] x402 live gateway error: PaymentSettlementError: PaymentOracle write failed: rpc connection reset
+    at recordPaymentEvidence (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/x402/settlement.js:656:11)
+    at async deliverPaidReport (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/x402/delivery.js:53:25)
+    at async file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/x402/liveGateway.js:140:35 {
+  code: 'payment_oracle_write_failed',
+  retryable: false,
+  paymentId: null,
+  cause: Error: rpc connection reset
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/x402LiveGateway.test.js:347:37)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/x402LiveGateway.test.js:345:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    code: 'NETWORK_ERROR'
+  },
+  payment: {
+    status: 'settled',
+    txHash: '0xabababababababababababababababababababababababababababababababab',
+    payer: '0x954ecB97932d742d5d9E99e855c4bFde44632EfF',
+    retry: 'Re-send the same PAYMENT-SIGNATURE to receive the report; a settled payment is never charged twice'
+  }
+}
+  ✔ a failure after settlement says the payment went through and that a retry is free (36.883893ms)
+[agentbl] x402 live gateway error: PaymentSettlementError: Live mode requires PAYMENT_ATTESTOR_PRIVATE_KEY (authorised via PaymentOracle.setAttestor(address,true)) and a deployed PaymentOracle
+    at recordPaymentEvidence (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/x402/settlement.js:597:13)
+    at async deliverPaidReport (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/x402/delivery.js:53:25)
+    at async file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/x402/liveGateway.js:140:35 {
+  code: 'payment_oracle_unavailable',
+  retryable: false,
+  paymentId: null,
+  cause: undefined,
+  payment: {
+    status: 'settled',
+    txHash: '0xabababababababababababababababababababababababababababababababab',
+    payer: '0x954ecB97932d742d5d9E99e855c4bFde44632EfF',
+    retry: 'Re-send the same PAYMENT-SIGNATURE to receive the report; a settled payment is never charged twice'
+  }
+}
+  ✔ without a configured attestor the report is not delivered (Live never fakes a receipt) (22.039422ms)
+  ✔ Mystery Voyage: invalid reveals are rejected before payment, a valid one completes after it (144.591804ms)
+  ✔ the OFFICIAL x402 client (real EIP-3009 signing) can pay the gateway (105.275098ms)
+  ✔ the repo CLI client pays a Live endpoint, but enforces budget, network and signer BEFORE signing (115.806356ms)
+  ✔ the BROWSER wallet flow (eth_signTypedData_v4) pays the gateway like the official client (53.522564ms)
+  ✔ the browser flow completes a Mystery Voyage reveal (wallet = previewing wallet) (52.033843ms)
+  ✔ a wrong-wallet Mystery payment is refused before the browser wallet is even asked to sign (24.353288ms)
+✔ x402 live gateway on the real app server (1269.445039ms)
+✔ X402-4: unpaid request returns a decodable V2 PAYMENT-REQUIRED challenge (112.246553ms)
+✔ X402-4: matching payment settles, exposes receipt metadata, and unlocks after 2xx (39.422626ms)
+✔ X402-4: malformed payment header is rejected before settlement (21.129222ms)
+✔ X402-4: expired, future, and overlong authorizations are rejected (38.142969ms)
+✔ X402-4: wrong network is rejected (25.42958ms)
+✔ X402-4: wrong amount is rejected in both accepted terms and signed authorization (24.939544ms)
+✔ X402-4: wrong recipient is rejected in accepted terms and signed authorization (27.05063ms)
+✔ X402-4: settlement failure never releases the protected handler (22.505773ms)
+✔ X402-4: middleware leaves unprotected routes untouched (22.643073ms)
+ℹ tests 95
+ℹ suites 4
+ℹ pass 94
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 41343.241648
+
+✖ failing tests:
+
+test at tests/mcp.test.js:46:1
+✖ each manifest tool has required fields in inputSchema.properties (1.051477ms)
+  AssertionError [ERR_ASSERTION]: get_agent_status: inputSchema has no properties
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:50:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

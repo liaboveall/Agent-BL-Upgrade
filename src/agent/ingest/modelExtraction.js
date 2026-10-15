@@ -13,7 +13,7 @@ const date = z.string().regex(/^20\d{2}-\d{2}-\d{2}$/u).refine((value) => {
 });
 export const FIELD_SCHEMAS = Object.freeze({
   ...Object.fromEntries(['bl_no', 'bl_id', 'bl_type', 'ebl_platform', 'carrier', 'shipper', 'consignee', 'notify_party',
-    'vessel', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'cargo', 'incoterms', 'invoice_no', 'sales_contract',
+    'vessel', 'vessel_imo', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'cargo', 'incoterms', 'invoice_no', 'sales_contract',
     'payment_terms', 'seller', 'buyer', 'policy_no', 'policy_type', 'provider', 'insured_party', 'origin', 'destination',
     'commodity', 'receipt_no', 'title_ref', 'warehouse', 'warehouse_address', 'warehouse_operator'].map((name) => [name, shortText])),
   ...Object.fromEntries(['shipped_on_board', 'eta', 'issue_date', 'invoice_date', 'expires_at', 'storage_date', 'pickup_deadline'].map((name) => [name, date])),

@@ -10,12 +10,23 @@
 | [contracts.md](./contracts.md) | 合约：**§0 是当前 v2 实现**（权限、状态机、动作码、测试、已知限制、部署状态）；§1–§7 是最初冻结的接口设计 |
 | [x402-integration.md](./x402-integration.md) | x402 付费情报：Demo 与 Live（x402 V2）两种传输、服务目录、环境变量、威胁模型 |
 | [acceptance.md](./acceptance.md) | 验收标准和对应的 harness 命令 |
+| [final-acceptance-20261015.md](./final-acceptance-20261015.md) | 2026-10-15 开发交付验收、审查修复、最终检查及实链/人工边界 |
 | [PRD.md](./PRD.md) | 产品需求文档（v0.2） |
 | [tasks.md](./tasks.md) | 任务清单与状态（Agent 相关的 Done 标记以下一行的审计为准） |
 | [agent-implementation-plan.md](./agent-implementation-plan.md) | Agent 全量实现规划：现状审计、目标架构、分阶段工作包与验收标准（开发中随时更新状态表） |
 | [copilot.md](./copilot.md) | Phase 3 P0/P1：多轮偏好、检索排序、主动重排、确认动作、会话 API、验收和 Live 边界 |
 | [document-extraction.md](./document-extraction.md) | WP2.2：PDF 文本层、可选视觉/文本模型、中文仓单、人工复核、安全和本地证据 |
+| [compliance-screening.md](./compliance-screening.md) | WP2.3：版本化演示名单、模糊匹配、逐份单证/港口/IMO/HS 筛查、三态证据、复核与外部接口边界 |
+| [live-opening.md](./live-opening.md) | WP2.4：Live 三步开盘提案、既有货物关联、owner CLI、逐步回执核验和中断恢复；实链交易未验收 |
+| [live-settlement.md](./live-settlement.md) | WP2.6：USDC 规范链回执、精确金额、双证明与独立结算审批、持久防复用和 CLI/重启恢复；真实付款/owner 交易未验收 |
+| [chain-watcher.md](./chain-watcher.md) | WP2.7：只读确认日志、持久游标、池发现/状态对账、独立紧急停止与 RPC/重组恢复；真实 RPC 长时间运行另需验收 |
+| [agent-api.md](./agent-api.md) | WP2.9：五个无状态 PRD API、单证/定价/简报/图哈希、输入与资源限制；全项目 API 模型 x-test-2 |
 | [frontend-acceptance.md](./frontend-acceptance.md) | WP4.6：全站中英/1440px/390px、键盘与焦点、通知播报、复现脚本和 40 个页面/弹窗组合的本地证据 |
+| [phase4-console-demo.md](./phase4-console-demo.md) | Phase 4：五处证据 ID/历史报价联动、后台完整单证演示、停止与独立审批、模型用量、中英/窄屏及本地证据 |
+| [phase5-security-replay.md](./phase5-security-replay.md) | Phase 5：红队、新鲜度、重放、隐私保留、65 项闸门及三笔测试网回执/重放验收 |
+| [phase6-interoperability.md](./phase6-interoperability.md) | Phase 6：15 工具/5 资源、A2A 1.0 卡片与同步消息、Bazaar 声明、带交付证据的委托定价与 69 项闸门 |
+| [phase7-decision-anchoring.md](./phase7-decision-anchoring.md) | Phase 7：独立合约、终态序号/Merkle 证明、审批承诺、恢复、只读校验；授权测试网部署初始化已核验，首批待授权，当前 71 项发布闸门 |
+| [agent-security-matrix.md](./agent-security-matrix.md) | 自主级别、签名角色、动作、接口权限及人工恢复矩阵 |
 | [agent-reliability.md](./agent-reliability.md) | Phase 5 P0：故障矩阵、重启/对账边界、真实组件评测、61 项发布闸门与后续入口 |
 | [evaluation-report.md](./evaluation-report.md) | 可复现的本地确定性评测；代码与金标摘要、分母、失败样例及局限 |
 | [Instruction.md](./Instruction.md) | 团队协作手册（原根目录 README） |

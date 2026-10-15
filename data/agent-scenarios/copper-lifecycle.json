@@ -1,0 +1,127 @@
+{
+  "name": "copper-lifecycle",
+  "title": {
+    "en": "Full copper lifecycle: documents to settlement approval",
+    "zh": "铜货全流程：单证接入至结算审批"
+  },
+  "description": {
+    "en": "Real fixture files pass parsing, compliance and pricing before simulated subscription, risk, departure and arrival. Payment and settlement each require operator approval. No real transaction.",
+    "zh": "样例文件经过解析、合规和定价，再模拟认购、风险变化、离港与到港；付款和结算分别等待人工审批。不会发送真实交易。"
+  },
+  "case_id": "CASE-EBL-2026-CU-SG-SHA",
+  "start_at": "2026-06-10T00:00:00Z",
+  "steps": [
+    {
+      "kind": "documents",
+      "after_hours": 0,
+      "label": {
+        "en": "Parse and verify the three copper documents",
+        "zh": "解析核验铜货三份单证"
+      }
+    },
+    {
+      "kind": "risk_snapshot",
+      "after_hours": 0,
+      "label": {
+        "en": "Calm seas: baseline",
+        "zh": "海况平稳：建立基线"
+      },
+      "events": []
+    },
+    {
+      "kind": "subscribe",
+      "after_hours": 1,
+      "fraction": 0.4,
+      "label": {
+        "en": "Investors subscribe 40% of the pool",
+        "zh": "投资者认购 40% 份额"
+      }
+    },
+    {
+      "kind": "event",
+      "after_hours": 6,
+      "type": "CARGO_DEPARTED",
+      "data": {},
+      "label": {
+        "en": "Cargo departs Singapore",
+        "zh": "货物离开新加坡"
+      }
+    },
+    {
+      "kind": "risk_snapshot",
+      "after_hours": 24,
+      "label": {
+        "en": "Typhoon warning near Shanghai",
+        "zh": "上海附近发布台风预警"
+      },
+      "events": [
+        {
+          "type": "severe_weather",
+          "region": "East China Sea",
+          "severity": "warning",
+          "description": "Typhoon warning on the approach to Shanghai",
+          "date": "2026-06-11"
+        }
+      ]
+    },
+    {
+      "kind": "risk_snapshot",
+      "after_hours": 12,
+      "label": {
+        "en": "Typhoon escalates to severe",
+        "zh": "台风升级为严重"
+      },
+      "events": [
+        {
+          "type": "severe_weather",
+          "region": "East China Sea",
+          "severity": "critical",
+          "description": "Typhoon landfall expected, port closure likely",
+          "date": "2026-06-12"
+        }
+      ]
+    },
+    {
+      "kind": "risk_snapshot",
+      "after_hours": 12,
+      "label": {
+        "en": "Skies clear (1 of 2 quiet checks)",
+        "zh": "天气转好（第 1 次平静检查）"
+      },
+      "events": []
+    },
+    {
+      "kind": "risk_snapshot",
+      "after_hours": 12,
+      "label": {
+        "en": "Skies clear (2 of 2): risk cleared",
+        "zh": "天气转好（第 2 次）：风险解除"
+      },
+      "events": []
+    },
+    {
+      "kind": "event",
+      "after_hours": 72,
+      "type": "CARGO_ARRIVED",
+      "data": {},
+      "label": {
+        "en": "Cargo arrives in Shanghai",
+        "zh": "货物抵达上海"
+      }
+    },
+    {
+      "kind": "event",
+      "after_hours": 24,
+      "type": "PAYMENT_RECEIVED",
+      "data": {
+        "payment_proof": "demo:payment:copper-typhoon",
+        "repayment_amount": 1380000,
+        "proof_source": "demo-scenario"
+      },
+      "label": {
+        "en": "Importer payment reported: waits for approval",
+        "zh": "进口商付款已申报：等待批准"
+      }
+    }
+  ]
+}

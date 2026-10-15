@@ -438,6 +438,10 @@ type RWAOfferingState =
 | POST | `/api/agent/generate-investor-brief` | 生成投资者风险提示 |
 | POST | `/api/agent/generate-evidence-graph` | 生成证据图和 hash |
 
+2026-10-15：上述五个接口已完成 WP2.9 本地实现与自动化验证。均为无状态计算，不创建作业、审批或交易；严格请求契约、复核/限流边界、图哈希和全项目 `x-test-2` 模型配置见 [Agent API 指南](agent-api.md)。真实提供方和人工验收另有证据边界。
+
+Phase 4 的有状态运行时另提供 `POST /api/agent/demo/run {scenario, speed}`、`GET /api/agent/demo/run`、`POST /api/agent/demo/stop` 和 `GET /api/agent/references`。演示写接口仅在 Demo 可用，按已配置的管理员令牌授权；完整单证场景保留付款和结算独立审批。五个界面的引用与历史报价联动、停止和恢复边界见 [Phase 4 指南](phase4-console-demo.md)。
+
 ### 9.3 合约接口
 
 WEB3-1 到 WEB3-4 的冻结版接口、事件、权限和状态机定义见 `docs/contracts.md`。本节只保留主流程摘要，后续 JS contract mock 和 Solidity 实现必须以 `docs/contracts.md` 为准。
@@ -641,3 +645,11 @@ WEB3-1 到 WEB3-4 的冻结版接口、事件、权限和状态机定义见 `doc
 - Exporter 页面只看到账速度和融资金额；
 - Investor 页面只看价格、收益、风险；
 - AI Console 页面才展示细节。
+
+## 2026-10-15 Phase 5 本地实现记录
+
+O6 确定性红队生成器、TRUST-5 新鲜度门槛、VERIFY-2 决策重放、WP5.6 审计隐私/保留、SEC-2 权限矩阵和人工测试网冒烟工具已接入。20 个确定性质量闸门、65 项 preflight、实际代码及证据边界见 [Phase 5 指南](phase5-security-replay.md)。真实测试网签名、真实模型、人工试用仍需各自证据。
+
+## 2026-10-15 Phase 6 互操作实现记录
+
+WP6.1–WP6.4 已接入：15 tools + 5 resources，stdio 使用现有后端；A2A 1.0 标准卡片路径及旧路径别名、同步 `SendMessage` 结构化报价；四个 x402 Bazaar HTTP 声明；MCP/A2A/HTTP 共用无状态报价与可选服务器交付证据。事件默认 dry-run，实际入队需带外审批令牌；委托不付款、不执行合约。Demo `accepts=[]`，Live 描述与 402 要求同源，未声称外部 facilitator 已收录。发布闸门扩为 69 项，详见 [Phase 6 指南](phase6-interoperability.md)。

@@ -57,13 +57,17 @@ export async function agentRequest(path, options = {}) {
     rememberToken(response.ok ? entered : '');
   }
   if (!response.ok) {
-    throw new AgentApiError(data?.error || `${path} → ${response.status}`, { status: response.status, code: data?.code, details: data?.details });
+    throw new AgentApiError(data?.code === 'evidence_expired' ? t('ac_evidence_expired') : data?.error || `${path} → ${response.status}`, { status: response.status, code: data?.code, details: data?.details });
   }
   return data;
 }
 
 export const agent = {
   status: () => agentRequest('/api/agent/status'),
+  scenarios: () => agentRequest('/api/agent/scenarios'),
+  references: () => agentRequest('/api/agent/references'),
+  runDemo: (body) => agentRequest('/api/agent/demo/run', { method: 'POST', body }),
+  stopDemo: () => agentRequest('/api/agent/demo/stop', { method: 'POST', body: {} }),
   control: (body) => agentRequest('/api/agent/control', { method: 'POST', body }),
   inject: (event) => agentRequest('/api/agent/events?wait=1', { method: 'POST', body: event }),
   decisions: (query = {}) => {
@@ -73,6 +77,8 @@ export const agent = {
     return agentRequest(`/api/agent/decisions${qs ? `?${qs}` : ''}`);
   },
   decision: (id) => agentRequest(`/api/agent/decisions/${encodeURIComponent(id)}`),
+  replay: (id) => agentRequest(`/api/agent/decisions/${encodeURIComponent(id)}/replay`),
+  anchor: (id) => agentRequest(`/api/agent/decisions/${encodeURIComponent(id)}/anchor`),
   trace: (id) => agentRequest(`/api/agent/decisions/${encodeURIComponent(id)}/trace`),
   approvals: (status) => agentRequest(`/api/agent/approvals${status ? `?status=${encodeURIComponent(status)}` : ''}`),
   approve: (id, note) => agentRequest(`/api/agent/approvals/${encodeURIComponent(id)}/approve`, { method: 'POST', body: { note } }),

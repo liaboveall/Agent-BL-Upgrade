@@ -1,0 +1,80 @@
+✔ anchor leaves use canonical JSON, domain separation and explicit terminal fields (5.977099ms)
+✔ approval identity, route, time, outcome and transaction are committed without source text or credentials (2.275389ms)
+✔ Merkle tree proves every leaf in a 1-record batch and rejects alterations (0.488714ms)
+✔ Merkle tree proves every leaf in a 2-record batch and rejects alterations (0.368584ms)
+✔ Merkle tree proves every leaf in a 3-record batch and rejects alterations (0.679001ms)
+✔ Merkle tree proves every leaf in a 5-record batch and rejects alterations (0.715328ms)
+✔ Merkle tree proves every leaf in a 16-record batch and rejects alterations (2.220007ms)
+✔ Merkle tree proves every leaf in a 255-record batch and rejects alterations (61.864143ms)
+✔ Merkle tree proves every leaf in a 256-record batch and rejects alterations (43.693245ms)
+✔ invalid or oversized tree/proof inputs fail closed (0.465312ms)
+✔ enabling anchoring does not change the agent version; policy, model and source changes do (1.086731ms)
+✔ concurrent finalizations allocate a continuous durable sequence; duplicates and restart keep it (66.291346ms)
+✔ a second OS process cannot take the active anchor sequence lock (44.237664ms)
+✔ a dead process lock is recovered without resetting sequence (49.235767ms)
+✔ failed persistence consumes no finalization sequence and leaves the prior state intact (7.115298ms)
+✔ tampered terminal data fails verification; finalized entries cannot be silently overwritten (1.437337ms)
+✔ corrupted sequence, leaf, version and batch root are rejected on load (4.88247ms)
+✔ legacy journals are explicitly marked with an unrecorded version (0.710048ms)
+✔ Demo and disabled Live form local trees without contacting a chain adapter (1.830669ms)
+✔ minimum batch, interval and version boundaries keep each batch homogeneous and continuous (6.815467ms)
+✔ Live batches persist intent and hash before confirmation; repeat ticks do not broadcast twice (2.233166ms)
+✔ uncertain send survives restart and recovers by observed hash without a repeat broadcast (7.439023ms)
+✔ preflight failure is retryable but a mode change before send never broadcasts (1.490292ms)
+✖ runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick (433.748442ms)
+✖ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq (35.407399ms)
+✔ retention preserves independent proofs and live sequences; Demo reset discards only Demo proofs (18.801895ms)
+✔ HTTP exposes public proofs and behavioral tamper failures, with missing IDs returning 404 (58.17166ms)
+✔ CLI rechecks a disk audit without reading keys or mutating journals and exits nonzero for tampering (3359.33879ms)
+✔ Demo: a world-risk event becomes a decision, an executed simulated reprice, activity and a trace (430.115246ms)
+✔ Demo: injecting the same event again never produces a second execution (11.510269ms)
+✔ Demo: the full risk cycle reprice → pause → resume restores the previous state (25.918482ms)
+✔ Demo: events that change nothing are ignored with a reason, not turned into decisions (8.199229ms)
+✔ invalid events are refused before they are queued (8.058398ms)
+✔ policy: a price move above the cap waits for approval; approving it executes, rejecting does not (16.678022ms)
+✔ policy: rejecting a pending proposal records it and changes nothing (11.811842ms)
+✔ policy: observe and off modes never execute; set_autonomy changes it at runtime and is logged (20.34961ms)
+✔ policy: an emergency stop blocks a reprice but lets a pause through, and can be lifted (10.989526ms)
+✔ policy: the cooldown stops a flapping signal from acting twice in a row (11.261606ms)
+✔ settlement actions: RECORD_PAYMENT always needs approval, RECORD_ARRIVAL does not (16.002072ms)
+✔ a failing action is recorded as FAILED with its reason, and the event itself still completes (8.200102ms)
+✔ status reports mode, autonomy, signers (booleans only) and queue depth (4.928616ms)
+✔ listDecisions filters and paginates; getDecision returns one (12.990722ms)
+✔ Demo reset clears the agent state of Demo mode only (16.784554ms)
+✔ decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate (53.437637ms)
+✔ a replayed event whose decision already exists does not decide again (34.462679ms)
+[agentbl] AGENT_AUTONOMY=auto is treated as propose in Live mode: every action needs human approval.
+✔ Live: a mapped pool gets a proposal that waits for approval; approving sends exactly one real-looking transaction and records its hash (20.163721ms)
+✔ Live: AGENT_AUTONOMY=auto is downgraded to propose and the downgrade is visible (9.328356ms)
+✔ Live: a pool with no on-chain mapping gets a recorded proposal and nothing is executed (7.840359ms)
+✔ Live: the protected pool refuses terminal actions outright and never queues them (4.976435ms)
+✔ Live: an action only the owner can sign becomes an owner-CLI approval; the reported tx is verified before anything completes (15.637643ms)
+✔ Live: an approval is not executed after the runtime mode changed (11.917573ms)
+✔ Live: only proof-carrying events can be injected by hand (5.998836ms)
+✔ Live: a hand-injected arrival without a proof is rejected before queueing (5.952279ms)
+✔ Live: a broadcast transaction that is not yet confirmed stays EXECUTING and is reconciled on the next tick (42.198442ms)
+✔ Live: an unreachable chain never degrades to a simulated result (7.062787ms)
+ℹ tests 55
+ℹ suites 0
+ℹ pass 53
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15382.697744
+
+✖ failing tests:
+
+test at tests/agentAnchoring.test.js:227:1
+✖ runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick (433.748442ms)
+  TypeError: Cannot read properties of null (reading 'status')
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentAnchoring.test.js:236:25)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests/agentAnchoring.test.js:240:1
+✖ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq (35.407399ms)
+  TypeError: Cannot read properties of null (reading 'approval')
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentAnchoring.test.js:249:33)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)

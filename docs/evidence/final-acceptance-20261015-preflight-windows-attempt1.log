@@ -1,0 +1,13 @@
+node:internal/util/parse_args/parse_args:383
+        throw new ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL(token.value);
+              ^
+
+TypeError [ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL]: Unexpected argument 'scripts/preflight.mjs'. This command does not take positional arguments
+    at node:internal/util/parse_args/parse_args:383:15
+    at Array.forEach (<anonymous>)
+    at parseArgs (node:internal/util/parse_args/parse_args:374:3)
+    at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/preflight.mjs:28:29 {
+  code: 'ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL'
+}
+
+Node.js v26.8.1

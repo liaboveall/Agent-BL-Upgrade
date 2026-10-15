@@ -1,0 +1,51 @@
+{
+  "checked_at": "2026-10-15T02:53:35.318Z",
+  "backend": "http://127.0.0.1:44042",
+  "checks": [
+    {
+      "name": "Agent Card supports JSONRPC / A2A 1.0",
+      "passed": true
+    },
+    {
+      "name": "Four Bazaar HTTP declarations",
+      "passed": true
+    },
+    {
+      "name": "Demo does not advertise a live payment scheme",
+      "passed": true
+    },
+    {
+      "name": "15 tools and 5 resources discovered over SDK stdio",
+      "passed": true
+    },
+    {
+      "name": "Policy uses the same backend mode",
+      "passed": true
+    },
+    {
+      "name": "MCP returns a committed, indicative quote without payment or chain execution",
+      "passed": true
+    },
+    {
+      "name": "A2A and MCP commit the same quote and assessment",
+      "passed": true
+    }
+  ],
+  "real_transactions": 0,
+  "real_provider_calls": 0,
+  "report_purchases": 0,
+  "runtime_started_by_client": false,
+  "human_acceptance": false,
+  "mode": "demo",
+  "result": {
+    "case_id": "CASE-EBL-2026-CU-SG-SHA",
+    "price_usd": 0.8,
+    "risk_level": "MEDIUM",
+    "quote_hash": "0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e",
+    "evidence_hash": "0x2787720faa7d963582d119e9086a685db93b60eb523d46d9aea44b24de21ca87",
+    "result_hash": "0xdf9eed44bdfbc6edf0afebdfbba5081b464d30fa03e37e5d4512eba38430c7ce",
+    "assessment": "HOLD_FOR_REVIEW",
+    "payment_evidence": []
+  },
+  "passed": true
+}

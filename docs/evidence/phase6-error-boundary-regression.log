@@ -1,0 +1,29 @@
+✔ delegated quotations match the canonical engine at every payout speed, without touching a runtime (97.459114ms)
+✔ delegation preserves document mismatch and demo compliance blocks instead of granting execution (10.551453ms)
+✔ delegation rejects ambiguous source selection, missing cases, unsupported fields and unsafe numbers (3.227435ms)
+✔ only unexpired, case-bound server-delivered reports become neutral quote provenance (24.984235ms)
+✔ pricing concurrency is bounded and recovers after a failed lookup (3.271839ms)
+✔ MCP dry-run is side-effect free and invalid approval cannot change the queue (25.836564ms)
+✔ MCP operator events retain Live restrictions even with a valid host token (0.74769ms)
+✔ MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots (20.708575ms)
+✔ stateless MCP recommendations preserve hard filters, never create sessions or execute actions (15.426059ms)
+✔ Agent Card uses the verified A2A 1.0 required fields, advertises one implemented skill and no unsupported transports (61.791957ms)
+✔ public origins reject credentials and cleartext remote URLs, and never trust Host or forwarded headers (20.314031ms)
+✔ A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation (35.080651ms)
+✔ A2A validates JSON-RPC framing, protocol negotiation, media and structured inputs before pricing (51.123485ms)
+✔ delegation input errors remain JSON-RPC errors without reflecting internal exception messages (29.687224ms)
+✔ discovery and card never publish Live payment accepts while the application is Demo (29.577659ms)
+✔ Live discovery, card and 402 header/body derive identical exact V2 requirements from the catalog (1.828621ms)
+✔ interoperability rate limits are applied before delegated work (22.01792ms)
+✔ untrusted JSON rejects reserved keys and complexity before schema traversal (13.641537ms)
+✔ stdio backend adapter rejects redirects, oversized or invalid replies and reports backend loss without local fallback (6.413159ms)
+✔ MCP runtime tools and resources hide unexpected storage or provider exception details (0.539725ms)
+✔ MCP/WP6: official SDK stdio lifecycle executes 15 tools + reads 5 resources against the shared backend (12715.721997ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24654.534783

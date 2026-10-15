@@ -64,7 +64,7 @@ Powered by: Injective × Microsoft Azure AI × ENI × 丽讯科技
 > - 通过 **xAPI 协议**抓取地缘风险、天气、航线风险
 > - 接入**丽讯科技物流系统**，获取这条航线的历史准时率
 >
-> **AI 引擎使用 Microsoft Azure OpenAI 的 GPT-4 模型**，从大量实时数据中提取风险因素，然后给出三档融资方案：
+> **AI API 统一配置为 x-test-2**；定价引擎根据案例中的风险证据给出三档融资方案，模型可参与有依据的解释：
 > - **FAST 到账**：折价 20%，发行价 $0.80
 > - **BALANCED**：折价 15%，发行价 $0.85  
 > - **SAFE**：折价 10%，发行价 $0.90
@@ -161,7 +161,7 @@ Powered by: Injective × Microsoft Azure AI × ENI × 丽讯科技
 > 总结一下，AgentBL 是一个 **Web3 原生的贸易融资协议**。
 >
 > 技术栈方面：
-> - **Microsoft Azure OpenAI**：驱动 AI 定价引擎，支持 GPT-4 工具调用和结构化输出
+> - **OpenAI 兼容推理 API**：统一请求 x-test-2，可配置 Azure 路由；真实模型的工具调用和结构化输出能力需单独验收
 > - **Injective**：所有智能合约部署在 Injective inEVM 测试网，每个 AI 决策都在链上强制执行
 > - **ENI 可信文件层**：电子提单的唯一性控制和不可篡改性
 > - **丽讯科技**：真实的物流数据和行业客户场景
@@ -197,13 +197,13 @@ The AI prices. The chain enforces.
 | 时间段 | 提及内容 |
 |--------|---------|
 | [0:20] | "我们用 **Microsoft Azure OpenAI** 驱动 AI 定价引擎" |
-| [1:00] | "AI 引擎使用 **Microsoft Azure OpenAI 的 GPT-4 模型**" |
+| [1:00] | "AI API 统一配置为 **x-test-2**，定价来自确定性引擎" |
 | [2:15] | "**Microsoft Azure OpenAI** 重新分析局势" |
 | [2:45] | "**Microsoft Azure OpenAI**：驱动 AI 定价引擎，支持工具调用" |
 
 **演示证据**：
 - 代码中的 `openaiCompatClient.js` 支持 Azure provider
-- AI 定价输出的解释文本（由 GPT-4 生成）
+- AI 定价输出的依据与解释文本（默认确定性；可选 x-test-2 润色，真实提供方尚未复验）
 - 文档中明确标注 Azure OpenAI 集成
 
 ### ② Injective 使用（至少 3 次）

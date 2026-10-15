@@ -1,7 +1,7 @@
 import { state } from './store.js';
 import { $, el, clear, toast } from './dom.js';
 import { t, tData } from './i18n.js';
-import { scrollBehavior } from './accessibility.js';
+import { scrollBehavior, showAccessibleDialog } from './accessibility.js';
 import * as web3 from './web3.js';
 import { payV2WithWallet } from './x402-v2.js';
 import { isIndependentSubscriptionAuthorized, verifyMysteryProof } from './mystery-proof.js';
@@ -214,7 +214,7 @@ function renderPassportCollection() {
         ),
         el('p', { class: 'passport-card-notice', text: t('passport_fixed_disclaimer') }),
         el('div', { class: 'passport-card-actions' },
-          el('button', { class: 'btn ghost sm', type: 'button', text: t('passport_share'), onclick: () => openPassportShare(credential) }),
+          el('button', { class: 'btn ghost sm', type: 'button', 'data-focus-key': `passport-share:${credential.credential_id}`, text: t('passport_share'), onclick: () => openPassportShare(credential) }),
           el('a', { class: 'btn ghost sm', href: card.verify_url, target: '_blank', rel: 'noopener', text: t('passport_verify') }),
           el('button', { class: 'btn ghost sm', type: 'button', text: hidden.has(card.credential_id) ? t('passport_unhide') : t('passport_hide'), onclick: () => togglePassportHidden(card.credential_id) })
         )
@@ -293,7 +293,7 @@ function openPassportShare(credential) {
   if (advancedNote) advancedNote.textContent = (passportIsDemo(credential) || !credential._publicPayment) ? t('passport_advanced_unavailable') : t('passport_advanced_note');
   renderPassportSharePreview();
   const dialog = $('#passport-share-modal');
-  if (dialog && !dialog.open) dialog.showModal();
+  showAccessibleDialog(dialog, '#passport-refresh-btn');
 }
 
 function renderPassportSharePreview() {
@@ -414,7 +414,7 @@ async function createPreview() {
     $('#mystery-post-actions').hidden = true;
     await loadPassportCollection(mysteryState.signer.address);
     const modal = $('#mystery-modal');
-    if (modal && !modal.open) modal.showModal();
+    showAccessibleDialog(modal, '#mystery-preview-btn');
   } catch (error) {
     toast(error.message, true);
   } finally {
@@ -558,10 +558,29 @@ function renderReveal(report) {
   badge.className = `badge mystery-risk-${String(risk.level ?? '').toLowerCase()} risk-pulse`;
 }
 
-function replaceList(node, items, fallback) {
+function replaceList(node, items, fallback, renderItem = (item) => el('li', { text: String(item) })) {
   clear(node);
   const values = Array.isArray(items) && items.length ? items : [fallback];
-  values.forEach((item) => node.append(el('li', { text: String(item) })));
+  values.forEach((item) => node.append(renderItem(item)));
+}
+
+// Keep the two quoted document values verbatim; surrounding report copy remains localizable.
+export function riskFactorSegments(value) {
+  const text = String(value);
+  const match = text.match(/^(doc: Incoterms agreement \(eBL\/invoice\): eBL ")([^"]*)(" vs invoice ")([^"]*)(")$/u);
+  if (!match) return [{ text: tData(text) }];
+  return [
+    { text: tData(match[1]) },
+    { text: match[2], source: 'bill_of_lading.incoterms' },
+    { text: tData(match[3]) },
+    { text: match[4], source: 'commercial_invoice.incoterms' },
+    { text: match[5] }
+  ];
+}
+
+function renderRiskFactor(value) {
+  return el('li', {}, riskFactorSegments(value).map((part) => part.source
+    ? el('span', { 'data-source-document-field': part.source, text: part.text }) : part.text));
 }
 
 function renderPaymentEvidence(report) {
@@ -594,7 +613,7 @@ function renderReport(report) {
   $('#mystery-report-freshness').textContent = `${report.evidence_freshness?.status ?? '—'} · ${Number(report.evidence_freshness?.age_seconds ?? 0).toFixed(0)}s`;
   renderPaymentEvidence(report);
   replaceList($('#mystery-report-reasons'), suitability.reasons?.map(tData), t('mystery_no_match_reason'));
-  replaceList($('#mystery-report-risks'), risk.factors?.map(tData), t('mystery_no_risk_factor'));
+  replaceList($('#mystery-report-risks'), risk.factors, t('mystery_no_risk_factor'), renderRiskFactor);
   $('#mystery-non-guarantee').textContent = report.non_guarantee_notice || t('mystery_non_guarantee');
   $('#mystery-post-actions').hidden = false;
   $('#mystery-subscribe-btn').disabled = !mysteryState.proofValid;
@@ -703,7 +722,7 @@ function openSubscriptionConfirmation() {
   mysteryState.subscriptionSignature = null;
   updateSubscriptionConfirmation();
   const dialog = $('#mystery-subscribe-modal');
-  if (!dialog.open) dialog.showModal();
+  showAccessibleDialog(dialog, '#mystery-subscribe-btn');
 }
 
 function subscriptionAuthorizationMessage(amountUsd) {

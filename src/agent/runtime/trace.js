@@ -7,7 +7,9 @@
 // every span is also forwarded to it; without it that bridge is a no-op.
 
 import crypto from 'node:crypto';
-import { appendJsonl, readJsonl } from '../../lib/jsonStore.js';
+import { sanitizeAudit, redactText } from '../security/privacy.js';
+import { pruneJsonl, retainRecords } from './retention.js';
+import { appendJsonl, readJsonl, createWriteQueue } from '../../lib/jsonStore.js';
 import { sanitizeAttributes, traceSpan } from '../tracing/tracer.js';
 
 export function hashText(text) {
@@ -51,7 +53,7 @@ class Span {
     this.record.duration_ms = Math.max(0, Math.round(this.run.tracer.clock() - this.t0));
     if (error) {
       this.record.status = 'error';
-      this.record.error = String(error?.message ?? error).slice(0, 300);
+      this.record.error = redactText(error?.message ?? error).slice(0, 300);
     }
     return this.record;
   }
@@ -135,6 +137,7 @@ export class Tracer {
     this.maxBytes = maxBytes;
     this.keepFiles = keepFiles;
     this.recent = [];
+    this.enqueueWrite = createWriteQueue();
   }
 
   startRun(options = {}) {
@@ -142,17 +145,24 @@ export class Tracer {
   }
 
   remember(summary) {
-    this.recent.push(summary);
+    this.recent.push(sanitizeAudit(summary));
     if (this.recent.length > this.memoryRuns) this.recent.splice(0, this.recent.length - this.memoryRuns);
   }
 
   async persist(summary) {
     if (!this.file) return;
     try {
-      await appendJsonl(this.file, summary, { maxBytes: this.maxBytes, keepFiles: this.keepFiles });
+      await this.enqueueWrite(() => appendJsonl(this.file, sanitizeAudit(summary), { maxBytes: this.maxBytes, keepFiles: this.keepFiles }));
     } catch {
       // Tracing must never break a decision.
     }
+  }
+
+  async prune(options) {
+    return this.enqueueWrite(async () => {
+      this.recent = retainRecords(this.recent, { ...options, timestamp: 'started_at' });
+      if (this.file) await pruneJsonl(this.file, this.keepFiles, { ...options, timestamp: 'started_at' });
+    });
   }
 
   /** The newest trace recorded for a decision (memory first, then the files). */
@@ -161,6 +171,6 @@ export class Tracer {
     if (inMemory) return structuredClone(inMemory);
     if (!this.file) return null;
     const found = await readJsonl(this.file, { filter: (trace) => trace.decision_id === decisionId, includeRotated: true, keepFiles: this.keepFiles });
-    return found.length ? found[found.length - 1] : null;
+    return found.length ? sanitizeAudit(found[found.length - 1]) : null;
   }
 }

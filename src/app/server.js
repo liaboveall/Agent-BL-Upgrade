@@ -55,6 +55,8 @@ import { ActivityLog } from '../agent/runtime/activityLog.js';
 import { attachActivityPersistence, createAgentService } from '../agent/runtime/factory.js';
 import { loadAgentConfig } from '../agent/runtime/config.js';
 import { createAgentRoutes } from './agentRoutes.js';
+import { decisionReferences } from '../agent/runtime/references.js';
+import { createAgentApiRoutes } from './agentApiRoutes.js';
 import { runtimeDir, runtimePath } from '../runtimePaths.js';
 import { CopilotService } from '../copilot/service.js';
 import { createCopilotRoutes } from './copilotRoutes.js';
@@ -63,6 +65,8 @@ import { llmStatus, relayChat } from './llmProxy.js';
 import { isRecord, looksLikeCase } from './shapes.js';
 import { createX402ServiceDefinitions } from './x402Services.js';
 import { createLiveGateway } from '../x402/liveGateway.js';
+import { createPricingDelegate } from '../interop/delegation.js';
+import { createInteropRoutes } from './interopRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -488,6 +492,7 @@ const handleAgentRoute = createAgentRoutes({
   runtimeMode: () => demoModeController.snapshot(),
   activityLog
 });
+const handleAgentApiRoute = createAgentApiRoutes();
 
 export const copilotService = new CopilotService({
   getPools: async () => { await ensureMockPools(); return [...storeState.pools.values()]; },
@@ -513,6 +518,12 @@ export const copilotService = new CopilotService({
   file: process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href ? runtimePath('copilot-sessions.json') : null
 });
 const handleCopilotRoute = createCopilotRoutes({ service: copilotService });
+const delegatePricing = createPricingDelegate({
+  loadCase: async (id) => (await loadCaseCatalog()).find((entry) => entry.case_id === id)?.case,
+  readReport: async (id) => (await import('../x402/reportStore.js')).getPaidReportCache().read(id)
+});
+const mcpContext = { getService: getAgentService, recommend: (input) => copilotService.query(input), delegate: delegatePricing, env: process.env };
+const handleInteropRoute = createInteropRoutes({ context: mcpContext, runtimeMode: () => demoModeController.snapshot() });
 activityLog.onAppend((activity) => { copilotService.notifyDecision(activity).catch(() => {}); });
 
 export function logAgentActivity(activity) {
@@ -663,6 +674,7 @@ async function handlePaidService(request, response, service) {
 
 async function routeRequest(request, response, url) {
   const { method } = request;
+  if (await handleInteropRoute(request, response, url)) return;
   const { pathname } = url;
 
   if (method === 'GET' && pathname === '/api/health') {
@@ -691,6 +703,7 @@ async function routeRequest(request, response, url) {
       });
       return;
     }
+    await getAgentService().onModeChanged();
     await copilotService.invalidateSessions();
     sendJson(response, 200, { ok: true, ...snapshot });
     return;
@@ -706,6 +719,7 @@ async function routeRequest(request, response, url) {
     }
     // A Demo reset starts the Demo over: the offchain pools and everything the agent recorded in Demo
     // mode. Live records are never touched.
+    await getAgentService().scenarios.stopPlayback();
     resetStore();
     await getAgentService().resetDemo();
     await copilotService.invalidateSessions();
@@ -1030,12 +1044,15 @@ async function routeRequest(request, response, url) {
     const decisions = (await getAgentService().listDecisions({ limit: 5000 })).decisions;
     const myInvestments = recorded.map((investment) => {
       const pool = storeState.pools.get(investment.poolId);
-      const affected = decisions.filter((decision) => decision.pool_id === investment.poolId || decision.case_id === investment.poolId).slice(0, 3);
+      const affected = decisions.filter((decision) => decision.mode === getAgentService().getMode()
+        && (decision.generation === undefined || decision.generation === getAgentService().getGeneration())
+        && (decision.pool_id === investment.poolId || decision.case_id === investment.poolId)).slice(0, 3);
       return { ...investment,
         source_label: investment.source?.kind === 'MYSTERY_VOYAGE' ? 'Mystery' : investment.source?.kind === 'COPILOT' ? 'Copilot' : 'Market',
         current_status: pool?.status ?? 'Unknown', current_price_usd: pool?.quote.final_issue_price_usd ?? null,
         current_risk_level: pool?.quote.risk_level ?? null,
-        decisions: affected.map(({ decision_id, action, status, created_at }) => ({ decision_id, action, status, created_at }))
+        references: affected[0] ? decisionReferences(affected[0]) : null,
+        decisions: affected.map((decision) => ({ decision_id: decision.decision_id, action: decision.action, status: decision.status, created_at: decision.created_at, references: decisionReferences(decision) }))
       };
     });
 
@@ -1151,10 +1168,11 @@ async function routeRequest(request, response, url) {
     }
     try {
       const { callTool } = await import('../mcp/mcpServer.js');
-      const result = await callTool(body.tool, body.params ?? {});
+      const result = await callTool(body.tool, body.params ?? {}, mcpContext);
       sendJson(response, 200, { ok: true, ...result });
     } catch (error) {
-      sendJson(response, 400, { ok: false, error: error.message, tool: body.tool });
+      sendJson(response, error.status >= 400 && error.status < 600 ? error.status : 400,
+        { ok: false, code: error.code ?? 'tool_error', error: error.message, tool: body.tool });
     }
     return;
   }
@@ -1450,6 +1468,7 @@ async function routeRequest(request, response, url) {
   }
 
   // Agent runtime: status, control, events, decisions, approvals, pools.
+  if (await handleAgentApiRoute(request, response, url)) return;
   if (await handleAgentRoute(request, response, url)) return;
   if (await handleCopilotRoute(request, response, url)) return;
 

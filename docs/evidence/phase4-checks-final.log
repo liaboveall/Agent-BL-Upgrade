@@ -1,0 +1,53 @@
+✔ tab keyboard navigation wraps, handles Home/End and skips disabled choices (5.490314ms)
+✔ payout radio group exposes checked state separately from navigation selection (0.203125ms)
+✔ menu arrow keys only move focus and cannot select or connect a wallet (0.265295ms)
+✔ live rendering restores replaced controls without stealing focus from a connected control (0.209556ms)
+✔ modal Tab and reverse Tab wrap at the edges while ordinary navigation is untouched (0.339965ms)
+✔ timeline announcements exclude initial history, unchanged polls and removed decisions (0.233572ms)
+✔ reduced motion selects immediate programmatic scrolling (0.196318ms)
+✔ every dashboard tab owns a named panel and dialogs have accessible names (6.391743ms)
+(node:67413) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ console: dynamic values never go through innerHTML (decisions carry event and chain data) (1.148366ms)
+✔ console: a link is only ever built from an https explorer_url, never from a hash or a demo reference (0.806041ms)
+✔ console: a simulated execution is labelled DEMO and has no link path (0.245194ms)
+✔ console: shortId shortens without repeating the value (0.157231ms)
+✔ the README lists exactly the deployed contract addresses from chain-config.json (4.672259ms)
+✔ every `npm run <script>` in the README and deployment guide exists (14.266339ms)
+✔ the README mentions the commands the release preflight expects (3.158641ms)
+✔ .env.example documents every variable the server reads and never ships a real key (4.282729ms)
+✔ every AGENT_* variable the runtime reads is documented in .env.example (12.431711ms)
+(node:67420) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ frontend translation keys have both Chinese and English copy (4.683213ms)
+✔ accessible labels and the document language follow the language switch (0.448533ms)
+✔ Chinese UI keeps navigation and key investor information in Chinese (0.114646ms)
+✔ English UI copy contains no accidental Chinese (2.784905ms)
+✔ Chinese-native trade data is rendered in English in English mode (0.903484ms)
+(node:67422) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ MBOX-FE-5: browser verifier reproduces the backend reveal selection (54.452475ms)
+✔ MBOX-FE-5: proof and binding tampering fails closed (15.358067ms)
+✔ MBOX-FE-6: independent subscription guard requires amount, acknowledgement and selected pool binding (0.370755ms)
+✔ MBOX-FE-7: Passport share card uses a strict public whitelist (7.056351ms)
+✔ MBOX-FE-7: public transaction disclosure requires both advanced confirmations (0.456993ms)
+✔ MBOX-FE-1~6: DOM contract includes tiers, five steps, reveal, verifier and guarded subscribe (8.485157ms)
+✔ Phase 4: full playback parses actual files and preserves separate payment and settlement approval (207.589841ms)
+✔ Phase 4: repeated playback has no duplicate event, job, subscription or execution (165.640599ms)
+✔ Phase 4: two starts and manual steps cannot race a paced run; stop drains and preserves progress (18.714677ms)
+✔ Phase 4: playback rejects invalid speed/name, Live and non-auto autonomy (1.118057ms)
+✔ Phase 4: speed only changes pacing; virtual event times, decisions and quote commitments stay deterministic (121.471089ms)
+✔ Phase 4: a mode generation change cancels playback before another step or subscription (3.276757ms)
+✔ Phase 4: references distinguish report payment from decision execution; Demo never inherits a transaction (0.32705ms)
+✔ Phase 4 HTTP: historical quote stays saved while latest market, timeline and portfolio share references (83.992037ms)
+✔ Phase 4 HTTP: playback is asynchronous, admin-protected when configured, and rejects Live (151.477973ms)
+✔ Phase 4: actual provider usage reaches valuation metadata without changing or leaking into chat messages (2.208023ms)
+✔ Phase 4: mode switching during event initialization rejects the old scenario before bus submission (1.295297ms)
+ℹ tests 39
+ℹ suites 0
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11405.122008

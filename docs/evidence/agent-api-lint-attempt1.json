@@ -1,0 +1,8 @@
+{
+  "phase": "WP2.9",
+  "passed": false,
+  "errors": 2,
+  "file": "scripts/agent-api-acceptance-runner.mjs",
+  "reason": "Browser callback used unqualified innerWidth/document under Node ESLint globals.",
+  "resolution": "Use globalThis.innerWidth and globalThis.document."
+}

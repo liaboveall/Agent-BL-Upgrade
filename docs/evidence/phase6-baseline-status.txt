@@ -1,0 +1,324 @@
+ M .env.example
+ M README.md
+ M docs/DEPLOYMENT.md
+ M docs/PRD.md
+ M docs/README.md
+ M docs/SP-8-9-10-Summary.md
+ M docs/agent-implementation-plan.md
+ M docs/agent-reliability.md
+ M docs/ai-valuation-tooling.md
+ M docs/evaluation-report.md
+ M docs/evidence/agent-eval.json
+ M docs/pitch-script.md
+ M docs/tasks.md
+ M docs/video-script-final.md
+ M hardhat/test/deploySmoke.test.js
+ M package.json
+ M public/accessibility.js
+ M public/agent/api.js
+ M public/agent/approvals.js
+ M public/agent/console.js
+ M public/agent/decision-detail.js
+ M public/agent/documents.js
+ M public/app.js
+ M public/copilot/styles.css
+ M public/i18n.js
+ M public/index.html
+ M public/mystery.js
+ M public/styles.css
+ M scripts/check.mjs
+ M scripts/demo.mjs
+ M scripts/document-extraction-acceptance-server.mjs
+ M scripts/eval-agent.mjs
+ M scripts/lib/agent-approve.mjs
+ M scripts/preflight.mjs
+ M scripts/scenarios.mjs
+ M scripts/ui-acceptance.playwright.js
+ M src/agent/complianceChecker.js
+ M src/agent/decisionLogger.js
+ M src/agent/documentParser.js
+ M src/agent/evaluation/dataset.js
+ M src/agent/evaluation/goldDataset.js
+ M src/agent/evaluation/runner.js
+ M src/agent/ingest/ingestService.js
+ M src/agent/ingest/modelExtraction.js
+ M src/agent/llm/openaiCompatClient.js
+ M src/agent/orchestrator.js
+ M src/agent/pipelines/ingestPipeline.js
+ M src/agent/pipelines/monitorPipeline.js
+ M src/agent/pricingNarrator.js
+ M src/agent/runtime/activityLog.js
+ M src/agent/runtime/agentService.js
+ M src/agent/runtime/approvals.js
+ M src/agent/runtime/config.js
+ M src/agent/runtime/eventBus.js
+ M src/agent/runtime/events.js
+ M src/agent/runtime/executors/chainExecutor.js
+ M src/agent/runtime/factory.js
+ M src/agent/runtime/ownerTxPlan.js
+ M src/agent/runtime/policy.js
+ M src/agent/runtime/poolRegistry.js
+ M src/agent/runtime/sources/scenarioPlayer.js
+ M src/agent/runtime/sources/worldRiskMonitor.js
+ M src/agent/runtime/trace.js
+ M src/agent/security/dataFreshness.js
+ M src/agent/tracing/tracer.js
+ M src/agent/valuationAgent.js
+ M src/agent/worldRiskAgent.js
+ M src/app/agentRoutes.js
+ M src/app/server.js
+ M src/copilot/retrieval.js
+ M src/core/pricingEngine.js
+ M tests/agentApprovals.test.js
+ M tests/agentEvaluation.test.js
+ M tests/agentEventBus.test.js
+ M tests/agentIngestApi.test.js
+ M tests/agentIngestPipeline.test.js
+ M tests/agentReliability.test.js
+ M tests/agentRuntimeParts.test.js
+ M tests/agentScenarios.test.js
+ M tests/agentService.test.js
+ M tests/complianceChecker.test.js
+ M tests/copilotRerank.test.js
+ M tests/docsConsistency.test.js
+ M tests/documentExtraction.test.js
+ M tests/i18nCoverage.test.js
+ M tests/llmProxy.test.js
+ M tests/mcpProtocol.test.js
+ M tests/tracer.test.js
+ M tests/valuationAgent.test.js
+?? data/agent-scenarios/copper-lifecycle.json
+?? data/compliance/
+?? docs/agent-api.md
+?? docs/agent-security-matrix.md
+?? docs/chain-watcher.md
+?? docs/compliance-screening.md
+?? docs/evaluation-report-phase5-before-final-migration.md
+?? docs/evaluation-report-phase5-before-retention-order.md
+?? docs/evaluation-report-pre-compliance-v2.md
+?? docs/evaluation-report-pre-phase5-p1.md
+?? docs/evidence/agent-api-1440-en-attempt1.png
+?? docs/evidence/agent-api-1440-en.png
+?? docs/evidence/agent-api-1440-zh-attempt1.png
+?? docs/evidence/agent-api-1440-zh.png
+?? docs/evidence/agent-api-390-en-attempt1.png
+?? docs/evidence/agent-api-390-en.png
+?? docs/evidence/agent-api-390-zh-attempt1.png
+?? docs/evidence/agent-api-390-zh.png
+?? docs/evidence/agent-api-browser-attempt1.json
+?? docs/evidence/agent-api-browser.json
+?? docs/evidence/agent-api-lint-attempt1.json
+?? docs/evidence/agent-api-local.json
+?? docs/evidence/agent-api-preflight-attempt1.json
+?? docs/evidence/agent-api-preflight-attempt2.json
+?? docs/evidence/agent-api-preflight.json
+?? docs/evidence/agent-api-test-attempt1.json
+?? docs/evidence/agent-eval-phase5-before-final-migration.json
+?? docs/evidence/agent-eval-phase5-before-live-verifier.json
+?? docs/evidence/agent-eval-phase5-before-retention-order.json
+?? docs/evidence/agent-eval-pre-compliance-v2.json
+?? docs/evidence/agent-eval-pre-phase5-p1.json
+?? docs/evidence/agent-live-smoke-1792027678667.json
+?? docs/evidence/agent-live-smoke-pre-authorized-run.json
+?? docs/evidence/agent-live-smoke-recovery-1792028589423.json
+?? docs/evidence/agent-live-smoke.json
+?? docs/evidence/chain-watcher-1440-en.png
+?? docs/evidence/chain-watcher-1440-zh.png
+?? docs/evidence/chain-watcher-390-en.png
+?? docs/evidence/chain-watcher-390-zh.png
+?? docs/evidence/chain-watcher-browser-attempt1.json
+?? docs/evidence/chain-watcher-browser-attempt2.json
+?? docs/evidence/chain-watcher-browser-attempt3.json
+?? docs/evidence/chain-watcher-browser-attempt4.json
+?? docs/evidence/chain-watcher-browser-attempt5.json
+?? docs/evidence/chain-watcher-browser.json
+?? docs/evidence/chain-watcher-debug-first.png
+?? docs/evidence/chain-watcher-local.json
+?? docs/evidence/chain-watcher-preflight-attempt1.json
+?? docs/evidence/chain-watcher-preflight.json
+?? docs/evidence/compliance-1440-en.png
+?? docs/evidence/compliance-1440-zh-before-fix.png
+?? docs/evidence/compliance-1440-zh.png
+?? docs/evidence/compliance-390-en.png
+?? docs/evidence/compliance-390-zh.png
+?? docs/evidence/compliance-browser-first.json
+?? docs/evidence/compliance-browser-second.json
+?? docs/evidence/compliance-browser-third.json
+?? docs/evidence/compliance-browser.json
+?? docs/evidence/compliance-local.json
+?? docs/evidence/compliance-preflight.json
+?? docs/evidence/evaluation-report-phase5-before-live-verifier.md
+?? docs/evidence/opening-1440-en.png
+?? docs/evidence/opening-1440-zh.png
+?? docs/evidence/opening-390-en.png
+?? docs/evidence/opening-390-zh.png
+?? docs/evidence/opening-browser-first.json
+?? docs/evidence/opening-browser-second.json
+?? docs/evidence/opening-browser-third.json
+?? docs/evidence/opening-browser.json
+?? docs/evidence/opening-debug-third.png
+?? docs/evidence/opening-local.json
+?? docs/evidence/opening-preflight.json
+?? docs/evidence/phase4-1792002321172-failure.png
+?? docs/evidence/phase4-1792002422241-1440-en.png
+?? docs/evidence/phase4-1792002422241-1440-zh.png
+?? docs/evidence/phase4-1792002422241-failure.png
+?? docs/evidence/phase4-1792002682228-1440-en.png
+?? docs/evidence/phase4-1792002682228-1440-zh.png
+?? docs/evidence/phase4-1792002682228-failure.png
+?? docs/evidence/phase4-1792002785413-1440-en.png
+?? docs/evidence/phase4-1792002785413-1440-zh.png
+?? docs/evidence/phase4-1792002785413-390-en.png
+?? docs/evidence/phase4-1792002785413-390-zh.png
+?? docs/evidence/phase4-1792002896210-failure.png
+?? docs/evidence/phase4-1792003158071-failure.png
+?? docs/evidence/phase4-1792003285303-failure.png
+?? docs/evidence/phase4-1792003476142-failure.png
+?? docs/evidence/phase4-1792003584437-failure.png
+?? docs/evidence/phase4-1792003967170-1440-en.png
+?? docs/evidence/phase4-1792003967170-1440-zh.png
+?? docs/evidence/phase4-1792003967170-390-en.png
+?? docs/evidence/phase4-1792003967170-390-zh.png
+?? docs/evidence/phase4-browser-1792002085845.json
+?? docs/evidence/phase4-browser-1792002321172.json
+?? docs/evidence/phase4-browser-1792002422241.json
+?? docs/evidence/phase4-browser-1792002682228.json
+?? docs/evidence/phase4-browser-1792002785413.json
+?? docs/evidence/phase4-browser-1792003967170.json
+?? docs/evidence/phase4-local.json
+?? docs/evidence/phase4-preflight-attempt1.json
+?? docs/evidence/phase4-preflight.json
+?? docs/evidence/phase4-regression-1792002896210.json
+?? docs/evidence/phase4-regression-1792003158071.json
+?? docs/evidence/phase4-regression-1792003285303.json
+?? docs/evidence/phase4-regression-1792003476142.json
+?? docs/evidence/phase4-regression-1792003584437-desktop-en.png
+?? docs/evidence/phase4-regression-1792003584437.json
+?? docs/evidence/phase4-regression-1792003740747-desktop-en.png
+?? docs/evidence/phase4-regression-1792003740747-mobile-copilot-en.png
+?? docs/evidence/phase4-regression-1792003740747-mobile-decision-zh.png
+?? docs/evidence/phase4-regression-1792003740747-mobile-documents-en.png
+?? docs/evidence/phase4-regression-1792003740747-mobile-mystery-zh.png
+?? docs/evidence/phase4-regression-1792003740747-mobile-passport-en.png
+?? docs/evidence/phase4-regression-1792003740747-mobile-voyage-en.png
+?? docs/evidence/phase4-regression-1792003740747.json
+?? docs/evidence/phase4-regression-1792004070058-desktop-en.png
+?? docs/evidence/phase4-regression-1792004070058-mobile-copilot-en.png
+?? docs/evidence/phase4-regression-1792004070058-mobile-decision-zh.png
+?? docs/evidence/phase4-regression-1792004070058-mobile-documents-en.png
+?? docs/evidence/phase4-regression-1792004070058-mobile-mystery-zh.png
+?? docs/evidence/phase4-regression-1792004070058-mobile-passport-en.png
+?? docs/evidence/phase4-regression-1792004070058-mobile-voyage-en.png
+?? docs/evidence/phase4-regression-1792004070058.json
+?? docs/evidence/phase5-1792023335112-1440-en.png
+?? docs/evidence/phase5-1792023335112-1440-zh.png
+?? docs/evidence/phase5-1792023335112-390-en.png
+?? docs/evidence/phase5-1792023335112-390-zh.png
+?? docs/evidence/phase5-1792024793070-1440-en.png
+?? docs/evidence/phase5-1792024793070-1440-zh.png
+?? docs/evidence/phase5-1792024793070-390-en.png
+?? docs/evidence/phase5-1792024793070-390-zh.png
+?? docs/evidence/phase5-attempt-history.json
+?? docs/evidence/phase5-browser-1792023335112.json
+?? docs/evidence/phase5-browser-1792024793070.json
+?? docs/evidence/phase5-browser-1792024811933.json
+?? docs/evidence/phase5-chain-readonly-1792023523314.json
+?? docs/evidence/phase5-completion-before-doc-finalization.json
+?? docs/evidence/phase5-completion.json
+?? docs/evidence/phase5-live-preparation-1792027678667.json
+?? docs/evidence/phase5-live-preparation-recovery-1792028589423.json
+?? docs/evidence/phase5-live-verification-1792028589423.json
+?? docs/evidence/phase5-live-verification-final-1792028767147.json
+?? docs/evidence/phase5-live-verification-final-1792029472229.json
+?? docs/evidence/phase5-local-before-doc-finalization.json
+?? docs/evidence/phase5-local-before-live-verifier.json
+?? docs/evidence/phase5-local-pre-live.json
+?? docs/evidence/phase5-local.json
+?? docs/evidence/phase5-preflight-attempt1.json
+?? docs/evidence/phase5-preflight-live-final.json
+?? docs/evidence/phase5-preflight-release.json
+?? docs/evidence/phase5-preflight-verified.json
+?? docs/evidence/phase5-regression-1792024811933-desktop-en.png
+?? docs/evidence/phase5-regression-1792024811933-mobile-copilot-en.png
+?? docs/evidence/phase5-regression-1792024811933-mobile-decision-zh.png
+?? docs/evidence/phase5-regression-1792024811933-mobile-documents-en.png
+?? docs/evidence/phase5-regression-1792024811933-mobile-mystery-zh.png
+?? docs/evidence/phase5-regression-1792024811933-mobile-passport-en.png
+?? docs/evidence/phase5-regression-1792024811933-mobile-voyage-en.png
+?? docs/evidence/phase5-smoke-plan-1792023710155.json
+?? docs/evidence/phase5-smoke-plan-1792023986531.json
+?? docs/evidence/phase5-smoke-plan-1792027471542.json
+?? docs/evidence/settlement-1440-en.png
+?? docs/evidence/settlement-1440-zh.png
+?? docs/evidence/settlement-390-en.png
+?? docs/evidence/settlement-390-zh.png
+?? docs/evidence/settlement-browser-attempt1.json
+?? docs/evidence/settlement-browser-attempt2.json
+?? docs/evidence/settlement-browser-attempt3.json
+?? docs/evidence/settlement-browser.json
+?? docs/evidence/settlement-coverage-attempt1.json
+?? docs/evidence/settlement-local.json
+?? docs/evidence/settlement-preflight-attempt1.json
+?? docs/evidence/settlement-preflight.json
+?? docs/live-opening.md
+?? docs/live-settlement.md
+?? docs/phase4-console-demo.md
+?? docs/phase5-security-replay.md
+?? public/agent/chain-watcher.js
+?? public/agent/compliance.js
+?? public/agent/demo.js
+?? public/agent/references.js
+?? public/agent/settlement.js
+?? scripts/agent-api-acceptance-runner.mjs
+?? scripts/agent-api-acceptance-server.mjs
+?? scripts/agent-live-smoke.mjs
+?? scripts/agent-redteam.mjs
+?? scripts/agent-replay.mjs
+?? scripts/agent-smoke-plan.mjs
+?? scripts/chain-watcher-acceptance-runner.mjs
+?? scripts/chain-watcher-acceptance-server.mjs
+?? scripts/chain-watcher-acceptance.playwright.js
+?? scripts/compliance-acceptance-server.mjs
+?? scripts/compliance-acceptance.playwright.js
+?? scripts/lib/agent-live-smoke.mjs
+?? scripts/lib/owner-journal.mjs
+?? scripts/opening-acceptance-server.mjs
+?? scripts/opening-acceptance.playwright.js
+?? scripts/phase4-acceptance-runner.mjs
+?? scripts/phase4-acceptance-server.mjs
+?? scripts/phase5-acceptance-runner.mjs
+?? scripts/phase5-acceptance-server.mjs
+?? scripts/settlement-acceptance-runner.mjs
+?? scripts/settlement-acceptance-server.mjs
+?? scripts/settlement-acceptance.playwright.js
+?? src/agent/api.js
+?? src/agent/compliance/
+?? src/agent/pipelines/settlementPipeline.js
+?? src/agent/redteam/
+?? src/agent/runtime/freshness.js
+?? src/agent/runtime/liveSmoke.js
+?? src/agent/runtime/liveSmokeVerification.js
+?? src/agent/runtime/openingPlan.js
+?? src/agent/runtime/references.js
+?? src/agent/runtime/replay.js
+?? src/agent/runtime/retention.js
+?? src/agent/runtime/settlementEvidence.js
+?? src/agent/runtime/sources/chainWatcher.js
+?? src/agent/security/privacy.js
+?? src/agent/security/privateStore.js
+?? src/app/agentApiRoutes.js
+?? tests/agentChainWatcher.test.js
+?? tests/agentLiveSmoke.test.js
+?? tests/agentOpening.test.js
+?? tests/agentOpeningCli.test.js
+?? tests/agentPhase5.test.js
+?? tests/agentPrivacy.test.js
+?? tests/agentSettlement.test.js
+?? tests/agentSettlementCli.test.js
+?? tests/agentStatelessApi.test.js
+?? tests/helpers/chainWatcher.js
+?? tests/helpers/opening.js
+?? tests/helpers/phase5.js
+?? tests/helpers/settlement.js
+?? tests/llmProjectModel.test.js
+?? tests/phase4Workflow.test.js

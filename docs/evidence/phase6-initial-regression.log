@@ -1,0 +1,20 @@
+✔ MCP-10: dry-run is safe without approval (7.040275ms)
+✔ MCP-10: real write requires explicit human approval (7.195671ms)
+✔ MCP-10: wrong network, excessive amount and unknown contract are rejected (4.372584ms)
+✔ MCP-10: approved, pinned and allowlisted write passes (6.112253ms)
+✔ MCP-10: model-controlled approval cannot replace the out-of-band channel (8.42953ms)
+✔ MCP-10: raw EVM smoke rejects every non-allowlisted selector (6.406606ms)
+✔ X402-10: a paid envelope adds provenance without changing any risk or price result (36.223243ms)
+✔ X402-10: paid report is a clearly neutral evidence-graph node (0.931373ms)
+✔ X402-10: tampered report hash cannot enter pricing (0.76718ms)
+✔ X402-10: expired report cannot enter pricing (0.637451ms)
+✔ X402-10: report from another trade case cannot enter pricing (0.680411ms)
+✔ X402-10: duplicate report ids are idempotent in the evidence graph (0.817758ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5977.876242

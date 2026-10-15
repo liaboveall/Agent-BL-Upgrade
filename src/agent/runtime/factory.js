@@ -21,11 +21,16 @@ import { ChainExecutor, createChainContext } from './executors/chainExecutor.js'
 import { SimExecutor } from './executors/simExecutor.js';
 import { PoolRegistry } from './poolRegistry.js';
 import { PreferenceStore } from './preferences.js';
+import { SettlementEvidenceStore } from './settlementEvidence.js';
 import { RiskTracker } from './sources/riskTracker.js';
 import { ScenarioPlayer } from './sources/scenarioPlayer.js';
 import { createVoyageMonitor } from './sources/voyageMonitor.js';
 import { createWorldRiskMonitor } from './sources/worldRiskMonitor.js';
+import { ChainWatcher } from './sources/chainWatcher.js';
 import { Tracer } from './trace.js';
+import { DecisionAnchoring } from './anchoring.js';
+import { createAgentVersion } from './agentVersion.js';
+import { createAnchorChainAdapter } from './anchorChain.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CHAIN_NETWORK = 'injective-testnet';
@@ -67,18 +72,19 @@ export function createAgentService(options = {}) {
 
   const activity = options.activity ?? new ActivityLog({ store, mode: getMode, now: options.now });
   const logger = options.logger ?? new DecisionLogger({ filePath: file('agent-decisions.json'), clock: options.now });
-  const approvals = options.approvals ?? new ApprovalQueue({ file: file('agent-approvals.json'), ttlSec: config.approvalTtlSec, now: options.now });
+  const approvals = options.approvals ?? new ApprovalQueue({ file: file('agent-approvals.json'), ttlSec: config.approvalTtlSec, maxRecords: config.maxDecisions, now: options.now });
   const registry = options.registry ?? new PoolRegistry({ file: file('agent-pools.json'), protectedChainPools: config.protectedChainPools, now: options.now });
-  const tracer = options.tracer ?? new Tracer({ file: file('agent-traces.jsonl') });
+  const tracer = options.tracer ?? new Tracer({ file: file('agent-traces.jsonl'), wall: options.now ? () => options.now().getTime() : undefined });
   const bus = options.bus ?? new EventBus({
     handler: async () => {}, // replaced by the service
     eventsFile: file('agent-events.jsonl'),
     indexFile: file('agent-event-index.json'),
     now: options.now,
+    maxIndexEntries: config.maxDecisions,
     sleep: options.sleep
   });
   const sim = options.sim ?? new SimExecutor({ store, now: options.now });
-  const ingest = options.ingest ?? new IngestService({ dir, maxBytes: config.uploadMaxBytes, now: options.now });
+  const ingest = options.ingest ?? new IngestService({ dir, maxBytes: config.uploadMaxBytes, now: options.now, getMode });
   const documentModel = createDocumentModel({ env, completion: options.documentCompletion });
   const documentParser = {
     visionEnabled: config.visionEnabled,
@@ -86,6 +92,7 @@ export function createAgentService(options = {}) {
     ...(config.documentLlm && documentModel.configured ? { aiExtractor: documentModel.complete } : {})
   };
   const preferences = options.preferences ?? new PreferenceStore({ file: file('agent-preferences.json'), now: options.now });
+  const settlementEvidence = options.settlementEvidence ?? new SettlementEvidenceStore({ file: file('agent-settlement-evidence.json') });
   const riskTracker = options.riskTracker ?? new RiskTracker({ clearTicks: config.riskClearTicks, file: file('agent-risk-snapshots.json') });
   let service = null;
   const scenarios = options.scenarios ?? new ScenarioPlayer({ getService: () => service, clearTicks: config.riskClearTicks, speed: config.scenarioSpeed });
@@ -125,14 +132,37 @@ export function createAgentService(options = {}) {
     return live.executor;
   };
 
+  // Isolated read-only provider: this path never builds wallets or resolves signer keys.
+  let watcherContext = null;
+  const watcher = options.chainWatcher === false || !config.chainWatcherEnabled || !monitorsOn && !options.chainWatcher ? null
+    : options.chainWatcher ?? new ChainWatcher({ file: file('agent-chain-cursor.json'), chainConfig,
+      confirmations: config.chainConfirmations, pollSec: config.chainPollSec, startBlock: config.chainStartBlock,
+      now: options.now, getContext: options.getWatcherContext ?? options.getChainContext ?? (async () => {
+        if (!chainConfig) return null;
+        watcherContext ??= await createChainContext({ chainConfig, env, readOnly: true });
+        return watcherContext;
+      }) });
+
   const signerRoles = () => ({
     PRICING_UPDATER: Boolean(resolveSignerKey('PRICING_UPDATER', env, { warn: () => {} })?.dedicated),
     AGENT_EXECUTOR: Boolean(resolveSignerKey('AGENT_EXECUTOR', env, { warn: () => {} }))
   });
 
+  const version = options.agentVersion ?? createAgentVersion(config, env);
+  const anchoring = options.anchoring ?? new DecisionAnchoring({ file: file('agent-anchors.json'), version, config, logger,
+    getMode, getGeneration, now: options.now,
+    adapter: options.anchorAdapter ?? (chainConfig?.contracts?.AgentDecisionLog ? createAnchorChainAdapter({ chainConfig, getContext: getChainContext,
+      confirmations: config.chainConfirmations, runExclusive: async (task) => {
+        const chain = await getChain(), context = await getChainContext();
+        if (!chain || !context?.signers?.PRICING_UPDATER) throw new Error('Dedicated pricing signer is unavailable');
+        return chain.withSigner(context.signers.PRICING_UPDATER, task);
+      } }) : null) });
+  logger.agentVersion = version;
+  logger.onRecord = (decision) => anchoring.captureSafe(decision);
+
   service = new AgentService({
     config, env, store, getMode, getGeneration, activity, logger, approvals, registry, bus, tracer, sim,
-    ingest, scenarios, riskTracker, documentParser,
+    ingest, scenarios, riskTracker, documentParser, settlementEvidence, chainWatcher: watcher, anchoring,
     getChain, getChainContext, chainConfig, signerRoles,
     ensurePools: options.ensurePools,
     now: options.now,

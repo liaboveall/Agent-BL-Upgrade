@@ -87,6 +87,19 @@ test('X402-8: fraud review reuses consistency checker, pricing and scenario runn
   assert.ok(report.scenario.final_state);
 });
 
+test('WP6: a v2 financing case delivers fraud review without legacy LTV fields or an invented contract action', async () => {
+  const data = JSON.parse(await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8'));
+  assert.equal(data.financing.requested_amount_usd, undefined);
+  const report = await buildPremiumFraudReview(data);
+  assert.equal(report.case_id, data.case_id);
+  assert.equal(report.five_dimension_summary.lifecycle.workflow_version, 'pricing-v2');
+  assert.equal(report.five_dimension_summary.lifecycle.contract_action, null);
+  assert.equal(report.five_dimension_summary.lifecycle.pricing_action, report.pricing_result.pricing_action);
+  assert.equal(report.scenario.workflow_version, 'pricing-v2');
+  assert.ok(report.scenario.steps.length >= 3);
+  assert.ok(report.scenario.steps.some((step) => step.state === report.scenario.final_state));
+});
+
 test('X402-8/MBOX-X402-1: all four business endpoints return HTTP 402 before payment', async () => {
   for (const service of X402_SERVICES) {
     const response = await fetch(`${baseUrl}${service.endpoint}`);

@@ -1,3 +1,4 @@
+import { readPrivateJson, writePrivateJson } from '../src/agent/security/privateStore.js';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
@@ -201,14 +202,14 @@ test('bus: events that were queued or mid-flight when the process stopped are pr
   const crashed = new EventBus({ ...files, handler: async () => {} });
   await crashed.submit(risk({ event_id: 'queued', case_id: 'Q' }));
   // A second event was PROCESSING when the process died.
-  const index = JSON.parse(await fs.readFile(files.indexFile, 'utf8'));
+  const index = await readPrivateJson(files.indexFile);
   const inFlight = norm({ type: 'WORLD_RISK_UPDATED', case_id: 'P', event_id: 'inflight', data: { events: [] } });
   index.entries.push({
     idempotency_key: inFlight.idempotency_key, event_id: 'inflight', case_id: 'P', type: inFlight.type,
     occurred_at: inFlight.occurred_at, status: 'PROCESSING', attempts: 1,
     received_at: '2026-10-12T00:00:00.000Z', updated_at: '2026-10-12T00:00:01.000Z', event: inFlight
   });
-  await fs.writeFile(files.indexFile, JSON.stringify(index));
+  await writePrivateJson(files.indexFile, index);
 
   const seen = [];
   const revived = new EventBus({ ...files, handler: async (event) => { seen.push(event.event_id); } });

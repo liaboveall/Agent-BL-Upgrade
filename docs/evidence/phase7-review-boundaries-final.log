@@ -1,0 +1,16 @@
+✔ anchor preflight requires the deployed testnet, exact version, explicit signer role and continuous head (22.611374ms)
+✔ anchor broadcast shares the signer lock, static-preflights and persists hash before waiting (2.351953ms)
+✔ confirmed anchors require exact calldata, sender, receipt event, current canonical block and chain batch (23.687933ms)
+✔ pending or underconfirmed anchors are never reported as confirmed; changed deployment bindings fail closed (2.560407ms)
+✔ broadcast recovery uses one exact event in a bounded scan, with no send or inferred hash (2.025005ms)
+✔ chain verification rechecks finality and inclusion instead of trusting a stored ANCHORED label (3.848384ms)
+✔ pricing and anchoring serialize by signer and a failed task cannot poison the shared queue (0.643141ms)
+✔ deployment plan validation rejects altered commitments and its default does not touch chain or files (1.505825ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6269.957036

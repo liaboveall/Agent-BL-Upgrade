@@ -40,7 +40,7 @@ npm run preflight -- --report docs/evidence/agent-phase5-preflight.json
 
 确定性评测调用实际的单证解析、一致性、合规、定价、Copilot、九步接入流水线及 Demo 场景运行时。金标不会传给组件；输入经深拷贝、标签键检查和冻结。测试会篡改金标、替换为空解析器和拒绝所有单证的组件，验证输出不会跟着答案改变，质量闸门也不能因此全绿。
 
-评测包含 19 份文本/空白扰动单证（82 个标注字段）、10 个一致性样例、10 个合规样例、固定种子 150 个定价案例的 1,350 次检查、三个完整自主循环、44 段中英文多轮对话（100 轮）、六个分级相关度排序查询、16 个注入样本和一个干净对照。44 段对话来自 22 个情境的双语配对，空白扰动也与原文相关；它们不是独立的泛化样本。
+评测包含 19 份文本/空白扰动单证（82 个标注字段）、10 个一致性样例、20 个三态合规样例（WP2.3 新版，旧版记录保留）、固定种子 150 个定价案例的 1,350 次检查、三个完整自主循环、44 段中英文多轮对话（100 轮）、六个分级相关度排序查询、16 个注入样本和一个干净对照。44 段对话来自 22 个情境的双语配对，空白扰动也与原文相关；它们不是独立的泛化样本。
 
 冻结阈值在 `src/agent/evaluation/dataset.js`，所有 19 个确定性阈值由 `npm test` 强制执行。抽取只评人工标注字段，不为未标注字段虚构准确率；一致性按问题 ID 算 P/R；推荐约束使用独立判定器；NDCG 使用人工相关度，重复候选不能重复得分。报告包含日期、Git 基线、dirty 状态、实际工作区文件摘要、数据集摘要、分母、失败样例和局限。
 
@@ -62,6 +62,15 @@ Windows 下直接执行包含空格路径的 `node.exe`，仅 npm.cmd 后备启�
 
 ## 后续入口与提交建议
 
-WP4.6 和后续 P1 WP3.6/WP3.8/WP0.6 均已于 2026-10-13 完成本地验收，见 [frontend-acceptance.md](frontend-acceptance.md)、[copilot.md](copilot.md) 和 [wave-b.md](wave-b.md)。WP0.6 另有只读实链复核，后续 WP2.2 已完成 PDF/可选视觉/仓单本地验收，见 [document-extraction.md](document-extraction.md)；下一入口为 WP2.3 合规 v2。Live 钱包路径仅经桩验证；真实链上写入仍逐笔遵守实施规划 §16。
+WP4.6 和后续 P1 WP3.6/WP3.8/WP0.6 均已于 2026-10-13 完成本地验收，见 [frontend-acceptance.md](frontend-acceptance.md)、[copilot.md](copilot.md) 和 [wave-b.md](wave-b.md)。WP0.6 另有只读实链复核，后续 WP2.2 已完成 PDF/可选视觉/仓单本地验收，见 [document-extraction.md](document-extraction.md)；WP2.3 的版本化演示合规已完成本地验收，见 [compliance-screening.md](compliance-screening.md)；WP2.4 Live 开盘提案与 owner CLI 已完成本地链桩验收，见 [live-opening.md](live-opening.md)；WP2.6 的规范 USDC 回执、持久防复用、链上双证明及结算恢复已完成本地验收，见 [live-settlement.md](live-settlement.md)；WP2.7 的确认日志、游标和状态/紧急停止对账已于 2026-10-15 完成本地自动化验证，见 [chain-watcher.md](chain-watcher.md)。WP2.9 五个无状态 PRD API 已于 2026-10-15 完成本地实现：54 项新增行为测试、全量覆盖率执行 1115/1115、54 项浏览器检查；全项目 API 模型统一为 `x-test-2`，真实提供方未复验，详见 [agent-api.md](agent-api.md)。下一入口为 WP4.4 ID 贯通。真实 RPC 长时间运行、Live 钱包、付款与 owner 路径仍有独立验收边界；真实链上写入逐笔遵守实施规划 §16。
 
 本地验收记录在提交前生成，保留当时的未提交快照。用户已于 2026-10-13 授权提交并推送；按依赖分为：① `feat(agent): harden event ordering and execution recovery`；② `feat(eval): measure Agent components against isolated gold fixtures`（含评测发现的解析/合规修复）；③ `test(release): gate agent reliability and measured quality`（含文档与验收证据）。具体提交、远端一致性与 CI 结果以本次 Git 操作和对应提交的 Actions 运行记录为准；部署不包含在该授权内。
+
+## 2026-10-15 Phase 5 P1 增量
+
+红队变异、新鲜度、只读决策重放、递归脱敏/认证加密、保留与权限矩阵已落地，preflight 扩为 65 项。原文的 61 项和 19 个评测阈值描述历史 P0；当前生成变异检测率加入第 20 个闸门。完整实现、验证、真实链上冒烟的授权入口和证据边界见 [Phase 5 指南](phase5-security-replay.md)。
+
+2026-10-15 Phase 6 再扩为 **69 项**：MCP 表面更新为 **15 tools + 5 resources**，增加共享运行时与事件 dry-run、A2A 1.0 卡片、Bazaar 模式边界和三入口报价一致性。旧的 61/65 项记录保留为历史。外部 Agent 不启动第二份运行时；事件令牌与决策/链上审批是分开的权限，见 [Phase 6 指南](phase6-interoperability.md)。
+2026-10-15 Phase 7 发布闸门为 **71 项**，加入终态决策锚定/审批/连续序号/重启恢复与链上回执/共用签名队列/部署默认 dry-run 两组行为套件。定稿归档失败不会改写已经确认的执行，清理原日志前先补齐归档；未知广播只读恢复。实际部署和首批锚定另行授权，见 [Phase 7 指南](phase7-decision-anchoring.md)。
+
+Phase 7 验收固定 Node 测试并发为 4，参数放在文件列表之前；coverage 的 88/72/86 门槛不变。完整 coverage、评测和 preflight 串行运行，避免资源竞争造成假超时。preflight 中完整 Node 套件的进程上限为 10 分钟，其余命令仍为 3 分钟；断言及完整执行检查不变。

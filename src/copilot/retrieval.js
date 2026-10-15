@@ -42,7 +42,7 @@ export function poolCandidate(pool, decision, now = Date.now()) {
     collateral_coverage: quote.ai_verified_collateral_value_usd / Math.max(1, quote.target_redemption_exposure_usd),
     remaining_usd: Math.max(0, pool.targetUsd - pool.subscribedUsd),
     compliance: pool.complianceStatus ?? 'UNKNOWN',
-    eligible: pool.investorEligible !== false, decision,
+    eligible: pool.investorEligible !== false && !pool.chainOnly && !pool.chainQuoteMismatch, decision,
     stale: !Number.isFinite(age) || age > 3600_000,
     geography: `${routeEvidence} ${countries} ${data.region ?? ''}`.toLowerCase(),
     text: `${bl.cargo ?? ''} ${route} ${bl.carrier ?? ''} ${data.note ?? ''}`, caseData: data

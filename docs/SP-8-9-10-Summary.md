@@ -1,5 +1,7 @@
 # SP-8 到 SP-10 任务完成总结
 
+> 阶段历史记录。2026-10-15 可运行配置示例的模型名更新为 `x-test-2`；历史测试和提供方结果不构成新模型验收，现行配置见 [agent-api.md](agent-api.md)。
+
 ## ✅ 任务完成状态
 
 ### SP-8: Azure OpenAI / Microsoft Foundry Models ✅
@@ -29,7 +31,7 @@ headers['api-key'] = apiKey  // Azure 使用 api-key 而非 Bearer token
 ```bash
 # 设置环境变量
 export AZURE_OPENAI_ENDPOINT="https://<resource>.openai.azure.com"
-export AZURE_OPENAI_DEPLOYMENT="gpt-4"
+export AZURE_OPENAI_DEPLOYMENT="x-test-2"
 export AZURE_OPENAI_API_KEY="your-api-key"
 
 # 自动检测并使用 Azure provider
@@ -125,7 +127,7 @@ import { recordLLMCall } from './src/agent/tracing/tracer.js';
 
 recordLLMCall(span, {
   provider: 'azure',
-  model: 'gpt-4',
+  model: 'x-test-2',
   promptTokens: 500,
   completionTokens: 200,
   cost: 0.015
@@ -215,7 +217,7 @@ npm test
 ```bash
 # 1. 配置环境变量
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
-export AZURE_OPENAI_DEPLOYMENT="gpt-4"
+export AZURE_OPENAI_DEPLOYMENT="x-test-2"
 export AZURE_OPENAI_API_KEY="your-key"
 
 # 2. 运行服务器

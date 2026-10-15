@@ -1,0 +1,99 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 30B 0.1s
+#1 transferring dockerfile: 1.26kB 0.1s done
+#1 DONE 0.2s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 2.2s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/node:22-alpine
+#5 ...
+
+#6 [auth] library/node:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#5 [internal] load metadata for docker.io/library/node:22-alpine
+#5 DONE 1.6s
+
+#7 [internal] load .dockerignore
+#7 transferring context: 374B 0.1s
+#7 transferring context: 376B 0.1s done
+#7 DONE 0.2s
+
+#8 [internal] load build context
+#8 DONE 0.0s
+
+#9 [deps 1/4] FROM docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+#9 resolve docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 0.0s done
+#9 DONE 0.0s
+
+#8 [internal] load build context
+#8 transferring context: 6.46MB 3.6s done
+#8 DONE 3.6s
+
+#10 [deps 2/4] WORKDIR /app
+#10 CACHED
+
+#11 [deps 3/4] COPY package.json package-lock.json ./
+#11 DONE 0.1s
+
+#12 [deps 4/4] RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+#12 14.37 
+#12 14.37 added 121 packages, and audited 122 packages in 14s
+#12 14.37 
+#12 14.37 47 packages are looking for funding
+#12 14.37   run `npm fund` for details
+#12 14.37 
+#12 14.37 found 0 vulnerabilities
+#12 14.38 npm notice
+#12 14.38 npm notice New major version of npm available! 10.9.9 -> 12.2.0
+#12 14.38 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+#12 14.38 npm notice To update run: npm install -g npm@12.2.0
+#12 14.38 npm notice
+#12 14.54 npm warn using --force Recommended protections disabled.
+#12 DONE 15.0s
+
+#13 [stage-1 3/9] COPY --from=deps /app/node_modules ./node_modules
+#13 DONE 1.7s
+
+#14 [stage-1 4/9] COPY package.json package-lock.json ./
+#14 DONE 0.1s
+
+#15 [stage-1 5/9] COPY src ./src
+#15 DONE 0.1s
+
+#16 [stage-1 6/9] COPY public ./public
+#16 DONE 0.1s
+
+#17 [stage-1 7/9] COPY data ./data
+#17 DONE 0.0s
+
+#18 [stage-1 8/9] COPY scripts/lib ./scripts/lib
+#18 DONE 0.0s
+
+#19 [stage-1 9/9] RUN mkdir -p /app/data/runtime && chown -R node:node /app/data/runtime
+#19 DONE 0.2s
+
+#20 exporting to image
+#20 exporting layers
+#20 exporting layers 3.6s done
+#20 exporting manifest sha256:94e77ed552e03764bd0efba67baf035e39f00b9f7042a199910352e00b0ffc11 0.0s done
+#20 exporting config sha256:252981ce56d680f191e2e015dbf114724ded5982aa7488ddac1ad58b704df0af 0.0s done
+#20 exporting attestation manifest sha256:f5ecbb29ca3c375fb325d84e2b15aee97b5ff16acf63e19538bdfd09118a77cd 0.0s done
+#20 exporting manifest list sha256:35c6cd8530d5df0d8853292e6749ba2e6c81b37e5204b85fe9c5fcd84647585b 0.0s done
+#20 naming to docker.io/library/agentbl-phase7-local:20261015 done
+#20 unpacking to docker.io/library/agentbl-phase7-local:20261015
+#20 unpacking to docker.io/library/agentbl-phase7-local:20261015 4.6s done
+#20 DONE 8.3s

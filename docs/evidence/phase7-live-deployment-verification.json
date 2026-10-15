@@ -1,0 +1,219 @@
+{
+  "schema": "agentbl-phase7-live-deployment-verification-v1",
+  "checked_at": "2026-10-15T05:43:08.339Z",
+  "status": "PASS",
+  "network": "injective-testnet",
+  "chain_id": 1439,
+  "verified_at_block": 143821052,
+  "contract": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+  "explorer_address": "https://testnet.blockscout.injective.network/address/0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+  "approved_plan_sha256": "cc6ee0e0ae781765f35e9ae5bd39cfa7088430e560e43bbe59006baaabfc8bd6",
+  "authorization": {
+    "source": "Direct user reply 授权 to the reviewed three-transaction deployment request",
+    "transactions": 3,
+    "plan_sha256": "cc6ee0e0ae781765f35e9ae5bd39cfa7088430e560e43bbe59006baaabfc8bd6",
+    "first_anchor_batch": false,
+    "enable_background": false
+  },
+  "transactions": [
+    {
+      "method": "deploy AgentDecisionLog",
+      "tx_hash": "0x27208e6af3ec24c543d5566ea215fea725d0093bb6f36a6fd5b0849bbdc4ac3b",
+      "from": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+      "to": null,
+      "nonce": 33,
+      "chain_id": 1439,
+      "value": "0",
+      "calldata_keccak256": "0x1c495f69537a30c00e4014c5e52d99a78d0d1c339e88417f98a0ac2284df07e5",
+      "exact_calldata_match": true,
+      "receipt_status": 1,
+      "block_number": 143820823,
+      "block_hash": "0xdac086210d29a99449ce3f6e2d8a94a9dd85dba95d4380d78e8ce9102d963e2c",
+      "block_timestamp": "2026-10-15T05:40:57.000Z",
+      "canonical_block": true,
+      "gas_used": "862255",
+      "gas_limit": "862255",
+      "effective_gas_price_wei": "160000001",
+      "max_fee_per_gas_wei": "202500000",
+      "receipt_gas_cost_INJ": "0.000137960800862255",
+      "gas_limit_times_max_fee_INJ": "0.0001746066375",
+      "events": [
+        {
+          "name": "OwnershipTransferred",
+          "args": [
+            "0x0000000000000000000000000000000000000000",
+            "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
+          ]
+        }
+      ],
+      "explorer_tx": "https://testnet.blockscout.injective.network/tx/0x27208e6af3ec24c543d5566ea215fea725d0093bb6f36a6fd5b0849bbdc4ac3b"
+    },
+    {
+      "method": "registerAgentVersion",
+      "tx_hash": "0xaad5df123c763ec5443efd121d123e7075c57c9cdeee90c85c56eb2b70ed663f",
+      "from": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+      "to": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+      "nonce": 34,
+      "chain_id": 1439,
+      "value": "0",
+      "calldata_keccak256": "0x49f3c6561761efe304d1b4894e50231b4610959588b6c6f8d986a8c065beb33c",
+      "exact_calldata_match": true,
+      "receipt_status": 1,
+      "block_number": 143820831,
+      "block_hash": "0x98e77d5b0b07cb6f9e7a84eae7300e8d90c40c2235c93a2782f64473ef1c3203",
+      "block_timestamp": "2026-10-15T05:41:02.000Z",
+      "canonical_block": true,
+      "gas_used": "117778",
+      "gas_limit": "117778",
+      "effective_gas_price_wei": "500000000",
+      "max_fee_per_gas_wei": "542500000",
+      "receipt_gas_cost_INJ": "0.000058889",
+      "gas_limit_times_max_fee_INJ": "0.000063894565",
+      "events": [
+        {
+          "name": "AgentVersionRegistered",
+          "args": [
+            "0xa365b230c8fec402b51d3291f3cd1623da1f93acc674515d471171be0558d49a",
+            "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+            "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
+            "x-test-2"
+          ]
+        }
+      ],
+      "explorer_tx": "https://testnet.blockscout.injective.network/tx/0xaad5df123c763ec5443efd121d123e7075c57c9cdeee90c85c56eb2b70ed663f"
+    },
+    {
+      "method": "setAnchorer",
+      "tx_hash": "0xe20002c73f75e67dc30f0e50ee759cba1ed9162f84514818292f0a187ecabd97",
+      "from": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+      "to": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+      "nonce": 35,
+      "chain_id": 1439,
+      "value": "0",
+      "calldata_keccak256": "0xd0d2f5607c609bead990176933aee12cd947d724a284673079de8b4db290d895",
+      "exact_calldata_match": true,
+      "receipt_status": 1,
+      "block_number": 143820839,
+      "block_hash": "0xdce4884ffbf688b84ea3c01b0d260dc45f3fba8cea44b9803d99510aaf1da9f1",
+      "block_timestamp": "2026-10-15T05:41:07.000Z",
+      "canonical_block": true,
+      "gas_used": "47865",
+      "gas_limit": "47865",
+      "effective_gas_price_wei": "160000001",
+      "max_fee_per_gas_wei": "202500000",
+      "receipt_gas_cost_INJ": "0.000007658400047865",
+      "gas_limit_times_max_fee_INJ": "0.0000096926625",
+      "events": [
+        {
+          "name": "AnchorerSet",
+          "args": [
+            "0xEB43623667f1Add616D0FbdEBbbE067a0F195F79",
+            true
+          ]
+        }
+      ],
+      "explorer_tx": "https://testnet.blockscout.injective.network/tx/0xe20002c73f75e67dc30f0e50ee759cba1ed9162f84514818292f0a187ecabd97"
+    }
+  ],
+  "real_transactions": 3,
+  "confirmed_transactions": 3,
+  "new_contract_deployments": 1,
+  "owner_initialization_transactions": 2,
+  "fees": {
+    "receipt_gas_cost_INJ": "0.00020450820091012",
+    "gas_limit_times_max_fee_INJ": "0.000248193865",
+    "owner_balance_decrease_INJ": "0.000248193865",
+    "balance_decrease_equals_max_fee_product": true,
+    "note": "Observed balance decrease equals sum(gasLimit * maxFeePerGas); receipt gasUsed * effectiveGasPrice is separately reported and is lower. No assumption that these two measures are equal."
+  },
+  "owner_balance_after_INJ": "0.635222306135",
+  "owner_nonce_after": 36,
+  "pending_nonce_after": 36,
+  "bytecode": {
+    "exact_match": true,
+    "keccak256": "0xd640be8fcc656a2c8f1f5aa288f60de77356b202edafd051ade992130943167b",
+    "bytes": 3631
+  },
+  "all_configured_contracts": {
+    "network": "injective-testnet",
+    "chainId": 1439,
+    "results": [
+      {
+        "name": "AgentBLRWA",
+        "address": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+        "status": "MATCH"
+      },
+      {
+        "name": "PaymentOracle",
+        "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+        "status": "MATCH"
+      },
+      {
+        "name": "EBLRegistry",
+        "address": "0x8152FE274497C84850Ce79822feA3B885295cf53",
+        "status": "MATCH"
+      },
+      {
+        "name": "RWAToken",
+        "address": "0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C",
+        "status": "MATCH"
+      },
+      {
+        "name": "RWAOfferingPool",
+        "address": "0x38c52c33FEC5cc430f19F573768671c47E63b310",
+        "status": "MATCH"
+      },
+      {
+        "name": "RiskPricingOracle",
+        "address": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC",
+        "status": "MATCH"
+      },
+      {
+        "name": "AgentDecisionLog",
+        "address": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+        "status": "MATCH"
+      }
+    ]
+  },
+  "owner": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+  "anchorer": {
+    "address": "0xEB43623667f1Add616D0FbdEBbbE067a0F195F79",
+    "allowed": true,
+    "owner_allowed": false
+  },
+  "registered_version": {
+    "policy_hash": "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+    "code_commit": "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
+    "model_id": "x-test-2",
+    "version_id": "0xa365b230c8fec402b51d3291f3cd1623da1f93acc674515d471171be0558d49a",
+    "registered_at": "1792042862"
+  },
+  "batch_count": "0",
+  "last_seq": "0",
+  "background_anchoring_enabled": false,
+  "first_anchor_batch_executed": false,
+  "existing_registry_entries_preserved": true,
+  "registry_changed_paths": [
+    "networks.injective-testnet.contracts.AgentDecisionLog",
+    "networks.injective-testnet.abis.AgentDecisionLog",
+    "networks.injective-testnet.deployments.AgentDecisionLog"
+  ],
+  "protected_solidity_sources_unchanged": 8,
+  "source_manifest_files": 465,
+  "source_changes_since_local_acceptance": [
+    "public/chain-config.json"
+  ],
+  "protected_pool_2": {
+    "before": {
+      "state": "6",
+      "issue_price_e6": "791000"
+    },
+    "after": {
+      "state": "6",
+      "issue_price_e6": "791000"
+    },
+    "unchanged": true
+  },
+  "new_commits": 0,
+  "pushes": 0
+}

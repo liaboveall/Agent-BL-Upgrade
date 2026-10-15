@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-10-15T07:46:27.812992+00:00",
+  "client": "Windows PowerShell Invoke-WebRequest",
+  "url": "http://localhost:43820/api/health",
+  "status": 200,
+  "mode": "demo",
+  "builtin_browser_control": false,
+  "human_acceptance": false
+}

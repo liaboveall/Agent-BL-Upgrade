@@ -28,7 +28,7 @@ test('tracing helpers work whether or not @opentelemetry/api is installed', asyn
 test('LLM and chain metrics are recorded as span attributes', async () => {
   const attributes = {};
   const span = { setAttribute: (key, value) => { attributes[key] = value; } };
-  recordLLMCall(span, { provider: 'deepseek', model: 'deepseek-chat', promptTokens: 10, completionTokens: 5, cost: 0.001 });
+  recordLLMCall(span, { provider: 'deepseek', model: 'x-test-2', promptTokens: 10, completionTokens: 5, cost: 0.001 });
   recordChainTransaction(span, { chainId: 1439, txHash: `0x${'ab'.repeat(32)}`, gasUsed: 21000 });
   assert.equal(attributes['llm.total_tokens'], 15);
   assert.equal(attributes['llm.cost_usd'], 0.001);

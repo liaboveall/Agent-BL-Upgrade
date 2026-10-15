@@ -9,7 +9,7 @@
 //   - Deterministic fallback: when no LLM key is set, we call the same tools in
 //     a fixed order and template the explanation. The demo therefore always runs.
 
-import { chatCompletion, isConfigured, resolveProvider } from './llm/openaiCompatClient.js';
+import { chatCompletion, completionMetadata, isConfigured, resolveProvider } from './llm/openaiCompatClient.js';
 import {
   TOOL_SPECS,
   TOOL_EXECUTORS,
@@ -83,14 +83,17 @@ async function runWithLlm(caseData, env, maxIterations, chat = chatCompletion) {
   ];
   const captured = {};
   const toolTrace = [];
+  const modelUsage = [];
 
   for (let i = 0; i < maxIterations; i += 1) {
     const message = await chat({ messages, tools: TOOL_SPECS }, env);
+    const metadata = completionMetadata(message);
+    if (metadata) modelUsage.push(metadata);
     messages.push(message);
 
     const toolCalls = message.tool_calls ?? [];
     if (toolCalls.length === 0) {
-      return { explanation: (message.content ?? '').trim(), captured, toolTrace };
+      return { explanation: (message.content ?? '').trim(), captured, toolTrace, modelUsage };
     }
 
     for (const call of toolCalls) {
@@ -108,7 +111,7 @@ async function runWithLlm(caseData, env, maxIterations, chat = chatCompletion) {
       messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
     }
   }
-  return { explanation: '(max tool iterations reached)', captured, toolTrace };
+  return { explanation: '(max tool iterations reached)', captured, toolTrace, modelUsage };
 }
 
 /** Deterministic path: call the tools in order, template the explanation. */
@@ -147,7 +150,7 @@ async function runDeterministic(caseData, env) {
   return { explanation, captured, toolTrace };
 }
 
-function assembleReport(caseData, { explanation, captured, toolTrace }, provider) {
+function assembleReport(caseData, { explanation, captured, toolTrace, modelUsage }, provider) {
   const f = caseFacts(caseData);
   const live = captured.get_live_commodity_price ?? {};
   const premium = captured.get_regional_physical_premium ?? {};
@@ -181,7 +184,8 @@ function assembleReport(caseData, { explanation, captured, toolTrace }, provider
     valuation,
     ai_explanation: explanation,
     provider,
-    tool_trace: toolTrace
+    tool_trace: toolTrace,
+    ...(modelUsage?.length ? { model_usage: modelUsage } : {})
   };
 }
 
@@ -209,7 +213,7 @@ export async function runValuationAgent(caseData, options = {}) {
     // If the model produced no usable numbers, backfill deterministically.
     if (!run.captured.get_live_commodity_price) {
       const det = await runDeterministic(caseData, env);
-      return assembleReport(caseData, { ...det, explanation: run.explanation || det.explanation }, provider);
+      return assembleReport(caseData, { ...det, explanation: run.explanation || det.explanation, modelUsage: run.modelUsage }, provider);
     }
     return assembleReport(caseData, run, provider);
   } catch (error) {

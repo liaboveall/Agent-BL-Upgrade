@@ -1,5 +1,5 @@
 // Agent runtime configuration (docs/agent-implementation-plan.md §4.7). Only variables something reads
-// today are here; the rest of §4.7 (chain watcher, vision, ...) is added together with the work package
+// today are here; the rest of §4.7 is added together with the work package
 // that uses it.
 //
 // Everything is read from the environment in one place so tests can pass a plain object, and so the
@@ -58,8 +58,15 @@ export function loadAgentConfig(env = process.env) {
     cooldownSec: int(env.AGENT_COOLDOWN_SEC, 600, { min: 0 }),
     maxActionsPerPoolPerDay: int(env.AGENT_MAX_ACTIONS_PER_POOL_PER_DAY, 12, { min: 1 }),
     chainConfirmations: int(env.AGENT_CHAIN_CONFIRMATIONS, 1, { min: 1 }),
+    chainWatcherEnabled: bool(env.AGENT_CHAIN_WATCHER_ENABLED, true),
+    chainPollSec: int(env.AGENT_CHAIN_POLL_SEC, 15, { min: 1, max: 3600 }),
+    chainStartBlock: env.AGENT_CHAIN_START_BLOCK?.trim() ? Number(env.AGENT_CHAIN_START_BLOCK) : null,
+    settlementRecipient: String(env.AGENT_SETTLEMENT_RECIPIENT ?? '').trim(),
     maxDecisions: int(env.AGENT_MAX_DECISIONS, 5000, { min: 100 }),
     retentionDays: int(env.AGENT_RETENTION_DAYS, 90, { min: 1 }),
+    anchorEnabled: bool(env.AGENT_ANCHOR_ENABLED, false),
+    anchorIntervalSec: int(env.AGENT_ANCHOR_INTERVAL_SEC, 3600, { min: 1, max: 86400 }),
+    anchorMinBatch: int(env.AGENT_ANCHOR_MIN_BATCH, 1, { min: 1, max: 256 }),
     approvalTtlSec: int(env.AGENT_APPROVAL_TTL_SEC, 24 * 60 * 60, { min: 60 }),
     riskClearTicks: int(env.AGENT_RISK_CLEAR_TICKS, 2, { min: 1, max: 20 }),
     insuranceWarnDays: int(env.AGENT_INSURANCE_WARN_DAYS, 7, { min: 1, max: 365 }),

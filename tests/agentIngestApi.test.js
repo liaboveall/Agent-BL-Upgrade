@@ -166,7 +166,7 @@ test('ingest API (Demo)', async (t) => {
     const service = await freshService();
     const list = await api('GET', '/api/agent/scenarios');
     assert.equal(list.status, 200);
-    assert.deepEqual(list.data.scenarios.map((s) => s.name), ['copper-typhoon', 'insurance-gap', 'warcrisis-hormuz']);
+    assert.deepEqual(list.data.scenarios.map((s) => s.name), ['copper-lifecycle', 'copper-typhoon', 'insurance-gap', 'warcrisis-hormuz']);
     assert.equal(list.data.current.loaded, false);
 
     const run = await api('POST', '/api/agent/scenarios/copper-typhoon/run', {});

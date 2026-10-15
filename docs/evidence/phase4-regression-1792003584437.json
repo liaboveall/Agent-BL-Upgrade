@@ -1,0 +1,1111 @@
+{
+  "checked_at": "2026-10-14T18:46:24.437Z",
+  "browser": "153.0.8010.12",
+  "mode": "isolated-demo",
+  "real_transactions": 0,
+  "real_provider_calls": 0,
+  "builtin_browser_control": false,
+  "human_acceptance": false,
+  "builtin_browser_error": "sandboxCwd is not a local file URI",
+  "checks": [
+    {
+      "name": "Isolated Demo runtime has no configured signer",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: wallet menu arrows move focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: wallet menu returns focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/market-and-portfolio: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: tab arrows activate mint",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: payout radios follow arrow keys",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mint-and-document-extraction: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/agent-console: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: SSE update keeps control focus",
+      "passed": true
+    },
+    {
+      "name": "Demo setup /api/agent/control",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: refreshed select retains focus",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: announcement is polite",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: unchanged history is silent",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/decision-drawer: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/decision-drawer: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/decision-drawer: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "Demo setup /api/agent/control",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: drawer refresh does not steal focus",
+      "passed": true
+    },
+    {
+      "name": "#ac-drawer: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#ac-drawer: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: decision focus returns to opener",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: Home activates market",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: activity disclosure works with Enter",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: activity terminal stays in page flow",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/voyage-and-x402-reports: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/voyage-and-x402-reports: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/voyage-and-x402-reports: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "#deal-detail-modal: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#deal-detail-modal: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: voyage focus returns to project",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/mystery-commit: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mystery-commit: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mystery-commit: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mystery-reveal-and-proof: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mystery-reveal-and-proof: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/mystery-reveal-and-proof: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: edited invalid proof disables subscription",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: original proof restores",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/independent-subscription-confirmation: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/independent-subscription-confirmation: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/independent-subscription-confirmation: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh: separate acknowledgement is required",
+      "passed": true
+    },
+    {
+      "name": "#mystery-subscribe-modal: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#mystery-subscribe-modal: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "#mystery-modal: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#mystery-modal: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/passport-share: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/passport-share: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/passport-share: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "#passport-share-modal: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#passport-share-modal: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "1440/zh/copilot-recommendations: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/copilot-recommendations: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/zh/copilot-recommendations: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "#copilot-dialog: reverse Tab stays in modal",
+      "passed": true
+    },
+    {
+      "name": "#copilot-dialog: Escape closes",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: Copilot focus returns to launcher",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: reduced motion disables decorative animation",
+      "passed": true
+    },
+    {
+      "name": "1440/en: wallet menu arrows move focus",
+      "passed": true
+    },
+    {
+      "name": "1440/en: wallet menu returns focus",
+      "passed": true
+    },
+    {
+      "name": "1440/en/market-and-portfolio: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en/market-and-portfolio: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en/market-and-portfolio: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en: tab arrows activate mint",
+      "passed": true
+    },
+    {
+      "name": "1440/en: payout radios follow arrow keys",
+      "passed": true
+    },
+    {
+      "name": "1440/en/mint-and-document-extraction: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en/mint-and-document-extraction: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en/mint-and-document-extraction: localized UI copy",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en/agent-console: content fits viewport",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en/agent-console: controls are named and separate",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "1440/en/agent-console: localized UI copy",
+      "passed": false,
+      "detail": [
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "管理员控制"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "停止"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "立即 tick"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost ac-danger",
+          "text": "紧急停止"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "",
+          "text": "自主级别"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "Demo：可逆动作自动执行，全部是对链下池子的模拟，不产生链上交易。"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "待批准的方案"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted",
+          "text": "现在没有等待批准的方案。"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "事件注入器（Demo）"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "向所选案例注入一个真实的 Agent 事件，观察 事件 → 决策 → 策略 → 模拟执行 的全过程。"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "",
+          "text": "案例"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "台风预警"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "战争升级"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "风险解除"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "保险即将到期"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "离港"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "到港"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "进口商付款"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "一键全流程演示"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-muted",
+          "text": "尚未开始"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted",
+          "text": "仅在 Demo 模式播放。进度来自服务器；停止后保留已完成步骤。付款和结算仍须分别审批。重新开始完整故事请使用“重置 Demo”。"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn",
+          "text": "启动演示"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "停止播放"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "ac-demo-progress",
+          "text": "已完成 0 / 0 步"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "决策时间线"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "来源：admin"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "自动"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "已完成"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-warn",
+          "text": "DEMO 模拟"
+        },
+        {
+          "tag": "SUMMARY",
+          "id": "",
+          "class": "",
+          "text": "关联证据"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "决策 ID"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "报价哈希"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该报价未引用付费报告。"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该决策没有真实链上交易。"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "来源：ingest"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "自动"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "已完成"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-warn",
+          "text": "DEMO 模拟"
+        },
+        {
+          "tag": "SUMMARY",
+          "id": "",
+          "class": "",
+          "text": "关联证据"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "决策 ID"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "报价哈希"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该报价未引用付费报告。"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该决策没有真实链上交易。"
+        },
+        {
+          "tag": "P",
+          "id": "ac-announcement",
+          "class": "sr-only",
+          "text": "1 条决策有更新：REPRICE，已完成（decision_d1…5196）。"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/phase4-regression-1792003584437-desktop-en.png",
+    "docs/evidence/phase4-1792003584437-failure.png"
+  ],
+  "page_errors": [],
+  "blocked_external_requests": [
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network",
+    "https://k8s.testnet.json-rpc.injective.network"
+  ],
+  "measurements": [
+    {
+      "name": "market-and-portfolio",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "mint-and-document-extraction",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "agent-console",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "decision-drawer",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 519,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "voyage-and-x402-reports",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1298,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "mystery-commit",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1178,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "mystery-reveal-and-proof",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1178,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "independent-subscription-confirmation",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 618,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "passport-share",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 718,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "copilot-recommendations",
+      "locale": "zh",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 438,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "market-and-portfolio",
+      "locale": "en",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "mint-and-document-extraction",
+      "locale": "en",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": []
+    },
+    {
+      "name": "agent-console",
+      "locale": "en",
+      "viewport": 1440,
+      "document_width": 1440,
+      "scope_width": 1440,
+      "overflow": [],
+      "unnamed_controls": [],
+      "nested_controls": [],
+      "untranslated_keys": [],
+      "english_mixed_copy": [
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "管理员控制"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "停止"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "立即 tick"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost ac-danger",
+          "text": "紧急停止"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "",
+          "text": "自主级别"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "Demo：可逆动作自动执行，全部是对链下池子的模拟，不产生链上交易。"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "待批准的方案"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted",
+          "text": "现在没有等待批准的方案。"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "事件注入器（Demo）"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "向所选案例注入一个真实的 Agent 事件，观察 事件 → 决策 → 策略 → 模拟执行 的全过程。"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "",
+          "text": "案例"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "台风预警"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "战争升级"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "风险解除"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "保险即将到期"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "离港"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "到港"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "进口商付款"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "一键全流程演示"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-muted",
+          "text": "尚未开始"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted",
+          "text": "仅在 Demo 模式播放。进度来自服务器；停止后保留已完成步骤。付款和结算仍须分别审批。重新开始完整故事请使用“重置 Demo”。"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn",
+          "text": "启动演示"
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "btn ghost",
+          "text": "停止播放"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "ac-demo-progress",
+          "text": "已完成 0 / 0 步"
+        },
+        {
+          "tag": "H3",
+          "id": "",
+          "class": "",
+          "text": "决策时间线"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "来源：admin"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "自动"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "已完成"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-warn",
+          "text": "DEMO 模拟"
+        },
+        {
+          "tag": "SUMMARY",
+          "id": "",
+          "class": "",
+          "text": "关联证据"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "决策 ID"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "报价哈希"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该报价未引用付费报告。"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该决策没有真实链上交易。"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "来源：ingest"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "自动"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-ok",
+          "text": "已完成"
+        },
+        {
+          "tag": "SPAN",
+          "id": "",
+          "class": "badge sm ac-badge tone-warn",
+          "text": "DEMO 模拟"
+        },
+        {
+          "tag": "SUMMARY",
+          "id": "",
+          "class": "",
+          "text": "关联证据"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "决策 ID"
+        },
+        {
+          "tag": "DT",
+          "id": "",
+          "class": "",
+          "text": "报价哈希"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该报价未引用付费报告。"
+        },
+        {
+          "tag": "P",
+          "id": "",
+          "class": "muted ac-small",
+          "text": "该决策没有真实链上交易。"
+        },
+        {
+          "tag": "P",
+          "id": "ac-announcement",
+          "class": "sr-only",
+          "text": "1 条决策有更新：REPRICE，已完成（decision_d1…5196）。"
+        }
+      ]
+    }
+  ],
+  "legacy_suite_page_errors": [],
+  "passed": false,
+  "error": "1440/en/agent-console: localized UI copy: [{\"tag\":\"H3\",\"id\":\"\",\"class\":\"\",\"text\":\"管理员控制\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"停止\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"立即 tick\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost ac-danger\",\"text\":\"紧急停止\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"\",\"text\":\"自主级别\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"Demo：可逆动作自动执行，全部是对链下池子的模拟，不产生链上交易。\"},{\"tag\":\"H3\",\"id\":\"\",\"class\":\"\",\"text\":\"待批准的方案\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted\",\"text\":\"现在没有等待批准的方案。\"},{\"tag\":\"H3\",\"id\":\"\",\"class\":\"\",\"text\":\"事件注入器（Demo）\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"向所选案例注入一个真实的 Agent 事件，观察 事件 → 决策 → 策略 → 模拟执行 的全过程。\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"\",\"text\":\"案例\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"台风预警\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"战争升级\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"风险解除\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"保险即将到期\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"离港\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"到港\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"进口商付款\"},{\"tag\":\"H3\",\"id\":\"\",\"class\":\"\",\"text\":\"一键全流程演示\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"badge sm ac-badge tone-muted\",\"text\":\"尚未开始\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted\",\"text\":\"仅在 Demo 模式播放。进度来自服务器；停止后保留已完成步骤。付款和结算仍须分别审批。重新开始完整故事请使用“重置 Demo”。\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn\",\"text\":\"启动演示\"},{\"tag\":\"BUTTON\",\"id\":\"\",\"class\":\"btn ghost\",\"text\":\"停止播放\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"ac-demo-progress\",\"text\":\"已完成 0 / 0 步\"},{\"tag\":\"H3\",\"id\":\"\",\"class\":\"\",\"text\":\"决策时间线\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"来源：admin\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"badge sm ac-badge tone-ok\",\"text\":\"自动\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"badge sm ac-badge tone-ok\",\"text\":\"已完成\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"badge sm ac-badge tone-warn\",\"text\":\"DEMO 模拟\"},{\"tag\":\"SUMMARY\",\"id\":\"\",\"class\":\"\",\"text\":\"关联证据\"},{\"tag\":\"DT\",\"id\":\"\",\"class\":\"\",\"text\":\"决策 ID\"},{\"tag\":\"DT\",\"id\":\"\",\"class\":\"\",\"text\":\"报价哈希\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"该报价未引用付费报告。\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"该决策没有真实链上交易。\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"来源：ingest\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"badge sm ac-badge tone-ok\",\"text\":\"自动\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"badge sm ac-badge tone-ok\",\"text\":\"已完成\"},{\"tag\":\"SPAN\",\"id\":\"\",\"class\":\"badge sm ac-badge tone-warn\",\"text\":\"DEMO 模拟\"},{\"tag\":\"SUMMARY\",\"id\":\"\",\"class\":\"\",\"text\":\"关联证据\"},{\"tag\":\"DT\",\"id\":\"\",\"class\":\"\",\"text\":\"决策 ID\"},{\"tag\":\"DT\",\"id\":\"\",\"class\":\"\",\"text\":\"报价哈希\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"该报价未引用付费报告。\"},{\"tag\":\"P\",\"id\":\"\",\"class\":\"muted ac-small\",\"text\":\"该决策没有真实链上交易。\"},{\"tag\":\"P\",\"id\":\"ac-announcement\",\"class\":\"sr-only\",\"text\":\"1 条决策有更新：REPRICE，已完成（decision_d1…5196）。\"}]",
+  "failure_focus": {
+    "id": "tab-agent",
+    "key": null,
+    "tag": "BUTTON"
+  },
+  "summary": {
+    "total": 77,
+    "passed": 76
+  }
+}

@@ -1,6 +1,23 @@
 # AgentBL 冠军路线与工程任务清单
 
-任务状态：`Todo` / `In Progress` / `Review` / `Done` / `Blocked` / `Partial`（有代码和测试，但没有接入运行时或存在已知的不实之处；以 [agent-implementation-plan.md](agent-implementation-plan.md) 为准）
+**2026-10-15 Phase 7 当前增量**：WP7.1 独立决策锚定合约、终态/审批承诺、连续序号与 Merkle 批处理、重启/未知广播对账、HTTP/只读 CLI、版本注册计划及中英/窄屏详情已实现。部署脚本默认零广播，保留原有六份协议合约与地址；已按本次明确授权完成测试网部署、版本注册及 anchorer 授权共三笔，并经独立只读核验；后台启用及首次锚定仍需按实现规划 §16 单独确认。7.2–7.5 仍是原规划暂不做的可选项。见 [Phase 7 指南](phase7-decision-anchoring.md) 和 [当前验收清单](evidence/phase7-completion.json)。既有 dirty 改动与失败历史保留，未提交、未推送。 1222/1222 Node、86 项本地合约测试、20/20 确定性质量闸门、296 项中英/1440/390px 浏览器检查；preflight 66 PASS / 0 WARN / 5 Live SKIP / 0 FAIL（71 项）；覆盖率行/分支/函数 94.47% / 85.03% / 92.42%。禁网、只读 Node 22.23.3 容器启动和 Windows HTTP 200 通过；独立复核两项 P2 已修复并复核闭合。
+
+**2026-10-15 Phase 6 当前增量**：WP6.1–WP6.4 全量完成本地实现与自动化验收：1179/1179 Node、75 项合约测试、20/20 质量闸门、261 项浏览器检查；preflight 64 PASS / 0 WARN / 5 Live SKIP / 0 FAIL。MCP 为 15 tools + 5 resources，连接现有后端；A2A 1.0 卡片与同步报价、四项 Bazaar 声明和带服务器交付证据的委托报价已接通。事件默认 dry-run，入队需带外令牌；报价不付款或执行。preflight 扩为 69 项。见 [Phase 6 指南](phase6-interoperability.md)。未提交、未推送；既有 dirty 改动及全部尝试历史保留。完成清单见 [phase6-completion.json](evidence/phase6-completion.json)，下一入口为 Phase 7 WP7.1，部署另行确认。
+
+**2026-10-15 Phase 5 历史记录**：WP5.1–5.9 全量完成。红队、新鲜度、CLI/API/控制台重放、审计脱敏/认证加密、保留和权限矩阵已落地；冻结全量 1158/1158、20 个质量闸门、41+256 项中英/窄屏浏览器检查、75 项本地合约测试及 preflight 60 PASS / 0 WARN / 5 Live SKIP 通过。本次授权的 REPRICE / PAUSE / RESUME 三笔真实测试网交易与三份决策重放通过，最终 pool #2 为可认购的 Repriced / 0.7910。初版将风险报价当成池价的核验缺陷已修正，失败与恢复历史保留，无重复广播或第四笔交易。见 [Phase 5 指南](phase5-security-replay.md)、[实链证据](evidence/agent-live-smoke.json) 和 [完成清单](evidence/phase5-completion.json)。可选 owner 生命周期、真实 LLM、人工/实体设备试用未运行。未提交、未推送；下一入口 **Phase 6 WP6.1 MCP**。
+
+
+**2026-10-15 Phase 4 最新增量**：WP4.4 五处 ID/原报价贯通、跨案例选择与池高亮、当前池状态，以及 WP4.5 后台完整单证演示、速度/高亮/键盘停止/幂等/模式边界已完成本地实现；付款及结算保留各自审批。WP4.1 模型实际用量与 WP4.6 中英/窄屏一起复验，11 项新增行为测试、全量覆盖率执行 1126/1126、107 项新流程及 255 项全站浏览器检查通过；发布闸门 56 PASS / 0 WARN / 5 Live SKIP。详见 [phase4-console-demo.md](phase4-console-demo.md)。重放依赖 WP5.5；真实模型、链上/钱包、内置窗格操作和人工验收不由本地结果替代。下一入口 **Phase 5 P1（WP5.2）**。未提交、未推送，既有 dirty 改动和失败历史保留。
+
+**2026-10-15 WP2.9 最新增量**：PRD 五个无状态分析接口已接入共享单证、核验、合规、定价、简报和图哈希；不创建作业/审批/池/交易，补齐输入、文件、限流和并发边界。**整个项目** 的 API 默认模型及本地 `LLM_MODEL` 均统一为 `x-test-2`，取消腾讯旧锁定。54 项新增行为测试、全量覆盖率执行 1115/1115、54 项中英/1440/390px 浏览器检查通过；真实模型、内置窗格操作和用户人工验收未确认。下一入口 **WP4.4 ID 贯通**，随后 WP4.5；见 [agent-api.md](agent-api.md)。不提交、不推送，旧改动和失败记录保留。
+
+**2026-10-15 WP2.7 最新增量**：只读确认日志、持久游标、部署起点核对、池发现、精确原子金额与镜像对账、独立链上紧急停止、RPC 退避及重组审查已实现并通过本地自动化验证。40 项新增行为测试、全量 1061/1061，覆盖率门槛及 91 项中英/1440/390px 浏览器检查通过；真实 RPC 长时间运行、内置浏览器操作和用户人工验收各自未确认。下一入口 **WP2.9 PRD Agent API**；详见 [chain-watcher.md](chain-watcher.md)。先前未提交工作和失败证据保留，不发真实交易、不提交、不推送。
+
+**2026-10-14 WP2.6 最新增量**：Live USDC 回执、六位小数原子金额、单回执绑定生命周期池、链上双证明与单独结算审批、CLI/重启恢复已完成本地实现。35 项新增行为测试、全量 1021/1021 与覆盖率门槛通过；中英/1440px/390px 浏览器验收记录见 [live-settlement.md](live-settlement.md)。真实付款/owner/钱包未验收；下一入口 **WP2.7 链上监听**，实际交易按实施规划 §16 逐笔授权。
+
+**2026-10-14 WP2.3 增量**：版本化演示合规已接入逐份单证筛查、模糊匹配、港口/IMO/HS、三态证据与人工复核；965 项测试、122 项中英/1440px/390px 浏览器检查通过，旧报告保留。外部接口仅 mock 验证，默认关闭；AI-18 标为 Done（演示）。当前下一入口为 **WP2.4 Live 开盘提案与 owner CLI**，实际交易另行授权。见 [compliance-screening.md](compliance-screening.md)。
+
+任务状态：`Todo` / `In Progress` / `Review` / `Done` / `Blocked` / `Partial`（有代码和测试，但没有接入运行时或存在已知的不实之处；以 [agent-implementation-plan.md](agent-implementation-plan.md) 为准）。以下按日期保留的增量说明是历史快照，下一入口以上方最新增量及规划 §13 为准。
 
 **2026-10-14 WP2.2 增量**：PDF 文本层与页码/行号、可选图片视觉和缺字段文本补全、中文 `WAREHOUSE_RECEIPT` 与发票核验已接入上传作业及复核闭环；模型无工具、严格 schema 与原文支持校验，视觉最高 0.75 且始终复核，人民币金额保持 CNY。17 项新增行为测试在 Node 20.11/22/24 和 Alpine/Node 22 均通过；118 项中英/1440/390px 浏览器检查使用 mock 视觉。修复截图发现的 OPEN 步骤漏翻译。真实模型准确率和扫描 PDF OCR 未验收，AI-17 保持 Partial。当前下一入口为 **WP2.3 合规 v2**；细节见 [document-extraction.md](document-extraction.md)。
 
@@ -71,9 +88,9 @@ RWA：投资贸易融资资产    阅读报告 → 接受风险 → 认购 RWA �
 | AI 定价、反欺诈审单、风险场景、RAG、xAPI | ✅ 已有 | `npm test` 实测 **300/300 passed**；继续作为产品主线，不重做 |
 | Solidity 合约 | ✅ 五合约协议已部署 | `hardhat test` 实测 **24/24 passed**；EBLRegistry V2、发行池、RWA Token、定价 Oracle 与 AgentBLRWA 已部署并完成全生命周期 smoke |
 | Injective Testnet | ✅ 完整链上证据 | chainId `1439`；真实 USDC 支付、PaymentAttested、PricingUpdated、五合约部署及协议 smoke 均有 explorer 证据 |
-| MCP Server | ✅ 标准 9 tools + 3 resources（7 个基线 + 2 个 Mystery） | 官方 MCP SDK stdio lifecycle 已实测；另通过安全 adapter 完成官方 Injective MCP 查询和受控 raw EVM testnet 交易 |
+| MCP Server | ✅ 标准 15 tools + 5 resources（含 Phase 6 的 6 个工具及 2 个资源） | 官方 MCP SDK stdio lifecycle 已实测；另通过安全 adapter 完成官方 Injective MCP 查询和受控 raw EVM testnet 交易 |
 | Demo Mode | ✅ 已完成 | `DEMO_MODE=true` 默认、顶部常驻 banner、Live toggle、一键 reset；Live 配置不足时显式失败，不伪造链上 tx |
-| x402 | ✅ Live 支付闭环已验证；全部 P0 + P1 动效完成 | X402-1~16（含 P1 动效 X402-12）已完成；真实 V2/EIP-3009 支付、PaidReportEnvelope 与 PaymentAttested 已由 explorer 证据串联；前端付费市场含 TTL 重读、支付流光/priceFlash/riskPulse/impact-pop（reduced-motion 安全）；仅 X402-17(P2 discovery) 待做 |
+| x402 | ✅ Live 支付闭环已验证；全部 P0 + P1 动效完成 | X402-1~16（含 P1 动效 X402-12）已完成；真实 V2/EIP-3009 支付、PaidReportEnvelope 与 PaymentAttested 已由 explorer 证据串联；前端付费市场含 TTL 重读、支付流光/priceFlash/riskPulse/impact-pop（reduced-motion 安全）；X402-17 已实现本地 Bazaar 描述，外部收录未验收 |
 | Preflight | ✅ 已完成 | 固定 54 项总闸门；Demo 环境实测 50 PASS / 4 项显式 Live WARN / 0 FAIL，覆盖 Node、Solidity、smoke、scenarios、MCP、x402 与 UI |
 | 动效 | 🟡 仅 waterfall 已有 | `priceFlash`、`riskPulse`、支付流水和 Demo banner 待补，且必须支持 reduced motion |
 | 中文路演 | 🟡 有 30 秒和 3 分钟素材 | 需统一成 30 秒 / 1 分钟 / 3 分钟同一故事，并补 x402 与评委追问 |
@@ -96,7 +113,7 @@ RWA：投资贸易融资资产    阅读报告 → 接受风险 → 认购 RWA �
 | P1 | 多场景回归 | fast / balanced / high-risk repricing |
 | P1 | 产品化市场后端与角色中心 | listings/search、pool subscribe/status、exporter dashboard、investor portfolio |
 | P1 | 自主决策可审计 | 决策日志持久化、证据哈希、链上 tx 回填、Agent 活动面板 |
-| P1 | 标准 MCP + Injective MCP | AgentBL 升级为 9 tools + 3 resources 的 stdio server，并用官方 Injective MCP 查询/执行；历史 Wave B 冻结基线为 7 tools |
+| P1 | 标准 MCP + Injective MCP | AgentBL 升级为 15 tools + 5 resources 的 stdio server，并用官方 Injective MCP 查询/执行；历史 Wave B 冻结基线为 7 tools |
 | P1 | Microsoft Foundry 评测 | 接 Azure OpenAI provider、Agent traces 和可复现 eval，给出 AI 质量证据 |
 | P2 | Injective 原生模块 | ERC20/Bank precompile 优先；Exchange precompile 仅在有真实可解释场景时接入 |
 | P2 | AI 与品牌增强 | 多 LLM 共识、出口商偏好参数、Injective 紫色主题与 ENI + Injective 联合品牌 |
@@ -137,12 +154,12 @@ AI 的目标不是"写一段解释"，而是产出可被后端、前端和合约
 | AI-10 | 生成 high-risk scenario：战争 / 严重天气 / 保险缺口导致降价或暂停 | Bowen | Done | `npm run scenarios` | data/cases/copper-sg-shanghai-warcrisis.case.json + data/pricing-scenarios/03-high-risk-reprice、04-high-risk-pause；tests/pricingScenarioRunner.test.js（Repriced→Redeemed / CRITICAL→PAUSE） |
 | AI-11 | 建立 RAG 风险情报知识库：项目文档 + mock macro risk feed | Bowen | Done | retrieval eval | src/agent/riskIntel.js + data/risk-intel/feed.json（10 docs）；tests/riskIntel.test.js（evaluateRetrieval precision@k ≥ 0.8） |
 | AI-12 | 做 Judge Q&A assistant：解释 AI 定价、非保本、合约动作 | Bowen | Done | 彩排通过（`npm run qa`） | src/agent/judgeAssistant.js（6 个 grounded intents + RAG 引用 + 实时报价数字 + LLM polish/fallback）；scripts/judge-qa.mjs；tests/judgeAssistant.test.js |
-| AI-13 | 实现 Agent 编排器 `src/agent/orchestrator.js`：串联文档解析、交叉核验、货物估值、三档定价、方案选择与自动开盘 | Bowen | Partial | `node --test tests/orchestrator.test.js`，一次 eBL 事件只能生成一个确定性开盘决策 | `AgentOrchestrator.processEbl` 串联 parse→check→value→3 quotes→decision/optional execution；关键单据冲突强制 PAUSE；4 tests passed<br>**2026-10-12 复核（Partial）**：模块只有测试引用，运行时没有调用，上传接口也没有触发它。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.4。<br>**2026-10-13**：新增 `processDocuments`（解析→注入筛查→一致性→合规→估值→世界风险→三档定价→出口商约束→决策，逐步计时），由 Agent 运行时在每次上传时调用，可得到 OPEN / OPEN_WITH_WARNING / HOLD_FOR_REVIEW / REJECT；Demo 下自动建池。Live 的三笔 owner 开盘交易尚未做。`tests/agentIngestPipeline.test.js`。 |
+| AI-13 | 实现 Agent 编排器 `src/agent/orchestrator.js`：串联文档解析、交叉核验、货物估值、三档定价、方案选择与自动开盘 | Bowen | Partial | `node --test tests/orchestrator.test.js`，一次 eBL 事件只能生成一个确定性开盘决策 | `AgentOrchestrator.processEbl` 串联 parse→check→value→3 quotes→decision/optional execution；关键单据冲突强制 PAUSE；4 tests passed<br>**2026-10-12 复核（Partial）**：模块只有测试引用，运行时没有调用，上传接口也没有触发它。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.4。<br>**2026-10-13**：新增 `processDocuments`（解析→注入筛查→一致性→合规→估值→世界风险→三档定价→出口商约束→决策，逐步计时），由 Agent 运行时在每次上传时调用，可得到 OPEN / OPEN_WITH_WARNING / HOLD_FOR_REVIEW / REJECT；Demo 下自动建池。Live 的三笔 owner 开盘交易尚未做。`tests/agentIngestPipeline.test.js`。<br>**2026-10-14 WP2.4**：Live isUnique、三步 owner 开盘提案、依赖编号、已登记铜货关联、回执 tuple/事件核验、广播检查点与重启对账已完成本地实现，21 项新增行为测试；真实 owner 交易和用户验收未运行，因此仍为 Partial。见 [live-opening.md](live-opening.md)。 |
 | AI-14 | 实现自主触发管道 `src/agent/autonomousAgent.js`：Event → Decision → On-chain Action，覆盖 mint、xAPI 风险、风险解除、付款、到港、保险到期 | Bowen | Partial | `node --test tests/autonomousAgent.test.js`，六类事件分别得到 OPEN/REPRICE/PAUSE/RESUME/SETTLE/WARNING 动作 | 六类事件均产出结构化 protocol action；到港未付款只 WARNING，critical 世界风险强制 PAUSE；7 tests（含 AI-15）passed<br>**2026-10-12 复核（Partial）**：`autonomousAgent.js` 本身没有运行时调用方；它的职责由新运行时 `src/agent/runtime` + `pipelines/monitorPipeline.js` 承担（事件→提案→策略→审批/模拟执行，Phase 1 已落地，Demo 可注入事件验证）。尚缺监控源和场景播放器（WP2.5）。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP1.x / WP2.5。<br>**2026-10-13**：监控源（风险变化检测带滞回、保险到期）和场景播放器已接入运行时，付款与到港证明齐备后才提出 SETTLE。`tests/agentMonitors.test.js`、`tests/agentScenarios.test.js`。 |
 | AI-15 | 实现持续监控与执行可靠性：定时/事件驱动、幂等键、重试、并发锁、失败回退，禁止同一事件重复上链 | Bowen | Partial | fake-timer + 重试/重复事件测试；连续运行两轮不产生重复 tx | `executionReliability.js` + `AutonomousAgent`：single-flight、指数退避、持久幂等、EXECUTING tx reconciliation、polling；并发/重启/重试测试通过<br>**2026-10-12 复核（Partial）**：可靠性骨架已被事件总线复用（去重、按案例串行、重试、死信、重启恢复），但周期性监控源（风险快照对比、保险、航程）尚未实现（WP2.5）。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP1.1 / WP2.5。<br>**2026-10-13**：风险快照对比（基线 + 滞回，同一静态夹具不会重复触发）和保险到期监控已实现；离港/到港需要证明，来自场景或人工，不由监控猜测。 |
-| AI-16 | 实现决策审计日志 `src/agent/decisionLogger.js`：保存输入快照、推理摘要、证据哈希、决策与链上 tx，并支持 tx 回填 | Bowen | Partial | `node --test tests/decisionLogger.test.js`，`decision_id` 可重算且日志重启后仍可读取 | canonical hash 生成稳定 `decision_id`；原子 JSON 持久化、幂等 upsert、状态/tx 回填与重启读取；4 tests passed<br>**2026-10-12 复核（Partial）**：决策日志已由 AgentService 写入（重启后可读，带策略结论、审批和执行记录）；决策锚定与重放校验尚未做（WP5.5、WP7.1）。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP1.5。 |
+| AI-16 | 实现决策审计日志 `src/agent/decisionLogger.js`：保存输入快照、推理摘要、证据哈希、决策与链上 tx，并支持 tx 回填 | Bowen | Partial | `node --test tests/decisionLogger.test.js`，`decision_id` 可重算且日志重启后仍可读取 | canonical hash 生成稳定 `decision_id`；原子 JSON 持久化、幂等 upsert、状态/tx 回填与重启读取；4 tests passed<br>**2026-10-12 复核（Partial）**：决策日志已由 AgentService 写入（重启后可读，带策略结论、审批和执行记录）；当时决策锚定与重放校验尚未做。**2026-10-15**：WP5.5 的结构化快照重放已完成；WP7.1 本地合约、终态与审批承诺、Merkle/API/CLI 已实现，真实部署与两笔初始化已获授权并实链核验，首次锚定仍待单独确认。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP1.5。 |
 | AI-17 | 实现 AI 文档解析器 `src/agent/documentParser.js`：从 eBL / 发票 / 保险单图片或 PDF 提取结构化字段，并保留字段级来源与置信度 | Bowen | Partial | `node --test tests/documentParser.test.js`，固定扫描件 fixtures 的关键字段准确率达到验收阈值，LLM 失败可回退/报人工复核 | Markdown/text 原生解析；PDF/image 走可注入 OCR；字段级 line/method/confidence、bundle merge、AI 失败确定性 fallback/人工复核；5 tests passed<br>**2026-10-12 复核（Partial）**：只有文本/Markdown 的确定性解析；PDF/图片的 OCR 与 AI 抽取器没有实现，只留了可注入接口。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.2。<br>**2026-10-13**：解析器新增桶计货物（读取单证写明的吨数，不做换算），补了铜/原油的保单样例；PDF 和图片会被存储并标为 OCR_REQUIRED 转人工，仍无抽取。<br>**2026-10-14 WP2.2**：PDF 文本层/页码、可选视觉和文本模型补全、仓单已接入，17 项新增行为测试和 118 项浏览器检查通过；视觉为 mock、始终复核，真实扫描 OCR/提供方准确率尚未验证，因此 AI-17 仍为 Partial。见 [document-extraction.md](document-extraction.md)。 |
-| AI-18 | 实现合规标注引擎 `src/agent/complianceChecker.js`：制裁、出口管制、MLETR、eUCP、DCSA、ICC DSI；只标注风险，不按企业规模拒绝服务 | Agent | Partial | `node --test tests/complianceChecker.test.js`，通过、警告、阻断级风险 fixtures 均有证据引用 | `npm test` passed<br>**2026-10-12 复核（Partial）**：是关键字匹配的演示规则，不是真实名单筛查；输出措辞已更正为“demo keyword rule”。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.3。 |
+| AI-18 | 实现合规标注引擎 `src/agent/complianceChecker.js`：制裁、出口管制、MLETR、eUCP、DCSA、ICC DSI；只标注风险，不按企业规模拒绝服务 | Agent | Done（演示） | `node --test tests/complianceChecker.test.js`，通过、警告、阻断级风险 fixtures 均有证据引用 | `npm test` passed<br>**2026-10-12 复核（Partial）**：是关键字匹配的演示规则，不是真实名单筛查；输出措辞已更正为“demo keyword rule”。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.3。<br>**2026-10-14 WP2.3**：版本化虚构名单、实体模糊匹配、逐份单证/港口/IMO/HS 筛查、三态证据、人工复核与重启保存已本地实现；外部接口只用 mock，默认关闭。平台只识别标准声明，未作官方筛查或法律认定。见 [compliance-screening.md](compliance-screening.md)及本地验收记录。 |
 | AI-19 | 将现有浏览器端 `recommendEBL` 提炼为可测试的服务端投资顾问 `src/agent/investmentAdvisor.js`，支持自然语言偏好、排序理由与确定性 fallback | Agent | Done | `node --test tests/investmentAdvisor.test.js`，旧投资顾问保留兼容；2026-10-13 搜索框和 popup 统一使用 src/copilot，多轮与排序测试见 tests/copilot*.test.js | `npm test` passed |
 | AI-20 | 实现多 LLM 竞争评估：同一 case 由 3 个 provider 独立输出结构化评估，以中位数/共识聚合，分歧过大时降级为确定性引擎并标警告 | Agent | Partial | `node --test tests/llmConsensus.test.js`，覆盖全成功、单 provider 失败、极端离群、全部失败四种情况 | `npm test` passed<br>**2026-10-12 复核（Partial）**：只有测试引用；已去掉对未配置 provider 注入 dummy key 的做法，provider 取自实际配置。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，Phase 7 的 7.2。 |
 
@@ -163,7 +180,7 @@ AI 的目标不是"写一段解释"，而是产出可被后端、前端和合约
 | BE-7 | API 错误输入校验：发行数量过高、价格不合法、target redemption 超抵押覆盖 | Bowen | Done | invalid payload test | src/app/server.js resolvePricingRequest 校验 payout_speed / requested_cash_usd>0 / subscription_usd≥0 / target_redemption=1 / events 为数组 → 400；tests/apiValidation.test.js 6 个非法 payload 用例；抵押超额由引擎 AI-5 护栏 + assertPricingQuote 不变量兜底 |
 | BE-8 | 输出 `quote_hash` / `evidence_hash`，供合约 oracle 使用 | Bowen | Done | `npm run test` | src/core/oracle.js `toOracleUpdate`（issue_price/risk/action/offering_state + evidence_hash + quote_hash + supply/target，对齐 RiskPricingOracle.updatePricing / RWAOfferingPool.createOffering）；POST /api/oracle/pricing-update；tests/oracle.test.js + smoke 覆盖 |
 | BE-9 | 保持原有 `/api/health`、`/api/demo-data`、`/api/risk/analyze`、`/api/workflow/simulate` 可用 | Bowen | Done | `npm run smoke` | 四个 legacy 端点全部保留并未改动语义；scripts/smoke.mjs 现显式覆盖 health/demo-data/risk-analyze/workflow-simulate；`npm run smoke` 通过 |
-| BE-10 | 集成最终 demo CLI：打印 RWA price、investor yield、risk factors | Bowen | Done | `npm run demo` | scripts/demo.mjs 打印 RWA issue price / investor yield / risk factors / 融资成本 + 链上 oracle hashes + AI 叙述；src/agent/pricingNarrator.js（确定性优先，可选 LLM 润色出错自动回退）；接入 Tencent **hy3-preview**（src/agent/llm/openaiCompatClient.js，model 锁定，优先级最高）；`npm run demo` 离线 + 实测 hy3-preview 均通过 |
+| BE-10 | 集成最终 demo CLI：打印 RWA price、investor yield、risk factors | Bowen | Done | `npm run demo` | scripts/demo.mjs 打印 RWA issue price / investor yield / risk factors / 融资成本 + 链上 oracle hashes + AI 叙述；src/agent/pricingNarrator.js（确定性优先，可选 LLM 润色出错自动回退）；历史接入 Tencent **hy3-preview** 并有当时实测；2026-10-15 全项目模型已改为 `x-test-2`、取消旧锁定，新模型尚无真实提供方证据 |
 | BE-11 | 实现市场服务 API：`GET /api/market/listings` + `POST /api/market/search`，只返回活跃池并复用 AI-19 推荐逻辑 | Bowen | Done | `node --test tests/marketApi.test.js`，覆盖筛选、排序、分页、暂停池排除和自然语言搜索 | tests/marketApi.test.js passed |
 | BE-12 | 实现发行池 API：`POST /api/pool/subscribe` + `GET /api/pool/status`，真实链模式返回 tx/event，离线模式保持确定性 fallback | Bowen | Done | `node --test tests/poolApi.test.js` + `npm run smoke`，重复认购、暂停池、金额越界均被正确处理 | tests/poolApi.test.js passed |
 | BE-13 | 实现角色中心 API：`GET /api/exporters/dashboard` + `GET /api/investors/portfolio`，持久化 eBL、池状态、持仓、收益与兑付记录 | Bowen | Done | `node --test tests/dashboardApi.test.js`，服务重启后数据可恢复且只能读取当前钱包的数据 | tests/dashboardApi.test.js passed |
@@ -303,7 +320,7 @@ x402 Resource Server ──402 + PaymentRequirements──► wallet
 | X402-14 | 新增 `scripts/smoke-x402.mjs`、`npm run smoke:x402` 和至少 12 个自动化测试 | P0 | Bowen | Done | 新增 `tests/x402Endpoints.test.js` 15 tests；连同 config/server/settlement 覆盖 3 endpoints、budget/cancel/timeout/wrong network、tamper/replay/expiry/wrong recipient/结算失败与成功；`smoke:x402` 通过 |
 | X402-15 | 做 Injective Live smoke：钱包有 INJ gas + USDC，实际购买一份报告，回读支付 tx、`PaymentAttested` 与报告哈希 | P0 | Bowen | Done | 2026-06-29 在 `eip155:1439` 以测试用 self-transfer 真实结算 0.001 USDC：payment `0x6d796d…a0b49`、report `rpt_3e5f…3334` / hash `0x994078…168ce`、attestation `0xa03ab9…fef6e`；路演前可改用独立 treasury payTo 再跑；完整证据见 `docs/evidence/x402-live-smoke.json` |
 | X402-16 | README、架构图、API 文档、威胁模型和 FAQ 更新；清楚区分 x402 报告支付与 RWA 认购 | P0 | Sage | Done | `docs/x402-integration.md` 新增「x402 报告支付 vs RWA 认购」对照表 + 流程图、8 条威胁模型不变量表（对应代码与测试）+ 客户端可恢复错误码、评委 FAQ（谁付钱/买什么/为何上链/与 RWA 区别/支付失败/为何 Injective）、`GET /api/x402/report/:id` 重读端点与 `X402_REPORT_CACHE_PATH`；README 中英文 API 表新增 4 个 x402 端点 + 「x402 ≠ RWA」提示框 + More docs 链接到 x402-integration.md |
-| X402-17 | 可选：通过 x402 Bazaar/discovery extension 发布 3 个机器可发现的资源描述，使外部 Agent 能发现并购买 | P2 | Bowen | Todo | discovery metadata 可被客户端解析；不阻塞核心 demo |
+| X402-17 | 通过 x402 Bazaar/discovery extension 发布四个付费服务的资源描述 | P2 | Bowen | 本地 Done | 目录与 V2 402 同源、Draft 2020-12 输入声明、Demo 不公布 Live accepts；外部 Bazaar 收录未验收，见 phase6-interoperability.md |
 
 ### 8.4 x402 安全不变量
 
@@ -322,7 +339,7 @@ x402 Resource Server ──402 + PaymentRequirements──► wallet
 
 这些是加分项，必须服务 AI 定价主链路。
 
-### 9.1 冻结为 7 tools
+### 9.1 当前为 15 tools（原始基线 7 个）
 
 ```text
 1. get_trade_case
@@ -332,14 +349,24 @@ x402 Resource Server ──402 + PaymentRequirements──► wallet
 5. purchase_premium_analysis     # 新增：作为 x402 client 购买报告
 6. simulate_offering
 7. push_pricing_to_oracle
+8. preview_mystery_voyage
+9. verify_mystery_reveal
+10. get_agent_status
+11. list_agent_decisions
+12. explain_decision
+13. submit_agent_event          # 默认 dry-run；实际入队需要带外审批令牌
+14. recommend_trade_assets      # 无持久会话，不执行动作
+15. delegate_pricing            # 指示性报价，可附已有交付报告
 ```
 
-### 9.2 冻结为 3 resources
+### 9.2 当前为 5 resources
 
 ```text
 agentbl://cases/catalog           # 可演示 case 与摘要，不含敏感全文
 agentbl://risk/methodology        # 5/6 维风险、bps 规则、非保本边界
 agentbl://contracts/deployments   # network、合约地址、ABI 版本、explorer
+agentbl://agent/policy            # 当前模式、阈值和事件权限
+agentbl://agent/decisions/recent  # 最近最多 20 条，剔除私有重放快照
 ```
 
 ### 9.3 工程任务
@@ -372,8 +399,8 @@ agentbl://contracts/deployments   # network、合约地址、ABI 版本、explor
 | TRUST-2 | 评估 OCR/解析准确率、文档一致性 precision/recall、风险分单调性、估值误差、tool-call 成功率 | P1 | Done | Partial | `docs/evaluation-report.md` 给出指标、失败样例、限制；不能只报总测试数 | **历史 2026-10-12**：旧 mock 回抄金标，指标不能作为证据。**2026-10-13 WP5.1**：旧骨架已替换为真实组件测量，报告与源/金标摘要已生成，19 项确定性阈值由测试强制执行。文本抽取、一致性、Demo 合规、定价性质、自主循环、Copilot、注入已测；OCR/视觉、真实估值提供方与完整 tool-call 质量仍未验收。 |
 | TRUST-3 | Prompt-injection 防护：文档内容视为不可信数据，不能改变工具权限、支付地址、网络、价格和系统规则 | P0 | Done | Partial | 恶意 eBL fixture 不能触发任意 tool/tx、改 payTo、泄露 secret；测试纳入 preflight | 5 个注入测试 + sanitizer 完成<br>**2026-10-12 复核（Partial）**：模块存在，但运行时和测试都没有调用它。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP2.2 / WP5.4。<br>**2026-10-13**：接入流水线在解析后筛查中英文指令语句、隐藏字符和字段里的钱包地址，命中即 HOLD_FOR_REVIEW，且不开池。`tests/ingest.test.js`、`tests/agentIngestPipeline.test.js`。 |
 | TRUST-4 | 合约安全：访问控制、暂停、重入、重放、整数精度、重复 cargo/payment/report、状态机、emergency stop | P0 | Bowen | Todo | Slither 或同等静态检查 + adversarial tests；所有 high finding 关闭或书面接受 |
-| TRUST-5 | 数据新鲜度和来源健康：风险情报标 `observed_at/expires_at/source_status`，过期自动降置信度或拒绝定价 | P0 | Done | Partial | clock-controlled tests；断网不把旧数据冒充实时数据 | DataFreshnessValidator 完成<br>**2026-10-12 复核（Partial）**：模块存在，但运行时没有调用它。见 [agent-implementation-plan.md](agent-implementation-plan.md) §1，WP5.3。 |
-| TRUST-6 | 隐私与合规最小化：链上只存 hash；日志/telemetry 对 BL、公司、钱包做字段级脱敏；增加删除/保留策略 | P1 | Bowen | Todo | log snapshot 无原始文件、API key、私钥、完整地址；隐私说明加入 README |
+| TRUST-5 | 数据新鲜度和来源健康：风险情报标 `observed_at/expires_at/source_status`，过期自动降置信度或拒绝定价 | P0 | Done | Partial | clock-controlled tests；断网不把旧数据冒充实时数据 | DataFreshnessValidator 完成<br>**2026-10-12 复核（Partial）**：模块存在，但当时运行时没有调用它。**2026-10-15 WP5.3 本地 Done**：逐份上传、事件、风险源时钟与新鲜度门槛接入，旧 feed 不刷新时间，过期批准/签名前拒绝，徽标动态显示。见 [Phase 5](phase5-security-replay.md)。 |
+| TRUST-6 | 隐私与合规最小化：链上只存 hash；日志/telemetry 对 BL、公司、钱包做字段级脱敏；增加删除/保留策略 | P1 | Bowen | Partial | 2026-10-15 WP5.6 本地范围 Done：日志无原文/密钥/完整钱包，操作快照认证加密，终态审计保留和 README 隐私说明落地。必要 BL/公司抽取字段供复核；全项目数据分类和原始上传删除策略仍是独立工作。见 phase5-security-replay.md。 |
 | TRUST-7 | 经济模型压力测试：重复购买、报告转售、低价刷接口、退款、报告过期、RWA 违约与利益冲突 | P1 | Bowen | Todo | 文档给出价格/成本/毛利假设与 3 个极端场景；x402 收入不混入 RWA 收益承诺 |
 
 ---
@@ -399,16 +426,16 @@ agentbl://contracts/deployments   # network、合约地址、ABI 版本、explor
 |---|---|---|---|---|---|
 | DEMO-1 | 新增统一 `demoMode=true`（默认）与显式 Live toggle；Demo 数据可一键 reset，Live 模式严禁 mock tx | P0 | Bowen | Done | `src/demo/mode.js` + `/api/demo/mode|reset`；顶部常驻 banner/Live toggle/reset；Live 前置不足返回 409，PaymentOracle 写入失败不会退回假 tx |
 | DEMO-2 | 首页只保一个主 CTA："购买这笔 RWA 的 AI 风控报告"；二级入口再放融资/市场/航运 | P0 | Bowen | Todo | 5 秒可用性测试：新用户能说出谁付钱、买什么、链上发生什么 |
-| DEMO-3 | 完成支付流水、riskPulse、priceFlash、waterfall、Agent activity 的同屏联动 | P1 | Bowen | Todo | 同一 `report_id/decision_id/tx_hash` 贯穿各面板；没有随机日志或不一致数字 |
+| DEMO-3 | 完成支付流水、riskPulse、priceFlash、waterfall、Agent activity 的同屏联动 | P1 | Bowen | 本地 Done | 2026-10-15：时间线、市场、历史瀑布图、x402 和持仓共享原始引用；缺失报告/交易不编造，历史报价不覆盖当前认购。见 phase4-console-demo.md；真实链上人工验收另行进行。 |
 | DEMO-4 | 编写 30 秒 / 1 分钟 / 3 分钟中文路演稿与英文 tagline，三版数字、角色和叙事完全一致 | P0 | Bowen | Todo | 交叉检查 README、PRD、demo-script、video-script；至少 3 次计时彩排 |
 | DEMO-5 | `npm run preflight` 汇总环境、schema、应用/合约测试、smoke/scenarios、MCP、x402、Live readiness、UI hooks 和 Agent 质量 | P0 | Bowen | Done | 2026-10-13：`scripts/preflight.mjs` 固定 61 项；56 PASS / 0 WARN / 5 SKIP / 0 FAIL；缺失实际测试计数或跳过/取消均失败。Live/readiness、提供方及人工验证各自独立。 |
 | DEMO-6 | 评委追问预案：为什么 AI、谁承担货损、为何不是证券保本、报告是否能伪造、支付失败怎么办、为何必须 Injective、与 TradeGo/银行差异 | P0 | Bowen | Todo | 每题 20 秒答案 + 可点击证据/代码/tx；不做未经律师确认的法律断言 |
 | DEMO-7 | 录制 Live 主视频 + Demo Mode 兜底视频，准备本地 MP4、关键截图和 CLI 兜底 | P0 | Bowen | Todo | 飞行模式也能播放；视频中的 tx 链接和当前部署配置一致 |
 | DEMO-8 | 做一次"故障彩排"：RPC、facilitator、LLM、xAPI、钱包分别失效 | P0 | Bowen | Todo | 每种故障 15 秒内切到正确兜底；不刷新整场、不暴露堆栈/密钥 |
 
-### 11.3 `preflight`（当前固定 61 项；下表为原始 54 项设计）
+### 11.3 `preflight`（当前固定 69 项；下表为原始 54 项设计）
 
-**现行实现**以 `scripts/preflight.mjs` 和 [agent-reliability.md](agent-reliability.md) 为准：61 项，MCP 9 tools + 3 resources，Agent 新增闸门在 47–51，Demo 的 Live 专属项为 SKIP。下表保留最初设计，不代表它的每一项已完成（如正式静态安全扫描、人工 390px/视频审查）。不能只用总项数代替实际执行和分项证据。
+**现行实现**以 `scripts/preflight.mjs` 和 [agent-reliability.md](agent-reliability.md) 为准：69 项，MCP 15 tools + 5 resources，Agent P0 闸门在 47–51，Phase 5 P1 在 57–60，Demo 的 Live 专属项为 SKIP。下表保留最初设计，不代表它的每一项已完成（如正式静态安全扫描、人工 390px/视频审查）。不能只用总项数代替实际执行和分项证据。
 
 | # | Check | # | Check |
 |---:|---|---:|---|
@@ -459,7 +486,7 @@ QA 目标：任何新增功能都必须回到同一条主链路，不能散。
 | QA-9 | 最后 6 小时功能冻结协调 | Bowen | Todo | 全员确认 | - |
 | QA-10 | 增加自主 Agent 可靠性测试矩阵：事件乱序、重复事件、进程重启、RPC 超时、xAPI/LLM 不可用、链上交易失败 | Bowen | Done | `npm run test`，所有失败路径均有幂等恢复或确定性 fallback | 2026-10-13：15 个矩阵测试，假链/注入时钟；已广播只读对账、审批过期与世代隔离、明确回退；真实链上冒烟仍见 WP5.9 |
 | QA-11 | 增加 eBL V2 安全测试：一货多单、伪造 cargoHash、未授权 transfer/endorse、质押中转让、重放攻击 | Bowen | Review | `cd hardhat && npm test` + 安全测试报告 | 回归测试：`hardhat/test/contractHardening.test.js`（一张 eBL 只能支撑一个 offering、V1/V2 重复登记、未授权 transfer/endorse、质押中转让）、`paymentOracle.test.js` 与 `eblRegistryV2.test.js`（重放、重复 cargoHash）；随机状态机对照 `offeringModel.test.js`；报告见 `docs/contracts.md` §0.3 / §0.6 |
-| QA-12 | 增加市场与角色 API 集成测试：访问控制、分页、并发认购、持久化恢复、链上/链下状态对账 | Bowen | Todo | `npm run test && npm run smoke`，API、持久化存储与合约事件三方一致 | - |
+| QA-12 | 增加市场与角色 API 集成测试：访问控制、分页、并发认购、持久化恢复、链上/链下状态对账 | Bowen | Partial | `npm run test && npm run smoke`，API、持久化存储与合约事件三方一致 | 2026-10-15：WP2.7 已覆盖 Agent 确认日志、镜像对账、持久游标与重启；真实 RPC/其余市场与角色 API 验收仍待完成，见 chain-watcher.md。 |
 | QA-13 | 建立 MetaMask / Keplr / Leap × 桌面/移动端 × 真实链/离线 fallback 的手动验收矩阵 | Bowen | Todo | 完整 checklist、截图与测试 tx hash | - |
 | QA-14 | 按 gap analysis v2 跑通 3 分钟 P0 验收：上传 → 唯一性 → 解析 → 自主定价/开盘 → 市场认购 → 风险暂停/恢复 → 自动兑付 | Bowen | Todo | 录像 + 决策日志 + 全套链上 tx；任何一步不得依赖伪造随机 tx | - |
 
@@ -629,7 +656,7 @@ npm run demo
 | ID | Task | Priority | Owner | Status | Verification | Done Evidence |
 |---|---|---|---|---|---|---|
 | VERIFY-1 | TEE 模拟推理证明：生成包含 hash 验证的 `inference_attestation`，存入 PricingOracle 事件 | P0 | Bowen | Todo | `npm run verify-inference` 验证链上与链下的一致性 | - |
-| VERIFY-2 | 推理可重放 (Reproducible Inference)：提供 CLI 重跑定价，证明基于相同 hash 能得出相同结果 | P0 | Bowen | Todo | 命令行输出相同的 evidence_hash 和 quote_hash | - |
+| VERIFY-2 | 推理可重放 (Reproducible Inference)：提供 CLI 重跑定价，证明基于相同 hash 能得出相同结果 | P0 | Bowen | 本地 Done | CLI/API/控制台比对 decision_id、evidence_hash、quote_hash 与保存报价，篡改失败 | 2026-10-15 WP5.5；结构化快照重放，不重跑 OCR/模型，不代替链上锚定。见 phase5-security-replay.md。 |
 | VERIFY-3 | 多方推理共识上链：把 AI-20 的多 LLM 共识元数据（中位数、分歧度等）写入合约事件 | P1 | Bowen | Todo | 检查合约事件中包含 consensus attestation | - |
 
 ### 16.2 智能账户与 Agent 钱包 (Smart Account & Agent Wallet)
@@ -649,8 +676,8 @@ npm run demo
 ### 16.4 Agent 间协作协议 (Agent-to-Agent Commerce)
 | ID | Task | Priority | Owner | Status | Verification | Done Evidence |
 |---|---|---|---|---|---|---|
-| A2A-1 | Agent 任务卡片 (A2A Agent Card)：发布 `/.well-known/agent.json` 声明能力和定价 | P0 | Bowen | Todo | 访问该 endpoint 返回合法的 A2A 协议 JSON | - |
-| A2A-2 | Agent 间委托定价：外部 Agent 发送委托，AgentBL 返回报价和 x402 付费证据 | P1 | Bowen | Todo | 通过另一个 MCP Client (如 Claude Desktop) 发起完整交互 | - |
+| A2A-1 | 发布 A2A 1.0 Agent Card（标准路径及旧路径别名） | P0 | Bowen | 本地 Done | supportedInterfaces/skills/schema、运行模式/价格、可信公开 origin；见 phase6-interoperability.md |
+| A2A-2 | Agent 间委托定价：MCP/A2A/HTTP 共用报价及可选交付证据 | P1 | Bowen | 本地 Done | 官方 SDK stdio 子进程、同一后端、Demo 402 交付与中立证据；桌面客户端人工验收另列 |
 
 ### 16.5 交易意图架构 (Intent-Based Execution)
 | ID | Task | Priority | Owner | Status | Verification | Done Evidence |
@@ -663,7 +690,7 @@ npm run demo
 |---|---|---|---|---|---|---|
 | STREAM-1 | 链上事件实时流：WebSocket 订阅事件，实时渲染为动态时间轴，不再需要手动刷新 | P0 | Bowen | Todo | 页面开着时注入事件，UI 自动新增流光动画节点 | - |
 | STREAM-2 | 全球风险热力图：展示航线、战争、天气风险，与 xAPI 联动 | P1 | Bowen | Todo | UI 展示风险热力图，并随 scenario 切换实时变色 | - |
-| DEMO-9 | "Holy Sh*t" 一键全演示：自动跑通上传->购买->定价->暂停->兑付的全流程，并带 3s 延迟和高亮 | P0 | Bowen | Todo | 点击 "▶ Full Demo"，不再需任何点击操作即可跑完全场 | - |
+| DEMO-9 | 一键全演示：单证->模拟认购->风险定价/暂停/恢复->到港->付款/结算审批；可调速度和高亮 | P0 | Bowen | 本地 Done | 2026-10-15：后台播放 10 步，键盘停止、页面刷新进度、幂等/并发/模式保护；按既定策略，付款与结算各须一次明确审批。见 phase4-console-demo.md。 | 原“无需任何点击即兑付”的目标按独立审批规则修正；未进行真实付款或链上写入。 |
 | DEMO-10 | 对比演示：侧边或分屏对比银行 45 天 vs AgentBL 60 秒 | P0 | Bowen | Todo | 页面上有明确的 Value Proposition 视觉对比 | - |
 | DEMO-11 | 评委专属 Dashboard：展示全部技术证据、trace 链接和 Tx Hash，供一键核查 | P1 | Bowen | Todo | 有一个 /evidence 面板，汇总所有的 Explorer 链接 | - |
 
@@ -672,7 +699,7 @@ npm run demo
 |---|---|---|---|---|---|---|
 | ECON-1 | 动态定价交互模拟器：拖动滑块实时看到战争、天气风险如何改变发行价 | P0 | Bowen | Todo | 滑动 UI 进度条，调用 mock pricing 引擎实时输出数值 | - |
 | SEC-1 | 合约静态分析 (Slither)：修复所有 High/Medium finding，生成报告 | P0 | Bowen | Todo | `slither .` 零 High 级漏洞，生成 report.md | - |
-| SEC-2 | Agent 权限隔离矩阵：文档化 AI 的不可操作范围，展示约束能力 | P0 | Bowen | Todo | 新增 `docs/security-matrix.md` 并被 README 引用 | - |
+| SEC-2 | Agent 权限隔离矩阵：文档化 AI 的不可操作范围，展示约束能力 | P0 | Bowen | Done | 新增 `docs/agent-security-matrix.md` 并被 README 引用 | 2026-10-15 WP5.7；按实际策略、自主级别、角色、动作、接口及人工恢复记录。 |
 
 ---
 
@@ -1152,7 +1179,7 @@ MBOX-PM-4 完成标准：产品定义、credential 字段、视觉/分享白名�
 | MBOX-AI-1 | P0 | 生成揭晓版 `AI Risk Passport`：适配理由、定价分解、压力回收、证据 freshness | AI | Done | schema + groundedness eval；LLM 失败有 deterministic fallback | `src/mystery/riskPassport.js`：确定性报告含 suitability、真实定价分解、压力回收、抵押覆盖、evidence graph/freshness 与 non-guarantee；端到端 groundedness 断言通过 |
 | MBOX-BE-6 | P0 | 处理候选在支付前后失效：fail closed、记录 abort、免费重开/退款状态，不静默替换 | Backend | Done | 状态竞态与 Paused/Frozen 注入测试 | 付款前全候选重验并 `PAYMENT_NOT_SETTLED`；付款后竞态进入 `ABORTED` + `REFUND_OR_FREE_REOPEN_AVAILABLE`；API/store 注入测试通过 |
 | MBOX-BE-7 | P1 | 将 Mystery reveal 来源写入 portfolio/analytics，不改变原始 PricingQuote 或 yield | Backend | Done | portfolio API 与事件漏斗测试 | `src/mystery/passport.js`/`analytics.js`、`src/mystery/service.js`、`src/app/store.js`：Discovery/Investor Journey signed credential、脱敏公开验证、`MYSTERY_VOYAGE` source attribution、匿名 funnel 与 quote/yield integrity；`tests/mysteryPassport.test.js`、`tests/mysteryApi.test.js` 全通过 |
-| MBOX-MCP-1 | P1 | 增加 `preview_mystery_voyage` / `verify_mystery_reveal` MCP 能力，购买仍受预算与人工授权约束 | AI + Backend | Done | MCP Inspector 调用 + 超预算拒绝测试 | `src/mcp/tools.js`/`mcpServer.js`：preview 只读候选与人工确认边界，verifier 本地 fail-closed；MCP surface=9 tools+3 resources；`tests/mysteryMcp.test.js`、`tests/mcp*.test.js`、check/preflight manifest gates 全通过 |
+| MBOX-MCP-1 | P1 | 增加 `preview_mystery_voyage` / `verify_mystery_reveal` MCP 能力，购买仍受预算与人工授权约束 | AI + Backend | Done | MCP Inspector 调用 + 超预算拒绝测试 | `src/mcp/tools.js`/`mcpServer.js`：preview 只读候选与人工确认边界，verifier 本地 fail-closed；当前 MCP surface=15 tools+5 resources；`tests/mysteryMcp.test.js`、`tests/mcp*.test.js`、check/preflight manifest gates 全通过 |
 
 #### 20.7.3 Frontend / Experience
 

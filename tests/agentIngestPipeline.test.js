@@ -8,6 +8,7 @@ import { AgentOrchestrator } from '../src/agent/orchestrator.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
 import { createAgentService, loadChainConfig } from '../src/agent/runtime/factory.js';
 import { pdfFixture } from './helpers/pdf.js';
+import { createExternalComplianceChecker } from '../src/agent/compliance/external.js';
 
 const UPLOADS = new URL('../data/uploads/', import.meta.url);
 const COPPER = ['bill-of-lading.md', 'commercial-invoice.md', 'insurance-policy.md'];
@@ -232,14 +233,122 @@ test('ingest pipeline: a payment address smuggled into a trade field holds the c
 
 test('ingest pipeline: a sanctioned counterparty is rejected, not held', async () => {
   const { service } = await runtime();
-  await upload(service, { case_id: 'CASE-UP-SAN-1', documents: await copperDocs((name, text) => text.replace('Strait Resources Trading Pte. Ltd.', 'Sanctioned Trading Pte. Ltd.')) });
+  await upload(service, { case_id: 'CASE-UP-SAN-1', documents: await copperDocs((name, text) => text.replace('Strait Resources Trading Pte. Ltd.', 'Demo Cobalt Lantern Trading Pte. Ltd.')) });
   const [decision] = await decisionsOf(service);
   assert.equal(decision.action, 'REJECT');
   assert.equal(decision.status, 'REJECTED');
   assert.equal(decision.policy.verdict, 'REJECTED');
   assert.ok(decision.findings.some((f) => f.kind === 'COMPLIANCE_BLOCK'));
   assert.equal(storeState.pools.has('CASE-UP-SAN-1'), false);
-  assert.match(decision.proposal.params ? JSON.stringify(decision.findings) : '', /demo sanctions keyword/u, 'the finding says it is a keyword demo rule, not a real list screening');
+  assert.equal(decision.proposal.params.compliance.status, 'BLOCK');
+  assert.match(decision.proposal.params.compliance.disclaimer, /bundled demo list/u);
+  assert.ok(decision.findings.some((finding) => finding.evidence?.entry_id === 'DEMO-ENTITY-001'));
+});
+
+test('compliance v2 pipeline: near entity holds, corrected documents rerun screening and retain old evidence', async (t) => {
+  const { service } = await runtime(); t.after(() => service.stop());
+  const body = { case_id: 'CASE-COMP-NEAR', documents: await copperDocs((name, text) => text.replace('Strait Resources Trading Pte. Ltd.', 'Demo Cobalt Lantren Trading Pte. Ltd.')) };
+  const uploaded = await upload(service, body), held = service.ingest.getJob(uploaded.job.job_id);
+  assert.equal(held.result_action, 'HOLD_FOR_REVIEW'); assert.equal(held.compliance.status, 'REVIEW');
+  assert.equal(storeState.pools.has(body.case_id), false);
+  assert.ok(held.findings.some((finding) => finding.kind === 'COMPLIANCE_REVIEW' && finding.evidence.entry_id === 'DEMO-ENTITY-001'));
+  assert.equal((await upload(service, body)).job.job_id, held.job_id);
+  const review = await service.reviewDocuments(held.job_id, { documents: await copperDocs(), note: 'Verified the correct counterparty against the original files.' });
+  await service.waitFor(review.idempotency_key, 20000); await service.bus.idle();
+  const finished = service.ingest.getJob(review.job.job_id);
+  assert.equal(finished.compliance.status, 'CLEAR'); assert.equal(finished.steps.length, 9);
+  assert.ok(['OPEN', 'OPEN_WITH_WARNING'].includes(finished.result_action));
+  assert.deepEqual(service.ingest.getJob(held.job_id).compliance, held.compliance);
+  const decisions = await decisionsOf(service);
+  assert.ok(decisions.some((decision) => decision.input_snapshot.compliance_report_hash && decision.input_snapshot.compliance_list_version === 'demo-screening-v2.0'));
+});
+
+test('compliance v2 pipeline: unknown ports and dual-use HS both prevent opening', async (t) => {
+  const { service } = await runtime(); t.after(() => service.stop());
+  for (const [name, edit, code] of [
+    ['PORT', (name, text) => text.replace('Singapore (SGSIN)', 'Unlisted Example Port'), 'PORT_UNKNOWN'],
+    ['HS', (name, text) => text.replaceAll('7403.11', '8542.31'), 'HS_REVIEW']
+  ]) {
+    const result = await upload(service, { case_id: `CASE-COMP-${name}`, documents: await copperDocs(edit) });
+    const job = service.ingest.getJob(result.job.job_id);
+    assert.equal(job.result_action, 'HOLD_FOR_REVIEW'); assert.equal(job.compliance.status, 'REVIEW');
+    assert.ok(job.compliance.checks.some((check) => check.code === code));
+    assert.equal(storeState.pools.has(`CASE-COMP-${name}`), false);
+  }
+});
+
+test('compliance v2 pipeline: a transport port and synthetic IMO block with exact field evidence', async (t) => {
+  const { service } = await runtime(); t.after(() => service.stop());
+  for (const [id, edit, code] of [
+    ['JUR', (name, text) => text.replace('Singapore (SGSIN)', 'Bandar Abbas (IRBND)'), 'JURISDICTION_BLOCK'],
+    ['IMO', (name, text) => name === 'bill-of-lading.md' ? text + '\n**Vessel IMO:** 9999993\n' : text, 'VESSEL_MATCH_BLOCK']
+  ]) {
+    const result = await upload(service, { case_id: `CASE-COMP-${id}`, documents: await copperDocs(edit) });
+    const job = service.ingest.getJob(result.job.job_id);
+    assert.equal(job.result_action, 'REJECT'); assert.equal(job.compliance.status, 'BLOCK');
+    assert.ok(job.compliance.checks.some((check) => check.code === code && check.evidence.entry_id));
+    assert.equal(storeState.pools.has(`CASE-COMP-${id}`), false);
+    if (id === 'IMO') assert.ok(job.extraction.some((document) => document.fields.vessel_imo === '9999993'));
+  }
+});
+
+test('compliance v2 pipeline: eBL HS cannot be overwritten by the clean invoice HS', async (t) => {
+  const { service } = await runtime(); t.after(() => service.stop());
+  const result = await upload(service, { case_id: 'CASE-COMP-HS-CONFLICT', documents: await copperDocs((name, text) => name === 'bill-of-lading.md' ? text.replaceAll('7403.11', '9301.00') : text) });
+  const job = service.ingest.getJob(result.job.job_id);
+  assert.equal(job.result_action, 'REJECT');
+  assert.ok(job.compliance.checks.some((check) => check.evidence.field === 'bill_of_lading.hs_code' && check.code === 'HS_BLOCK'));
+});
+
+test('compliance v2 pipeline: a later clean document of the same type cannot hide a blocked source', async (t) => {
+  const { service } = await runtime(); t.after(() => service.stop());
+  for (const [caseId, name, edit, code] of [
+    ['CASE-COMP-TWO-BL', 'bill-of-lading.md', (text) => text.replace('Strait Resources Trading Pte. Ltd.', 'Demo Cobalt Lantern Trading'), 'ENTITY_MATCH_BLOCK'],
+    ['CASE-COMP-TWO-INV', 'commercial-invoice.md', (text) => text.replaceAll('7403.11', '9301.00'), 'HS_BLOCK']
+  ]) {
+    const original = await copperDocs();
+    const bad = { name: `blocked-${name}`, mime_type: 'text/markdown', text: edit(await read('copper-sg-shanghai', name)) };
+    const uploaded = await upload(service, { case_id: caseId, documents: [bad, ...original] });
+    const job = service.ingest.getJob(uploaded.job.job_id);
+    assert.equal(job.result_action, 'REJECT'); assert.equal(job.compliance.status, 'BLOCK');
+    assert.ok(job.compliance.checks.some((check) => check.code === code && check.evidence.document_name === bad.name && check.evidence.field.startsWith('documents.')));
+    assert.equal(storeState.pools.has(caseId), false);
+  }
+});
+
+test('compliance v2 pipeline: CNY warehouse and incomplete invoice are screened before pricing exits', async (t) => {
+  const { service } = await runtime(); t.after(() => service.stop());
+  const warehouse = await copperDocs((name, text) => text.replaceAll('上海锦源国际贸易有限公司', 'Demo Cobalt Lantern Trading'), 'alu-fs-wh-00014', ['warehouse-receipt.md', 'commercial-invoice.md']);
+  const result = await upload(service, { case_id: 'CASE-COMP-CNY', documents: warehouse });
+  const job = service.ingest.getJob(result.job.job_id);
+  assert.equal(job.result_action, 'REJECT'); assert.equal(job.compliance.status, 'BLOCK');
+  assert.ok(job.findings.some((finding) => finding.kind === 'CURRENCY_REVIEW_REQUIRED'));
+  const invoice = await copperDocs((name, text) => text.replaceAll('Strait Resources Trading Pte. Ltd., Singapore', 'Demo Cobalt Lantern Trading'), 'copper-sg-shanghai', ['commercial-invoice.md']);
+  const partial = await upload(service, { case_id: 'CASE-COMP-PARTIAL', documents: invoice });
+  assert.equal(service.ingest.getJob(partial.job.job_id).result_action, 'REJECT');
+  assert.equal(storeState.pools.has('CASE-COMP-CNY'), false); assert.equal(storeState.pools.has('CASE-COMP-PARTIAL'), false);
+});
+
+test('compliance v2 pipeline: asynchronous provider failure is a review, with no Demo fallback opening', async (t) => {
+  const checker = createExternalComplianceChecker({ url: 'https://screening.invalid/v1', timeoutMs: 5, fetchImpl: async () => new Promise(() => {}) });
+  const { service } = await runtime({ orchestrator: new AgentOrchestrator({ checkCompliance: checker }) });
+  t.after(() => service.stop());
+  const result = await upload(service, { case_id: 'CASE-COMP-EXTERNAL', documents: await copperDocs() });
+  const job = service.ingest.getJob(result.job.job_id);
+  assert.equal(job.result_action, 'HOLD_FOR_REVIEW');
+  assert.ok(job.compliance.checks.some((check) => check.code === 'EXTERNAL_UNAVAILABLE'));
+  assert.equal(storeState.pools.has('CASE-COMP-EXTERNAL'), false);
+});
+
+test('compliance v2 pipeline: versioned report and matching evidence survive a restart', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-comp-persist-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const first = await runtime({ dir });
+  const result = await upload(first.service, { case_id: 'CASE-COMP-PERSIST', documents: await copperDocs((name, text) => text.replace('Strait Resources Trading Pte. Ltd.', 'Demo Cobalt Lantren Trading')) });
+  const original = first.service.ingest.getJob(result.job.job_id).compliance;
+  await first.service.stop(); const second = await runtime({ dir }); t.after(() => second.service.stop());
+  assert.deepEqual(second.service.ingest.getJob(result.job.job_id).compliance, original);
+  assert.deepEqual((await decisionsOf(second.service))[0].proposal.params.compliance, original);
 });
 
 test('ingest pipeline: documents that disagree on the quantity are held for a person', async () => {

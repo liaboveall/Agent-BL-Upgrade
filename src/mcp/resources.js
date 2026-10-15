@@ -3,10 +3,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listHarnessCaseFiles } from '../core/scenarioRunner.js';
 import chainConfig from '../../scripts/lib/chain-config.cjs';
+import { publicAgentPolicy, externalDecision } from './agentTools.js';
+import { callAgentBackend } from './agentClient.js';
+import { HttpError } from '../app/http.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export const MCP_RESOURCES = Object.freeze([
+  Object.freeze({ uri: 'agentbl://agent/policy', name: 'Agent Policy',
+    description: 'Current public policy, autonomy and operator-event boundaries', mimeType: 'application/json' }),
+  Object.freeze({ uri: 'agentbl://agent/decisions/recent', name: 'Recent Agent Decisions',
+    description: 'Latest 20 redacted decisions from the existing application runtime', mimeType: 'application/json' }),
   Object.freeze({
     uri: 'agentbl://cases/catalog',
     name: 'Trade Case Catalog',
@@ -115,12 +122,26 @@ function riskMethodology() {
   };
 }
 
-export async function readMcpResource(uri) {
+export async function readMcpResource(uri, context) {
   if (typeof uri !== 'string' || !uri.startsWith('agentbl://')) {
     throw Object.assign(new Error('Resource URI must use the agentbl:// scheme'), { code: -32602 });
   }
   if (uri === 'agentbl://cases/catalog') return content(uri, await caseCatalog());
   if (uri === 'agentbl://risk/methodology') return content(uri, riskMethodology());
   if (uri === 'agentbl://contracts/deployments') return content(uri, await deploymentEvidence());
+  if (['agentbl://agent/policy', 'agentbl://agent/decisions/recent'].includes(uri)) {
+    try {
+      if (uri === 'agentbl://agent/policy') {
+        const policy = context ? await publicAgentPolicy(context.getService())
+          : (await callAgentBackend('get_agent_policy')).result;
+        return content(uri, policy);
+      }
+      const result = context ? await context.getService().listDecisions({ limit: 20 })
+        : (await callAgentBackend('list_agent_decisions', { limit: 20 })).result;
+      return content(uri, { ...result, decisions: result.decisions.map(externalDecision) });
+    } catch (error) {
+      throw Object.assign(new Error(error instanceof HttpError ? error.message : 'Agent runtime resource is unavailable'), { code: -32603 });
+    }
+  }
   throw Object.assign(new Error(`Unknown resource URI: ${uri}`), { code: -32002 });
 }

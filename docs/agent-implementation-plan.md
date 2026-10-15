@@ -1,8 +1,8 @@
 # AgentBL Agent 全量实现规划
 
-> 版本：v1.7（2026-10-14；WP2.2 PDF/可选视觉/文本补全/仓单）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 另行新增。
+> 版本：v1.17（2026-10-15；选定开发范围完成，最终交付验收见 final-acceptance-20261015.md；首次批次/后台启用单独确认；全项目 API 模型继续为 x-test-2）。v1.1 按用户确认的结论更新了 D1、D2、D4、D8：Live 只提方案；不新增 Agent 执行密钥；Live 演示用现有 pool #2；现有合约不改，决策锚定合约 WP7.1 独立新增。
 > 基线：`main` @ `2292906`。该基线下 `npm test` 541 个用例全部通过，合约测试 74 个通过。
-> 状态：**开发中**（P0 与 P1 WP3.6 / WP3.8 / WP0.6 / WP2.2 已完成本地实现与验收；WP0.6 另有实链只读复验。下一入口 WP2.3 合规 v2。WP2.2 的视觉提供方是 mock 验证；真实提供方、钱包/链上写入与用户人工验收另有证据边界，见 §13）。开发会话按本文推进，并随时更新 §13 的状态表。
+> 状态：**选定开发范围实现与本地交付验收通过**（P0 与 P1 WP3.6 / WP3.8 / WP0.6 / WP2.2 / WP2.3 / WP2.4 / WP2.6 / WP2.7 / WP2.9 / WP4.4 / WP4.5 已完成本地实现与自动化验证；WP0.6 另有实链只读复验。Phase 4 整合及 Phase 5 全量完成；WP5.9 已按本次授权完成三笔 REPRICE / PAUSE / RESUME，回执、事件、历史状态与三份决策重放均通过。最终 pool #2 为可认购的 Repriced / 0.7910。Phase 6 WP6.1–WP6.4 全量完成本地实现与自动化验收；Phase 7 WP7.1 已完成本地实现与授权的三笔测试网部署/初始化并独立核验；首次批次及后台启用待单独确认。WP2.9 模型仅使用本地桩验证，WP2.7 真实 RPC 部署历史与本次定价事件已补证，内置浏览器操作未验收，WP2.4/2.6 真实 owner 交易及 USDC 付款尚未验收。视觉和外部合规接口仅以 mock 验证；真实提供方、owner/钱包生命周期与用户人工验收另有证据边界，见 §13）。开发会话按本文推进，并随时更新 §13 的状态表。
 > 范围：项目里所有“应有的 Agent 功能”：`docs/tasks.md`、`docs/PRD.md`、`docs/injective-hackathon-gap-analysis2.md` 和 README 中承诺过的 Agent 能力，以及顺带的改进与优化。
 
 ---
@@ -41,7 +41,7 @@
 - `npm run dev` 是普通 `node`，不会热更新，改了服务端代码要重启。停服务用 PowerShell：先 `Get-NetTCPConnection -LocalPort 3000 -State Listen`，再 `Stop-Process`。
 - 测试不读开发者的 `.env`：`src/env.js` 在 `NODE_TEST_CONTEXT` 下会跳过它。新代码不要绕开这一点，`npm test` 里也绝不能调用真实的 LLM 或链。
 - Node：应用要求 ≥ 20.11，Hardhat 要求 ≥ 22.13，本机是 v26。新依赖必须同时支持 Node 20.11 和 Docker 的 `node:22-alpine`。
-- 本机 `.env` 配了一个 OpenAI 兼容的 LLM（NUS SoCLaaS 的 GLM 推理模型，支持工具调用、流式和内联图片；推理模型要配合 `LLM_REASONING_EFFORT` 和 `LLM_MAX_TOKENS_CAP` 使用，见 `docs/DEPLOYMENT.md`），以及 Live x402 需要的各个密钥。**没有** `XAPI_KEY` 和行情类 key，所以世界风险和行情都走离线 fixture。
+- 本机 `.env` 配有 OpenAI 兼容推理端点和 Live x402 所需配置。2026-10-15 全项目及本地 `LLM_MODEL` 统一为 `x-test-2`，其真实能力尚未复验（推理预算选项见 `docs/DEPLOYMENT.md`）。**没有** `XAPI_KEY` 和行情类 key，所以世界风险和行情都走离线 fixture。
 - 如果在 worktree 里开发，先完成 WP0.5。worktree 里没有 `.env`（被 git 忽略），需要真实 LLM 或链的验证在主目录做。**推荐直接在主目录开发。**
 
 ### 0.5 命令速查
@@ -49,7 +49,7 @@
 ```text
 npm test / npm run lint / npm run check / npm run test:coverage
 npm run test:contracts            # Hardhat，Node ≥ 22.13
-npm run preflight                 # 61 项发布总闸门；Live 专属项在 Demo 下为 SKIP
+npm run preflight                 # 71 项发布总闸门；Live 专属项在 Demo 下为 SKIP
 npm run eval:agent                # 真实组件确定性评测与报告；--check 不覆盖报告
 npm run dev                       # http://localhost:3000
 ```
@@ -430,8 +430,10 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | `AGENT_INSURANCE_WARN_DAYS` | `7` | 保险即将到期的提醒天数 |
 | `AGENT_EXECUTOR_PRIVATE_KEY` | 空（默认不用） | D2 的可选升级；纳入 `SIGNER_ROLES`。配置后，执行者角色的 4 个动作改由服务器一键执行 |
 | `AGENT_CHAIN_CONFIRMATIONS` | `1` | 等待的确认数 |
+| `AGENT_SETTLEMENT_RECIPIENT` | 空 | WP2.6 的明确贸易还款收款地址；空则关闭 Live USDC 付款接入，不继承 x402/owner 地址 |
 | `AGENT_CHAIN_POLL_SEC` | `15` | 链上监听周期 |
-| `AGENT_CHAIN_START_BLOCK` | 部署区块 | 链上监听的起点 |
+| `AGENT_CHAIN_WATCHER_ENABLED` | `true` | 持久化 Live 运行时启动只读监听；Demo 不访问 RPC |
+| `AGENT_CHAIN_START_BLOCK` | 空，采用最早监听合约部署区块 | 显式起点只能向前扩展历史，不能跳过部署；修改需对账游标 |
 | `AGENT_SCENARIO_SPEED` | `1` | Demo 场景时钟倍速 |
 | `AGENT_UPLOAD_MAX_BYTES` | `8388608` | 单个单证上限（base64 前） |
 | `AGENT_VISION_ENABLED` | `false` | 图片单证走 LLM 视觉抽取 |
@@ -545,7 +547,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
   - `npm run agent:approve -- --list`：列出等待签名的审批。
   - `npm run agent:approve -- --id <approval_id> [--confirm]`：
     1. 用 `GET /api/agent/approvals/:id` 读取要签的交易，打印合约、方法、参数、网络和预估 gas。
-    2. 默认 dry-run（只做 `staticCall` 预检），加 `--confirm` 才用本机的 `DEPLOYER_PRIVATE_KEY` 签名发送。开盘需要 3 笔交易时按顺序发送，每笔都等确认。
+    2. 默认 dry-run（只做 `staticCall` 预检），加 `--confirm` 才用本机的 `DEPLOYER_PRIVATE_KEY` 签名发送。开盘分别使用 `--step 0/1/2 --confirm`，每次只发送明确授权的一笔，核验回执后再继续；CLI 保存本地广播检查点，未知结果不自动重发。
     3. 把 `tx_hash` POST 到 `attach-tx`。服务器从链上读回执和事件，核对合约、方法、参数一致后才标记完成。**服务器绝不只凭客户端给的哈希就信任。**
   - CLI 只在运维者本机运行；Web 服务器进程不读取 owner 密钥。
 - 测试：状态机；过期；未带令牌被拒；分流规则（每类动作走对路径）；`attach-tx` 对假哈希、合约不符、方法或参数不符、事件缺失都要拒绝（链上部分用假 provider）。
@@ -641,7 +643,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
   - `data/compliance/screening-list.json`：
     - 显式标注为“演示名单”，带版本、`as_of` 和来源说明。
     - 实体全部是**虚构**的，不出现真实公司名，以免误伤。
-    - 司法辖区用公开且广为人知的全面制裁国家或地区，例如 IR、KP、SY、CU；同时注明“示例，需以官方名单为准”。
+  - 司法辖区用公开项目资料作为背景，例如 IR、KP、CU；同时注明“示例，需以官方名单及具体交易规则为准”。2026-10-14 复核后移除旧 SY 示例，官方一般叙利亚制裁计划已于 2025-07-01 终止，来源见 compliance-screening.md。
     - 另含示例船舶 IMO，以及两用物项和军品的 HS 前缀表。
   - `data/compliance/ports.json`：港口到国家的映射，覆盖现有案例里的所有港口。
 - **匹配**：先规范化（统一大小写、去标点、去掉 Ltd/Co/Pte/LLC 等后缀），再用 token Jaccard 加 Jaro-Winkler 打分：≥ 0.92 算命中（BLOCK），0.85–0.92 送人工复核（REVIEW）。
@@ -946,7 +948,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
   2. 用管理员令牌通过审批接口批准，由服务器用 `PRICING_UPDATER` 执行。
   3. 每一步都核对链上事件和 `stateOf`。
   - **绝不对 pool #2 发冻结、清算、结算**（§4.5 第 2 条）。
-  - 合计约 4 笔交易、约 0.0001 INJ，由定价密钥支付（余额约 0.05 INJ）。
+  - 默认三笔交易，由专用定价密钥支付；可选第四笔恢复价格另行授权，费用以真实回执为准。
 - `--lifecycle` 模式（可选）：在原油案例的新池上走完整生命周期：开盘、认购、离港、付款和到港证明、结算。需要 owner 签名的步骤会停下来，提示运行 CLI。这会让该池进入终态。
 - 产出 `docs/evidence/agent-live-smoke.json`。必须加 `--confirm` 才发交易；运行前要征得用户同意（§16），`--lifecycle` 里的每笔 owner 交易也要逐笔同意。
 
@@ -1035,13 +1037,13 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 1.7 | PoolRegistry | P1 | 1.5 | S | Done（2026-10-12；Live 的 pool #2 映射用假链测过，真链核对在首次 Live 启动时发生） |
 | 2.1 | 单证接入 v2 | P0 | 1.5 | M | Done（2026-10-13；旧 `/api/ebl/upload` 带内容时转发） |
 | 2.2 | 解析器增强（文本 P0；PDF 和视觉 P1） | P0/P1 | 2.1 | L | Done（2026-10-14；PDF 文本层/页码、可选视觉和文本补全、中文仓单与 CNY 保真；17 项新增行为测试、118 项浏览器检查；视觉为 mock，扫描 OCR/真实模型准确率未验收；见 document-extraction.md） |
-| 2.3 | 合规 v2 | P1 | — | M | Todo |
-| 2.4 | 编排器 v2 | P0 | 2.1、2.2 | M | Demo 部分 Done（2026-10-13：`processDocuments`）；Live 开盘的 3 笔 owner 交易与 `isUnique` 检查 Todo |
+| 2.3 | 合规 v2 | P1 | — | M | Done（2026-10-14；版本化虚构名单、模糊实体/港口/IMO/HS、逐份单证与三态证据、复核/重启保存；外部接口 mock 验证且默认关闭；见 compliance-screening.md） |
+| 2.4 | 编排器 v2 | P0 | 2.1、2.2 | M | 本地实现 Done（2026-10-14；isUnique、三步 owner 提案/依赖编号、已登记货物关联、逐步回执与重启/广播恢复；21 项新增行为测试。真实 owner 交易未运行；见 live-opening.md） |
 | 2.5 | 持续监控与场景播放器 | P0 | 1.5 | L | Done（2026-10-13；航程只派生保险，离港和到港来自场景或人工证明） |
-| 2.6 | 结算流水线 | P0/P1 | 2.5 | M | Demo 部分 Done（2026-10-13：两份证明齐了才提出 SETTLE，且需审批）；Live 的 USDC 回执核验 Todo |
-| 2.7 | 链上监听 | P1 | 1.7 | M | Todo |
+| 2.6 | 结算流水线 | P0/P1 | 2.5 | M | 本地实现 Done（2026-10-14；规范链 USDC Transfer、六位小数原子金额、持久跨池防复用、链上双证明、逐笔审批/CLI 与重启恢复；35 项新增行为测试。真实付款及 owner 交易未验收；见 live-settlement.md） |
+| 2.7 | 链上监听 | P1 | 1.7 | M | 本地实现 Done（2026-10-15；只读确认日志/部署起点、持久游标/重启、池发现、金额/证明对账、紧急停止与审批恢复、RPC/重组边界；40 项新增行为测试、91 项浏览器检查。WP5.9 补证真实 RPC 部署历史与定价事件；内置浏览器/人工验收仍待完成；见 chain-watcher.md 和 evidence/agent-live-smoke.json） |
 | 2.8 | 出口商偏好 | P0 | 2.4 | S | Done（2026-10-13；前端已保存到服务器） |
-| 2.9 | PRD §9.2 Agent API | P1 | 2.4 | S | Todo |
+| 2.9 | PRD §9.2 Agent API | P1 | 2.4 | S | 本地实现 Done（2026-10-15；五个无状态接口、原始输入/逐份单证承诺、版本化合规、确定性报价与简报、规范图哈希、输入/限流/并发保护；54 项新增行为测试、54 项浏览器检查，全量 1115/1115；全项目 API 默认及本地 LLM_MODEL=x-test-2。提供方/内置窗格/人工验收未确认；见 agent-api.md） |
 | 3.1 | InvestorContext | P0 | — | M | Done（2026-10-13） |
 | 3.2 | 意图路由 | P0 | 3.1 | M | Done（2026-10-13；区间需澄清，LLM 提供方未实测） |
 | 3.3 | 检索 | P0 | 3.1 | M | Done（2026-10-13） |
@@ -1050,26 +1052,26 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | 3.6 | 动态重排推送 | P1 | 3.5、1.5 | M | Done（2026-10-13；原条件重排、关注、SSE 最新快照续接、双订阅与决策链接；见 copilot.md） |
 | 3.7 | 前端统一 | P0 | 3.5 | M | Done（2026-10-13） |
 | 3.8 | 动作提案 | P1 | 3.7 | M | 本地实现 Done（2026-10-13；确认/取消、Demo 持仓和报告、Live 钱包辅助函数与回执桩；真实钱包/交易未验收，按 §16） |
-| 4.1 | Agent 控制台 | P0 | 1.5 | L | Done（2026-10-12；暂缺：重放校验按钮（5.5）、模型用量（接入 LLM 后）、点击决策联动价格瀑布图（4.4）） |
+| 4.1 | Agent 控制台 | P0 | 1.5 | L | 本地实现 Done（2026-10-15 复验；状态/来源/审批/追踪、模型实际返回用量、历史报价导航；跨阶段重放功能仍由 5.5 交付） |
 | 4.2 | eBL 管理 | P0 | 2.1 | M | Done（2026-10-13；文本上传、字段来源、SSE、修正补件重跑） |
 | 4.3 | 持仓 | P0 | 0.1 | S | Done（2026-10-13；Demo 服务器持仓、当前镜像与决策；Live 持仓不在本包） |
-| 4.4 | ID 贯通 | P1 | 4.1 | S | Todo |
-| 4.5 | 一键全流程演示 | P1 | 2.5、4.1 | M | Todo |
-| 4.6 | 国际化、无障碍、移动端 | P0 | 4.x | S | Done（2026-10-13；全站中英、1440/390px、40 个页面/弹窗组合和 255 项浏览器检查；真实读屏器/实体手机未验收） |
-| 5.1 | 重建评测体系 | P0 | 2.x、3.x | L | Done（2026-10-13；7 类实际组件评测，44 段双语对话/100 轮；真实 LLM 未运行） |
-| 5.2 | 红队生成器 | P1 | 5.1 | M | Todo |
-| 5.3 | 新鲜度接入 | P1 | 2.5 | S | Todo |
-| 5.4 | 可靠性矩阵 | P0 | 1.x | M | Done（2026-10-13；15 个故障矩阵测试，假链/注入时钟；未确认广播不重发） |
-| 5.5 | 决策重放 | P1 | 1.5 | S | Todo |
-| 5.6 | 隐私与保留 | P1 | 1.5 | S | Todo |
-| 5.7 | 权限矩阵文档 | P1 | 1.2 | S | Todo |
-| 5.8 | preflight 扩充 | P0 | 5.1 | S | Done（2026-10-13；61 项，实际执行计数与 SKIP 分开记录） |
-| 5.9 | 测试网冒烟（pool #2 默认；`--lifecycle` 可选） | P1 | 1.3、1.4、1.7、§16 | S | Todo |
-| 6.1 | MCP | P1 | 1.5、3.5 | M | Todo |
-| 6.2 | A2A Agent Card | P1 | — | S | Todo |
-| 6.3 | x402 discovery | P2 | — | S | Todo |
-| 6.4 | 委托定价 | P2 | 6.1 | M | Todo |
-| 7.1 | 决策锚定合约 `AgentDecisionLog` | P2 | 1.3、1.5、Phase 0–6 完成；部署前用户再确认 | M | Todo |
+| 4.4 | ID 贯通 | P1 | 4.1 | S | 本地实现 Done（2026-10-15；五处统一引用、保存原报价、跨案例选择和池高亮、历史只读报价、当前池状态；报告付款与执行交易分开，缺失引用不编造） |
+| 4.5 | 一键全流程演示 | P1 | 2.5、4.1 | M | 本地实现 Done（2026-10-15；后台 API/四场景/逐步高亮/速度/键盘停止/页面刷新查看/幂等/并发与模式边界；完整场景从实际文件开始，付款和结算仍独立审批） |
+| 4.6 | 国际化、无障碍、移动端 | P0 | 4.x | S | 本地实现 Done（2026-10-15 增量；新流程 107 项中英/1440/390px 浏览器检查，长编号与窄屏瀑布图、焦点/通知/减弱动画；全站旧证据保留并另行回归，见 phase4-console-demo.md。真实读屏器/实体手机未验收） |
+| 5.1 | 重建评测体系 | P0 | 2.x、3.x | L | 本地 Done（2026-10-15 增量；原 7 类及生成变异评测，44 段双语/100 轮、26 个注入、17 个生成变异、20 个冻结闸门；真实 LLM 未运行） |
+| 5.2 | 红队生成器 | P1 | 5.1 | M | 本地 Done（2026-10-15；确定性 seed/虚构单证/八种变异类别，接入 eval/scenarios/preflight；有限合成样本） |
+| 5.3 | 新鲜度接入 | P1 | 2.5 | S | 本地 Done（2026-10-15；逐份上传/事件/风险观察与到期/来源状态、Live 发布时钟、过期复核与签名前复验、当前徽标及场景时钟；旧数据不恢复 Live 暂停） |
+| 5.4 | 可靠性矩阵 | P0 | 1.x | M | 本地 Done（2026-10-15 增量；16 个故障矩阵测试，加入 RPC 预检期间证据过期；假链/注入时钟，未确认广播不重发） |
+| 5.5 | 决策重放 | P1 | 1.5 | S | 本地 Done（2026-10-15；CLI/API/控制台，从持久结构化快照重算动作、ID、证据/报价承诺；篡改 FAIL，旧快照缺失明确 FAIL；不重跑原文/OCR/模型/链上执行） |
+| 5.6 | 隐私与保留 | P1 | 1.5 | S | 本地 Done（2026-10-15；递归脱敏、操作快照认证加密、密钥/认证失败拒绝、终态决策/审批/事件/轮转日志保留、未决保护与 SSE 序号检查点；原始上传私有保存供复核） |
+| 5.7 | 权限矩阵文档 | P1 | 1.2 | S | Done（2026-10-15；自主级别 × 签名角色 × 动作及接口/人工兜底，README 已引用 agent-security-matrix.md） |
+| 5.8 | preflight 扩充 | P0 | 5.1 | S | 本地 Done（2026-10-15；65 项，红队、新鲜度/重放、隐私/保留、人工冒烟安全加入；Demo Live 项 SKIP，Phase 5 基线 MCP 为 9 tools + 3 resources；Phase 6 当前为 69 项 / 15 tools + 5 resources） |
+| 5.9 | 测试网冒烟（pool #2 默认；`--lifecycle` 可选） | P1 | 1.3、1.4、1.7、§16 | M | Done（2026-10-15；用户授权的三笔 REPRICE / PAUSE / RESUME 已上链；精确 calldata、回执/规范区块、事件、历史状态、防重放和三份决策重放通过。PAUSE/RESUME 保留池价，最终 Repriced / 0.7910；无重复广播或第四笔恢复价格。可选 lifecycle 未执行；见 evidence/agent-live-smoke.json） |
+| 6.1 | MCP | P1 | 1.5、3.5 | M | 本地 Done（2026-10-15；见 phase6-interoperability.md 和 evidence/phase6-completion.json） |
+| 6.2 | A2A Agent Card | P1 | — | S | 本地 Done（2026-10-15；见 phase6-interoperability.md 和 evidence/phase6-completion.json） |
+| 6.3 | x402 discovery | P2 | — | S | 本地 Done（2026-10-15；见 phase6-interoperability.md 和 evidence/phase6-completion.json） |
+| 6.4 | 委托定价 | P2 | 6.1 | M | 本地 Done（2026-10-15；见 phase6-interoperability.md 和 evidence/phase6-completion.json） |
+| 7.1 | 决策锚定合约 `AgentDecisionLog` | P2 | 1.3、1.5、Phase 0–6 完成；部署前用户再确认 | M | 本地 Done（2026-10-15）；独立合约、终态/审批承诺、连续序号/Merkle 批次、重启/未知广播恢复、HTTP/CLI/中英详情和安全部署计划。1222/1222 Node、86 合约、296 浏览器、71 项闸门通过；授权的三笔测试网部署/初始化及独立核验完成；首批广播与后台启用待单独确认；见 phase7-decision-anchoring.md 与 evidence/phase7-completion.json |
 
 **推荐执行顺序**：
 
@@ -1091,7 +1093,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 2. **场景里离港在台风之前。** 合约的 `markInTransit` 只接受 `Funded` / `Subscribed`，已经 `Repriced` 的池子不能再离港，所以 `copper-typhoon` 的顺序是：认购 → 离港 → 台风预警（改价）→ 升级（暂停）→ 解除（恢复）→ 到港 → 付款（等批准）→ 结算（等批准）。这是合约的真实约束，不是演示的取巧。
 3. **`warcrisis-hormuz` 用原油案例**，不是规划里的铜战争案例：后者在目录里本来就是 `Paused`，播放不出任何变化。原油的价格已含战争折价，所以第一步是 `WARNING`（价格没有下调空间），第二步才是 `PAUSE`。
 4. **保险监控在 Demo 里只认场景时钟。** Demo 世界是 2026 年 6 月，用真实时钟看每张保单都已过期。Live 用真实时钟，并且只看已映射到链上池的池子。
-5. **Live 的 `OPEN` 只有记录，没有签名路线。** Live 下上传会得到 `OPEN` 提案，策略要求审批，但 `mintEBLV2 → pledge → createOffering` 的 owner 计划还没做，所以决策以 `SKIPPED` 结束并写明原因，不会假装有交易。这是 WP2.4 剩下的 Live 部分。
+5. **Live 的 `OPEN` 只有记录，没有签名路线。** Live 下上传会得到 `OPEN` 提案，策略要求审批，但 `mintEBLV2 → pledge → createOffering` 的 owner 计划还没做，所以决策以 `SKIPPED` 结束并写明原因，不会假装有交易。这是当时 WP2.4 未完成的 Live 部分，已在下方 2026-10-14 批次完成本地实现。
 6. **修正补件入口已在 WP4.2 接线（2026-10-13）**：`POST /api/agent/jobs/:id/review` 接收修正内容，创建新作业与 `REVIEW_RESOLVED` 事件，保留旧 HOLD 并重跑全部检查；不能直接强制放行。
 7. **桶计原油**：解析器现在读取 `bbl`，吨数只取单证上写明的（`78,221 MT`），不做换算；没有写明吨数时保持缺失并转人工复核。单价保留原单位（`unit_price_usd_per_bbl`）。
 8. **旧 `/api/ebl/upload`**：只带元数据仍只是 mock 确认；带 `content` 和 `case_id` 时进入接入流水线。WP4.2 已将浏览器改为 FileReader 读取真实内容，直接上传 `/api/agent/ingest`，旧接口保留兼容。
@@ -1163,6 +1165,92 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 - 实测 Node 20.11.1 / 22.23.3 / 24.21.0 与 Alpine 3.22.0 / Node 22.23.2 均通过 17 项新增抽取测试；依赖审计零漏洞。CI 增加 Node 20.11.1 专项，但没有因此声称远端已通过。浏览器为本机 Edge、1440/390px、中英与 mock 视觉，共 118 项检查；见 [document-extraction.md](document-extraction.md)。
 - 不读取或打印 `.env` 值，不调用真实视觉提供方，不执行链上写入。用户已于 2026-10-14 授权提交并推送；本地验收 JSON 保留提交前快照，提交、远端一致性与 CI 以实际 Git/Actions 记录为准。下一入口 **WP2.3 合规 v2**。提交建议为 `feat(agent): extract PDF text and review model document fields`。
 
+### P1 WP2.3 演示合规 v2（2026-10-14）
+
+- 用带版本、资料日期和 SHA256 的虚构名单替换名字关键词；固定 token Jaccard / Jaro-Winkler 分数及 0.85/0.92 阈值。国家词不再直接触发实体阻断，港口映射才提供地区证据，仓库不被当作海港。
+- 船名与合成 IMO、各单证的 HS 和运输地点分别筛查。同类单证后上传的干净字段不能覆盖前一份阻断证据；CNY 或无法报价的已解析单证也会筛查。报告随作业与决策保存，修正补件重跑并保留历史。
+- CLEAR / REVIEW / BLOCK 接入策略，所有未解决筛查项转人工复核。平台标准仅识别声明，不声称符合性或法律认定；企业规模不构成拒绝服务理由。
+- 外部接口必须显式注入 transport，URL 设置本身不联网；无效或矛盾结果及超时失败转复核，外部 CLEAR 不能解除本地 REVIEW/BLOCK。未调用真实服务、真实 LLM 或链上写入。
+- 双语折叠证据、键盘、1440px/390px、真实文件上传/幂等/修正/历史保存的浏览器结果见 [compliance-screening.md](compliance-screening.md)及 [evidence/compliance-browser.json](evidence/compliance-browser.json)。首轮翻译缺失与窄屏刷新焦点的失败记录保留。
+- 本地测试 965/965，lint/check 通过，覆盖率 94.17% / 83.59% / 91.85%；46 项合规/接入针对性测试和 122 项浏览器检查通过。确定性评测更新为 20 个三态合规样例，19 个质量阈值均通过；旧金标和上一版实测报告分别保留。工程证据与边界见 [evidence/compliance-local.json](evidence/compliance-local.json)。
+- 下一入口为 **WP2.4 Live 开盘提案与 owner CLI**。建议提交分组：① `feat(agent): screen versioned demo compliance evidence per document`；② `feat(frontend): show localized compliance review evidence`；③ `test(agent): record compliance v2 evaluation and acceptance`。本批未提交、未推送。
+
+### WP2.4 Live 开盘提案与 owner CLI（2026-10-14）
+
+- Live 单证接入在九步处理之后记录策略和执行计划：新货物进入三步 owner 审批；已登记货物进入只读关联审批，批准后重新核验既有链状态，不重铸、不改价。`isUnique` 查询失败不降级为 Demo。
+- cargoHash 继续使用共享 `cargoIdentityHash`。站立铜案例核对实际单证与原案例身份后使用历史哈希，并保存源身份哈希；事实不一致或原身份缺失时停止，不制造新身份绕过已登记货物。
+- 后续 eBL/pool 编号来自已匹配事件的核验回执；完整 metadata tuple、事件参数、发送者、网络、零原生币金额和合约地址一起核对。三步全核验且当前链状态一致后才登记 PoolRegistry。
+- CLI 默认只预检当前可执行的一步；开盘必须明确 `--step 0/1/2 --confirm`，一次只发一笔。本地无密钥的广播检查点和进程锁阻止不明结果重发；`--attach-tx` 单独回填。到期、模式/代次切换、紧急停止和状态变化会停止发送。
+- 21 项新增行为测试覆盖依赖、回执篡改、铜身份、逐步审批、重复/并发回填、重启、映射失败后对账、CLI 中断与进程锁。全量测试 986/986，覆盖率 94.30% / 83.60% / 92.04%，19/19 确定性评测阈值通过；浏览器中英 × 1440px/390px 共 102 项检查通过，页面脚本错误为零；Demo preflight=56 PASS/5 Live SKIP/0 FAIL。证据与边界见 [live-opening.md](live-opening.md)。
+- 本轮不读取/打印开发者 `.env` 值，不新增密钥，不发真实交易，不提交、不推送。下一入口 **WP2.6 Live USDC 回执核验**，随后 WP2.7 链上监听。建议提交分组：① `feat(agent): propose receipt-bound Live offering openings`；② `feat(cli): checkpoint and reconcile owner opening transactions`；③ `feat(frontend): explain owner opening and cargo-link approvals`；④ `test(agent): record Live opening local acceptance`。
+
+### WP2.6 Live USDC 回执与结算（2026-10-14）
+
+- 明确配置贸易收款地址；既有测试网 USDC 映射、交易/成功回执、精确原子金额、确认数和规范区块共同核验，不能由请求地址或自报核验字段改变。USDC 证明按整个回执绑定到一个生命周期池，保存于独立证据文件，队列失败和重启不重复消费。
+- 付款和到港证明分别批准并由 owner CLI 签名记录；结算准备按同一区块读取链上两份证明及金额，重启可恢复。结算始终单独审批；受保护池不进入结算接入。旧的未核验/raw-unit Live 方案不能直接签名。
+- CLI 与可选执行者路径在发送前再次核验实际证据；owner 回填检查精确事件字段及确认数。已核验检查点写入中断可恢复，不明广播不自动重发。合约只记录证明，不分配资金。
+- 35 项新增行为测试；全量 1021/1021，覆盖率 94.36% / 83.83% / 92.11%。浏览器中英 × 1440/390px 的 112/112 项检查覆盖真实表单、错误反馈、核验摘要、逐步审批与回执、键盘及 SSE 草稿保持；截图检查修复空值文本和窄屏地址裁切。终检保留失败记录，MCP 使用明确离线子进程，SSE 按完整关闭事件帧断言。最终记录与边界见 [live-settlement.md](live-settlement.md)。
+- 真实 USDC/owner/钱包验收仍按 §16 逐笔授权；本批未提交、未推送，旧记录保留。下一入口 **WP2.7 链上监听**。
+
+### WP2.7 只读链上监听（2026-10-15）
+
+- 独立 provider-only 连接读取四类已部署合约日志，每批最多 5000 块；确认数、链号、地址/主题、规范区块、日志位置/解码一起核对。部署起点缺区块时核验部署回执，不解析签名密钥、不访问 Demo RPC、不触发任何链上写入。
+- 持久事件队列先落盘，再原子提交绑定配置/最后区块哈希的游标。重启恢复确认镜像及下一块；重复/冲突、RPC 退避/超时、模式/代次切换、部分投递/持久化失败与重组分别有行为测试。重组/映射冲突保留原证据，要求人工对账，不自动回退重发。
+- 新池按协议合约及池号登记并纳入监听，CLI 原映射与 pool #2 保护保留；终态作为历史。未知货物只有 chain-only 观察，不猜风险或合规。AgentBLRWA 编号与协议池隔离；PaymentAttested 只关联报告存证观察，不冒充贸易还款。
+- 确认区块上的状态、原子金额及双证明更新 Live 镜像并记录 RECONCILE_MISMATCH；既有报价/哈希保留，链价不一致时不给 Copilot 旧价投资动作。owner 更正付款时清除旧 USDC 核验标记。当前/确认紧急停止与本地开关独立，未知链状态/追赶暂停 Live 状态变更提案；已批准动作保留等待成功轮询恢复，发送前再次核对。
+- 最终本地证据：40 项新增行为测试；全量 1061/1061；覆盖率 94.50% / 83.89% / 91.95%；lint/check 通过；中英 × 1440/390px 浏览器 91/91、零脚本错误；Demo preflight 56 PASS / 0 WARN / 5 Live SKIP / 0 FAIL。原生 Playwright 与 Windows HTTP 可访问性已验证；内置浏览器仅 queued，控制工具有 WSL URI 错误，不能替代该项或人工/真实 RPC 验收。服务和临时运行目录已清理。完整记录与失败历史见 [chain-watcher.md](chain-watcher.md) / [本地证据](evidence/chain-watcher-local.json)。
+- 本批未提交、未推送，先前 WP2.3 / WP2.4 / WP2.6 的未提交改动保留，零真实签名/交易。下一入口 **WP2.9 PRD Agent API**；建议提交分组为监听运行时、控制台状态/紧急停止、验收证据，具体标题见 chain-watcher.md。
+
+### WP2.9 PRD 无状态 Agent API 与全项目模型（2026-10-15）
+
+- PRD §9.2 五个 POST 接口接入共享组件：抽取、核验、RWA 定价、投资简报、证据图。它们在 Demo/Live 均不创建作业、事件、决策、审批、池或交易，不能传入本地路径或伪造报价/合规输出。
+- 复用上传字节校验、确定性解析、一致性、逐份版本化演示合规及定价引擎。缺证据、注入、冲突、不可读单证保持复核，BLOCK 为 REJECT；USD 不足或 CNY 不被转换定价。图同时绑定原始输入、合并结果、每份单证字节、检查与合规版本，保持独立的规范 SHA-256。
+- 简报先由 pricingNarrator 提供事实，可选润色只在模型开关允许且没有复核/阻断时调用；数字/风险/动作/词汇与非保证性声明检查失败或上游异常即回退，报价不由模型修改。五个接口共用每 IP 预算、并发上限和请求体限制。
+- **用户明确要求应用于整个项目**：共享客户端及所有厂商默认模型、本地 `.env` 的 LLM_MODEL、模板、CLI、测试与现行文档统一为 `x-test-2`，移除腾讯旧锁定。保留显式运维覆盖；Azure deployment 仍为实际路由标识。旧模型的历史证据保留，不作为新模型联调证据。
+- 54 项新增行为测试通过；全量覆盖率执行 1115/1115，行 94.65% / 分支 84.00% / 函数 92.13%，新增 API 两个模块行/函数覆盖率均 100%；最终发布总闸门 56 PASS / 0 WARN / 5 Live SKIP / 0 FAIL，合约测试 74/74。中英 × 1440/390px 共 54 项本机 Chromium 检查通过，Windows 侧确认隔离入口模型状态为 x-test-2。
+- 桌面工具初始化报 `sandboxCwd is not a local file URI`，未声称操作内置窗格或完成人工验收。真实模型支持/能力未调用验证，零真实交易。完整证据及首次失败记录见 [agent-api.md](agent-api.md)。
+- 保留 WP2.3/2.4/2.6/2.7 等原有未提交改动。本批未提交、未推送。下一入口 **WP4.4 ID 贯通**，随后 WP4.5 一键演示；建议按 API 实现、全局模型迁移、验收记录三组提交。
+
+### Phase 4 控制台与全流程整合（2026-10-15）
+
+- WP4.4 保存决策原报价并统一五个界面的证据引用；历史报价查看和当前认购价格分开，跨案例选择带请求版本防止旧响应覆盖；市场价格和状态来自服务器池镜像。
+- WP4.5 新增异步 run/status/stop 接口、完整铜货单证场景；限一个后台播放和一个步骤，停止/模式变化先收尾，事件/作业/认购幂等。虚拟时间不受请求 speed 影响；单证演示强制离线确定性。付款及结算保留独立审批。
+- WP4.1/4.6 增量：提供方实际返回的模型用量、来源、历史报价导航、四场景中英文案、焦点/播报、窄屏长编号和瀑布图；WP5.5 重放仍为后续工作包。
+- 11 项新增行为测试、全量覆盖率执行 1126/1126（94.70% 行 / 84.03% 分支 / 92.25% 函数），新流程浏览器 107/107、全站 40 组合回归 255/255；发布闸门 56 PASS / 0 WARN / 5 Live SKIP。完整证据及失败历史见 [phase4-console-demo.md](phase4-console-demo.md) 和 [本地证据](evidence/phase4-local.json)。
+- 本批未提交、未推送，保留全部既有 dirty 改动和历史失败。真实模型、RPC、钱包/owner、人工/实体设备验收保持各自边界。下一入口 **Phase 5 P1（先 WP5.2）**。
+
+### Phase 5 全量收尾（2026-10-15）
+
+WP5.1–5.9 已完成本阶段范围。冻结代码 **1158/1158** 测试、20/20 质量闸门通过，覆盖率 **94.26% 行 / 84.20% 分支 / 92.37% 函数**；浏览器 41 项新流程与 256 项全站检查的 UI 文件保持一致，发布闸门 **60 PASS / 0 WARN / 5 Live SKIP / 0 FAIL**，75 项本地合约测试通过。源摘要、历史尝试见 [Phase 5 指南](phase5-security-replay.md)、[本地证据](evidence/phase5-local.json) 和 [完成清单](evidence/phase5-completion.json)。
+
+本次用户明确授权后，受保护 pool #2 在 Injective 测试网 chain 1439 上完成 REPRICE / PAUSE / RESUME 三笔交易；逐笔 calldata、签名账户、Oracle 目标、回执/规范区块、事件参数、历史价格/状态、防重放以及三份持久决策重放均通过。初版预检把 PAUSE 的风险报价误当成实际池价，且误认为 RESUME 回到 Open；已按真实合约语义修正。PAUSE/RESUME 不改池价，RESUME 恢复暂停前的 Repriced，最终 **Repriced（可认购）/ 0.7910**。首轮核验失败、仅补执行 RESUME 的恢复运行及独立只读核验全部保留，没有重发前两笔；详见 [实链证据](evidence/agent-live-smoke.json)。
+
+真实 LLM、可选 owner 生命周期、内置窗格操作、实体设备/人工试用仍有独立边界。本批未提交、未推送，保留既有 dirty 改动与全部历史。下一入口 **Phase 6 WP6.1 MCP**。
+
+### Phase 6 互操作实现（2026-10-15）
+
+WP6.1–WP6.4 全量完成本地实现与自动化验收。MCP 新增五个运行时/Copilot 工具及一个委托报价工具，合计 **15 tools + 5 resources**；stdio 连接既有后端，默认事件 dry-run，无第二份调度器。A2A 核对 1.0 规范后使用 supportedInterfaces，标准 agent-card.json 与旧 agent.json 返回同卡片，同步 SendMessage 输出指示性报价。四个 Bazaar HTTP 声明与 V2 402 要求共用配置；Demo accepts 为空，未声称外部集市收录。三种委托入口共用确定性定价与版本化演示合规；付费证据仅取服务器交付缓存，付款不改变报价或风险。
+
+详见 [phase6-interoperability.md](phase6-interoperability.md)。原有 dirty 改动与失败历史保留，不提交、不推送；零真实付款、交易或提供方调用。发布 preflight 扩为 69 项，最终冻结结果：1179/1179 Node、75 项本地合约测试、20/20 质量闸门、261 项浏览器检查及 64 PASS / 0 WARN / 5 Live SKIP / 0 FAIL；覆盖率行/分支/函数 94.42% / 84.70% / 92.40%。证据见 evidence/phase6-completion.json。
+
+### Phase 7 决策锚定（2026-10-15）
+
+WP7.1 已实现 `AgentDecisionLog`，只新增独立合约，原有六份协议源码保留，chain-config 仅合并新合约三类条目。终态立即归档，Demo/Live 独立连续序号，审批结果、身份、方式、时间及证据/报价/版本进入规范叶子；旧日志使用明确未知版本。Merkle 批次、公开证明 API、只读 CLI 和中英/窄屏详情已接通。签名与既有 pricing key 共用串行队列，广播意图/哈希持久化，未知广播只读对账不重发；原日志保留前先完成归档。
+
+部署脚本默认零广播，初始化按每版本注册并只合并新条目，`verify:bytecode` 自动核对新增地址。已按本次明确授权完成真实测试网部署、注册审阅版本及 anchorer 授权共三笔；精确交易/规范回执/事件、7 份字节码及独立只读核验通过。首次批次、后台启用及人工/实体设备验收尚未执行；前两项须按 §16 单独确认。7.2–7.5 继续按原计划暂不做。本地验收结果、工具限制及尝试历史集中在 [phase7-completion.json](evidence/phase7-completion.json)，操作和局限见 [Phase 7 指南](phase7-decision-anchoring.md)。未提交、未推送。
+
+
+Phase 7 独立只读复核发现的模型空值/空格规范化和 UTF-8 长度边界均已修复：版本与实际请求共用默认模型语义，部署计划按合约的 128 字节上限在任何广播前拒绝超限输入。
+
+Phase 7 最终本地验收：1222/1222 Node、86 项本地合约测试、20/20 确定性质量闸门、296 项中英/1440/390px 浏览器检查；preflight 66 PASS / 0 WARN / 5 Live SKIP / 0 FAIL（71 项）；覆盖率行/分支/函数 94.47% / 85.03% / 92.42%。禁网、只读 Node 22.23.3 容器启动和 Windows HTTP 200 通过；独立复核两项 P2 已修复并复核闭合。部署前源码清单 465 项逐文件复核无变化、原有协议及链配置 9 项哈希未变；授权部署后该清单仅 chain-config 增加新合约条目及字节码验证测试补齐新增合约夹具，原条目及 8 份 Solidity 源文件未变，376 个既有 dirty 路径保留。证据为 evidence/phase7-completion.json，本次三笔授权部署初始化证据见 evidence/phase7-live-deployment-verification.json；首批锚定和后台启用仍待 §16 单独授权。
+
+
+### 最终交付验收（2026-10-15）
+
+本次按用户“验收项目，然后提交推送”的授权，统一交付 §13 的 Phase 0–6 和选定的 WP7.1。修复无状态 API 的视觉开关、整包注入筛查及简报预算，监听游标升级、规范交易恢复、原始单证本地化边界以及重放刷新/焦点竞态。当前 300 项全站/锚定及 41 项重放浏览器检查通过；最终完整测试与发布闸门结果统一记录于 [交付验收](final-acceptance-20261015.md) 和 [机器证据](evidence/final-acceptance-20261015.json)。前文“未提交/未推送”为各阶段验收当时的历史记录，本次提交推送获用户明确授权。
+
+本次代码修复改变运行时代码承诺，链上既有版本注册仍保留其历史含义；注册当前版本、首次批次与后台启用需按 §16 单独授权。可选 WP7.2–7.5、其他产品路线图、真实提供方、owner/USDC 生命周期和人工验收仍保持原边界。
+
 ## 14. 测试策略
 
 - **单元测试**：每个新模块。策略、合并语义、排序都用表驱动。
@@ -1215,11 +1303,15 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 
 按现在的余额（owner 约 0.64 INJ，定价密钥约 0.05 INJ），上面所有方案都**不需要用户转钱**。
 
+**本次授权记录（2026-10-15）**：用户明确授权受保护 pool #2 上的 REPRICE / PAUSE / RESUME 三笔测试网交易，现均已执行和核验，见 [agent-live-smoke.json](evidence/agent-live-smoke.json)。该授权不涵盖第四笔价格恢复、owner 生命周期或后续重跑。
+
+**Phase 7 部署授权记录（2026-10-15）**：用户以“授权”明确批准 [已审阅计划](evidence/phase7-deployment-plan.json) 的三笔测试网交易，现已完成部署、注册一个版本、授权现有 PRICING_UPDATER，见 [实链核验](evidence/phase7-live-deployment-verification.json)。此授权范围未包含首次 `anchorBatch`、后台启用或额外版本注册。
+
 **开发过程中仍需用户当场确认的事项**（每次都要问）：
 
 1. **owner CLI 的每笔交易**：开新池（3 笔）、离港、付款和到港证明、结算。
-2. **真实的测试网交易**：WP5.9 冒烟（默认在 pool #2 上约 4 笔），以及 WP0.6 修好后重跑 `verify:wave-b`。
-3. **WP7.1 的合约部署**：Phase 0–6 完成后再问一次。
+2. **真实的测试网交易**：WP5.9 冒烟（默认在 pool #2 上三笔；第四笔恢复价格另行批准），以及 WP0.6 修好后重跑 `verify:wave-b`。
+3. **WP7.1 的后续实链操作**：本次三笔部署/初始化已获授权并完成；首次批次、后台启用、额外版本注册及任何新部署均需单独确认。
 4. **可选升级 D2**：如果以后想在页面上一键执行执行者角色的动作，需要用户给新钱包转约 0.01 INJ，并同意 owner 发授权交易。
 5. **LLM 费用**：SoCLaaS 免费；如果启用其他 provider，要先设好消费上限。
 6. **现有的遗留事项**：吊销 git 历史里泄露的 DeepSeek key（`sk-64b8…1c7f`），备份部署者密钥。

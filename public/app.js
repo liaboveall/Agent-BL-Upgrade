@@ -23,6 +23,8 @@ import { copilotQuery, resetCopilotSession } from './copilot/api.js';
 import { renderRecommendations, decisionButton, poolStateLabel } from './copilot/ui.js';
 import { initDocumentManagement } from './agent/documents.js';
 import { openAgentDecision } from './agent/console.js';
+import { agent } from './agent/api.js';
+import { renderReferences } from './agent/references.js';
 import { payV2WithWallet } from './x402-v2.js';
 import { initMysteryExperience, renderMysteryExperience, resetMysteryExperience } from './mystery.js';
 
@@ -31,6 +33,59 @@ const PAUSED_ACTIONS = new Set(['PAUSE_OFFERING', 'FREEZE_POOL', 'TRIGGER_LIQUID
 const NOTIFY_DECISION_ACTIONS = new Set(['REPRICE', 'PAUSE', 'RESUME', 'FREEZE', 'LIQUIDATE', 'SETTLE']);
 const MARKET_PLAY_MS = 90000;
 const marketClock = { timer: 0, startedAt: 0 };
+const evidenceState = { latest: new Map(), pools: new Map(), selected: null, version: 0, selectionVersion: 0, caseVersion: 0 };
+
+function evidenceFor(caseId) {
+  return evidenceState.selected?.case_id === caseId ? evidenceState.selected : evidenceState.latest.get(caseId);
+}
+
+async function refreshEvidence() {
+  const version = ++evidenceState.version, generation = state.modeGeneration;
+  try {
+    const data = await agent.references();
+    if (version !== evidenceState.version || generation !== state.modeGeneration || data.generation !== generation) return;
+    evidenceState.latest = new Map(data.decisions.map((decision) => [decision.case_id, decision]));
+    evidenceState.pools = new Map((data.pools ?? []).map((pool) => [pool.case_id, pool]));
+    if (state.view === 'market') renderMarket();
+    renderPortfolio();
+  } catch { /* the normal timeline reports runtime errors */ }
+}
+
+function clearEvidenceSelection() {
+  evidenceState.selectionVersion += 1;
+  evidenceState.selected = null;
+  document.querySelector('#x402-decision-reference')?.replaceChildren();
+}
+
+function renderReportDecisionReferences() {
+  const decision = evidenceFor(state.caseId);
+  let report = $('#x402-decision-reference');
+  if (!report) {
+    report = el('div', { id: 'x402-decision-reference' });
+    $('#x402-report-detail')?.before(report);
+  }
+  report.replaceChildren(...(decision ? [renderReferences(decision.references, { open: true })] : []));
+}
+
+function selectDecisionEvidence(decision) {
+  if (decision.mode !== (state.demoMode ? 'demo' : 'live') || decision.generation !== undefined && decision.generation !== state.modeGeneration) return false;
+  evidenceState.selected = decision;
+  state.categoryFilter = 'all'; state.searchQuery = ''; state._aiMatchedIds = null;
+  if ($('#search-input')) $('#search-input').value = '';
+  highlightCategoryBtn();
+  renderMarket(); renderPortfolio();
+  if (state.caseId === decision.case_id) renderViewMint();
+  renderReportDecisionReferences();
+  return true;
+}
+
+async function selectLinkedDecision(decision) {
+  const version = ++evidenceState.selectionVersion;
+  if (!selectDecisionEvidence(decision)) return false;
+  if (state.caseId !== decision.case_id) await selectCase(decision.case_id);
+  if (version !== evidenceState.selectionVersion) return false;
+  return selectDecisionEvidence(decision);
+}
 
 function potentialYieldText(quote, unavailable = '--') {
   if (!quote || PAUSED_ACTIONS.has(quote.pricing_action)) return unavailable;
@@ -133,8 +188,9 @@ async function boot() {
   renderCaseSelector();
   renderSpeedSelector();
   await selectCase(state.cases[0]?.case_id);
-  setView('market');
+  setView(state.view);
   warmMarketQuotes();
+  refreshEvidence();
 }
 
 async function loadDemoRuntimeMode() {
@@ -145,6 +201,7 @@ async function loadDemoRuntimeMode() {
     state.demoMode = data.demoMode;
     state.liveAvailable = data.liveAvailable;
     state.modeGeneration = data.generation;
+    clearEvidenceSelection(); evidenceState.latest.clear(); evidenceState.pools.clear(); refreshEvidence();
   } catch {
     state.demoMode = true;
     state.liveAvailable = false;
@@ -216,6 +273,7 @@ async function onModeToggle() {
     state.liveAvailable = data.liveAvailable;
     state.modeGeneration = data.generation;
     resetMysteryExperience();
+    clearEvidenceSelection(); evidenceState.latest.clear(); evidenceState.pools.clear(); refreshEvidence();
     resetCopilotUi();
     refreshDemoModeUi();
     toast(`Switched to ${target.toUpperCase()} mode`);
@@ -230,6 +288,7 @@ async function onDemoReset() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Demo reset failed');
     state.modeGeneration = data.generation;
+    clearEvidenceSelection(); evidenceState.latest.clear(); evidenceState.pools.clear(); refreshEvidence();
     state.marketComparisons = {};
     state.marketSubscriptionResult = null;
     state.mint = null;
@@ -300,6 +359,7 @@ async function persistExporterPreferences() {
 async function loadExporterPreferences(caseId) {
   try {
     const stored = (await api.getExporterPreferences(caseId))?.preferences ?? {};
+    if (state.caseId !== caseId) return;
     if ($('#pref-min-price') && Number.isFinite(stored.min_acceptable_issue_price)) $('#pref-min-price').value = String(stored.min_acceptable_issue_price);
     if ($('#pref-speed')) $('#pref-speed').value = stored.payout_speed_preference ?? '';
   } catch {
@@ -310,9 +370,12 @@ async function loadExporterPreferences(caseId) {
 async function selectCase(caseId) {
   const entry = state.cases.find((c) => c.case_id === caseId);
   if (!entry) return;
+  const version = ++evidenceState.caseVersion, generation = state.modeGeneration;
+  if (evidenceState.selected?.case_id !== caseId) clearEvidenceSelection();
   state.caseId = caseId;
   window.dispatchEvent(new CustomEvent('agentbl:casechange'));
   await loadExporterPreferences(caseId);
+  if (version !== evidenceState.caseVersion || generation !== state.modeGeneration) return;
   state.caseData = entry.case;
   state.financingUsd = null;
   state.mint = null;
@@ -327,7 +390,9 @@ async function selectCase(caseId) {
   subscribeToAgentActivity(caseId);
 
   try {
-    state.comparison = await getCaseComparison(entry);
+    const comparison = await getCaseComparison(entry);
+    if (version !== evidenceState.caseVersion || generation !== state.modeGeneration) return;
+    state.comparison = comparison;
     state.speed = state.comparison.recommended_payout_speed
       ?? state.comparison.quotes?.[0]?.payout_speed ?? 'BALANCED';
     highlightSpeed();
@@ -341,12 +406,13 @@ async function selectCase(caseId) {
   } catch (e) {
     toast(t('t_pricing_fail', { msg: e.message }), true);
   } finally {
-    setBusy(false);
+    if (version === evidenceState.caseVersion) setBusy(false);
   }
 }
 
 function selectSpeed(speed) {
   if (!state.comparison?.quotes?.some((q) => q.payout_speed === speed)) return;
+  clearEvidenceSelection();
   state.speed = speed;
   highlightSpeed();
   state.voyageInjected = false;
@@ -418,7 +484,8 @@ function renderViewMint() {
   renderDealStrip(quote);
   renderHeroPrice(quote);
   renderValuation(quote);
-  renderWaterfall(quote);
+  const decision = evidenceState.selected?.case_id === state.caseId ? evidenceState.selected : null;
+  renderWaterfall(decision?.quote_snapshot ?? decision?.proposal?.params?.quote ?? quote);
   renderExporterCards();
   renderMintModule(quote);
 }
@@ -581,7 +648,8 @@ function renderMarketGrid(cases) {
 }
 
 function renderMarketCard(entry, comparison) {
-  const quote = recommendedQuote(comparison);
+  const currentPool = evidenceState.pools.get(entry.case_id);
+  const quote = currentPool?.quote ?? recommendedQuote(comparison);
   const bl = entry.case?.bill_of_lading ?? {};
   const active = entry.case_id === state.caseId;
   const risk = quote?.risk_level ?? entry.risk_hint ?? '—';
@@ -590,7 +658,7 @@ function renderMarketCard(entry, comparison) {
   const progress = marketVoyageProgress(entry.case);
   const qty = cargoQuantity(bl);
   const act = quote ? f.actionMeta(quote.pricing_action) : null;
-  const paused = quote && PAUSED_ACTIONS.has(quote.pricing_action);
+  const paused = currentPool && ['Paused', 'Frozen', 'Liquidated', 'Repaid', 'Cancelled'].includes(currentPool.status) || quote && PAUSED_ACTIONS.has(quote.pricing_action);
 
   let cargoType = 'alu'; // fallback
   const cId = (entry.case_id || '').toLowerCase();
@@ -606,10 +674,10 @@ function renderMarketCard(entry, comparison) {
 
   const imgSrc = `/img/cargo/${cargoType}.webp`;
   return el('article', {
-    class: `market-card tone-${tone}${active ? ' active' : ''}${paused ? ' paused' : ''}`,
+    class: `market-card tone-${tone}${active ? ' active' : ''}${paused ? ' paused' : ''}${evidenceState.selected?.case_id === entry.case_id ? ' decision-highlight' : ''}`,
     'data-case': entry.case_id,
     onclick: (event) => {
-      if (event.target.closest('button, input, select, a')) return;
+      if (event.target.closest('button, input, select, a, details')) return;
       selectMarketCase(entry.case_id);
     }
   },
@@ -639,6 +707,7 @@ function renderMarketCard(entry, comparison) {
     ),
     renderMarketVoyage(bl, progress),
     renderMarketFunding(funding, paused),
+    evidenceFor(entry.case_id) ? renderReferences(evidenceFor(entry.case_id).references) : null,
     el('div', { class: 'market-card-actions' },
       el('button', { class: 'btn sm market-subscribe-shortcut', onclick: () => selectMarketCase(entry.case_id) }, t('market_card_subscribe')),
       el('button', { class: 'btn ghost sm', 'data-focus-key': `market-track:${entry.case_id}`, onclick: (event) => openDealDetailModal(entry.case_id, event.currentTarget) }, t('market_card_track'))
@@ -690,14 +759,15 @@ function renderMarketDetail() {
   if (!box) return;
   clear(box);
   const entry = state.cases.find((c) => c.case_id === state.caseId);
-  const quote = selectedQuote();
+  const currentPool = evidenceState.pools.get(state.caseId);
+  const quote = currentPool?.quote ?? selectedQuote();
   const bl = state.caseData?.bill_of_lading ?? {};
   if (!entry || !quote) {
     box.append(el('div', { class: 'market-detail-empty', text: t('market_detail_loading') }));
     return;
   }
 
-  const paused = PAUSED_ACTIONS.has(quote.pricing_action);
+  const paused = ['Paused', 'Frozen', 'Liquidated', 'Repaid', 'Cancelled'].includes(currentPool?.status) || PAUSED_ACTIONS.has(quote.pricing_action);
   const act = f.actionMeta(quote.pricing_action);
   const amount = state.marketSubscriptionUsd ?? defaultMarketSubscription(quote);
   state.marketSubscriptionUsd = amount;
@@ -780,7 +850,7 @@ function renderMarketSubscribeReadout(quote) {
 }
 
 async function onMarketSubscribe() {
-  const quote = selectedQuote();
+  const quote = evidenceState.pools.get(state.caseId)?.quote ?? selectedQuote();
   if (!state.demoMode || !quote || PAUSED_ACTIONS.has(quote.pricing_action)) return;
   const amount = Number(state.marketSubscriptionUsd) || 0;
   if (amount <= 0) { toast(t('market_need_amount'), true); return; }
@@ -1140,6 +1210,15 @@ function renderValuation(quote) {
 function renderWaterfall(quote) {
   const wf = $('#waterfall');
   clear(wf);
+  const selected = evidenceState.selected?.case_id === state.caseId ? evidenceState.selected : null;
+  const decision = selected && (selected.quote_snapshot ?? selected.proposal?.params?.quote) ? selected : null;
+  wf.dataset.quoteHash = quote.quote_hash ?? '';
+  if (selected && !decision) wf.append(el('p', { class: 'decision-quote-note', role: 'status' }, t('ac_historical_quote_missing')));
+  if (decision) {
+    wf.append(el('p', { class: 'decision-quote-note', role: 'status' }, t('ac_historical_quote')),
+      renderReferences(decision.references, { open: true }),
+      el('button', { type: 'button', class: 'btn ghost sm', onclick: () => { clearEvidenceSelection(); renderViewMint(); renderMarket(); renderPortfolio(); } }, t('ac_current_quote')));
+  }
 
   const base = quote.base_issue_price_usd;
   const urg = quote.urgency_discount_bps / 10000;
@@ -1858,6 +1937,7 @@ function reopenX402Report(data) {
 }
 
 function renderIntelMarket() {
+  renderReportDecisionReferences();
   loadX402Config().then(() => {
     // Re-apply static i18n to the x402 view after it's shown
     applyStaticI18n(document.getElementById('view-intel'));
@@ -2593,6 +2673,8 @@ async function renderPortfolio() {
         el('p', {}, t('cp_position_current', { status: poolStateLabel(investment.current_status), price: investment.current_price_usd ?? '—', risk: f.riskLabel(investment.current_risk_level) })),
         el('p', { class: 'muted' }, t('cp_position_demo')));
       for (const decision of investment.decisions) item.append(decisionButton(decision.decision_id));
+      const linked = evidenceFor(investment.poolId)?.references ?? investment.references;
+      if (linked) item.append(renderReferences(linked));
       list.append(item);
     }
   } catch (error) { if (modeGeneration === state.modeGeneration) list.textContent = t('cp_error', { message: error.message }); }
@@ -2679,7 +2761,7 @@ function subscribeToAgentActivity(caseId, { retry = false } = {}) {
         agentLog(`${emoji} Agent: ${data.action}${data.details?.price ? ` → $${data.details.price}` : ''}`, 'var(--accent)');
 
         logAgentActivityUI(data);
-        if (data.decision_id) renderPortfolio();
+        if (data.decision_id) refreshEvidence();
 
         // Decision records carry the agent's decision verb in details.decision_action.
         const decisionAction = data.details?.decision_action ?? data.action;
@@ -2795,6 +2877,19 @@ function wireStaticHandlers() {
   window.addEventListener('agentbl:portfoliochange', renderPortfolio);
   window.addEventListener('agentbl:selectcase', (event) => { selectCase(event.detail.case_id); setView('market'); });
   window.addEventListener('agentbl:decisionopen', async (event) => { setView('agent'); await openAgentDecision(event.detail.decision_id); });
+  window.addEventListener('agentbl:decisionselected', (event) => { selectLinkedDecision(event.detail.decision).catch((error) => toast(error.message, true)); });
+  window.addEventListener('agentbl:decisionnavigate', async (event) => {
+    const { decision, target } = event.detail;
+    if (!['market', 'mint'].includes(target)) return;
+    if (!await selectLinkedDecision(decision)) return;
+    if (target === 'market') {
+      state.categoryFilter = 'all'; state.searchQuery = ''; state._aiMatchedIds = null;
+    }
+    setView(target); renderMarket(); renderViewMint();
+    const node = target === 'market' ? [...document.querySelectorAll('.market-card')].find((card) => card.dataset.case === decision.case_id) : $('#waterfall');
+    node?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+    node?.setAttribute('tabindex', '-1'); node?.focus({ preventScroll: true });
+  });
   // Close the wallet menu on an outside click or Escape.
   document.addEventListener('click', (e) => {
     if (isWalletMenuOpen() && !e.target.closest('.wallet-wrap')) closeWalletMenu();

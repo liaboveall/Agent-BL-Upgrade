@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-10-15T03:00:47.966558+00:00",
+  "client": "Windows System32 curl.exe",
+  "target": "http://127.0.0.1:44042/.well-known/agent-card.json",
+  "http_status": 200,
+  "a2a_version": "1.0",
+  "response_sha256": "a9fe2019dc46fdaa8315ca8235de4617c4250f729686e829ea03ae630cc3cfc3",
+  "passed": true,
+  "human_acceptance": false
+}

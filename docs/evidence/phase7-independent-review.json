@@ -1,0 +1,39 @@
+{
+  "checked_at": "2026-10-15T05:15:06.829453+00:00",
+  "review_type": "independent_read_only",
+  "agent": "phase7_review",
+  "findings": [
+    {
+      "priority": "P2",
+      "file": "src/agent/runtime/agentVersion.js",
+      "issue": "Model metadata did not normalize empty and padded values like the actual provider client",
+      "resolution": "Shared DEFAULT_LLM_MODEL with identical trim/fallback",
+      "status": "CLOSED"
+    },
+    {
+      "priority": "P2",
+      "file": "scripts/lib/deploy-agent-log.mjs",
+      "issue": "Deployment plan length checked characters while Solidity limits UTF-8 bytes",
+      "resolution": "Validate toUtf8Bytes(model_id).length <= 128 before any provider call or broadcast",
+      "status": "CLOSED"
+    }
+  ],
+  "targeted_recheck": {
+    "tests": 2,
+    "passed": 2,
+    "failed": 0,
+    "evidence": "phase7-review-boundaries-final.log",
+    "additional_root_tests": 8
+  },
+  "remaining_confirmed_findings": 0,
+  "real_provider_calls": 0,
+  "real_transactions": 0,
+  "scope": "anchoring, proofs, sequence lock, chain adapter, agent version, standalone contract and deployment/recovery helper",
+  "additional_packaging_fix": {
+    "file": "Dockerfile",
+    "issue": "Final image did not copy the lockfile required by source-version commitments",
+    "resolution": "Copy both manifests into final image",
+    "evidence": "phase7-container-runtime.json",
+    "passed": true
+  }
+}

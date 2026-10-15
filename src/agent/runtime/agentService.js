@@ -14,6 +14,9 @@
 //   - an approval created in one mode is not executed in another;
 //   - nothing here lets the content of an event choose a contract, an address or a network.
 
+import { eventFreshness, assessFreshness } from './freshness.js';
+import { replayDecision } from './replay.js';
+import { sanitizeAudit } from '../security/privacy.js';
 import { createDecisionId } from '../decisionLogger.js';
 import { executeWithRetry } from '../executionReliability.js';
 import { AgentOrchestrator } from '../orchestrator.js';
@@ -23,17 +26,23 @@ import { ApprovalError, APPROVAL_STATUS } from './approvals.js';
 import { effectiveAutonomy } from './config.js';
 import { normalizeEvent } from './events.js';
 import { EXECUTOR_METHOD_FOR, PRICING_ACTION_FOR, ExecutionPendingError, isTransientRpcError } from './executors/chainExecutor.js';
-import { buildOwnerPlan, verifyOwnerTx } from './ownerTxPlan.js';
+import { buildOwnerPlan, verifyOwnerTx, OWNER_PLAN_ACTIONS } from './ownerTxPlan.js';
+import { OPENING_ACTIONS, OPENING_SCHEMA, resolveOwnerStep, readRegisteredOpening } from './openingPlan.js';
+import { createChainReader } from './poolRegistry.js';
 import { INFORMATIONAL_ACTIONS, evaluatePolicy } from './policy.js';
 import { PreferenceStore } from './preferences.js';
 import { Scheduler } from './scheduler.js';
+import { planTransition } from './poolRules.js';
+import { hashSnapshot } from '../decisionLogger.js';
+import { createAgentVersion } from './agentVersion.js';
+import { SETTLEMENT_ACTIONS, SETTLEMENT_SCHEMA, SettlementError, readSettlementState, verifyUsdcTransfer,
+  validateSettlementStep, assertSettlementChain, samePaymentEvidence } from '../pipelines/settlementPipeline.js';
 
 /** Event types an operator may inject through the API while the runtime is Live: only ones that carry a proof. */
 export const LIVE_ADMIN_EVENT_TYPES = Object.freeze([
   'PAYMENT_RECEIVED', 'CARGO_ARRIVED', 'CARGO_DEPARTED', 'INSURANCE_EXPIRED', 'EMERGENCY_STOP_CHANGED', 'REVIEW_RESOLVED'
 ]);
 
-const OWNER_PLAN_ACTIONS = new Set(['MARK_IN_TRANSIT', 'RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE', 'CANCEL']);
 const COUNTED_STATUSES = new Set(['COMPLETED', 'EXECUTING', 'PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE', 'DECIDED']);
 
 export class AgentServiceError extends Error {
@@ -92,12 +101,17 @@ export class AgentService {
       orchestrator: deps.orchestrator ?? new AgentOrchestrator(),
       documentParser: deps.documentParser ?? {},
       scenarios: deps.scenarios ?? null,
+      settlementEvidence: deps.settlementEvidence,
       riskTracker: deps.riskTracker ?? null,
+      chainWatcher: deps.chainWatcher ?? null,
+      anchoring: deps.anchoring ?? null,
       env: deps.env ?? process.env
     });
     this.mutex = new KeyedMutex();
     this.running = false;
-    this.emergencyStopped = false;
+    this.localEmergencyStopped = false;
+    this.chainEmergencyStopped = false;
+    this.chainSafetyUnknown = Boolean(this.chainWatcher);
     this.autonomyOverride = null;
     this.lastError = null;
     this.initialized = false;
@@ -110,12 +124,31 @@ export class AgentService {
     this.bus.onSettled = (entry) => this.#onEventSettled(entry);
   }
 
+  get emergencyStopped() {
+    return this.localEmergencyStopped || this.getMode() === 'live' && (this.chainEmergencyStopped || this.chainSafetyUnknown);
+  }
+
+  set emergencyStopped(value) { this.localEmergencyStopped = Boolean(value); }
+
+  async onModeChanged() {
+    await this.scenarios?.stopPlayback();
+    if (!this.chainWatcher) return;
+    if (this.getMode() === 'demo') this.chainWatcher.suspend(this);
+    else {
+      this.chainSafetyUnknown = true;
+      this.chainWatcher.nextRetryAt = 0;
+      await this.chainWatcher.poll(this);
+    }
+  }
+
   // ---------------------------------------------------------------- lifecycle
 
   async init() {
     if (this.initialized) return this;
-    await Promise.all([this.logger.init(), this.approvals.init(), this.registry.init(), this.bus.init(), this.preferences.init?.(), this.ingest?.init(), this.riskTracker?.init()]);
+    await Promise.all([this.logger.init(), this.approvals.init(), this.registry.init(), this.bus.init(), this.preferences.init?.(), this.ingest?.init(), this.riskTracker?.init(), this.settlementEvidence?.init()]);
     await this.syncPools();
+    await this.anchoring?.init();
+    await this.anchoring?.collect();
     this.initialized = true;
     return this;
   }
@@ -124,6 +157,7 @@ export class AgentService {
   async syncPools() {
     const mode = this.getMode();
     if (mode === 'demo') {
+      this.chainWatcher?.suspend(this);
       await this.ensurePools();
       await this.registry.registerOffchainBatch([...this.store.pools.values()]
         .map((pool) => ({ case_id: pool.caseData?.case_id ?? pool.poolId, pool_id: pool.poolId })));
@@ -143,22 +177,28 @@ export class AgentService {
     await this.init();
     if (this.running) return this.status();
     this.running = true;
+    await this.anchoring?.start();
+    await this.chainWatcher?.poll(this);
     const autonomy = this.autonomy();
     if (autonomy.downgraded) {
       console.warn('[agentbl] AGENT_AUTONOMY=auto is treated as propose in Live mode: every action needs human approval.');
     }
     this.bus.start();
+    this.chainWatcher?.start(this);
     this.scheduler.start();
     this.#activity('SYSTEM', 'AGENT_STARTED', null, { mode: this.getMode(), autonomy: autonomy.effective, downgraded: autonomy.downgraded });
     return this.status();
   }
 
   async stop() {
-    if (!this.running) return this.status();
+    await this.scenarios?.stopPlayback();
+    if (!this.running) { await this.anchoring?.stop(); return this.status(); }
     this.running = false;
     this.scheduler.stop();
     await this.scheduler.drain();
+    await this.chainWatcher?.stop();
     await this.bus.stop();
+    await this.anchoring?.stop();
     this.#activity('SYSTEM', 'AGENT_STOPPED', null, {});
     return this.status();
   }
@@ -168,7 +208,7 @@ export class AgentService {
   }
 
   #noteError(error) {
-    this.lastError = { at: this.now().toISOString(), message: String(error?.message ?? error).slice(0, 300) };
+    this.lastError = sanitizeAudit({ at: this.now().toISOString(), message: String(error?.message ?? error).slice(0, 300) });
   }
 
   #activity(type, action, decision, details = {}, extra = {}) {
@@ -199,6 +239,10 @@ export class AgentService {
       generation: this.getGeneration(),
       autonomy: { configured: this.autonomyOverride ?? this.config.autonomy ?? null, effective: autonomy.effective, downgraded: autonomy.downgraded },
       emergency_stop: this.emergencyStopped,
+      emergency_stop_sources: { local: this.localEmergencyStopped, chain: this.getMode() === 'live' && this.chainEmergencyStopped,
+        chain_unknown: this.getMode() === 'live' && this.chainSafetyUnknown },
+      chain_watcher: this.chainWatcher?.status(this.getMode()) ?? { enabled: false, state: 'disabled' },
+      anchoring: this.anchoring?.status() ?? { enabled: false },
       scheduler: { interval_sec: this.config.monitorIntervalSec, last_tick_at: this.scheduler.lastRunAt, next_tick_at: this.scheduler.nextRunAt },
       queue: { queued: busStatus.queued, processing: busStatus.processing, counts: busStatus.counts, dead: busStatus.dead },
       executor: this.getMode() === 'live' ? 'chain' : 'sim',
@@ -207,6 +251,8 @@ export class AgentService {
       pending_approvals: this.approvals.pendingCount(),
       awaiting_owner_signature: this.approvals.list({ status: APPROVAL_STATUS.AWAITING_OWNER_SIGNATURE }).length,
       protected_chain_pools: this.config.protectedChainPools,
+      settlement: { recipient_configured: Boolean(this.config.settlementRecipient), confirmations: this.config.chainConfirmations, asset: 'USDC', decimals: 6 },
+      demo_run: this.scenarios?.playbackStatus(),
       scenario: this.scenarios ? (({ loaded, name, next_step: next, total_steps: total, finished }) => ({ loaded, name, next_step: next, total_steps: total, finished }))(this.scenarios.status()) : null,
       last_error: this.lastError,
       activity: { last_seq: this.activity.seq, persist_error: this.activity.lastPersistError }
@@ -220,9 +266,11 @@ export class AgentService {
    * restrictions for hand-injected events.
    */
   async submitEvent(raw, { origin = 'internal' } = {}) {
+    const mode = this.getMode(), generation = this.getGeneration();
     await this.init();
-    const mode = this.getMode();
-    const event = normalizeEvent(raw, { now: this.now, defaultMode: mode === 'live' ? 'live' : 'demo' });
+    this.#assertCurrent({ mode, generation });
+    if (origin === 'api') raw = { ...raw, source: 'admin' };
+    let event = normalizeEvent(raw, { now: this.now, defaultMode: mode === 'live' ? 'live' : 'demo' });
     event.runtime_generation = this.getGeneration();
     event.runtime_mode = mode;
     if (origin === 'api' && mode === 'live' && !LIVE_ADMIN_EVENT_TYPES.includes(event.type)) {
@@ -231,12 +279,77 @@ export class AgentService {
     }
     // Where an event came from and which mode it belongs to is decided here, never by the caller.
     if (origin === 'api') event.source_mode = mode === 'live' ? 'live' : 'demo';
-    if (event.type === 'EMERGENCY_STOP_CHANGED') {
+    if (mode === 'live' && event.type === 'CARGO_ARRIVED' && !event.data.arrival_proof?.trim()) {
+      throw new SettlementError('proof_required', 'An arrival_proof is required in Live mode');
+    }
+    if (mode === 'live' && ['PAYMENT_RECEIVED', 'CARGO_ARRIVED', 'SETTLEMENT_READY'].includes(event.type)) {
+      const entry = this.#settlementBinding(event);
+      if (event.type === 'PAYMENT_RECEIVED') {
+        if (event.data.proof_source !== 'usdc-transfer') throw new SettlementError('unsupported_payment_source', 'Live payment evidence currently requires proof_source: usdc-transfer');
+        const context = await this.getChainContext();
+        const verified = await verifyUsdcTransfer({ provider: context?.provider, chainConfig: this.chainConfig,
+          recipient: this.config.settlementRecipient, txHash: event.data.payment_proof,
+          amount: event.data.repayment_amount, confirmations: this.config.chainConfirmations });
+        const current = await readSettlementState({ context, chainConfig: this.chainConfig, poolId: entry.chain.pool_id });
+        if (current.ebl_id !== entry.chain.ebl_id) throw new SettlementError('settlement_pool_mismatch', 'Mapped pool collateral changed');
+        if (!current.paymentProof) {
+          const transition = planTransition('RECORD_PAYMENT', current);
+          if (!transition.ok) throw new SettlementError(transition.code, transition.message);
+          if (current.emergencyStopped) throw new SettlementError('emergency_stopped', 'Settlement intake is stopped');
+        }
+        if (current.paymentProof && (current.payment_proof !== verified.tx_hash || current.repayment_amount_atomic !== verified.amount_atomic)) {
+          throw new SettlementError('payment_record_conflict', 'The pool already records another payment or amount; owner correction requires separate review');
+        }
+        this.#assertCurrent({ mode, generation: event.runtime_generation });
+        event = normalizeEvent({ ...event, event_id: `usdc-payment:1439:${verified.tx_hash}`, pool_id: entry.pool_id,
+          chain_pool_id: entry.chain.pool_id, source_mode: 'live', evidence_hash: hashSnapshot(verified),
+          data: { payment_proof: verified.tx_hash, repayment_amount: verified.amount_usdc,
+            repayment_amount_atomic: verified.amount_atomic, proof_source: 'usdc-transfer', payment_verification: verified } }, { now: this.now, defaultMode: 'live' });
+        event.runtime_mode = mode; event.runtime_generation = this.getGeneration();
+        event = await this.settlementEvidence.claim(event);
+      }
+      this.#assertCurrent({ mode, generation: event.runtime_generation });
+    }
+    if (event.type === 'EMERGENCY_STOP_CHANGED' && origin !== 'chain-watcher') {
       this.emergencyStopped = Boolean(event.data.stopped);
       this.#activity('SYSTEM', 'EMERGENCY_STOP_CHANGED', null, { stopped: this.emergencyStopped }, { caseId: event.case_id });
     }
     const result = await this.bus.submit(event);
+    if (origin === 'chain-watcher' && !result.duplicate) this.#activity('SYSTEM', 'CHAIN_EVENT_OBSERVED', null,
+      { event_id: event.event_id, ...event.data }, { caseId: event.case_id, poolId: event.pool_id, tx_hash: event.data.transaction_hash });
     return { ...result, event_type: event.type, case_id: event.case_id, mode };
+  }
+
+  #settlementBinding(event) {
+    const entry = this.registry.get(event.case_id);
+    if (!entry?.chain?.pool_id) throw new SettlementError('no_chain_pool', 'Settlement evidence requires a verified pool mapping');
+    if (event.pool_id && event.pool_id !== entry.pool_id || event.chain_pool_id && event.chain_pool_id !== entry.chain.pool_id) {
+      throw new SettlementError('settlement_pool_mismatch', 'Event pool identifiers do not match the case registry');
+    }
+    if (this.registry.isProtected(event.case_id)) throw new SettlementError('protected_pool', 'The standing demonstration pool cannot enter the settlement workflow');
+    return entry;
+  }
+
+  async #liveSettlementView(event, pool) {
+    const entry = this.#settlementBinding(event), context = await this.getChainContext();
+    const current = await readSettlementState({ context, chainConfig: this.chainConfig, poolId: entry.chain.pool_id });
+    if (current.ebl_id !== entry.chain.ebl_id) throw new SettlementError('settlement_pool_mismatch', 'The pool collateral differs from the saved mapping');
+    const claim = this.settlementEvidence.find(current.payment_proof, event.case_id, entry.chain.pool_id);
+    let verification = null;
+    if (claim && current.paymentProof) {
+      verification = await verifyUsdcTransfer({ provider: context.provider, chainConfig: this.chainConfig,
+        recipient: this.config.settlementRecipient, txHash: current.payment_proof, amountAtomic: current.repayment_amount_atomic,
+        confirmations: this.config.chainConfirmations });
+      if (!samePaymentEvidence(claim.event.data.payment_verification, verification)
+        || claim.event.data.repayment_amount_atomic !== current.repayment_amount_atomic) throw new SettlementError('payment_evidence_changed', 'Recorded payment no longer matches its accepted evidence');
+    }
+    return { ...pool, poolId: entry.pool_id, caseData: pool?.caseData ?? { case_id: entry.case_id }, status: current.state,
+      chain_settlement: current, settlement: {
+        ...(current.paymentProof ? { payment_proof: current.payment_proof } : {}),
+        ...(current.arrivalProof ? { arrival_proof: current.arrival_proof } : {}),
+        ...(verification ? { repayment_amount: verification.amount_usdc, repayment_amount_atomic: verification.amount_atomic,
+          payment_verification: claim.event.data.payment_verification } : {}),
+        ...(current.state === 'Repaid' ? { settled_at: 'on-chain' } : {}) } };
   }
 
   /**
@@ -244,10 +357,12 @@ export class AgentService {
    * event that the ingest pipeline answers. Uploading the same bytes for the same case again returns
    * the same job instead of a second decision.
    */
-  async submitDocuments(body) {
+  async submitDocuments(body, { source = 'ingest', occurredAt, generation = this.getGeneration() } = {}) {
+    const mode = this.getMode();
     await this.init();
     if (!this.ingest) throw new AgentServiceError('ingest_unavailable', 'This runtime has no document intake', 503);
     const { job, documents, created } = await this.ingest.accept(body);
+    this.#assertCurrent({ mode, generation });
     if (body.exporter_preferences !== undefined) await this.preferences.put(job.case_id, body.exporter_preferences);
     let accepted = null;
     if (created) {
@@ -255,7 +370,8 @@ export class AgentService {
         event_id: job.event_id,
         type: 'DOCUMENTS_INGESTED',
         case_id: job.case_id,
-        source: 'ingest',
+        source,
+        ...(occurredAt ? { occurred_at: occurredAt } : {}),
         data: { job_id: job.job_id, document_ids: job.document_ids }
       });
     }
@@ -319,6 +435,10 @@ export class AgentService {
         await run.end('ok');
         return { ignored: 'Runtime changed since the event was queued', decisions: [] };
       }
+      if (event.source === 'chain-watcher') {
+        await run.end('ok');
+        return { observed: true, decisions: [] };
+      }
       if (event.type === 'EMERGENCY_STOP_CHANGED') {
         await run.end('ok');
         return { ignored: 'handled at submission' };
@@ -333,7 +453,23 @@ export class AgentService {
         await run.end('ok');
         return { decisions: recorded.map((decision) => decision.decision_id), recovered: true };
       }
-      const pool = this.store.pools.get(event.pool_id ?? event.case_id) ?? this.#poolByCase(event.case_id);
+      let pool = this.store.pools.get(event.pool_id ?? event.case_id) ?? this.#poolByCase(event.case_id);
+      if (mode === 'live' && ['PAYMENT_RECEIVED', 'CARGO_ARRIVED', 'SETTLEMENT_READY'].includes(event.type)) {
+        pool = await this.#liveSettlementView(event, pool);
+        if (event.type === 'PAYMENT_RECEIVED') {
+          const claim = this.settlementEvidence.find(event.data.payment_proof, event.case_id, event.chain_pool_id);
+          if (!claim || hashSnapshot(claim.event.data) !== hashSnapshot(event.data)) throw new SettlementError('payment_verification_required', 'Queued payment has no matching accepted receipt');
+          const context = await this.getChainContext();
+          const verified = await verifyUsdcTransfer({ provider: context?.provider, chainConfig: this.chainConfig,
+            recipient: this.config.settlementRecipient, txHash: event.data.payment_proof, amountAtomic: event.data.repayment_amount_atomic,
+            confirmations: this.config.chainConfirmations });
+          if (!samePaymentEvidence(verified, event.data.payment_verification)) throw new SettlementError('payment_evidence_changed', 'Payment evidence changed after acceptance');
+          if (pool.chain_settlement.paymentProof) {
+            await this.#maybeProposeSettlement({ mode, generation, case_id: event.case_id, pool_id: pool.poolId, action: 'RECORD_PAYMENT' });
+            await run.end('ok'); return { ignored: 'This verified payment is already recorded on-chain', decisions: [] };
+          }
+        }
+      }
       const documentEvent = event.type === 'DOCUMENTS_INGESTED' || event.type === 'REVIEW_RESOLVED' && event.data?.job_id;
       const proposed = documentEvent
         ? await this.#proposeFromUpload(event, pool, run)
@@ -372,10 +508,11 @@ export class AgentService {
       orchestrator: this.orchestrator,
       preferences: this.preferences,
       pool,
-      forceDeterministic: !this.config.valuationLlm,
-      valuation: { env: this.env },
-      worldRisk: { env: this.env },
-      parser: this.documentParser,
+      forceDeterministic: event.source === 'scenario' || !this.config.valuationLlm,
+      valuation: { env: event.source === 'scenario' ? {} : this.env },
+      worldRisk: { env: event.source === 'scenario' ? {} : this.env },
+      parser: event.source === 'scenario' ? {} : this.documentParser,
+      now: event.source === 'scenario' ? () => Date.parse(event.occurred_at) : () => this.now().getTime(),
       onStep: async (step) => {
         if (jobId) await this.ingest.recordStep(jobId, step);
         this.#activity('PIPELINE', 'PIPELINE_STEP', null, { job_id: jobId ?? null, ...step }, { caseId: event.case_id, poolId: pool?.poolId });
@@ -402,6 +539,13 @@ export class AgentService {
   async #decide(event, pool, proposal, index, run) {
     const mode = this.getMode();
     const generation = this.getGeneration();
+    const evidenceNow = event.source === 'scenario' ? Date.parse(event.observed_at) : this.now().getTime();
+    let freshness = proposal.freshness ?? eventFreshness(event, evidenceNow);
+    if (mode === 'live' && event.source === 'world-risk-monitor' && freshness.source_status !== 'live') freshness = { ...freshness, fresh: false, source_status: 'stale' };
+    const replay = proposal.replay ?? { schema: 'agent-replay-v1', kind: 'monitor',
+      event: structuredClone(event), pool: pool ? structuredClone({ poolId: pool.poolId, status: pool.status,
+        caseData: pool.caseData, quote: pool.quote, subscribedUsd: pool.subscribedUsd, settlement: pool.settlement }) : null,
+      mode, proposal_index: index, now_ms: evidenceNow };
     const poolId = pool?.poolId ?? event.pool_id ?? event.case_id;
     const idempotencyKey = index === 0 ? event.idempotency_key : `${event.idempotency_key}#${index}`;
     const core = {
@@ -443,7 +587,8 @@ export class AgentService {
         autonomy: autonomy.effective,
         protectedPool,
         emergencyStopped: await this.#emergencyStopped(),
-        evidenceStale: false,
+        chainObservationUnavailable: Boolean(this.chainWatcher && this.chainSafetyUnknown),
+        evidenceStale: !freshness.fresh || mode === 'live' && event.source === 'world-risk-monitor' && freshness.source_status !== 'live',
         recentActions: await this.#recentActions(poolId),
         now: this.now().getTime(),
         exporterPreferences: this.preferences.get(event.case_id),
@@ -456,19 +601,31 @@ export class AgentService {
       }
     ));
     this.#assertCurrent({ mode, generation });
+    const policyStep = { step: 'policy', status: policy.verdict === 'REJECTED' ? 'FAIL' : 'PASS', duration_ms: Date.now() - policyStarted };
+    if (mode === 'live' && event.data?.job_id) {
+      await this.ingest?.recordStep(event.data.job_id, policyStep);
+      this.#activity('PIPELINE', 'PIPELINE_STEP', null, policyStep, { caseId: event.case_id, poolId });
+    }
     const action = policy.action_override ?? proposal.action;
     const record = await this.logger.record({
       ...core,
+      agent_version: this.anchoring?.version,
       decision_id: decisionId,
       action,
       proposed_action: proposal.action,
+      freshness,
+      evidence_clock: event.source === 'scenario' && mode === 'demo' ? 'scenario' : 'wall',
+      replay,
+      replay_hash: hashSnapshot(replay),
       reasoning_summary: proposal.reasoning_summary,
       mode,
       generation,
+      ...(event.data?.job_id ? { job_id: event.data.job_id } : {}),
       chain_pool_id: chainPoolId,
-      pipeline: [...proposal.pipeline, { step: 'policy', status: policy.verdict === 'REJECTED' ? 'FAIL' : 'PASS', duration_ms: Date.now() - policyStarted }],
+      pipeline: [...proposal.pipeline, policyStep],
       findings: proposal.findings,
       quote_hash: proposal.quote_hash,
+      quote_snapshot: structuredClone(proposal.params?.quote ?? pool?.quote ?? null),
       proposal: { params: proposal.params, price_move_bps: proposal.price_move_bps ?? null, new_issue_price_usd: proposal.new_issue_price_usd ?? null },
       policy: { verdict: policy.verdict, reasons: policy.reasons, autonomy: policy.autonomy },
       status: 'DECIDED',
@@ -509,12 +666,12 @@ export class AgentService {
 
     const informational = INFORMATIONAL_ACTIONS.includes(decision.action);
     const needsChain = this.getMode() === 'live' && !informational;
-    if (needsChain && !decision.chain_pool_id) {
+    if (needsChain && !decision.chain_pool_id && !OPENING_ACTIONS.includes(decision.action)) {
       return this.#finish(decision, 'SKIPPED', { note: 'No on-chain pool is mapped for this case, so the proposal is recorded but nothing can be executed on-chain.' });
     }
 
     if (verdict === 'NEEDS_APPROVAL' && !informational) {
-      return this.#requestApproval(decision);
+      return this.#requestApproval(decision, run);
     }
     return this.mutex.run(decision.pool_id, () => this.#execute(decision, run));
   }
@@ -549,8 +706,20 @@ export class AgentService {
       pool_id: decision.pool_id,
       chain_pool_id: decision.chain_pool_id ?? null,
       params: decision.proposal?.params ?? {},
+      ...(SETTLEMENT_ACTIONS.includes(decision.action) ? { settlement_plan: this.approvals.list({ decision_id: decision.decision_id })[0]?.plan } : {}),
       onSubmitted,
-      assertCurrent: () => this.#assertCurrent(decision)
+      assertCurrent: () => {
+        this.#assertCurrent(decision);
+        if (!INFORMATIONAL_ACTIONS.includes(decision.action) && decision.freshness && !assessFreshness(decision.freshness, this.#evidenceNow(decision)).fresh) {
+          throw new AgentServiceError('evidence_expired', 'Evidence expired before broadcast; fresh evidence and a new proposal are required', 409);
+        }
+        if (decision.mode === 'live' && this.chainWatcher && this.chainSafetyUnknown) {
+          throw new AgentServiceError('chain_observation_unavailable', 'Confirmed chain monitoring is unavailable or still syncing', 503);
+        }
+        if (decision.mode === 'live' && this.emergencyStopped && decision.action !== 'PAUSE') {
+          throw new AgentServiceError('emergency_stopped', 'Emergency stop is active before submission', 409);
+        }
+      }
     };
   }
 
@@ -562,9 +731,21 @@ export class AgentService {
     if (!this.#isCurrent(decision)) throw new AgentServiceError('mode_changed', 'Runtime mode or generation changed since this proposal was made', 409);
   }
 
+  #evidenceNow(decision) {
+    return decision.evidence_clock === 'scenario' ? Date.parse(decision.freshness.evaluated_at)
+      + Math.max(0, this.now().getTime() - Date.parse(decision.created_at)) : this.now().getTime();
+  }
+
   async #execute(decision, run, approval = null) {
     if (!this.#isCurrent(decision)) return this.#fail(decision, { code: 'mode_changed', message: 'Runtime mode or generation changed before execution' }, approval);
     const informational = INFORMATIONAL_ACTIONS.includes(decision.action);
+    if (!informational && decision.freshness && !assessFreshness(decision.freshness, this.#evidenceNow(decision)).fresh) {
+      return this.#fail(decision, { code: 'evidence_expired', message: 'Evidence expired before execution; refresh it and create a new proposal.' }, approval);
+    }
+    // Keep a durably approved action pending across a temporary watcher outage; retry only after
+    // a successful poll. This also covers approval recovery on a scheduler tick.
+    if (!informational && decision.mode === 'live' && this.chainWatcher && this.chainSafetyUnknown) return decision;
+    if (!informational && decision.mode === 'live' && this.emergencyStopped && decision.action !== 'PAUSE') return decision;
     if (informational && this.getMode() === 'live') {
       // A Live record changes nothing on-chain. The offchain mirror is updated and nothing is claimed as executed.
       await this.#mirror(decision);
@@ -597,6 +778,7 @@ export class AgentService {
         { maxAttempts: 3, baseDelayMs: 300, sleep: this.sleep, shouldRetry: (error) => error?.retryable === true }
       ), { executor: route.kind });
       const result = retried.value;
+      if (route.kind === 'chain' && SETTLEMENT_ACTIONS.includes(decision.action)) await this.#verifySettlementExecution(decision, result);
       if (route.kind === 'chain') await this.#mirror(decision);
       if (result.skipped) {
         return this.#finish(decision, 'SKIPPED', { note: result.note, execution: this.#executionRecord(result, retried.attempts, started) });
@@ -633,9 +815,10 @@ export class AgentService {
   }
 
   async #complete(decision, execution, approval = null) {
+    const current = await this.logger.get(decision.decision_id);
     const updated = await this.logger.update(decision.decision_id, { status: 'COMPLETED', execution, error: undefined,
-      ...(approval ? { approval: { ...decision.approval, status: 'EXECUTED' } } : {}) });
-    await this.#maybeProposeSettlement(updated);
+      ...(approval ? { approval: { ...current.approval, status: 'EXECUTED' } } : {}) });
+    await this.#maybeProposeSettlement(updated).catch((error) => this.#noteError(error));
     // A separate approval-store write must not turn a verified execution into a failure. A later
     // tick repairs this checkpoint from the completed decision if the process/write stops here.
     if (approval) await this.approvals.markExecuted(approval.approval_id, { reference: execution.reference, tx_hash: execution.tx_hash ?? null })
@@ -661,11 +844,14 @@ export class AgentService {
   async #maybeProposeSettlement(decision) {
     if (!this.#isCurrent(decision)) return;
     if (!['RECORD_PAYMENT', 'RECORD_ARRIVAL'].includes(decision.action)) return;
-    const pool = this.store.pools.get(decision.pool_id) ?? this.#poolByCase(decision.case_id);
+    let pool = this.store.pools.get(decision.pool_id) ?? this.#poolByCase(decision.case_id);
+    if (decision.mode === 'live') pool = await this.#liveSettlementView(decision, pool);
     const settlement = pool?.settlement;
     if (!settlement?.payment_proof || !settlement?.arrival_proof || settlement.settled_at) return;
+    if (decision.mode === 'live' && (!settlement.payment_verification || pool.chain_settlement.emergencyStopped)) return;
+    if (decision.mode === 'live' && !planTransition('SETTLE', pool.chain_settlement).ok) return;
     const event = normalizeEvent({
-      event_id: `settlement-ready:${decision.mode}:${pool.poolId}`,
+      event_id: decision.mode === 'live' ? `settlement-ready:${this.getGeneration()}:${hashSnapshot(settlement)}` : `settlement-ready:${decision.mode}:${pool.poolId}`,
       type: 'SETTLEMENT_READY',
       case_id: decision.case_id,
       pool_id: pool.poolId,
@@ -673,12 +859,15 @@ export class AgentService {
       source_mode: decision.mode,
       data: { repayment_amount: settlement.repayment_amount, trigger_decision: decision.decision_id }
     }, { now: this.now, defaultMode: decision.mode });
+    event.runtime_mode = decision.mode; event.runtime_generation = this.getGeneration();
     await this.bus.submit(event).catch((error) => this.#noteError(error));
   }
 
   async #fail(decision, error, approval = null) {
     const failure = { code: error.code ?? error.name ?? 'error', message: String(error.message ?? error).slice(0, 500) };
-    const updated = await this.logger.update(decision.decision_id, { status: 'FAILED', error: failure });
+    const current = await this.logger.get(decision.decision_id);
+    const updated = await this.logger.update(decision.decision_id, { status: 'FAILED', error: failure,
+      ...(approval ? { approval: { ...current.approval, status: 'FAILED' } } : {}) });
     if (approval) await this.approvals.markFailed(approval.approval_id, failure).catch(() => {});
     this.#noteError(error);
     this.#activity('EXECUTION', 'EXECUTION_FAILED', updated, { decision_action: updated.action, ...failure });
@@ -689,6 +878,12 @@ export class AgentService {
   async #mirror(decision) {
     if (!this.#isCurrent(decision)) return;
     try {
+      if (SETTLEMENT_ACTIONS.includes(decision.action)) {
+        const pool = this.store.pools.get(decision.pool_id) ?? this.#poolByCase(decision.case_id);
+        const view = await this.#liveSettlementView(decision, pool);
+        if (pool) { pool.settlement = view.settlement; pool.status = view.status; }
+        return;
+      }
       await this.sim.execute({
         ...this.#command(decision),
         idempotency_key: `mirror:${decision.idempotency_key}`
@@ -700,24 +895,44 @@ export class AgentService {
 
   // ---------------------------------------------------------------- approvals
 
-  async #requestApproval(decision) {
+  async #requestApproval(decision, run) {
     this.#assertCurrent(decision);
     const mode = this.getMode();
     let route = 'sim';
     let plan = null;
     if (mode === 'live') {
-      const chosen = await this.#executorFor(decision);
+      const opening = OPENING_ACTIONS.includes(decision.action);
+      const chosen = opening ? null : await this.#executorFor(decision);
       route = chosen ? 'server' : 'owner_cli';
-      if (route === 'owner_cli') {
-        if (!OWNER_PLAN_ACTIONS.has(decision.action)) {
+      if (route === 'owner_cli' || SETTLEMENT_ACTIONS.includes(decision.action)) {
+        if (!OWNER_PLAN_ACTIONS.includes(decision.action)) {
           return this.#finish(decision, 'SKIPPED', { note: `${decision.action} has no signing route yet in Live (no key can send it)` });
         }
-        plan = await buildOwnerPlan({
-          action: decision.action,
-          chain_pool_id: decision.chain_pool_id,
-          params: decision.proposal?.params ?? {},
-          chainConfig: this.chainConfig
-        });
+        const started = Date.now();
+        const build = async () => buildOwnerPlan({ action: decision.action, chain_pool_id: decision.chain_pool_id,
+          params: decision.proposal?.params ?? {}, chainConfig: this.chainConfig,
+          context: opening || SETTLEMENT_ACTIONS.includes(decision.action) ? await this.getChainContext() : undefined,
+          recipient: this.config.settlementRecipient, confirmations: this.config.chainConfirmations });
+        try { plan = run ? await run.span('execution_plan', build) : await build(); }
+        catch (error) {
+          if (!opening) throw error;
+          this.#assertCurrent(decision);
+          const step = { step: 'execution_plan', status: 'REVIEW', duration_ms: Date.now() - started };
+          await this.logger.update(decision.decision_id, { pipeline: [...decision.pipeline, step], opening: { kind: 'unavailable', code: error.code ?? 'chain_unavailable' } });
+          if (decision.job_id) await this.ingest?.recordStep(decision.job_id, step);
+          this.#activity('PIPELINE', 'PIPELINE_STEP', decision, step);
+          return this.#finish(decision, 'SKIPPED', { note: `No on-chain pool is opened: ${error.message}`, error: { code: error.code ?? 'opening_plan_failed', message: String(error.message).slice(0, 500) } });
+        }
+        if (opening) {
+          route = plan.kind === 'link' ? 'link' : 'owner_cli';
+          const step = { step: 'execution_plan', status: 'PASS', duration_ms: Date.now() - started };
+          decision = await this.logger.update(decision.decision_id, { pipeline: [...decision.pipeline, step],
+            opening: { kind: plan.kind, cargo_hash: plan.cargo_hash,
+              ...(plan.identity_source ? { identity_source: plan.identity_source, source_cargo_hash: plan.source_cargo_hash } : {}),
+              ...(plan.existing ? { existing: plan.existing } : {}) } });
+          if (decision.job_id) await this.ingest?.recordStep(decision.job_id, step);
+          this.#activity('PIPELINE', 'PIPELINE_STEP', decision, step);
+        }
       }
     }
     this.#assertCurrent(decision);
@@ -739,6 +954,19 @@ export class AgentService {
 
   async approve(approvalId, { by = 'admin', note = null } = {}) {
     await this.init();
+    const pending = this.approvals.get(approvalId);
+    if (pending?.mode === 'live' && this.chainWatcher && this.chainSafetyUnknown) {
+      throw new AgentServiceError('chain_observation_unavailable', 'Confirmed chain monitoring is unavailable or still syncing', 503);
+    }
+    if (pending?.plan?.schema === SETTLEMENT_SCHEMA) {
+      this.#assertCurrent(await this.logger.get(pending.decision_id));
+      await validateSettlementStep({ plan: pending.plan, context: await this.getChainContext(), chainConfig: this.chainConfig,
+        recipient: this.config.settlementRecipient, confirmations: this.config.chainConfirmations });
+    }
+    const pendingDecision = pending ? await this.logger.get(pending.decision_id) : null;
+    if (pendingDecision?.freshness && !assessFreshness(pendingDecision.freshness, this.#evidenceNow(pendingDecision)).fresh) {
+      throw new AgentServiceError('evidence_expired', 'Fresh evidence and a new proposal are required before approval', 409);
+    }
     const approval = await this.approvals.approve(approvalId, { by, note });
     const decision = await this.logger.get(approval.decision_id);
     if (!decision) throw new AgentServiceError('decision_missing', `Decision ${approval.decision_id} of approval ${approvalId} is gone`, 409);
@@ -753,9 +981,15 @@ export class AgentService {
 
     if (approval.route === 'owner_cli') {
       await this.approvals.markAwaitingOwner(approvalId);
-      const waiting = await this.logger.update(decision.decision_id, { status: 'AWAITING_OWNER_SIGNATURE' });
+      const current = await this.logger.get(decision.decision_id);
+      const waiting = await this.logger.update(decision.decision_id, { status: 'AWAITING_OWNER_SIGNATURE', approval: { ...current.approval, status: 'AWAITING_OWNER_SIGNATURE' } });
       this.#activity('APPROVAL', 'OWNER_SIGNATURE_REQUIRED', waiting, { decision_action: waiting.action, approval_id: approvalId, steps: approval.plan?.steps?.length ?? 0 });
       return { approval: this.approvals.get(approvalId), decision: waiting };
+    }
+
+    if (approval.route === 'link') {
+      const linked = await this.mutex.run(decision.pool_id, () => this.#completeAssociation(decision, approval));
+      return { approval: this.approvals.get(approvalId), decision: linked };
     }
 
     const executed = await this.mutex.run(decision.pool_id, () => this.#execute(decision, null, approval));
@@ -776,61 +1010,147 @@ export class AgentService {
    */
   async attachTx(approvalId, { tx_hash: txHash, step_index: stepIndex = 0 }, { verify } = {}) {
     await this.init();
+    const key = this.approvals.get(approvalId)?.pool_id ?? approvalId;
+    return this.mutex.run(key, () => this.#attachOwnerTx(approvalId, txHash, stepIndex, verify));
+  }
+
+  async #attachOwnerTx(approvalId, txHash, stepIndex, verify) {
+    await this.approvals.expireStale();
     const approval = this.approvals.get(approvalId);
     if (!approval) throw new ApprovalError('approval_not_found', `Unknown approval ${approvalId}`, 404);
+    const opening = approval.plan?.schema === OPENING_SCHEMA;
+    const settlement = approval.plan?.schema === SETTLEMENT_SCHEMA;
+    let decision = await this.logger.get(approval.decision_id);
+    this.#assertCurrent(decision);
+    const already = approval.steps_done.find((done) => done.index === stepIndex);
+    if ((opening || settlement) && already && already.tx_hash.toLowerCase() === String(txHash).toLowerCase()
+      && [APPROVAL_STATUS.AWAITING_OWNER_SIGNATURE, APPROVAL_STATUS.EXECUTED].includes(approval.status)) {
+      if (opening && decision.status !== 'COMPLETED') decision = await this.logger.update(decision.decision_id, { opening: { ...decision.opening,
+        bindings: approval.plan.bindings, steps_verified: approval.steps_done.length } });
+      const complete = approval.steps_done.length === approval.plan.steps.length;
+      const completed = complete && approval.status !== APPROVAL_STATUS.EXECUTED ? await this.#finalizeOwner(decision, approval) : decision;
+      return { approval: this.approvals.get(approvalId), decision: completed, complete, duplicate: true };
+    }
     if (approval.status !== APPROVAL_STATUS.AWAITING_OWNER_SIGNATURE) {
       throw new ApprovalError('invalid_transition', `Approval ${approvalId} is ${approval.status}; it is not waiting for an owner signature`);
     }
-    const step = approval.plan?.steps?.[stepIndex];
-    if (!step) throw new ApprovalError('unknown_step', `Approval ${approvalId} has no step ${stepIndex}`, 400);
-    const decision = await this.logger.get(approval.decision_id);
-    this.#assertCurrent(decision);
+    const template = approval.plan?.steps?.[stepIndex];
+    if (!template) throw new ApprovalError('unknown_step', `Approval ${approvalId} has no step ${stepIndex}`, 400);
+    if (stepIndex !== approval.steps_done.length) throw new ApprovalError('step_out_of_order', `Step ${approval.steps_done.length} must be recorded first`);
+    if (this.approvals.list({ limit: 2000 }).some((item) => item.steps_done.some((done) => String(done.tx_hash).toLowerCase() === String(txHash).toLowerCase()))) {
+      throw new ApprovalError('tx_already_attached', 'This transaction is already attached to an approval');
+    }
+    const step = { ...resolveOwnerStep(approval.plan, template), chain_id: approval.plan.chain_id };
 
     const verifier = verify ?? ((input) => this.#verifyOwnerStep(input));
-    const verdict = await verifier({ step, txHash });
+    const verdict = await verifier({ step, txHash, plan: approval.plan });
     this.#assertCurrent(decision);
     if (!verdict.ok) {
       this.#activity('APPROVAL', 'OWNER_TX_REJECTED', null, { approval_id: approvalId, step: stepIndex, errors: verdict.errors }, { caseId: approval.case_id, poolId: approval.pool_id });
       throw new ApprovalError('tx_verification_failed', `The transaction does not match the approved plan: ${verdict.errors.join('; ')}`, 422);
     }
 
+    await this.approvals.expireStale();
     const recorded = await this.approvals.recordStep(approvalId, {
-      index: stepIndex, tx_hash: txHash, block_number: verdict.block_number, from: verdict.from, confirmed_events: verdict.confirmed_events, verified_at: this.now().toISOString()
+      index: stepIndex, tx_hash: txHash, block_number: verdict.block_number, from: verdict.from, confirmed_events: verdict.confirmed_events,
+      ...(opening ? { bindings: verdict.bindings ?? {} } : {}), verified_at: this.now().toISOString()
     });
+    if (opening) decision = await this.logger.update(decision.decision_id, { opening: { ...decision.opening,
+      bindings: recorded.approval.plan.bindings, steps_verified: recorded.approval.steps_done.length } });
+    this.#activity('APPROVAL', 'OWNER_STEP_VERIFIED', decision, { approval_id: approvalId, step: stepIndex, total: approval.plan.steps.length }, { tx_hash: txHash });
     if (!recorded.complete) return { approval: recorded.approval, decision, complete: false };
 
+    const completed = await this.#finalizeOwner(decision, recorded.approval);
+    return { approval: this.approvals.get(approvalId), decision: completed, complete: true };
+  }
+
+  async #finalizeOwner(decision, approval) {
+    this.#assertCurrent(decision);
+    if (decision.status === 'COMPLETED') { await this.approvals.markExecuted(approval.approval_id, decision.execution); return decision; }
+    if (approval.plan?.schema === OPENING_SCHEMA) {
+      const context = await this.getChainContext();
+      if (!context) throw new AgentServiceError('chain_unavailable', 'All steps were recorded; chain reconciliation is required before completion', 503);
+      const registered = await readRegisteredOpening({ cargoHash: approval.plan.cargo_hash, context, chainConfig: this.chainConfig });
+      if (String(registered.ebl_id) !== approval.plan.bindings?.ebl_id || String(registered.pool_id) !== approval.plan.bindings?.pool_id) {
+        throw new AgentServiceError('opening_binding_mismatch', 'The current cargo and pool do not match the verified receipts', 409);
+      }
+      this.#assertCurrent(decision);
+      await this.registry.linkChain({ case_id: decision.case_id, pool_id: decision.pool_id, ebl_id: registered.ebl_id,
+        chain_pool_id: registered.pool_id, source: 'owner-opening', note: `Verified approval ${approval.approval_id}` }, createChainReader(context));
+      decision = await this.logger.update(decision.decision_id, { chain_pool_id: registered.pool_id, opening: { ...decision.opening, bindings: approval.plan.bindings } });
+    }
+
     const base = String(this.chainConfig?.explorerBase ?? '').replace(/\/$/u, '');
-    const last = recorded.approval.steps_done.at(-1);
+    const last = approval.steps_done.at(-1);
     const execution = {
       mode: 'chain',
       signer_role: 'OWNER_CLI',
       reference: last.tx_hash,
       tx_hash: last.tx_hash,
-      tx_hashes: recorded.approval.steps_done.map((done) => done.tx_hash),
+      tx_hashes: approval.steps_done.map((done) => done.tx_hash),
       explorer_url: base ? `${base}/tx/${last.tx_hash}` : undefined,
       block_number: last.block_number,
-      confirmed_events: recorded.approval.steps_done.flatMap((done) => done.confirmed_events ?? []),
+      confirmed_events: approval.steps_done.flatMap((done) => done.confirmed_events ?? []),
       attempts: 1
     };
     await this.#mirror(decision);
-    const completed = await this.#complete(decision, execution, recorded.approval);
-    return { approval: this.approvals.get(approvalId), decision: completed, complete: true };
+    return this.#complete(decision, execution, approval);
   }
 
-  async #verifyOwnerStep({ step, txHash }) {
+  async #completeAssociation(decision, approval) {
+    try {
+      this.#assertCurrent(decision);
+      const context = await this.getChainContext();
+      if (!context) throw new AgentServiceError('chain_unavailable', 'The existing offering cannot be verified', 503);
+      const current = await readRegisteredOpening({ cargoHash: approval.plan.cargo_hash, context, chainConfig: this.chainConfig });
+      if (current.ebl_id !== approval.plan.existing.ebl_id || current.pool_id !== approval.plan.existing.pool_id) {
+        throw new AgentServiceError('existing_pool_changed', 'The existing cargo association changed after the proposal', 409);
+      }
+      this.#assertCurrent(decision);
+      await this.registry.linkChain({ case_id: decision.case_id, pool_id: decision.pool_id, ebl_id: current.ebl_id,
+        chain_pool_id: current.pool_id, source: 'approved-cargo-link' }, createChainReader(context));
+      decision = await this.logger.update(decision.decision_id, { chain_pool_id: current.pool_id });
+      return this.#complete(decision, { mode: 'record', reference: null, tx_hash: null, attempts: 0,
+        note: 'Existing eBL and offering linked after chain verification; no transaction was sent and no price was changed.' }, approval);
+    } catch (error) { return this.#fail(decision, error, approval); }
+  }
+
+  async #verifyOwnerStep({ step, txHash, plan }) {
     const context = await this.getChainContext();
     if (!context) return { ok: false, errors: ['The chain is not reachable from this server, so the transaction cannot be verified'], confirmed_events: [] };
+    if (plan?.schema === SETTLEMENT_SCHEMA) {
+      await assertSettlementChain(context.provider, this.chainConfig);
+      const receipt = await context.provider.getTransactionReceipt(txHash), head = await context.provider.getBlockNumber();
+      if (!receipt || head - receipt.blockNumber + 1 < this.config.chainConfirmations
+        || !receipt.blockHash || (await context.provider.getBlock(receipt.blockNumber))?.hash !== receipt.blockHash) {
+        return { ok: false, errors: ['Settlement transaction is unconfirmed or no longer in its canonical block'], confirmed_events: [] };
+      }
+      if (plan.payment) {
+        const current = await verifyUsdcTransfer({ provider: context.provider, chainConfig: this.chainConfig,
+          recipient: this.config.settlementRecipient, txHash: plan.payment.tx_hash, amountAtomic: plan.payment.amount_atomic,
+          confirmations: this.config.chainConfirmations });
+        if (!samePaymentEvidence(current, plan.payment)) return { ok: false, errors: ['USDC payment changed after approval'], confirmed_events: [] };
+      }
+    }
     const { Interface } = await import('ethers');
     const abi = this.chainConfig?.abis?.[step.contract];
     if (!abi) return { ok: false, errors: [`No ABI for ${step.contract}`], confirmed_events: [] };
     const allowed = [];
     try {
-      allowed.push(await context.pool.owner());
+      const contract = step.contract === 'EBLRegistry' ? context.registry : context.pool;
+      allowed.push(await contract.owner());
     } catch {
       return { ok: false, errors: ['Could not read the contract owner to check who sent the transaction'], confirmed_events: [] };
     }
-    if (context.signers?.AGENT_EXECUTOR) allowed.push(context.signers.AGENT_EXECUTOR);
+    if (context.signers?.AGENT_EXECUTOR && !['mintEBLV2', 'pledge', 'createOffering', 'cancelOffering'].includes(step.method)) allowed.push(context.signers.AGENT_EXECUTOR);
     return verifyOwnerTx({ step, txHash, provider: context.provider, iface: new Interface(abi), allowedSenders: allowed });
+  }
+
+  async #verifySettlementExecution(decision, result) {
+    const approval = this.approvals.list({ decision_id: decision.decision_id }).find((item) => item.plan?.schema === SETTLEMENT_SCHEMA);
+    if (!approval) throw new SettlementError('settlement_plan_required', 'A verified settlement plan is required for receipt reconciliation');
+    const verdict = await this.#verifyOwnerStep({ step: { ...approval.plan.steps[0], chain_id: approval.plan.chain_id }, txHash: result.tx_hash, plan: approval.plan });
+    if (!verdict.ok) throw new SettlementError('tx_verification_failed', verdict.errors.join('; '));
   }
 
   // ---------------------------------------------------------------- periodic work
@@ -838,6 +1158,7 @@ export class AgentService {
   /** One scheduler tick: expire approvals, reconcile submitted transactions, poll the sources. */
   async tick() {
     await this.init();
+    await this.chainWatcher?.poll(this);
     const expired = await this.approvals.expireStale();
     for (const approval of this.approvals.list({ status: APPROVAL_STATUS.EXPIRED, limit: 2000 })) {
       const decision = await this.logger.get(approval.decision_id);
@@ -847,6 +1168,18 @@ export class AgentService {
       }
     }
     await this.#reconcilePending();
+    for (const approval of this.approvals.list({ status: APPROVAL_STATUS.AWAITING_OWNER_SIGNATURE })) {
+      if (![OPENING_SCHEMA, SETTLEMENT_SCHEMA].includes(approval.plan?.schema)) continue;
+      const decision = await this.logger.get(approval.decision_id);
+      if (!decision || !this.#isCurrent(decision)) continue;
+      if (approval.steps_done.length !== approval.plan.steps.length) {
+        if (approval.plan.schema === OPENING_SCHEMA && decision.opening?.steps_verified !== approval.steps_done.length) await this.logger.update(decision.decision_id, { opening: { ...decision.opening,
+          bindings: approval.plan.bindings, steps_verified: approval.steps_done.length } });
+        continue;
+      }
+      try { await this.mutex.run(decision.pool_id, () => this.#finalizeOwner(decision, approval)); }
+      catch (error) { this.#noteError(error); }
+    }
     // Approval was durably granted but the process stopped before recording EXECUTING.
     for (const approval of this.approvals.list({ status: APPROVAL_STATUS.APPROVED })) {
       const decision = await this.logger.get(approval.decision_id);
@@ -865,6 +1198,8 @@ export class AgentService {
       } else if (approval.route === 'owner_cli') {
         await this.approvals.markAwaitingOwner(approval.approval_id);
         await this.logger.update(decision.decision_id, { status: 'AWAITING_OWNER_SIGNATURE' });
+      } else if (approval.route === 'link') {
+        await this.mutex.run(decision.pool_id, () => this.#completeAssociation(decision, approval));
       } else {
         await this.mutex.run(decision.pool_id, async () => {
           const current = await this.logger.get(decision.decision_id);
@@ -880,7 +1215,19 @@ export class AgentService {
         this.#noteError(error);
       }
     }
+    if (this.getMode() === 'live') for (const claim of this.settlementEvidence.list()) {
+      if (claim.event.runtime_generation !== this.getGeneration()) continue;
+      await this.#maybeProposeSettlement({ mode: 'live', generation: this.getGeneration(), action: 'RECORD_PAYMENT',
+        case_id: claim.event.case_id, pool_id: claim.event.pool_id }).catch((error) => this.#noteError(error));
+    }
+    await this.anchoring?.tick();
     await this.logger.prune({ maxRecords: this.config.maxDecisions, olderThanMs: this.config.retentionDays * 24 * 3600 * 1000 });
+    const protectedDecisions = new Set((await this.logger.list()).filter((record) => !['COMPLETED', 'FAILED', 'SKIPPED', 'REJECTED'].includes(record.status)).map((record) => record.decision_id));
+    const retention = { now: this.now().getTime(), retentionDays: this.config.retentionDays, maxRecords: this.config.maxDecisions, protectedDecisions };
+    await this.bus.pruneRetention?.(retention);
+    await this.approvals.pruneRetention?.(retention);
+    await this.activity.prune?.(retention);
+    await this.tracer.prune?.(retention);
     return { ok: true, expired: expired.length };
   }
 
@@ -915,8 +1262,9 @@ export class AgentService {
           return;
         }
         try {
-          const result = await chain.findTransaction(current.execution.tx_hash, current.action);
+          const result = await chain.findTransaction(current.execution.tx_hash, current.action, this.#command(current));
           if (!result) return;
+          if (SETTLEMENT_ACTIONS.includes(current.action)) await this.#verifySettlementExecution(current, result);
           const approval = this.approvals.list({ decision_id: current.decision_id })[0] ?? null;
           await this.#mirror(current);
           await this.#complete(current, this.#executionRecord(result, 1, Date.now()), approval && approval.status === APPROVAL_STATUS.APPROVED ? approval : null);
@@ -948,6 +1296,10 @@ export class AgentService {
       case 'set_autonomy': {
         if (!['off', 'observe', 'propose', 'auto'].includes(autonomy)) throw new AgentServiceError('invalid_autonomy', 'autonomy must be off, observe, propose or auto');
         this.autonomyOverride = autonomy;
+        if (this.anchoring) {
+          this.anchoring.version = createAgentVersion({ ...this.config, autonomy }, this.env);
+          this.logger.agentVersion = this.anchoring.version;
+        }
         const effective = this.autonomy();
         this.#activity('SYSTEM', 'AUTONOMY_CHANGED', null, { requested: autonomy, effective: effective.effective, downgraded: effective.downgraded });
         return this.status();
@@ -965,8 +1317,11 @@ export class AgentService {
 
   /** Clear everything the agent recorded in Demo mode. Live records are never touched. */
   async resetDemo() {
+    await this.scenarios?.stopPlayback();
     await this.init();
+    this.chainWatcher?.forgetDemoBackups();
     const removed = await this.logger.clearWhere((record) => record.mode === 'demo');
+    await this.anchoring?.resetDemo();
     await this.approvals.clearMode('demo');
     await this.bus.clearMode('demo');
     await this.activity.clearMode('demo');
@@ -995,11 +1350,29 @@ export class AgentService {
     items.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || order.get(b.decision_id) - order.get(a.decision_id));
     const start = cursor ? Math.max(0, items.findIndex((record) => record.decision_id === cursor) + 1) : 0;
     const page = items.slice(start, start + limit);
-    return { decisions: page, count: items.length, next_cursor: start + limit < items.length ? page.at(-1)?.decision_id : null };
+    return { decisions: page.map((record) => this.#publicDecision(record)), count: items.length, next_cursor: start + limit < items.length ? page.at(-1)?.decision_id : null };
   }
 
-  getDecision(id) {
-    return this.logger.get(id);
+  #publicDecision(record) {
+    if (!record) return null;
+    return sanitizeAudit({ ...record, ...(record.freshness ? { freshness_status: assessFreshness(record.freshness, this.#evidenceNow(record)).source_status } : {}) });
+  }
+
+  async getDecision(id) {
+    return this.#publicDecision(await this.logger.get(id));
+  }
+
+  async replayDecision(id) {
+    const decision = await this.logger.get(id);
+    if (!decision) throw new AgentServiceError('decision_not_found', 'Unknown decision', 404);
+    return replayDecision(decision);
+  }
+
+  async getDecisionAnchor(id) {
+    const decision = await this.logger.get(id);
+    const result = await this.anchoring?.get(id, decision);
+    if (!decision && !result?.available) throw new AgentServiceError('decision_not_found', 'Unknown decision', 404);
+    return result ?? { available: false, state: 'DISABLED', decision_id: id };
   }
 
   async getTrace(id) {

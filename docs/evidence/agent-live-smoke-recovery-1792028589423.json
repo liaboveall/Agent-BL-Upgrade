@@ -1,0 +1,99 @@
+{
+  "schema": "agent-live-smoke-v1",
+  "run_id": "phase5-live-1792027678667",
+  "checked_at": "2026-10-15T01:43:42.279Z",
+  "status": "PASS",
+  "live_acceptance": true,
+  "real_transactions": 1,
+  "pool_id": 2,
+  "before": {
+    "chain_id": 1439,
+    "state": 7,
+    "issue_price_e6": "791000",
+    "emergency_stopped": false
+  },
+  "steps": [
+    {
+      "action": "REPRICE",
+      "decision_id": "decision_cd916a9eca6a4cfb7bbe0514",
+      "tx_hash": "0xad1110be0b676640aaa7a634e553e7d4200884fa584bfbd640ed19c18891c703",
+      "observed": {
+        "chain_id": 1439,
+        "state": 6,
+        "issue_price_e6": "791000",
+        "emergency_stopped": false,
+        "quote_issue_price_e6": "791000",
+        "before": {
+          "chain_id": 1439,
+          "state": 2,
+          "issue_price_e6": "800000",
+          "emergency_stopped": false
+        },
+        "historical": true,
+        "transaction_block": 143794168,
+        "calldata_exact": true,
+        "oracle_processed": true,
+        "verified": true
+      }
+    },
+    {
+      "action": "PAUSE",
+      "decision_id": "decision_5d729995720da22bb74af347",
+      "tx_hash": "0x627ac1186be1b3789cccaf4c28201b71ac17446ecdb086af916e1589df154cee",
+      "observed": {
+        "chain_id": 1439,
+        "state": 7,
+        "issue_price_e6": "791000",
+        "emergency_stopped": false,
+        "quote_issue_price_e6": "783600",
+        "before": {
+          "chain_id": 1439,
+          "state": 6,
+          "issue_price_e6": "791000",
+          "emergency_stopped": false
+        },
+        "historical": true,
+        "transaction_block": 143794185,
+        "calldata_exact": true,
+        "oracle_processed": true,
+        "verified": true
+      }
+    },
+    {
+      "action": "RESUME",
+      "decision_id": "decision_867ebfc5c0c3c0201b3c8330",
+      "tx_hash": "0x94047bd679a3736b3bd5e492f6e6a131d02cb509454ff3ed13e995122250d247",
+      "observed": {
+        "chain_id": 1439,
+        "state": 6,
+        "issue_price_e6": "791000",
+        "emergency_stopped": false,
+        "quote_issue_price_e6": "791000",
+        "before": {
+          "chain_id": 1439,
+          "state": 7,
+          "issue_price_e6": "791000",
+          "emergency_stopped": false
+        },
+        "historical": false,
+        "transaction_block": 143795077,
+        "calldata_exact": true,
+        "oracle_processed": true,
+        "verified": true
+      }
+    }
+  ],
+  "actions": [
+    "REPRICE",
+    "PAUSE",
+    "RESUME"
+  ],
+  "confirmed_transactions": 3,
+  "reused_transactions": 2,
+  "after": {
+    "chain_id": 1439,
+    "state": 6,
+    "issue_price_e6": "791000",
+    "emergency_stopped": false
+  }
+}

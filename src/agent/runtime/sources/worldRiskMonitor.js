@@ -3,6 +3,7 @@
 // fixtures that means: baseline once, then silence -- not a repeat of the same alert every poll.
 
 import { ACTIVE_STATES } from '../poolRules.js';
+import { evidenceMetadata, eventFreshness } from '../freshness.js';
 import { assessWorldRisk } from '../../worldRiskAgent.js';
 
 const WATCHED_STATES = new Set([...ACTIVE_STATES, 'Paused']);
@@ -25,6 +26,7 @@ export function createWorldRiskMonitor({ tracker, assess = assessWorldRisk, env 
     const mode = service.getMode();
     await service.ensurePools();
     for (const pool of service.store.pools.values()) {
+      if (pool.chainOnly) continue; // Chain metadata alone is insufficient for a risk/pricing assessment.
       if (!pool.caseData || !WATCHED_STATES.has(pool.status)) continue;
       const caseId = pool.caseData.case_id ?? pool.poolId;
       // Live: only pools that are mapped to a verified on-chain pool.
@@ -32,6 +34,11 @@ export function createWorldRiskMonitor({ tracker, assess = assessWorldRisk, env 
 
       const assessment = await assess(pool.caseData, { env: env() }).catch(() => null);
       if (!assessment) continue;
+      const time = service.now?.().getTime() ?? Date.now();
+      const metadata = evidenceMetadata(assessment, { now: time, mode: assessment.live ? 'live' : 'fixture' });
+      const usable = eventFreshness({ ...metadata, data: { events: assessment.events ?? [] } }, time).fresh;
+      // Unavailable or old data cannot count towards hysteresis or clear a real risk.
+      if (!usable || mode === 'live' && !assessment.live) continue;
       const change = await tracker.observe(caseId, assessment.events ?? []);
       if (!change) continue;
       out.push({
@@ -41,6 +48,7 @@ export function createWorldRiskMonitor({ tracker, assess = assessWorldRisk, env 
         pool_id: pool.poolId,
         source: 'world-risk-monitor',
         source_mode: assessment.live ? 'live' : 'fixture',
+        ...metadata,
         data: change.data,
         ...(assessment.evidence_hash ? { evidence_hash: assessment.evidence_hash } : {})
       });

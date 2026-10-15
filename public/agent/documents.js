@@ -3,6 +3,7 @@ import { state } from '../store.js';
 import { t, onLangChange } from '../i18n.js';
 import { agentRequest } from './api.js';
 import { decisionButton } from '../copilot/ui.js';
+import { renderCompliance } from './compliance.js';
 
 export const MAX_FILE_BYTES = 8_388_608;
 export function fileDocument(file, Reader = FileReader) {
@@ -23,7 +24,22 @@ export function initDocumentManagement() {
   if (!input || !zone || !target) return;
   let reviewId = null, busy = false, selectedCase = null, generation = 0, stream = null, refreshVersion = 0, errorText = '';
   const latest = new Map();
+  const expanded = new Set();
+  const rememberDetails = (details, key) => {
+    details.dataset.detailKey = key; details.open = expanded.has(key);
+    const summary = details.querySelector('summary');
+    if (summary) summary.dataset.detailKey = key;
+    details.addEventListener('toggle', () => {
+      if (details.isConnected) details.open ? expanded.add(key) : expanded.delete(key);
+    });
+    return details;
+  };
   const render = () => {
+    const focusedKey = target.contains(document.activeElement) ? document.activeElement.dataset.detailKey : null;
+    // Read the DOM immediately: native toggle events may still be queued when SSE refreshes.
+    for (const details of target.querySelectorAll('details[data-detail-key]')) {
+      details.open ? expanded.add(details.dataset.detailKey) : expanded.delete(details.dataset.detailKey);
+    }
     clear(target);
     if (errorText) target.append(el('p', { class: 'cp-warning' }, errorText));
     if (busy) target.append(el('p', { role: 'status' }, t('ebld_uploading')));
@@ -31,6 +47,7 @@ export function initDocumentManagement() {
       const card = el('section', { class: 'ebl-job' }, el('strong', {}, `${t('ebld_job')}: ${t(`ebld_status_${job.status}`)}`));
       for (const step of job.steps ?? []) card.append(el('div', {}, `${t(`ebld_step_${step.step}`)} · ${t(`ebld_step_status_${step.status}`)}`));
       if (job.result_action) card.append(el('p', {}, t(`ebld_action_${job.result_action}`)));
+      if (job.compliance) card.append(rememberDetails(renderCompliance(job.compliance), `${job.job_id}:compliance`));
       for (const document of job.extraction ?? []) {
         const extractor = document.source?.extractor;
         const sourceLabel = t(extractor === 'pdf-text' ? 'ebld_source_pdf' : extractor === 'llm-vision' ? 'ebld_source_vision' : 'ebld_source_text');
@@ -44,10 +61,10 @@ export function initDocumentManagement() {
           const location = source?.page ? `${t('ebld_page')}: ${source.page} · ` : '';
           fields.append(el('dt', {}, t(`ebld_field_${name}`)), el('dd', {}, `${value} (${location}${t('ebld_line')}: ${source?.line ?? '—'} · ${source?.method ?? '—'})`));
         }
-        details.append(fields); card.append(details);
+        details.append(fields); card.append(rememberDetails(details, `${job.job_id}:extraction:${document.source?.filename ?? document.document_type}`));
       }
       for (const finding of job.findings ?? []) {
-        const key = `ebld_reason_${finding.code ?? finding.kind}`, translated = t(key);
+        const key = `ebld_reason_${finding.kind?.startsWith('COMPLIANCE_') ? finding.kind : finding.code ?? finding.kind}`, translated = t(key);
         card.append(el('p', { class: finding.severity === 'info' ? 'muted' : 'cp-warning' }, translated === key ? finding.detail : translated));
       }
       for (const id of job.decision_ids ?? []) card.append(decisionButton(id));
@@ -56,6 +73,7 @@ export function initDocumentManagement() {
         onclick: () => { reviewId = job.job_id; input.click(); } }, t('ebld_review_upload')));
       target.append(card);
     }
+    if (focusedKey) [...target.querySelectorAll('summary[data-detail-key]')].find((summary) => summary.dataset.detailKey === focusedKey)?.focus({ preventScroll: true });
   };
   async function refresh(caseId, requestGeneration) {
     const requestVersion = ++refreshVersion;

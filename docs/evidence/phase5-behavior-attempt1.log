@@ -1,0 +1,46 @@
+✔ measured Agent suites meet every frozen deterministic threshold using real components (2.447192ms)
+✔ scoring rejects missing and non-finite metrics rather than treating them as success (0.410866ms)
+✔ label boundary rejects leaked labels at any depth and freezes the component input (2.259442ms)
+✔ changing gold cannot change subject output, and broken extraction fails the quality gate (2657.988711ms)
+✔ empty or truncated evaluation suites are rejected, never awarded perfect safety scores (0.760599ms)
+✔ NDCG penalizes reversed rankings, irrelevant and duplicate results, and empty output (0.207307ms)
+✔ report shows failures and limits, and never claims an unrun provider evaluation (1145.480823ms)
+✔ default live smoke performs reads only, including when keys happen to exist (2.479768ms)
+✔ confirmed smoke approves exactly REPRICE, PAUSE, RESUME on protected pool #2 and verifies each (2.605893ms)
+✔ uncertain broadcast and mismatched receipt abort without retries or a second proposal (1.065555ms)
+✔ lifecycle mode stops with the separately authorized owner/wallet checklist (0.339948ms)
+✔ smoke rejects unconfirmed writes, insecure remote URLs and terminal actions (0.939472ms)
+✔ redteam corpus is deterministic, covers every planned mutation and leaves source data intact (9.886251ms)
+✔ generated mutations reach real screening, consistency, uniqueness and freshness subjects (313.7921ms)
+✔ freshness fails closed at expiry, on invalid/future times, unhealthy sources and stale children (0.643855ms)
+✔ stale evidence creates a review proposal and cannot mutate a pool or be approved (28.266111ms)
+✔ fresh proposal expires between proposal and approval without an execution (18.303458ms)
+✔ stale or fixture fallback does not advance Live risk hysteresis (0.901972ms)
+✔ monitor replay uses the saved pool and event, even after the current pool changes (26.045718ms)
+✔ ingest replay recomputes a quote from saved structured fields, including held injections (56.960917ms)
+✔ encrypted persistent snapshots replay after restart and CLI reports failures by exit code (14511.535128ms)
+✔ replay API is public in Demo, admin-only in Live, and never writes a second decision (59.455818ms)
+✔ audit projection scrubs nested secrets, source text and wallets while retaining valid evidence/tx hashes (2.869985ms)
+✔ operational journal keeps exact addresses encrypted and authenticates its public audit projection (19.324818ms)
+✔ runtime audit scan covers decisions, events, queue, activities and traces with adversarial values (87.593078ms)
+✔ retention bounds decisions, rotated activity and trace files while preserving in-flight decisions (50.475436ms)
+✔ periodic retention also runs under the injected service clock (19.773307ms)
+✔ Phase 4: full playback parses actual files and preserves separate payment and settlement approval (244.021289ms)
+✔ Phase 4: repeated playback has no duplicate event, job, subscription or execution (166.3258ms)
+✔ Phase 4: two starts and manual steps cannot race a paced run; stop drains and preserves progress (19.442687ms)
+✔ Phase 4: playback rejects invalid speed/name, Live and non-auto autonomy (2.008972ms)
+✔ Phase 4: speed only changes pacing; virtual event times, decisions and quote commitments stay deterministic (125.375021ms)
+✔ Phase 4: a mode generation change cancels playback before another step or subscription (3.57226ms)
+✔ Phase 4: references distinguish report payment from decision execution; Demo never inherits a transaction (0.447251ms)
+✔ Phase 4 HTTP: historical quote stays saved while latest market, timeline and portfolio share references (94.657542ms)
+✔ Phase 4 HTTP: playback is asynchronous, admin-protected when configured, and rejects Live (147.134228ms)
+✔ Phase 4: actual provider usage reaches valuation metadata without changing or leaking into chat messages (1.998633ms)
+✔ Phase 4: mode switching during event initialization rejects the old scenario before bus submission (1.276399ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 29937.237908

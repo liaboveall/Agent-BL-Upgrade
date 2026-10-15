@@ -1,0 +1,118 @@
+{
+  "schema": "agentbl-local-acceptance-v1",
+  "stage": "P1 WP2.3: versioned demo compliance, per-document screening, review and evidence",
+  "checked_at": "2026-10-13T17:16:23.242Z",
+  "completion_date_singapore": "2026-10-14",
+  "base_commit": "9cefb50519aefdd2b1774036fd048cbfb27859ad",
+  "working_tree": "uncommitted; no push or deployment",
+  "source_tree_sha256": "87b99047757d3634b52f541fdab7b3639396b16d335259b71085b2771f150171",
+  "hashed_files": 2379,
+  "hash_scope": "Sorted raw-byte SHA256 for .env.example, .github/workflows, data/agent-scenarios, data/cases, data/compliance, data/risk-intel, data/uploads, data/world-intel, eslint.config.js, hardhat/contracts, package-lock.json, package.json, public, scripts, src, tests; excludes .env, node_modules, runtime, generated docs and evidence",
+  "commands": {
+    "npm run lint": "PASS; zero warnings",
+    "npm run check": "PASS",
+    "npm test": {
+      "tests": 965,
+      "pass": 965,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "npm run test:coverage": {
+      "tests": 965,
+      "pass": 965,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "lines": 94.17,
+      "branches": 83.59,
+      "functions": 91.85,
+      "thresholds": {
+        "lines": 88,
+        "branches": 72,
+        "functions": 86
+      }
+    },
+    "node --test tests/complianceChecker.test.js tests/agentIngestPipeline.test.js": {
+      "tests": 46,
+      "pass": 46,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "npm run eval:agent": {
+      "passed": true,
+      "gates": 19,
+      "failed_cases": 0,
+      "dataset_version": "agent-gold-v2-compliance",
+      "dataset_hash": "0xad2ac1db991877faac356cb9f2406724dd2bb3643cbe78ebd831fdfb7523a154",
+      "compliance_cases": 20,
+      "source_sha256": "4cda9b9b641f7a8ca4ee8cc8300e480bfd7cded62471bbee44543d0c7889e6da",
+      "live_llm": "SKIP"
+    },
+    "npm run preflight": {
+      "counts": {
+        "PASS": 56,
+        "WARN": 0,
+        "SKIP": 5,
+        "FAIL": 0
+      },
+      "checks": 61,
+      "source_sha256": "4cda9b9b641f7a8ca4ee8cc8300e480bfd7cded62471bbee44543d0c7889e6da",
+      "live_checks": "SKIP; not a current provider or chain acceptance"
+    }
+  },
+  "browser": {
+    "evidence": "docs/evidence/compliance-browser.json",
+    "passed": true,
+    "browser": "153.0.8010.12",
+    "mode": "demo",
+    "checks": 122,
+    "page_errors": 0,
+    "locales": [
+      "zh",
+      "en"
+    ],
+    "widths": [
+      1440,
+      390
+    ],
+    "scope": "Actual file uploads, CLEAR/REVIEW/BLOCK evidence, keyboard expansion, preserved expansion on intake refresh, corrections, old evidence, idempotency, unknown ports, dual-use HS, synthetic IMO, language change and layout",
+    "windows_health": {
+      "endpoint": "/api/health",
+      "ok": true
+    },
+    "server_stopped": true,
+    "isolated_runtime_removed": true,
+    "built_in_codex_browser_control": "not verified"
+  },
+  "demo_data": {
+    "list_version": "demo-screening-v2.0",
+    "ports_version": "demo-ports-v1.0",
+    "as_of": "2026-10-14",
+    "entities_and_vessels": "fictional; synthetic IMO test values",
+    "official_screening": "not performed"
+  },
+  "external_screening": {
+    "enabled_by_default": false,
+    "verification": "mock transport only; schemas, timeout/abort, unavailable fallback and monotone verdicts"
+  },
+  "preserved_evidence": [
+    "docs/evidence/compliance-browser-first.json",
+    "docs/evidence/compliance-browser-second.json",
+    "docs/evidence/compliance-browser-third.json",
+    "docs/evidence/compliance-1440-zh-before-fix.png",
+    "docs/evidence/agent-eval-pre-compliance-v2.json",
+    "docs/evaluation-report-pre-compliance-v2.md"
+  ],
+  "boundaries": {
+    "dotenv_values_read": false,
+    "real_provider_calls": 0,
+    "real_chain_transactions": 0,
+    "human_user_trial": "not performed",
+    "physical_mobile_device": "not performed",
+    "remote_ci": "not run for these uncommitted changes",
+    "deployment": "not performed"
+  },
+  "next_work_package": "WP2.4 remaining Live OPEN proposal and owner CLI plan; each real transaction needs separate authorization"
+}

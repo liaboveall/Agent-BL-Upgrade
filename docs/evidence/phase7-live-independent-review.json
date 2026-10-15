@@ -1,0 +1,66 @@
+{
+  "schema": "agentbl-phase7-live-independent-review-v1",
+  "checked_at": "2026-10-15T05:44:46.000Z",
+  "reviewer": "phase7_review",
+  "mode": "independent read-only public RPC",
+  "status": "PASS",
+  "verified_at_block": 143820937,
+  "secret_access": false,
+  "files_modified": false,
+  "broadcasts": 0,
+  "predeployment": {
+    "approved_plan_matches_current_default_version": true,
+    "versions": 1,
+    "expected_transactions": 3,
+    "solidity_version": "0.8.24",
+    "build_info_id": "solc-0_8_24-b59367c3607abf2740b937c58cd24e423ac11127",
+    "contract_and_owned_sources_match_build_inputs": true,
+    "creation_and_runtime_match_compiler_outputs": true
+  },
+  "contract": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+  "checks": {
+    "chain_id": 1439,
+    "transaction_count": 3,
+    "nonces": [
+      33,
+      34,
+      35
+    ],
+    "exact_sender_target_calldata_value": true,
+    "canonical_blocks_and_receipts": true,
+    "expected_events": true,
+    "runtime_bytecode_exact_match": true,
+    "owner_version_anchorer_correct": true,
+    "batch_count": "0",
+    "last_seq": "0",
+    "prior_registry_deep_equal_after_removing_three_new_entries": true
+  },
+  "fee_historical_boundaries": {
+    "before_block": 143820822,
+    "after_block": 143820839,
+    "owner_nonce_before": 33,
+    "owner_nonce_after": 36,
+    "per_transaction_balance_decrease_wei": [
+      "174606637500000",
+      "63894565000000",
+      "9692662500000"
+    ],
+    "total_balance_decrease_INJ": "0.000248193865",
+    "equals_gas_limit_times_max_fee": true,
+    "receipt_gas_cost_INJ": "0.00020450820091012",
+    "extra_balance_changes_between_transaction_boundaries": false,
+    "network_refund_semantics": "NOT_INFERRED"
+  },
+  "findings": [],
+  "remaining_confirmed_findings": 0,
+  "primary_evidence": "phase7-live-deployment-verification.json",
+  "documentation_review": {
+    "issues_identified": 3,
+    "resolutions": [
+      "Scoped protocol deploy:all instructions to future separate authorization and retained standalone Phase 7 entry.",
+      "README explicitly separates original six 2026-10-12 deployments and AgentDecisionLog 2026-10-15.",
+      "Implementation plan records completed three-transaction authorization and reserves later first batch, background activation and additional registrations for separate review."
+    ],
+    "scope_claims_consistent": true
+  }
+}

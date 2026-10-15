@@ -1,0 +1,16 @@
+{
+  "phase": "WP2.6",
+  "status": "FAIL",
+  "command": "npm run test:coverage -- --test-concurrency=4",
+  "summary": {
+    "tests": 1021,
+    "pass": 1020,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "failure": "Copilot SSE test assumed a single network chunk contained SESSION_CLOSED; it received a fragment of the prior rerank frame.",
+  "resolution": "Read the full SESSION_CLOSED event frame, retain the session_not_found and EOF assertions, and bound waiting to five seconds.",
+  "log": "data/runtime/wp26-validation-nOfQc1/coverage.log",
+  "output_sha256": "149dd66e0bbdf2f1330d6f74bae77b3532d07fc0102fdea1be077e186f634e2d"
+}

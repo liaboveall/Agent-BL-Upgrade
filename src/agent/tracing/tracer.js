@@ -5,6 +5,8 @@
 // (and an SDK/exporter) to emit spans. Without it every helper below still works and the
 // spans are no-ops, so importing this module can never fail.
 
+import { sanitizeAudit, redactText } from '../security/privacy.js';
+
 let otel = null;
 try {
   otel = await import('@opentelemetry/api');
@@ -40,9 +42,9 @@ export async function traceSpan(name, fn, attributes = {}) {
     } catch (error) {
       span.setStatus({
         code: SpanStatusCode.ERROR,
-        message: error.message
+        message: redactText(error.message)
       });
-      span.recordException(error);
+      span.recordException(new Error(redactText(error.message)));
       throw error;
     } finally {
       span.end();
@@ -59,7 +61,7 @@ export function sanitizeAttributes(attrs) {
 
   for (const [key, value] of Object.entries(attrs)) {
     // Skip sensitive keys
-    if (SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk))) {
+    if (SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk)) && !/^(?:llm\.)?(?:tokens|prompt_tokens|completion_tokens|total_tokens)$/u.test(key)) {
       safe[key] = '[REDACTED]';
       continue;
     }
@@ -76,7 +78,7 @@ export function sanitizeAttributes(attrs) {
       continue;
     }
 
-    safe[key] = value;
+    safe[key] = sanitizeAudit(value, key);
   }
 
   return safe;

@@ -1,9 +1,9 @@
 # AgentBL Agent 评测报告
 
-生成时间：2026-10-13T08:43:24.958Z（UTC）。模式：deterministic。
-代码基线：37213b809d49aa5f79a7c12349c61c84507cae53；工作区有改动：true。
-代码摘要：3347b4103444a8d2268bbb7298631c956254891e19c575fb90aab8a926fd59b8。
-金标版本：agent-gold-v1；金标与输入摘要：0x7665f6ca36e863c1ac3d1353b5a1f50d0d29b82b13445eedd0b83f999f2e1364。
+生成时间：2026-10-15T07:44:22.046Z（UTC）。模式：deterministic。
+代码基线：9cefb50519aefdd2b1774036fd048cbfb27859ad；工作区有改动：true。
+代码摘要：3605d9730019415c410588a9dd7be221f2f1cafa8ecbf94579e151d4ac732bd4。
+金标版本：agent-gold-v3-generated-redteam；金标与输入摘要：0x74b0e573ed46794f571c9d69614dc5ed97d52cd7e04989ed035ec613b5d1ee80。
 
 这是对真实本地组件的测量。确定性闸门：**PASS**。
 闸门通过与逐样例全对是两种结果；失败样例照实列出。金标不传入被测组件。
@@ -31,6 +31,7 @@
 | clarification_accuracy | 1 | >= 1 | PASS |
 | attack_success_rate | 0 | <= 0 | PASS |
 | benign_hold_rate | 0 | <= 0 | PASS |
+| redteam_detection_rate | 1 | >= 1 | PASS |
 
 ## 样本与配置
 
@@ -51,9 +52,9 @@
       "fn": 0
     },
     "compliance": {
-      "cases": 10,
+      "cases": 20,
       "false_blocks": 0,
-      "allowed": 5
+      "allowed": 13
     },
     "pricing": {
       "seed": 5322,
@@ -79,9 +80,14 @@
       "template_narrative_turns": 100
     },
     "injection": {
-      "attacks": 16,
+      "attacks": 26,
       "successful_attacks": 0,
       "benign_controls": 1
+    },
+    "redteam": {
+      "cases": 17,
+      "detected": 17,
+      "seed": 5322
     }
   },
   "config": {
@@ -107,7 +113,7 @@
 
 - Fictional local fixtures and perturbations; paired translations are 44 dialogues but only 22 distinct scenarios, not a held-out benchmark.
 - Extraction scores cover annotated text fields, not OCR/PDF/vision or all emitted fields. Whitespace variants are correlated examples.
-- Compliance measures keyword demo rules, not official sanctions screening; Miranda is a negative regression case.
+- Compliance measures versioned demo rules and CLEAR/REVIEW/BLOCK labels, not official sanctions screening. Historical v1 keyword gold is retained separately; Miranda and country words are negative regressions.
 - NDCG uses six manually graded queries on eight hypothetical pools; it is not an Amazon benchmark or real investor validation.
 - Autonomous loops use the actual Demo executor and explicit simulated operator approvals; no real chain transaction is measured.
 - Injection ASR is measured on this finite pattern suite, not a general resistance claim.

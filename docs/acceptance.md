@@ -2,6 +2,8 @@
 
 本文定义项目准备阶段和 MVP 开发阶段的验收标准。所有新增功能必须能被至少一个 harness 命令验证。
 
+2026-10-15 最终交付：[开发验收报告](final-acceptance-20261015.md) 汇总 Phase 0–6、WP7.1 和本次审查修复；下文较早的测试数量与阶段状态按历史时间理解，当前数字以最终交付证据为准。
+
 当前主线：**AI 动态定价的 eBL-backed RWA 折价发行协议**（见 `docs/PRD.md` v0.2）。
 
 2026-10-14 WP2.2：PDF 文本层/页码、扫描/异常文件复核、可选视觉和文本补全、中文仓单与 CNY 保真已接入。`node --test tests/documentExtraction.test.js` 的 17 项行为测试在 Node 20.11/22/24 与 Alpine/Node 22 通过；中英 × 1440/390px 的 118 项浏览器检查通过，视觉上游为 mock。真实模型识别准确率、扫描 PDF OCR 与用户人工试用仍需单独证据。见 [document-extraction.md](document-extraction.md)。

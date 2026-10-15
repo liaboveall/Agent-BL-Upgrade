@@ -30,7 +30,7 @@ await fs.writeFile(path.join(fixtureDir, 'scan.pdf'), pdfFixture([''], { imageOn
 await fs.writeFile(path.join(fixtureDir, 'incomplete-invoice.pdf'), pdfFixture([texts[1].replace('**Invoice Date**', '**Issue Date**')]));
 await fs.writeFile(path.join(fixtureDir, 'invoice.png'), TINY_PNG);
 const env = { AGENT_VALUATION_LLM: 'false', AGENT_VISION_ENABLED: 'true', AGENT_DOCUMENT_LLM: 'false',
-  LLM_BASE_URL: 'http://127.0.0.1:1', LLM_API_KEY: 'offline-fixture-only', LLM_MODEL: 'fixture-vision-no-real-provider' };
+  LLM_BASE_URL: 'http://127.0.0.1:1', LLM_API_KEY: 'offline-fixture-only', LLM_MODEL: 'x-test-2' };
 const service = createAgentService({ env, dir: runtime, activity: activityLog, store: storeState,
   demoModeController, monitors: false, getChainContext: async () => null,
   documentCompletion: async () => ({ content: JSON.stringify({ document_type: 'COMMERCIAL_INVOICE', text: texts[1], fields: [] }) }) });

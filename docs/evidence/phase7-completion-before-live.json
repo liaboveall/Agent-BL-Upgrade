@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "phase": 7,
+  "status": "COMPLETE_LOCAL_AUTOMATED",
+  "checked_at": "2026-10-15T05:25:05.630999+00:00",
+  "phase_acceptance_complete": true,
+  "acceptance_scope": "WP7.1 implementation and local automated acceptance. Testnet deployment, owner initialization and first anchor broadcast require separate explicit authorization; original optional items 7.2-7.5 remain deferred.",
+  "work_packages": {
+    "WP7.1": "LOCAL_VERIFIED; standalone immutable version registry, explicit anchorer permission, terminal/approval commitments, continuous durable sequences, bounded Merkle batches, HTTP/CLI/UI proof verification, restart/broadcast recovery and default-dry-run deployment"
+  },
+  "source": {
+    "base_commit": "9cefb50519aefdd2b1774036fd048cbfb27859ad",
+    "branch": "main",
+    "dirty": true,
+    "sha256": "e08e5726f8e6bcd03db18862900f21bb0bc17b76654bc0fc921fecd48e70cf9e",
+    "files_reverified": 465,
+    "verification": "docs/evidence/phase7-source-verification.json",
+    "protected_protocol_and_chain_config_files_unchanged": 9,
+    "baseline_dirty_paths_preserved": 376
+  },
+  "verification": {
+    "node": {
+      "tests": 1222,
+      "pass": 1222,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "coverage": {
+      "lines": 94.47,
+      "branches": 85.03,
+      "functions": 92.42
+    },
+    "coverage_thresholds": {
+      "lines": 88,
+      "branches": 72,
+      "functions": 86
+    },
+    "lint": "PASS; zero warnings",
+    "repository_check": "PASS",
+    "docs_consistency": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "delivery_checks": 10
+    },
+    "solidity": {
+      "passed": 86,
+      "failed": 0,
+      "added_phase7_tests": 11
+    },
+    "preflight": {
+      "PASS": 66,
+      "WARN": 0,
+      "SKIP": 5,
+      "FAIL": 0
+    },
+    "preflight_total": 71,
+    "preflight_source_timing": "Main full Node suite was launched before final review fixes; both Phase 7 gates passed after the fixes. The final full coverage execution includes every source fix and the additional model regression.",
+    "deterministic_quality": {
+      "passed_gates": 20,
+      "total_gates": 20,
+      "live_llm": "NOT_RUN",
+      "source_sha256": "87357ac9434472bea5eba3227f6666aedb70dd5c7ae1693c8d5f325601268d4e",
+      "files_reverified": 2401
+    },
+    "browser": {
+      "passed": true,
+      "checks": 296,
+      "widths": [
+        1440,
+        390
+      ],
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "page_errors": [],
+      "unexpected_http_errors": [],
+      "builtin_browser_control": false,
+      "evidence": "docs/evidence/phase7-browser-1792036115033.json",
+      "source_timing": "Final frontend unchanged since acceptance; subsequent backend model/lock/deployment corrections covered by final Node/coverage, targeted preflight and production container startup."
+    },
+    "windows_access": "PASS; native curl.exe HTTP 200",
+    "container": {
+      "passed": true,
+      "node": "v22.23.3",
+      "network": "none",
+      "read_only": true,
+      "source_matches_host": true,
+      "evidence": "docs/evidence/phase7-container-runtime.json"
+    },
+    "independent_review": {
+      "confirmed_findings": 2,
+      "closed_findings": 2,
+      "remaining_confirmed_findings": 0,
+      "evidence": "docs/evidence/phase7-independent-review.json"
+    },
+    "git_diff_check": "PASS"
+  },
+  "runtime": {
+    "acceptance_servers_stopped": true,
+    "local_verification_container_removed": true,
+    "real_transactions": 0,
+    "real_payments": 0,
+    "real_provider_calls": 0,
+    "new_testnet_deployments": 0,
+    "production_deployments": 0,
+    "local_container_image_published": false
+  },
+  "outside_acceptance": {
+    "real_AgentDecisionLog_deployment": "NOT_RUN; requires explicit authorization",
+    "real_owner_initialization": "NOT_RUN; requires explicit authorization",
+    "first_live_anchor_batch": "NOT_RUN; distinct authorization and reviewed runtime version required",
+    "builtin_browser_control": "UNAVAILABLE; WSL cwd rejected as a non-local file URI",
+    "human_trial": "NOT_RUN",
+    "physical_device_trial": "NOT_RUN",
+    "remote_ci": "NOT_RUN_FOR_DIRTY_WORKSPACE",
+    "new_commits": 0,
+    "pushes": 0
+  },
+  "limitations": [
+    "Local Merkle roots do not establish on-chain immutability.",
+    "Sequence continuity cannot establish completeness before terminal records were captured.",
+    "Commitments do not authenticate input facts or real-world operator identities.",
+    "Legacy decisions have an explicitly unrecorded version.",
+    "Proof archives are preserved separately from normal audit retention and must be backed up."
+  ],
+  "history_preserved": true,
+  "artifacts": {
+    "guide": "docs/phase7-decision-anchoring.md",
+    "deployment_plan": "docs/evidence/phase7-deployment-plan.json",
+    "preflight": "docs/evidence/phase7-preflight.json",
+    "coverage": "docs/evidence/phase7-coverage-reviewed.log",
+    "evaluation": "docs/evidence/phase7-eval.json",
+    "browser": "docs/evidence/phase7-browser-1792036115033.json",
+    "container": "docs/evidence/phase7-container-runtime.json",
+    "attempt_history": "docs/evidence/phase7-attempt-history.json",
+    "tool_limitations": "docs/evidence/phase7-tool-limitations.json",
+    "evaluation_report": "docs/evidence/phase7-evaluation-report.md"
+  },
+  "next": "Review and separately authorize the 3-transaction standalone testnet deployment/initialization plan; keep anchoring disabled. Align running-server policy/version and register any required legacy version before authorizing the first anchor batch.",
+  "final_delivery_checks": {
+    "checked_at": "2026-10-15T05:26:15.865813+00:00",
+    "source_changes_after_verification": 0,
+    "source_files_verified": 465,
+    "evaluation_files_verified": 2401,
+    "docs_tests": {
+      "tests": 10,
+      "pass": 10,
+      "fail": 0
+    },
+    "acceptance_servers_stopped": true,
+    "local_verification_container_removed": true,
+    "git_diff_check": "PASS"
+  }
+}

@@ -158,12 +158,15 @@ test('Copilot stream: real SSE push, cursor replay, capacity and session deletio
   const decoder = new TextDecoder();
   const readUntil = async (source, pattern) => {
     let buffer = '';
-    while (!pattern.test(buffer)) {
-      const chunk = await source.read();
-      if (chunk.done) throw new Error('SSE ended before the expected event');
-      buffer += decoder.decode(chunk.value);
-    }
-    return buffer;
+    const deadline = setTimeout(() => source.cancel().catch(() => {}), 5000);
+    try {
+      while (!pattern.test(buffer)) {
+        const chunk = await source.read();
+        if (chunk.done) throw new Error('SSE ended before the expected event');
+        buffer += decoder.decode(chunk.value, { stream: true });
+      }
+      return buffer;
+    } finally { clearTimeout(deadline); }
   };
   assert.match(await readUntil(reader, /event: connected/u), /event: connected/u);
   await change('PAUSE');
@@ -172,7 +175,9 @@ test('Copilot stream: real SSE push, cursor replay, capacity and session deletio
   assert.equal((await fetch(endpoint)).status, 503);
   assert.equal((await fetch(endpoint, { headers: { 'last-event-id': '999' } })).status, 400);
   await service.delete(context.session_id);
-  assert.match(decoder.decode((await reader.read()).value), /SESSION_CLOSED/u);
+  const closed = await readUntil(reader, /event: SESSION_CLOSED\ndata: [^\n]+\n\n/u);
+  assert.match(closed, /event: SESSION_CLOSED/u);
+  assert.match(closed, /"code":"session_not_found"/u);
   assert.equal((await reader.read()).done, true); assert.equal(service.subscribers.size, 0);
   assert.equal((await requestJson(server.base, 'GET', `/api/copilot/sessions/${context.session_id}`)).status, 404);
   const next = await service.create(); await service.query({ message: 'copper' }, { sessionId: next.session_id });

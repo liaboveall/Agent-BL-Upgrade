@@ -13,6 +13,7 @@
 
 import { toChainPricingArgs } from '../../../core/oracle.js';
 import { chainStateName, planTransition } from '../poolRules.js';
+import { buildSettlementPlan, SETTLEMENT_ACTIONS, SETTLEMENT_SCHEMA } from '../../pipelines/settlementPipeline.js';
 
 /** agent action -> RiskPricingOracle pricing action */
 export const PRICING_ACTION_FOR = Object.freeze({
@@ -90,10 +91,13 @@ export async function oracleDecisionId({ pool_id, issue_price_e6, pricing_action
   ));
 }
 
+const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
+
 function eventNames(contracts, receipt) {
   const names = [];
   for (const log of receipt.logs ?? []) {
     for (const contract of contracts) {
+      if (!same(log.address, contract?.target)) continue;
       try {
         const parsed = contract?.interface?.parseLog(log);
         if (parsed) { names.push(parsed.name); break; }
@@ -170,14 +174,13 @@ export class ChainExecutor {
   }
 
   /** Resolve a previously submitted transaction: null while pending, a success result once confirmed. */
-  async findTransaction(txHash, action) {
+  async findTransaction(txHash, action, cmd) {
+    if (!cmd || cmd.action !== action) throw new ChainExecutionError('command_required', 'Receipt recovery requires the original approved command');
     const ctx = await this.getContext();
     const receipt = await ctx.provider.getTransactionReceipt(txHash);
     if (!receipt) return null;
-    if (receipt.status !== 1) {
-      throw new ChainExecutionError('tx_reverted', `Transaction ${txHash} reverted`);
-    }
-    const names = eventNames([ctx.oracle, ctx.pool], receipt);
+    const names = await this.#verifyReceipt({ cmd, ctx, txHash, receipt });
+    if (!names) return null;
     return this.#success({ ctx, action, receipt, txHash, names, signerRole: PRICING_ACTION_FOR[action] ? 'PRICING_UPDATER' : 'AGENT_EXECUTOR', recovered: true });
   }
 
@@ -237,13 +240,9 @@ export class ChainExecutor {
       // RPC log limits: fall through to "processed, transaction not located".
     }
     if (!found) {
-      return {
-        success: true, mode: 'chain', recovered: true, reference: null, tx_hash: null, explorer_url: null,
-        signer_role: 'PRICING_UPDATER', attempts: 0,
-        note: 'The oracle already processed this decision; its transaction could not be located in the scanned range.'
-      };
+      throw new ChainExecutionError('broadcast_uncertain', 'The oracle processed this decision but its confirmed transaction could not be located; operator reconciliation is required');
     }
-    const confirmed = await this.findTransaction(found.transactionHash, cmd.action);
+    const confirmed = await this.findTransaction(found.transactionHash, cmd.action, cmd);
     if (!confirmed) throw new ExecutionPendingError(found.transactionHash, 'Replay protection confirms processing but the receipt is not available yet');
     return confirmed;
   }
@@ -261,16 +260,25 @@ export class ChainExecutor {
 
     const params = cmd.params ?? {};
     const method = EXECUTOR_METHOD_FOR[cmd.action];
-    const args = [chainPoolId];
+    let args = [chainPoolId];
     if (cmd.action === 'MARK_IN_TRANSIT') args.push(await proofToBytes32(params.departure_proof));
-    if (cmd.action === 'RECORD_PAYMENT') args.push(await proofToBytes32(params.payment_proof), BigInt(params.repayment_amount));
-    if (cmd.action === 'RECORD_ARRIVAL') args.push(await proofToBytes32(params.arrival_proof));
-    if (cmd.action === 'SETTLE') args.push(BigInt(params.repayment_amount));
+    const settlementPlan = async () => {
+      const planned = await buildSettlementPlan({ action: cmd.action, chain_pool_id: chainPoolId, params,
+        chainConfig: ctx.chainConfig, context: ctx, recipient: ctx.settlementRecipient, confirmations: this.confirmations });
+      if (cmd.settlement_plan && JSON.stringify(planned.steps) !== JSON.stringify(cmd.settlement_plan.steps)) {
+        throw new ChainExecutionError('settlement_plan_changed', 'Current settlement proofs differ from the approved plan');
+      }
+      return planned;
+    };
+    if (SETTLEMENT_ACTIONS.includes(cmd.action)) args = (await settlementPlan()).steps[0].args;
 
     await this.#preflight(() => ctx.executorPool[method].staticCall(...args));
     return this.#submit({
       cmd, ctx, signer: ctx.signers?.AGENT_EXECUTOR ?? 'AGENT_EXECUTOR', signerRole: 'AGENT_EXECUTOR',
-      send: () => ctx.executorPool[method](...args)
+      send: async () => {
+        if (SETTLEMENT_ACTIONS.includes(cmd.action)) await settlementPlan();
+        return ctx.executorPool[method](...args);
+      }
     });
   }
 
@@ -315,11 +323,18 @@ export class ChainExecutor {
     };
   }
 
-  /** One transaction in flight per signer, so nonces are used in order. */
-  async #submit({ cmd, ctx, signer, signerRole, send }) {
+  /** Shared with decision anchoring; both features use the existing pricing key. */
+  withSigner(signer, task) {
     const key = String(signer);
     const previous = this.queues.get(key) ?? Promise.resolve();
-    const run = previous.catch(() => {}).then(async () => {
+    const run = previous.catch(() => {}).then(task);
+    this.queues.set(key, run.catch(() => {}));
+    return run;
+  }
+
+  /** One transaction in flight per signer, so nonces are used in order. */
+  async #submit({ cmd, ctx, signer, signerRole, send }) {
+    return this.withSigner(signer, async () => {
       await cmd.assertCurrent?.();
       let tx;
       try { tx = await send(); }
@@ -351,11 +366,58 @@ export class ChainExecutor {
       if (!receipt || receipt.status !== 1) {
         throw new ChainExecutionError('tx_reverted', `Transaction ${tx.hash} was mined but reverted`);
       }
-      const names = eventNames([ctx.oracle, ctx.pool, ctx.executorPool].filter(Boolean), receipt);
+      let names;
+      try { names = await this.#verifyReceipt({ cmd, ctx, txHash: tx.hash, receipt }); }
+      catch (error) {
+        if (isTransientRpcError(error)) throw new ExecutionPendingError(tx.hash, 'Receipt verification is unavailable after broadcast; reconcile without resubmission');
+        throw error;
+      }
+      if (!names) throw new ExecutionPendingError(tx.hash, 'Transaction has not reached the required canonical confirmations');
       return this.#success({ ctx, action: cmd.action, receipt, txHash: tx.hash, names, signerRole });
     });
-    this.queues.set(key, run.catch(() => {}));
-    return run;
+  }
+
+  /** First receipts and restart recovery establish the same exact, canonical execution. */
+  async #verifyReceipt({ cmd, ctx, txHash, receipt }) {
+    if (receipt.status !== 1) throw new ChainExecutionError('tx_reverted', `Transaction ${txHash} reverted`);
+    const pricing = Boolean(PRICING_ACTION_FOR[cmd.action]);
+    const contract = pricing ? ctx.oracle : ctx.pool;
+    const signer = ctx.signers?.[pricing ? 'PRICING_UPDATER' : 'AGENT_EXECUTOR'];
+    let method, args;
+    if (pricing) {
+      const value = toChainPricingArgs({ ...cmd.params?.quote, pricing_action: PRICING_ACTION_FOR[cmd.action] }, { pool_id: cmd.chain_pool_id });
+      method = 'updatePricing';
+      args = [value.pool_id, value.issue_price_e6, value.risk_level, value.pricing_action, value.evidence_hash, value.quote_hash];
+    } else {
+      method = EXECUTOR_METHOD_FOR[cmd.action];
+      if (cmd.action === 'MARK_IN_TRANSIT') args = [cmd.chain_pool_id, await proofToBytes32(cmd.params?.departure_proof)];
+      else {
+        const step = cmd.settlement_plan?.steps?.[0];
+        if (cmd.settlement_plan?.schema !== SETTLEMENT_SCHEMA || step?.method !== method
+          || !same(step.address, contract?.target) || Number(step.args?.[0]) !== Number(cmd.chain_pool_id)) {
+          throw new ChainExecutionError('settlement_plan_required', 'Receipt recovery requires the approved settlement transaction plan');
+        }
+        args = step.args;
+      }
+    }
+    const expectedData = contract.interface.encodeFunctionData(method, args);
+    const tx = await ctx.provider.getTransaction(txHash);
+    const chainId = Number(ctx.chainConfig?.chainIdDecimal ?? 1439);
+    if (!tx || !same(tx.hash, txHash) || !same(receipt.hash ?? receipt.transactionHash, txHash)
+      || !same(tx.to, contract.target) || !same(receipt.to, contract.target)
+      || !same(tx.from, signer) || !same(receipt.from, signer) || !same(tx.data, expectedData)
+      || BigInt(tx.value ?? 0) !== 0n || Number(tx.chainId) !== chainId
+      || Number(await ctx.provider.send('eth_chainId', [])) !== chainId) {
+      throw new ChainExecutionError('tx_verification_failed', 'Transaction differs from the approved contract, signer, network or exact calldata');
+    }
+    if (!Number.isSafeInteger(receipt.blockNumber) || receipt.blockNumber < 1 || !/^0x[0-9a-f]{64}$/iu.test(receipt.blockHash ?? '')) {
+      throw new ChainExecutionError('invalid_receipt_block', 'Transaction receipt has no valid mined block');
+    }
+    const [block, head] = await Promise.all([ctx.provider.getBlock(receipt.blockNumber), ctx.provider.getBlockNumber()]);
+    if (!block || !same(block.hash, receipt.blockHash)) throw new ChainExecutionError('tx_reorged', 'Transaction receipt is no longer in its canonical block');
+    if (!Number.isSafeInteger(head) || head < receipt.blockNumber) throw new ChainExecutionError('invalid_receipt_block', 'Confirmed chain head is unavailable or behind the receipt');
+    if (head - receipt.blockNumber + 1 < this.confirmations) return null;
+    return eventNames([ctx.oracle, ctx.pool, ctx.executorPool].filter(Boolean), receipt);
   }
 
   #success({ ctx, action, receipt, txHash, names, signerRole, recovered = false }) {
@@ -383,7 +445,7 @@ export class ChainExecutor {
  * Build the live context from chain-config.json and the environment. Resolves the contracts and the
  * signer for each role; a role without a key is simply left out. Never logs or returns a private key.
  */
-export async function createChainContext({ chainConfig, env = process.env, resolveKey, fetchTimeoutMs = 20_000 } = {}) {
+export async function createChainContext({ chainConfig, env = process.env, resolveKey, fetchTimeoutMs = 20_000, readOnly = false } = {}) {
   const { ethers } = await import('ethers');
   const { resolveSignerKey } = await import('../../../chain/signerKeys.js');
   const resolve = resolveKey ?? ((role) => resolveSignerKey(role, env));
@@ -404,7 +466,12 @@ export async function createChainContext({ chainConfig, env = process.env, resol
 
   const oracleRead = new ethers.Contract(addr('RiskPricingOracle'), abi('RiskPricingOracle'), provider);
   const pool = new ethers.Contract(addr('RWAOfferingPool'), abi('RWAOfferingPool'), provider);
-  const context = { provider, pool, explorerBase: network.explorerBase, signers: {}, oracle: oracleRead };
+  const registry = new ethers.Contract(addr('EBLRegistry'), abi('EBLRegistry'), provider);
+  const context = { provider, pool, registry, explorerBase: network.explorerBase, signers: {}, oracle: oracleRead,
+    chainConfig: network, settlementRecipient: String(env.AGENT_SETTLEMENT_RECIPIENT ?? '').trim() };
+
+  // The watcher has its own provider-only context. Do not even resolve signer keys on this path.
+  if (readOnly) return context;
 
   // The agent never signs with the contract OWNER key (D2/D3). A role whose key is only the deprecated
   // owner-key fallback is treated as "not configured": its actions go to an operator instead.
@@ -413,6 +480,10 @@ export async function createChainContext({ chainConfig, env = process.env, resol
     const wallet = new ethers.Wallet(pricing.privateKey, provider);
     context.oracle = oracleRead.connect(wallet);
     context.signers.PRICING_UPDATER = wallet.address;
+    if (network.contracts?.AgentDecisionLog) {
+      const { AGENT_LOG_ABI } = await import('../anchorChain.js');
+      context.decisionLog = new ethers.Contract(network.contracts.AgentDecisionLog, AGENT_LOG_ABI, wallet);
+    }
   }
   const executor = resolve('AGENT_EXECUTOR');
   if (executor?.dedicated) {

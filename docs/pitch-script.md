@@ -130,7 +130,7 @@ AgentBL 是一个 **AI 动态定价的电子提单 RWA 贸易融资协议**。�
 5. **Injective Testnet + Blockscout**：真实的测试网环境——300 个测试 + 真实 USDC 支付 + 所有交易可在 explorer 验证
 
 **Microsoft 层（企业级 AI 能力）：**
-1. **Azure OpenAI Service**：调用 GPT-4 等前沿模型完成风控决策（structured output + tool calling），确保输出符合严格 JSON Schema
+1. **OpenAI 兼容推理接口**：项目统一请求 `x-test-2`，可配置 Azure 部署路由；模型用于受校验的解析与解释，最终风控/定价遵守确定性策略，真实模型能力另行验收
 2. **Azure 算力支持**：为 AI Agent 提供稳定的推理能力，支持实时定价和大规模报告生成
 3. **Azure ML 工具链**（可选）：未来可用于微调定制模型，针对贸易融资场景优化
 

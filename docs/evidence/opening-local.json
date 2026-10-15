@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "phase": "WP2.4",
+  "checked_at": "2026-10-14T07:02:14.654Z",
+  "timezone": "Asia/Singapore",
+  "git": {
+    "head": "9cefb50519aefdd2b1774036fd048cbfb27859ad",
+    "branch": "main",
+    "worktree": "uncommitted; prior WP2.3 compliance work preserved in place without reset",
+    "committed": false,
+    "pushed": false
+  },
+  "source_sha256": "ee0321fc9be213651d9288192ecfd78ed9d5a46ac58c8ada6e6bc1c80cd1eefe",
+  "source_files": [
+    {
+      "path": "public/agent/approvals.js",
+      "sha256": "25c98397fe1002947e20d27045e14e973bcb370cc3e87cefb5f86073e94d9781"
+    },
+    {
+      "path": "public/i18n.js",
+      "sha256": "f2f9dc47089b53e84bf53775c6351a2e1d99a550c1c7f913c0eb9ea45f87016b"
+    },
+    {
+      "path": "public/styles.css",
+      "sha256": "2647d4e8d9d47302c9e4f3ec41d5c61db2e29df8a41b6de7e8e08fb9b911978b"
+    },
+    {
+      "path": "scripts/lib/agent-approve.mjs",
+      "sha256": "fd564c71e321e2d222377ee30296bf5583d6860250c4804e4529627d938e369e"
+    },
+    {
+      "path": "scripts/lib/owner-journal.mjs",
+      "sha256": "d8eb014026acd460d3a95131de8559fe61c6150015954c56b7d2b7e0da694410"
+    },
+    {
+      "path": "scripts/opening-acceptance-server.mjs",
+      "sha256": "98fdce48bd42913c7efa2f555404687c3ff79a08ce2e9872084f14cfe4645ced"
+    },
+    {
+      "path": "scripts/opening-acceptance.playwright.js",
+      "sha256": "dbbd4712bad6cd719ed9ac46066811cf4fd8eb78506d85a46bd4ae249744ffff"
+    },
+    {
+      "path": "src/agent/runtime/agentService.js",
+      "sha256": "68a61cf83ddc8f5c40f9e0ab0ffdb0fde50b2a7fad813ab9f9c9f27fa9065f2f"
+    },
+    {
+      "path": "src/agent/runtime/approvals.js",
+      "sha256": "547855d2dba082bba7e21d288e0de3edd20911b6cc91be8aa962ac3e4df809b7"
+    },
+    {
+      "path": "src/agent/runtime/executors/chainExecutor.js",
+      "sha256": "d362ecce50ee133a8d1af2362db2776cb46a9b4da569b366f181e53606f1d1cd"
+    },
+    {
+      "path": "src/agent/runtime/openingPlan.js",
+      "sha256": "abbcc30685c68185d748ddc17f40defc06e82318295d3e4c7540bb859ee8cf8d"
+    },
+    {
+      "path": "src/agent/runtime/ownerTxPlan.js",
+      "sha256": "b7f195a913f1c650391938f9963cb63ab9761a236c86306a46a036b6d8a399aa"
+    },
+    {
+      "path": "src/chain/cargoIdentity.js",
+      "sha256": "3530c426e1c61d08c41b3be28bfcedb4c505fa46ecdc24fa95353e7c5106f076"
+    },
+    {
+      "path": "tests/agentOpening.test.js",
+      "sha256": "7cb50b6f4d8b83feb36884e03a6250e652bfae8fa879d10d3cc4d13d63762ed4"
+    },
+    {
+      "path": "tests/agentOpeningCli.test.js",
+      "sha256": "acf71606460fae8b27a2e3e3ccdd598431817e2c6a12bf161c80b2add01ef1fd"
+    },
+    {
+      "path": "tests/helpers/opening.js",
+      "sha256": "3de6dc883a5aa2c8cf85bad2315b214ba8c8246055a450c25340fd390bede2ed"
+    }
+  ],
+  "checks": [
+    {
+      "command": "npm run lint",
+      "status": "PASS",
+      "output_sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74"
+    },
+    {
+      "command": "npm run check",
+      "status": "PASS",
+      "output_sha256": "283dbe517b190c85c285ad325532533d4c83656bd9b7462b330c3a75a04118b0"
+    },
+    {
+      "command": "npm test",
+      "status": "PASS",
+      "output_sha256": "3083256c406380dee2830d127a64a46cc2d5319734d8ababd5056b1f666dc5dc"
+    },
+    {
+      "command": "npm run test:coverage",
+      "status": "PASS",
+      "output_sha256": "035b4f8786d37ea63a4577dd2d6b8ecfb9a4ef80985e643dec9e557d16fcb5cc"
+    },
+    {
+      "command": "npm run eval:agent -- --check",
+      "status": "PASS",
+      "output_sha256": "f583ca626a97910b98490c8f853301191b43a1cb800a336fef9129043d9e2a66"
+    },
+    {
+      "command": "npm run preflight -- --report docs/evidence/opening-preflight.json",
+      "status": "PASS",
+      "output_sha256": "372922718b84584f1c80df0e9f27c13bb7ed06416d034c1a60ab6ad0258eb96b"
+    }
+  ],
+  "unit_tests": {
+    "total": 986,
+    "passed": 986,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "new_opening_behavior_tests": 21
+  },
+  "coverage": {
+    "lines": 94.3,
+    "branches": 83.6,
+    "functions": 92.04,
+    "thresholds": {
+      "lines": 88,
+      "branches": 72,
+      "functions": 86
+    }
+  },
+  "evaluation": {
+    "passed": 19,
+    "total": 19,
+    "real_llm": "SKIP"
+  },
+  "browser": {
+    "passed": 102,
+    "total": 102,
+    "page_errors": [],
+    "version": "153.0.8010.12",
+    "chain": "in-memory-ABI-fixture",
+    "locales": [
+      "zh",
+      "en"
+    ],
+    "widths": [
+      1440,
+      390
+    ],
+    "evidence": "docs/evidence/opening-browser.json",
+    "windows_entry": "Windows curl verified /api/agent/status",
+    "internal_codex_browser_control": "NOT_VERIFIED",
+    "browser_external_requests": "blocked in final run"
+  },
+  "preflight": {
+    "mode": "demo",
+    "counts": {
+      "PASS": 56,
+      "WARN": 0,
+      "SKIP": 5,
+      "FAIL": 0
+    },
+    "evidence": "docs/evidence/opening-preflight.json"
+  },
+  "cleanup": {
+    "server_stopped": true,
+    "runtime_removed": true
+  },
+  "boundaries": {
+    "developer_dotenv": "skipped by NODE_TEST_CONTEXT in isolated checks",
+    "configured_secret_values_printed": false,
+    "new_keys": 0,
+    "real_chain_transactions": 0,
+    "owner_signing": "ABI fixtures only",
+    "contracts_modified": false,
+    "real_provider_acceptance": false,
+    "official_compliance_screening": false,
+    "human_trial": false,
+    "physical_device_trial": false,
+    "remote_ci": "NOT_RUN",
+    "deployment": "NOT_RUN"
+  },
+  "next": [
+    "WP2.6 Live USDC receipt verification",
+    "WP2.7 chain watcher"
+  ],
+  "passed": true
+}

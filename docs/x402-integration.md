@@ -433,3 +433,11 @@ sponsor-native stack.
 | Paid intel pricing impact | Provenance-only evidence node; score unchanged | Risk delta only |
 | Offline demo mode | ✅ Deterministic mock signatures | ❌ Requires config |
 | npm script | `smoke:x402` + `smoke:x402:live` + `x402:intel` | `smoke:x402` |
+
+## Phase 6：Bazaar 资源描述与委托报价（2026-10-15）
+
+`GET /api/x402/discovery` 与 `/discovery/resources` 发布四个 HTTP 服务的 Bazaar `info` / Draft 2020-12 `schema`。Live `accepts` 和真实 V2 402 共用网络、USDC 原子金额、收款方与 EIP-3009 参数；Demo 仍走 personal_sign 模拟，目录 `accepts=[]` 且明确模式。它是本服务的目录，未自动注册到外部 facilitator/Bazaar。
+
+MCP `delegate_pricing`、A2A 1.0 `SendMessage` 和 `POST /api/agent/delegate-pricing` 共用指示性报价。可按 `paid_report_ids` 附加服务器实际交付且未过期的报告；拒绝任意外部 envelope、跨案例、篡改或缓存缺失。付款只增加来源证据，不改变风险/价格或授权执行；返回明确 Demo/Live 与 `onchain_reverified=false`。
+
+Phase 6 SDK 集成复现了新版融资案例在 fraud-review 付款后被旧 LTV schema 拒绝的问题。报告现在按输入融资模型使用既有 pricing-v2 或 legacy 工作流，保留真实模拟步骤；新版没有 legacy contract_action 时返回 null 并提供 pricing_action，不编造合约动作。旧版案例的报告契约保持。详见 [Phase 6 指南](phase6-interoperability.md)。

@@ -1,0 +1,11 @@
+{
+  "builtin_browser_control": "NOT_VERIFIED",
+  "tool": "computer-use / node_repl",
+  "error": "codex/sandbox-state-meta: sandboxCwd is not a local file URI: file:///mnt/c/Users/Mars/Documents/Codex/2026-10-15/qu-a",
+  "initialization_attempts": 3,
+  "kernel_reset_attempts": 1,
+  "native_open_request": "queued; no visible-page confirmation",
+  "fallback": "Isolated Playwright Chromium 1440/390px, Chinese/English and API cross-transport verification",
+  "human_trial": "NOT_RUN",
+  "physical_device": "NOT_RUN"
+}

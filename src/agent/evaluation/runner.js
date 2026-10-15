@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { runRedteam } from '../redteam/runner.js';
 import fs from 'node:fs/promises';
 import { parseDocument } from '../documentParser.js';
 import { checkDocumentConsistency } from '../documentConsistency.js';
@@ -169,10 +170,10 @@ export async function runEvaluation({ dataset, adapters = {}, liveLlm = false, e
   let complianceCorrect = 0, falseBlocks = 0, allowed = 0;
   for (const entry of data.compliance) {
     const output = await runBlind(entry.input, adapters.checkCompliance ?? checkCompliance);
-    const blocked = Boolean(output.has_block), passed = blocked === entry.gold.blocked;
+    const blocked = Boolean(output.has_block), passed = blocked === entry.gold.blocked && (!entry.gold.status || output.status === entry.gold.status);
     if (passed) complianceCorrect++;
     if (!entry.gold.blocked) { allowed++; if (blocked) falseBlocks++; }
-    record('compliance', entry.id, passed, { actual: blocked, gold: entry.gold.blocked });
+    record('compliance', entry.id, passed, { actual: output.status ?? blocked, gold: entry.gold.status ?? entry.gold.blocked });
   }
   metrics.compliance_accuracy = ratio(complianceCorrect, data.compliance.length);
   metrics.compliance_false_block_rate = ratio(falseBlocks, allowed);
@@ -280,6 +281,10 @@ export async function runEvaluation({ dataset, adapters = {}, liveLlm = false, e
   metrics.benign_hold_rate = data.benign.gold.allowed.includes(benign.action) ? 0 : 1;
   record('injection', 'benign-control', metrics.benign_hold_rate === 0, { actual: benign.action });
   counts.injection = { attacks: data.injections.length, successful_attacks: attacksSucceeded, benign_controls: 1 };
+  const redteam = await runRedteam({ caseData: data.pricing.input, documents: data.benign.input.documents, seed: data.pricing.seed });
+  counts.redteam = { cases: redteam.corpus_size, detected: redteam.results.filter((result) => result.passed).length, seed: redteam.seed };
+  metrics.redteam_detection_rate = ratio(counts.redteam.detected, counts.redteam.cases);
+  for (const result of redteam.results) record('redteam', result.id, result.passed, { actual: result.actual, category: result.category });
   const gates = checkThresholds(metrics);
   return { schema_version: 1, dataset_version: data.version, dataset_hash: hashSnapshot(data),
     mode: liveLlm ? 'live-llm' : 'deterministic', real_components: true, generated_at: new Date().toISOString(),
@@ -289,7 +294,7 @@ export async function runEvaluation({ dataset, adapters = {}, liveLlm = false, e
     limitations: [
       'Fictional local fixtures and perturbations; paired translations are 44 dialogues but only 22 distinct scenarios, not a held-out benchmark.',
       'Extraction scores cover annotated text fields, not OCR/PDF/vision or all emitted fields. Whitespace variants are correlated examples.',
-      'Compliance measures keyword demo rules, not official sanctions screening; Miranda is a negative regression case.',
+      'Compliance measures versioned demo rules and CLEAR/REVIEW/BLOCK labels, not official sanctions screening. Historical v1 keyword gold is retained separately; Miranda and country words are negative regressions.',
       'NDCG uses six manually graded queries on eight hypothetical pools; it is not an Amazon benchmark or real investor validation.',
       'Autonomous loops use the actual Demo executor and explicit simulated operator approvals; no real chain transaction is measured.',
       'Injection ASR is measured on this finite pattern suite, not a general resistance claim.',

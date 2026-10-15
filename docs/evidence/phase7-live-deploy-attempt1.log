@@ -1,0 +1,23 @@
+
+> agentbl-contracts@0.1.0 deploy:agent-log
+> hardhat run scripts/deploy-agent-log.js --network injective_testnet
+
+
+{
+  "dry_run": true,
+  "network": "injective-testnet",
+  "plan": {
+    "schema": "agentbl-anchor-deployment-plan-v1",
+    "chain_id": 1439,
+    "versions": [
+      {
+        "policy_hash": "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+        "code_commit": "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
+        "model_id": "x-test-2",
+        "version_id": "0xa365b230c8fec402b51d3291f3cd1623da1f93acc674515d471171be0558d49a"
+      }
+    ]
+  },
+  "expected_transactions": 3,
+  "broadcasts": 0
+}

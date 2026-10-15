@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-10-15T03:04:20.673287+00:00",
+  "source_sha256": "9de9dc570529d9627c2b8e1966664920157585596a18578b5c50a6014ba1fb66",
+  "files": 2389,
+  "changed": [
+    "scripts/smoke.mjs"
+  ],
+  "passed": false,
+  "changes_after_coverage": [],
+  "covered_src_modules_unchanged": true
+}

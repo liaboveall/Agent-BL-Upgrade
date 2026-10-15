@@ -25,7 +25,7 @@ async function digest(target) {
     fileHashes[target] = crypto.createHash('sha256').update(await fs.readFile(path.join(root, target))).digest('hex');
   }
 }
-for (const target of ['src', 'scripts', 'tests', 'data/cases', 'data/uploads', 'data/agent-scenarios', 'data/world-intel', 'data/risk-intel', '.github/workflows', 'package.json', 'package-lock.json', 'eslint.config.js']) await digest(target);
+for (const target of ['src', 'scripts', 'tests', 'data/cases', 'data/uploads', 'data/compliance', 'data/agent-scenarios', 'data/world-intel', 'data/risk-intel', '.github/workflows', 'package.json', 'package-lock.json', 'eslint.config.js']) await digest(target);
 evaluation.source = { commit: await git(['rev-parse', 'HEAD']), dirty: Boolean(await git(['status', '--porcelain'])),
   sha256: crypto.createHash('sha256').update(JSON.stringify(fileHashes)).digest('hex'), files: fileHashes };
 if (args.includes('--live-llm')) {

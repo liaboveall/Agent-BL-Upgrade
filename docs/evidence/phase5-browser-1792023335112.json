@@ -1,0 +1,190 @@
+{
+  "checked_at": "2026-10-15T00:15:35.112Z",
+  "browser": "153.0.8010.12",
+  "checks": [
+    {
+      "name": "1440/zh: fixture badge records source and times",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: keyboard replay passes",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: replay creates no additional decisions",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: tampered evidence fails visibly",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: stale badge is visible",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: stale evidence cannot execute automatically",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: stale approval is rejected",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: new controls are localized",
+      "passed": true
+    },
+    {
+      "name": "1440/zh: drawer fits the viewport",
+      "passed": true,
+      "detail": {
+        "viewport": 1440,
+        "document": 1440,
+        "content": 519,
+        "width": 519
+      }
+    },
+    {
+      "name": "1440/en: fixture badge records source and times",
+      "passed": true
+    },
+    {
+      "name": "1440/en: keyboard replay passes",
+      "passed": true
+    },
+    {
+      "name": "1440/en: replay creates no additional decisions",
+      "passed": true
+    },
+    {
+      "name": "1440/en: tampered evidence fails visibly",
+      "passed": true
+    },
+    {
+      "name": "1440/en: stale badge is visible",
+      "passed": true
+    },
+    {
+      "name": "1440/en: stale evidence cannot execute automatically",
+      "passed": true
+    },
+    {
+      "name": "1440/en: stale approval is rejected",
+      "passed": true
+    },
+    {
+      "name": "1440/en: new controls are localized",
+      "passed": true
+    },
+    {
+      "name": "1440/en: drawer fits the viewport",
+      "passed": true,
+      "detail": {
+        "viewport": 1440,
+        "document": 1440,
+        "content": 519,
+        "width": 519
+      }
+    },
+    {
+      "name": "390/zh: fixture badge records source and times",
+      "passed": true
+    },
+    {
+      "name": "390/zh: keyboard replay passes",
+      "passed": true
+    },
+    {
+      "name": "390/zh: replay creates no additional decisions",
+      "passed": true
+    },
+    {
+      "name": "390/zh: tampered evidence fails visibly",
+      "passed": true
+    },
+    {
+      "name": "390/zh: stale badge is visible",
+      "passed": true
+    },
+    {
+      "name": "390/zh: stale evidence cannot execute automatically",
+      "passed": true
+    },
+    {
+      "name": "390/zh: stale approval is rejected",
+      "passed": true
+    },
+    {
+      "name": "390/zh: new controls are localized",
+      "passed": true
+    },
+    {
+      "name": "390/zh: drawer fits the viewport",
+      "passed": true,
+      "detail": {
+        "viewport": 390,
+        "document": 390,
+        "content": 389,
+        "width": 389
+      }
+    },
+    {
+      "name": "390/en: fixture badge records source and times",
+      "passed": true
+    },
+    {
+      "name": "390/en: keyboard replay passes",
+      "passed": true
+    },
+    {
+      "name": "390/en: replay creates no additional decisions",
+      "passed": true
+    },
+    {
+      "name": "390/en: tampered evidence fails visibly",
+      "passed": true
+    },
+    {
+      "name": "390/en: stale badge is visible",
+      "passed": true
+    },
+    {
+      "name": "390/en: stale evidence cannot execute automatically",
+      "passed": true
+    },
+    {
+      "name": "390/en: stale approval is rejected",
+      "passed": true
+    },
+    {
+      "name": "390/en: new controls are localized",
+      "passed": true
+    },
+    {
+      "name": "390/en: drawer fits the viewport",
+      "passed": true,
+      "detail": {
+        "viewport": 390,
+        "document": 390,
+        "content": 389,
+        "width": 389
+      }
+    },
+    {
+      "name": "No browser script errors",
+      "passed": true
+    }
+  ],
+  "screenshots": [
+    "docs/evidence/phase5-1792023335112-1440-zh.png",
+    "docs/evidence/phase5-1792023335112-1440-en.png",
+    "docs/evidence/phase5-1792023335112-390-zh.png",
+    "docs/evidence/phase5-1792023335112-390-en.png"
+  ],
+  "page_errors": [],
+  "real_transactions": 0,
+  "real_provider_calls": 0,
+  "human_acceptance": false,
+  "builtin_browser_control": false,
+  "passed": true
+}

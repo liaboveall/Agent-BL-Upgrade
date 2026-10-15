@@ -8,6 +8,7 @@
 // screening, compliance, world risk and exporter constraints, times every step and can decide to hold
 // or reject instead of opening.
 
+import { assessFreshness, evidenceMetadata } from './runtime/freshness.js';
 import { checkCompliance } from './complianceChecker.js';
 import { checkDocumentConsistency } from './documentConsistency.js';
 import { DecisionLogger, createDecisionId, hashSnapshot } from './decisionLogger.js';
@@ -164,6 +165,13 @@ export class AgentOrchestrator {
     const now = options.now ?? (() => Date.now());
     const pipeline = [];
     const findings = [];
+    input = { ...input, documents: input.documents.map((document) => ({ ...document,
+      ...evidenceMetadata(document, { now: now(), mode: 'fixture' }) })) };
+    const documentStates = input.documents.map((document) => assessFreshness(document, now()));
+    const firstDocument = [...documentStates].sort((a, b) => Date.parse(a.expires_at) - Date.parse(b.expires_at))[0] ?? assessFreshness(evidenceMetadata({}, { now: now() }), now());
+    const documentFreshness = { ...firstDocument, fresh: documentStates.every((state) => state.fresh),
+      source_status: documentStates.every((state) => state.fresh) ? firstDocument.source_status : 'stale' };
+    if (!documentFreshness.fresh) findings.push({ kind: 'STALE_EVIDENCE', severity: 'high', detail: 'Uploaded evidence is expired, future-dated or unavailable; obtain a fresh verified document.' });
     const preferences = input.exporter_preferences ?? undefined;
 
     const run = async (step, fn) => {
@@ -180,7 +188,8 @@ export class AgentOrchestrator {
         step,
         status: outcome?.status ?? 'PASS',
         duration_ms: Math.max(0, now() - started),
-        ...(outcome?.provider ? { provider: outcome.provider } : {})
+        ...(outcome?.provider ? { provider: outcome.provider } : {}),
+        ...(outcome?.model_usage?.length ? { model_usage: outcome.model_usage } : {})
       };
       pipeline.push(entry);
       await options.onStep?.(entry);
@@ -195,7 +204,7 @@ export class AgentOrchestrator {
       reasoning_summary: reasoning,
       findings,
       pipeline,
-      documents: input.documents.map(({ name, kind, sha256, mime_type: mimeType }) => ({ name, kind, sha256, mime_type: mimeType })),
+      documents: input.documents.map(({ name, kind, sha256, mime_type: mimeType, observed_at, expires_at, source_status }) => ({ name, kind, sha256, mime_type: mimeType, observed_at, expires_at, source_status })),
       extraction,
       ...extra
     });
@@ -204,8 +213,10 @@ export class AgentOrchestrator {
       return summaryOf('HOLD_FOR_REVIEW', reasoning, {
         case_data: null,
         quote: null,
+        freshness: documentFreshness,
         input_snapshot: snapshot,
-        evidence_hash: hashSnapshot(snapshot)
+        evidence_hash: hashSnapshot(snapshot),
+        replay: { schema: 'agent-replay-v1', kind: 'ingest', snapshot: structuredClone(snapshot), no_quote: true, blocked: false }
       });
     };
 
@@ -266,7 +277,7 @@ export class AgentOrchestrator {
     if (!parsing) {
       return holdWithoutCase('No uploaded document could be read as an eBL, invoice or insurance policy; a person needs to look at the upload.');
     }
-    const visibleFields = new Set(['bl_id', 'bl_no', 'invoice_no', 'invoice_date', 'incoterms', 'carrier', 'shipper', 'consignee', 'document_hash', 'policy_no', 'provider', 'title_ref', 'cargo', 'quantity_mt', 'quantity_bbl', 'declared_value_usd', 'total_amount_usd', 'unit_price_usd_per_mt', 'unit_price_usd_per_bbl', 'currency', 'vessel', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'eta', 'issue_date', 'coverage_ratio', 'insured_value_usd', 'expires_at', 'receipt_no', 'warehouse', 'storage_date', 'pickup_deadline', 'hs_code', 'declared_value_cny', 'total_amount_cny', 'unit_price_cny_per_mt']);
+    const visibleFields = new Set(['bl_id', 'bl_no', 'invoice_no', 'invoice_date', 'incoterms', 'carrier', 'shipper', 'consignee', 'document_hash', 'policy_no', 'provider', 'title_ref', 'cargo', 'quantity_mt', 'quantity_bbl', 'declared_value_usd', 'total_amount_usd', 'unit_price_usd_per_mt', 'unit_price_usd_per_bbl', 'currency', 'vessel', 'vessel_imo', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'eta', 'issue_date', 'coverage_ratio', 'insured_value_usd', 'expires_at', 'receipt_no', 'warehouse', 'storage_date', 'pickup_deadline', 'hs_code', 'declared_value_cny', 'total_amount_cny', 'unit_price_cny_per_mt']);
     extraction = parsing.documents.map((document) => ({
       document_type: document.document_type, source: document.source,
       confidence: document.confidence, requires_human_review: document.requires_human_review,
@@ -285,6 +296,18 @@ export class AgentOrchestrator {
     });
 
     let caseData = { ...parsing.case_data, case_id: input.case_id };
+    let compliance;
+    const runCompliance = async () => run('compliance', async () => {
+      const result = await this.checkCompliance(caseData, { documents: parsing.documents });
+      for (const check of result.checks) {
+        if (check.status === 'BLOCK' || check.status === 'block') {
+          findings.push({ kind: 'COMPLIANCE_BLOCK', severity: 'critical', code: check.code, detail: `${check.label}: ${check.detail}`, evidence: check.evidence });
+        } else if (check.status === 'REVIEW' || check.status === 'warning') {
+          findings.push({ kind: 'COMPLIANCE_REVIEW', severity: 'high', code: check.code, detail: `${check.label}: ${check.detail}`, evidence: check.evidence });
+        }
+      }
+      return { status: result.has_block ? 'FAIL' : result.has_warning ? 'REVIEW' : 'PASS', value: result };
+    });
     if (caseData.commercial_invoice?.currency && caseData.commercial_invoice.currency !== 'USD') {
       findings.push({ kind: 'CURRENCY_REVIEW_REQUIRED', severity: 'high', detail: 'The uploaded invoice is not in USD. No currency conversion or USD financing is inferred.' });
       // Run warehouse/invoice checks even though this bundle cannot be priced in USD.
@@ -293,14 +316,32 @@ export class AgentOrchestrator {
         findings.push(...report.checks.filter((check) => check.status !== 'ok').map((check) => ({ kind: 'DOCUMENT_MISMATCH', severity: check.status === 'critical' ? 'high' : 'warning', detail: `${check.label}: ${check.detail}` })));
         return { status: report.has_critical ? 'FAIL' : report.ok ? 'PASS' : 'WARN', value: report };
       });
-      return holdWithoutCase('The warehouse and invoice fields were extracted; currency and financing need human review.');
+      compliance = await runCompliance();
+      const result = holdWithoutCase('The warehouse and invoice fields were extracted; currency and financing need human review.');
+      result.compliance = compliance;
+      result.input_snapshot.compliance_report_hash = hashSnapshot(compliance);
+      result.evidence_hash = hashSnapshot(result.input_snapshot);
+      if (compliance.has_block) {
+        result.action = 'REJECT'; result.reasoning_summary = 'Demo compliance screening blocked this document bundle.';
+      }
+      result.replay.snapshot = structuredClone(result.input_snapshot);
+      result.replay.blocked = result.action === 'REJECT';
+      return result;
     }
     if (!caseData.financing) caseData.financing = defaultFinancing(caseData, preferences);
     try {
       validateCaseForPricing(caseData);
     } catch (error) {
       findings.push({ kind: 'CASE_INCOMPLETE', severity: 'high', detail: error.message });
-      return holdWithoutCase(`The documents did not contain enough to price the case: ${error.message}`);
+      compliance = await runCompliance();
+      const result = holdWithoutCase(`The documents did not contain enough to price the case: ${error.message}`);
+      result.compliance = compliance;
+      result.input_snapshot.compliance_report_hash = hashSnapshot(compliance);
+      result.evidence_hash = hashSnapshot(result.input_snapshot);
+      if (compliance.has_block) { result.action = 'REJECT'; result.reasoning_summary = 'Demo compliance screening blocked this document bundle.'; }
+      result.replay.snapshot = structuredClone(result.input_snapshot);
+      result.replay.blocked = result.action === 'REJECT';
+      return result;
     }
 
     // 3. consistency
@@ -312,20 +353,8 @@ export class AgentOrchestrator {
       return { status: report.has_critical ? 'FAIL' : report.ok ? 'PASS' : 'WARN', value: report };
     });
 
-    // 4. compliance (keyword demo rules until WP2.3 lands the fuzzy-matched list)
-    const compliance = await run('compliance', async () => {
-      const result = this.checkCompliance(caseData);
-      for (const check of result.checks) {
-        if (check.status === 'block') {
-          findings.push({ kind: 'COMPLIANCE_BLOCK', severity: 'critical', detail: `${check.label}: ${check.detail}`, evidence: check.evidence });
-        } else if (check.status === 'warning' && check.id === 'export_controls') {
-          findings.push({ kind: 'COMPLIANCE_REVIEW', severity: 'high', detail: `${check.label}: ${check.detail}`, evidence: check.evidence });
-        } else if (check.status === 'warning') {
-          findings.push({ kind: 'COMPLIANCE_NOTE', severity: 'info', detail: `${check.label}: ${check.detail}` });
-        }
-      }
-      return { status: result.has_block ? 'FAIL' : result.has_warning ? 'WARN' : 'PASS', value: result };
-    });
+    // 4. Versioned demo screening. Every unresolved screening check requires review.
+    compliance = await runCompliance();
 
     // 5. valuation
     const valuation = await run('cargo_valuation', async () => {
@@ -333,16 +362,20 @@ export class AgentOrchestrator {
         ...(options.valuation ?? {}),
         forceDeterministic: screen.suspicious ? true : options.forceDeterministic ?? true
       });
-      return { status: 'PASS', provider: report.provider, value: report };
+      return { status: 'PASS', provider: report.provider, model_usage: report.model_usage, value: report };
     });
     caseData = enrichCaseWithValuation(caseData, valuation);
 
     // 6. world risk (offline fixtures unless xAPI is configured)
     const worldRisk = await run('world_risk', async () => {
-      const assessment = await this.assessWorldRisk(caseData, { ...(options.worldRisk ?? {}), forceFallback: screen.suspicious ? true : options.forceDeterministic ?? true });
+      const assessment = await this.assessWorldRisk(caseData, { ...(options.worldRisk ?? {}), now, forceFallback: screen.suspicious ? true : options.forceDeterministic ?? true });
       // The offline fixture is one generic feed for every cargo, not evidence about THIS cargo: it is
       // recorded but never folded into the price. Only live signals change the quote.
-      const fresh = assessment.live === true ? newWorldEvents(caseData, assessment.events ?? []) : [];
+      const metadata = evidenceMetadata(assessment, { now: now(), mode: assessment.live ? 'live' : 'fixture' });
+      const freshness = assessFreshness(metadata, now());
+      assessment.freshness = freshness;
+      if (assessment.live && !freshness.fresh) findings.push({ kind: 'STALE_EVIDENCE', severity: 'high', detail: 'World-risk evidence is stale or unavailable; fresh evidence is required.' });
+      const fresh = assessment.live === true && freshness.fresh ? newWorldEvents(caseData, assessment.events ?? []) : [];
       const status = fresh.some((event) => event.severity === 'critical') ? 'WARN' : 'PASS';
       return { status, provider: assessment.provider, value: { assessment, fresh } };
     });
@@ -418,6 +451,8 @@ export class AgentOrchestrator {
       } else if (kinds.has('PROMPT_INJECTION_SUSPECTED')) {
         action = 'HOLD_FOR_REVIEW';
         reason = 'The documents contain text that reads like instructions to an automated system.';
+      } else if (kinds.has('STALE_EVIDENCE')) {
+        action = 'HOLD_FOR_REVIEW'; reason = 'World-risk evidence is stale; refresh it before opening.';
       } else if (parsing.requires_human_review || kinds.has('OCR_REQUIRED') || kinds.has('DOCUMENT_UNPARSEABLE')) {
         action = 'HOLD_FOR_REVIEW';
         reason = 'Document extraction is incomplete or low-confidence.';
@@ -447,13 +482,19 @@ export class AgentOrchestrator {
       document_hashes: input.documents.map((document) => document.sha256).sort(),
       parser_requires_review: parsing.requires_human_review,
       document_penalty_bps: documentReport.penalty_bps,
-      compliance: compliance.has_block ? 'BLOCK' : compliance.has_warning ? 'WARN' : 'CLEAR',
+      compliance: compliance.status ?? (compliance.has_block ? 'BLOCK' : compliance.has_warning ? 'REVIEW' : 'CLEAR'),
+      compliance_list_version: compliance.list_version ?? null,
+      compliance_report_hash: hashSnapshot(compliance),
       injection_suspected: screen.suspicious,
       valuation_hash: hashSnapshot(valuation),
       world_risk_hash: worldRisk.assessment.evidence_hash,
       exporter_preferences: preferences ?? null,
       quote_hash: recommended.quote_hash
     };
+    const replay = { schema: 'agent-replay-v1', kind: 'ingest', snapshot: structuredClone(inputSnapshot),
+      case_data: structuredClone(caseData), pricing_options: { payout_speed: recommended.payout_speed,
+        requested_cash_usd: preferences?.target_financing_amount ?? caseData.financing.requested_cash_usd },
+      findings: structuredClone(findings), parser_review: parsing.requires_human_review, below_floor: chosen.below_floor };
     // The full valuation report (tool trace, comparables) is kept on the case file, not in the decision.
     const { ai_valuation: aiValuation, ...caseForStorage } = caseData;
     const documentSentence = documentReport.ok
@@ -466,6 +507,8 @@ export class AgentOrchestrator {
 
     return summaryOf(decision.action, reasoning, {
       case_data: caseForStorage,
+      replay,
+      freshness: documentFreshness.fresh ? worldRisk.assessment.freshness : documentFreshness,
       valuation: aiValuation,
       quote: recommended,
       comparison,

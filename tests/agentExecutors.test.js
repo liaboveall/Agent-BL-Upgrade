@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import test from 'node:test';
-import { AbiCoder, keccak256, toUtf8Bytes } from 'ethers';
+import { AbiCoder, Interface, keccak256, toUtf8Bytes } from 'ethers';
 import { createPool, resetStore, storeState } from '../src/app/store.js';
 import { quoteFromCase } from '../src/core/pricingEngine.js';
 import { toChainPricingArgs } from '../src/core/oracle.js';
@@ -155,13 +155,28 @@ function fakeChain(options = {}) {
     revert: null, receiptStatus: 1, logs: ['PricingUpdated', 'OfferingPaused'], processedLogs: [], waitMs: 0,
     executorPool: false, ...options
   };
-  const receipt = () => ({ status: o.receiptStatus, blockNumber: 12345, logs: o.logs.map((name) => ({ name })) });
-  const parse = { parseLog: (log) => (log.name ? { name: log.name } : null) };
+  const oracleAddress = '0x1111111111111111111111111111111111111111';
+  const poolAddress = '0x2222222222222222222222222222222222222222';
+  const updater = '0x3333333333333333333333333333333333333333';
+  const executorAddress = '0x4444444444444444444444444444444444444444';
+  const blockHash = `0x${'ab'.repeat(32)}`;
+  const functions = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32)',
+    'function markInTransit(uint256,bytes32)', 'function recordImporterPayment(uint256,bytes32,uint256)',
+    'function recordCargoArrival(uint256,bytes32)', 'function settle(uint256,uint256)']);
+  const initial = toChainPricingArgs({ ...baseQuote, pricing_action: 'PAUSE_OFFERING' }, { pool_id: 2 });
+  let transaction = { hash: TX, to: oracleAddress, from: updater, chainId: 1439n, value: 0n,
+    data: functions.encodeFunctionData('updatePricing', [initial.pool_id, initial.issue_price_e6, initial.risk_level,
+      initial.pricing_action, initial.evidence_hash, initial.quote_hash]) };
+  const receipt = () => ({ hash: transaction.hash, from: transaction.from, to: transaction.to,
+    status: o.receiptStatus, blockNumber: o.receiptBlock ?? 12345, blockHash,
+    logs: o.logs.map((name) => ({ name, address: o.logAddress ?? (name === 'PricingUpdated' ? oracleAddress : poolAddress) })) });
+  const parse = { parseLog: (log) => (log.name ? { name: log.name } : null), encodeFunctionData: functions.encodeFunctionData.bind(functions) };
   const staticCheck = async () => { if (o.revert) throw Object.assign(new Error('call exception'), { reason: o.revert }); };
   const updatePricing = Object.assign(async (...args) => {
     events.push('send');
     sent.push(args);
     const hash = options.txHash ?? TX;
+    transaction = { ...transaction, hash, from: updater, to: oracleAddress, data: functions.encodeFunctionData('updatePricing', args) };
     return {
       hash,
       wait: async () => {
@@ -175,17 +190,22 @@ function fakeChain(options = {}) {
   }, { staticCall: staticCheck });
   const executorMethod = (name) => Object.assign(async (...args) => {
     sent.push([name, ...args]);
+    transaction = { ...transaction, from: executorAddress, to: poolAddress, data: functions.encodeFunctionData(name, args) };
     return { hash: TX, wait: async () => receipt() };
   }, { staticCall: staticCheck });
   const context = {
     sent, events, options: o,
     provider: {
-      getBlockNumber: async () => 20000,
-      getTransactionReceipt: async (hash) => (o.pendingTx === hash ? null : receipt())
+      send: async () => o.chainId ?? '0x59f',
+      getBlockNumber: async () => o.head ?? 20000,
+      getBlock: async () => ({ hash: o.blockHash ?? blockHash }),
+      getTransaction: async () => ({ ...transaction, ...o.transaction }),
+      getTransactionReceipt: async (hash) => (o.pendingTx === hash ? null : { ...receipt(), ...o.receipt })
     },
     explorerBase: 'https://explorer.example/',
-    signers: { PRICING_UPDATER: '0xUpdater', AGENT_EXECUTOR: '0xExecutor' },
+    signers: { PRICING_UPDATER: updater, AGENT_EXECUTOR: executorAddress },
     oracle: {
+      target: oracleAddress,
       interface: parse,
       isDecisionProcessed: async () => o.processed,
       updatePricing,
@@ -193,6 +213,7 @@ function fakeChain(options = {}) {
       queryFilter: async () => o.processedLogs
     },
     pool: {
+      target: poolAddress,
       interface: parse,
       stateOf: async () => o.state,
       emergencyStopped: async () => o.emergency,
@@ -202,6 +223,7 @@ function fakeChain(options = {}) {
   };
   if (o.executorPool) {
     context.executorPool = {
+      target: poolAddress,
       interface: parse,
       markInTransit: executorMethod('markInTransit'),
       recordImporterPayment: executorMethod('recordImporterPayment'),
@@ -311,11 +333,8 @@ test('ChainExecutor: a decision the oracle already processed is reconciled by it
   assert.equal(result.tx_hash, TX);
 
   const lost = fakeChain({ processed: true, processedLogs: [] });
-  const noEvent = await makeExecutor(lost).execute(chainCmd('PAUSE'));
+  await assert.rejects(makeExecutor(lost).execute(chainCmd('PAUSE')), { code: 'broadcast_uncertain' });
   assert.equal(lost.sent.length, 0);
-  assert.equal(noEvent.success, true);
-  assert.equal(noEvent.tx_hash, null);
-  assert.match(noEvent.note, /could not be located/u);
 });
 
 test('ChainExecutor: a confirmation timeout leaves the decision pending with the tx hash', async () => {
@@ -366,12 +385,42 @@ test('ChainExecutor: findTransaction resolves a submitted hash only once it is m
   const context = fakeChain({ logs: ['PricingUpdated', 'OfferingPaused'] });
   context.options.pendingTx = TX;
   const executor = makeExecutor(context);
-  assert.equal(await executor.findTransaction(TX, 'PAUSE'), null);
+  assert.equal(await executor.findTransaction(TX, 'PAUSE', chainCmd('PAUSE')), null);
   context.options.pendingTx = null;
-  const done = await executor.findTransaction(TX, 'PAUSE');
+  const done = await executor.findTransaction(TX, 'PAUSE', chainCmd('PAUSE'));
   assert.equal(done.success, true);
   assert.equal(done.recovered, true);
   assert.equal(done.tx_hash, TX);
+});
+
+test('ChainExecutor: recovery waits for canonical confirmation depth without resending', async () => {
+  const context = fakeChain({ head: 12345 });
+  const executor = makeExecutor(context, { confirmations: 3 });
+  const command = chainCmd('PAUSE');
+  assert.equal(await executor.findTransaction(TX, 'PAUSE', command), null);
+  context.options.head = 12347;
+  assert.equal((await executor.findTransaction(TX, 'PAUSE', command)).success, true);
+  assert.equal(context.sent.length, 0);
+  await assert.rejects(makeExecutor(fakeChain({ head: 12345 }), { confirmations: 3 }).execute(command), { code: 'execution_pending', tx_hash: TX });
+});
+
+test('ChainExecutor: recovery rejects reorgs and binds the exact approved transaction', async (t) => {
+  for (const [name, patch, code] of [
+    ['reorg', { blockHash: `0x${'cd'.repeat(32)}` }, 'tx_reorged'],
+    ['wrong target', { transaction: { to: '0x5555555555555555555555555555555555555555' } }, 'tx_verification_failed'],
+    ['wrong signer', { transaction: { from: '0x5555555555555555555555555555555555555555' } }, 'tx_verification_failed'],
+    ['different calldata', { transaction: { data: '0x1234' } }, 'tx_verification_failed'],
+    ['other chain', { chainId: '0x1' }, 'tx_verification_failed'],
+    ['value transfer', { transaction: { value: 1n } }, 'tx_verification_failed'],
+    ['foreign event source', { logAddress: '0x5555555555555555555555555555555555555555' }, 'events_missing'],
+    ['substituted receipt', { receipt: { hash: `0x${'cd'.repeat(32)}` } }, 'tx_verification_failed']
+  ]) await t.test(name, async () => {
+    const context = fakeChain(patch);
+    await assert.rejects(makeExecutor(context).findTransaction(TX, 'PAUSE', chainCmd('PAUSE')), { code });
+    assert.equal(context.sent.length, 0);
+  });
+  await assert.rejects(makeExecutor(fakeChain()).findTransaction(TX, 'PAUSE'), { code: 'command_required' });
+  await assert.rejects(makeExecutor(fakeChain()).findTransaction(TX, 'PAUSE', chainCmd('RESUME')), { code: 'command_required' });
 });
 
 test('helpers: proofToBytes32 and oracleDecisionId match what the contracts compute', async () => {

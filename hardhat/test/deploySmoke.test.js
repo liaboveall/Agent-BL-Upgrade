@@ -2,9 +2,21 @@
 // final state. This replays the same sequence in-process so a contract change that would
 // break the real deployment smoke (which costs gas and time to discover) fails here first.
 import { expect } from 'chai';
-import { ACTION, STATE, deployProtocol, ethers, send } from './helpers/protocol.js';
+import { ACTION, STATE, deployProtocol, newOffering, applyPricing, ethers, send } from './helpers/protocol.js';
 
 describe('deploy-protocol.js smoke sequence', () => {
+  it('testnet smoke keeps the repriced offering price when PAUSE commits a lower risk quote', async () => {
+    const ctx = await deployProtocol();
+    const { poolId } = await newOffering(ctx, 'phase5-state-only-actions');
+    await send(applyPricing(ctx, poolId, 791_000n, ACTION.REPRICE_DOWN));
+    await send(applyPricing(ctx, poolId, 783_600n, ACTION.PAUSE_OFFERING));
+    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Paused);
+    expect(await ctx.pool.issuePriceOf(poolId)).to.equal(791_000n);
+    await send(applyPricing(ctx, poolId, 791_000n, ACTION.RESUME_OFFERING));
+    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Repriced);
+    expect(await ctx.pool.issuePriceOf(poolId)).to.equal(791_000n);
+  });
+
   it('create -> subscribe -> reprice -> pause -> resume -> settle ends Repaid at the repriced issue price', async () => {
     const { owner, registry, token, pool, oracle } = await deployProtocol();
     const metadata = {

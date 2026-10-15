@@ -222,7 +222,7 @@ function buildExporterExplanation(q) {
 }
 
 /** Evidence graph (AI-7): each price component with the evidence behind it. */
-function buildEvidenceGraph(core, collateralFloor, evidence) {
+export function buildEvidenceGraph(core, collateralFloor, evidence) {
   const intelCites = (evidence.intel ?? []).map((i) => `${i.id} (${i.source})`);
   const docIssues = evidence.documents?.issues ?? [];
   const floorPrice = Number.isFinite(collateralFloor) ? round(collateralFloor, 4) : null;

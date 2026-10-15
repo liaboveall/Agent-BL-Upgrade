@@ -1,0 +1,20 @@
+✔ the README lists exactly the deployed contract addresses from chain-config.json (2.55036ms)
+✔ every `npm run <script>` in the README and deployment guide exists (7.191389ms)
+✔ the README mentions the commands the release preflight expects (1.625795ms)
+✔ .env.example documents every variable the server reads and never ships a real key (1.933183ms)
+✔ every AGENT_* variable the runtime reads is documented in .env.example (4.858332ms)
+(node:103637) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ frontend translation keys have both Chinese and English copy (3.455488ms)
+✔ accessible labels and the document language follow the language switch (0.329624ms)
+✔ Chinese UI keeps navigation and key investor information in Chinese (0.091294ms)
+✔ English UI copy contains no accidental Chinese (1.996701ms)
+✔ Chinese-native trade data is rendered in English in English mode (0.822804ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 148.444266

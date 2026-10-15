@@ -5,6 +5,7 @@
 //
 // Whether the proposal may run (Demo auto, Live approval, ...) is decided later by the policy engine.
 
+import { evidenceMetadata } from '../runtime/freshness.js';
 import { hashSnapshot } from '../decisionLogger.js';
 
 /** A compact, deterministic view of the three-speed comparison for the decision record. */
@@ -35,7 +36,9 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
   const job = ingest.getJob(event.data?.job_id);
   const ids = event.data?.document_ids ?? job?.document_ids ?? [];
   if (ids.length === 0) return { proposals: [], ignored: 'The ingest event names no documents' };
-  const documents = await ingest.loadDocuments(ids);
+  let documents = await ingest.loadDocuments(ids);
+  if (event.source === 'scenario') documents = documents.map((document) => ({ ...document,
+    ...evidenceMetadata({ observed_at: event.occurred_at }, { now: Date.parse(event.occurred_at), mode: 'fixture' }) }));
 
   const result = await orchestrator.processDocuments({
     case_id: event.case_id,
@@ -48,6 +51,7 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
   if (opening) await ingest.saveCase(result.case_data);
   if (job) await ingest.updateJob(job.job_id, {
     extraction: result.extraction ?? [], findings: result.findings,
+    compliance: result.compliance ?? null,
     review_required: result.action === 'HOLD_FOR_REVIEW', result_action: result.action
   });
 
@@ -61,6 +65,7 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
       valuation_provider: result.valuation?.provider ?? null
     }
     : { documents: result.documents, ...(result.quote ? { quote: result.quote } : {}) };
+  if (result.compliance) params.compliance = result.compliance;
 
   return {
     proposals: [{
@@ -74,6 +79,8 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
       quote_hash: result.quote_hash,
       llm_only: false,
       pipeline: [{ step: 'event_validated', status: 'PASS', duration_ms: 0 }, ...result.pipeline],
+      replay: result.replay,
+      freshness: result.freshness,
       input_snapshot: result.input_snapshot
     }]
   };

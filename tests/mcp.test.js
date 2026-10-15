@@ -9,8 +9,8 @@ import { MCP_TOOLS_MANIFEST, MCP_TOOL_HANDLERS, callTool, runToolChain } from '.
 // MCP-1: Manifest Tests
 // ============================================================
 
-test('MCP tools manifest has exactly 9 tools', () => {
-  assert.equal(MCP_TOOLS_MANIFEST.length, 9);
+test('MCP tools manifest has exactly 15 tools', () => {
+  assert.equal(MCP_TOOLS_MANIFEST.length, 15);
 });
 
 test('manifest contains all expected tool names', () => {
@@ -43,11 +43,14 @@ test('each tool in manifest has a registered handler', () => {
   }
 });
 
-test('each manifest tool has required fields in inputSchema.properties', () => {
+test('manifest parameter schemas declare every required field, and status accepts an empty object', () => {
   for (const tool of MCP_TOOLS_MANIFEST) {
     const props = tool.inputSchema.properties || {};
-    // Every tool should have at least one property
-    assert.ok(Object.keys(props).length > 0, `${tool.name}: inputSchema has no properties`);
+    if (tool.name === 'get_agent_status') {
+      assert.deepEqual(props, {});
+      assert.equal(tool.inputSchema.additionalProperties, false);
+    } else assert.ok(Object.keys(props).length > 0, `${tool.name}: inputSchema has no properties`);
+    for (const required of tool.inputSchema.required ?? []) assert.ok(Object.hasOwn(props, required), `${tool.name}: missing required property ${required}`);
   }
 });
 

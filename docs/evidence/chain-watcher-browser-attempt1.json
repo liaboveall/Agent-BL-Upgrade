@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-10-14T17:03:44.076Z",
+  "browser": "153.0.8010.12",
+  "chain": "in-memory-ABI-fixture",
+  "real_transactions": 0,
+  "checks": [
+    {
+      "name": "Harness explicitly has zero real transactions",
+      "passed": true
+    },
+    {
+      "name": "Fixture controls require admin authentication",
+      "passed": true
+    }
+  ],
+  "screenshots": [],
+  "page_errors": [],
+  "passed": false,
+  "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.ac-chain-watcher') to be visible\u001b[22m\n",
+  "summary": {
+    "passed": 2,
+    "total": 2
+  }
+}

@@ -11,6 +11,7 @@ import {
 } from './config.js';
 import { HttpError, readJsonBody } from '../app/http.js';
 import { deliverPaidReport } from './delivery.js';
+import { bazaarExtension, paymentRequirement } from './discovery.js';
 import {
   JsonReceiptStore,
   PaymentSettlementError,
@@ -28,22 +29,7 @@ function sameAddress(left, right) {
 }
 
 function requirementFor(config, route) {
-  return {
-    scheme: 'exact',
-    network: config.network,
-    amount: route.amount,
-    asset: config.asset,
-    payTo: config.payTo,
-    maxTimeoutSeconds: config.ttlSeconds,
-    extra: {
-      name: 'USDC',
-      version: '2',
-      assetTransferMethod: 'eip3009',
-      chainId: config.chainId,
-      verifyingContract: config.asset,
-      primaryType: 'TransferWithAuthorization'
-    }
-  };
+  return paymentRequirement(config, route);
 }
 
 function resourceFor(req, route, baseUrl) {
@@ -64,6 +50,7 @@ export function buildPaymentRequired(config, route, resource, error = {}) {
     resource,
     accepts: [requirementFor(config, route)],
     extensions: {
+      bazaar: bazaarExtension(route.id),
       mode: config.mode,
       state: 'CHALLENGED',
       ...(error.code ? { errorCode: error.code } : {})
@@ -271,6 +258,7 @@ export function buildPaymentRequiredResponse(serviceId, priceUSDC, network, payT
     payTo,
     nonce,
     challenge,
+    extensions: { bazaar: bazaarExtension(serviceId), agentbl: { mode: 'demo', paymentProtocol: 'agentbl-demo-personal-sign' } },
     resource: resource || `agentbl://x402/${serviceId}`,
     paymentInstructions: {
       scheme: 'exact',

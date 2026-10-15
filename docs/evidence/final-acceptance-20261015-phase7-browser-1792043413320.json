@@ -1,0 +1,16 @@
+{
+  "phase": 7,
+  "checked_at": "2026-10-15T05:50:13.320Z",
+  "browser": "153.0.8010.12",
+  "checks": [],
+  "screenshots": [
+    "docs/evidence/final-acceptance-20261015-phase7-browser-1792043413320-failure.png"
+  ],
+  "measurements": [],
+  "real_transactions": 0,
+  "real_provider_calls": 0,
+  "human_acceptance": false,
+  "builtin_browser_control": false,
+  "passed": false,
+  "error": "page.evaluate: Execution context was destroyed, most likely because of a navigation"
+}

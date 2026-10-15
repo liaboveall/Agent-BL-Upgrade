@@ -410,7 +410,8 @@ test('pipeline: insurance, departure, arrival and payment map to their actions',
 });
 
 test('pipeline: the same event on the same pool always yields the same proposal', () => {
-  const run = () => proposeFromEvent(ev('WORLD_RISK_UPDATED', { data: { events: typhoon } }), { pool: poolFor(), mode: 'demo', now: () => 0 }).proposals[0];
+  const event = ev('WORLD_RISK_UPDATED', { data: { events: typhoon } });
+  const run = () => proposeFromEvent(event, { pool: poolFor(), mode: 'demo', now: () => 0 }).proposals[0];
   assert.deepEqual(run(), run());
 });
 

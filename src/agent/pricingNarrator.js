@@ -8,6 +8,7 @@
 //      so `npm run demo` always works (offline or if the provider is down).
 
 import { chatCompletion, isConfigured, resolveProvider } from './llm/openaiCompatClient.js';
+import { maxTokensCap } from '../app/llmProxy.js';
 
 const usd = (n) => 'USD ' + Math.round(Number(n)).toLocaleString('en-US');
 
@@ -21,7 +22,7 @@ export function buildPricingNarrative(comparison) {
     `target redemption value — a ${yieldPct}% gross upside for investors — on the exporter's ${rec.payout_speed} payout choice, ` +
     `which gives up about ${sharePct}% of ${usd(rec.exporter_gross_profit_usd)} verified trade profit. ` +
     `Current trade risk is ${rec.risk_level} (${rec.risk_score_bps}bps): ${rec.risk_factors.join('; ')}. ` +
-    `AI on-chain action: ${rec.pricing_action}. Target redemption is a target, not a guarantee.`
+    `Proposed protocol action: ${rec.pricing_action}. Target redemption is a target, not a guarantee.`
   );
 }
 
@@ -55,14 +56,19 @@ export async function narratePricing(comparison, options = {}) {
   const chat = options.chat ?? chatCompletion;
   const grounded = buildPricingNarrative(comparison);
 
-  if (useLlm && isConfigured(env)) {
+  if (useLlm && String(env.LLM_PROXY_ENABLED ?? 'true').toLowerCase() !== 'false' && isConfigured(env)) {
     try {
+      const cap = maxTokensCap(env);
       const message = await chat(
-        { messages: buildMessages(grounded, comparison.recommended_quote), temperature: 0.3, timeoutMs: 20000 },
+        { messages: buildMessages(grounded, comparison.recommended_quote), temperature: 0.3, timeoutMs: 20000,
+          ...(cap === null ? {} : { maxTokens: cap }) },
         env
       );
       const text = (message?.content ?? '').trim();
-      if (text) return { text, provider: resolveProvider(env)?.provider ?? 'llm', grounded };
+      if (text && (!options.acceptText || options.acceptText(text, grounded))) {
+        return { text, provider: resolveProvider(env)?.provider ?? 'llm', grounded };
+      }
+      return { text: grounded, provider: 'deterministic-fallback', grounded };
     } catch {
       return { text: grounded, provider: 'deterministic-fallback', grounded };
     }

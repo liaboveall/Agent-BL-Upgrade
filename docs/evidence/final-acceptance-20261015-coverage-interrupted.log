@@ -1,0 +1,1071 @@
+
+> agentbl-agent-starter@0.1.0 test:coverage
+> node --test --test-concurrency=4 --experimental-test-coverage --test-coverage-include="src/**" --test-coverage-lines=88 --test-coverage-branches=72 --test-coverage-functions=86 tests/*.test.js
+
+✔ tab keyboard navigation wraps, handles Home/End and skips disabled choices (4.279204ms)
+✔ payout radio group exposes checked state separately from navigation selection (0.340789ms)
+✔ menu arrow keys only move focus and cannot select or connect a wallet (0.514891ms)
+✔ live rendering restores replaced controls without stealing focus from a connected control (0.381583ms)
+✔ modal Tab and reverse Tab wrap at the edges while ordinary navigation is untouched (0.546373ms)
+✔ timeline announcements exclude initial history, unchanged polls and removed decisions (0.462888ms)
+✔ reduced motion selects immediate programmatic scrolling (0.304702ms)
+✔ every dashboard tab owns a named panel and dialogs have accessible names (13.260478ms)
+▶ agent activity feed
+  ✔ a priced quote is recorded as PRICING_QUOTE with its price (1734.209253ms)
+  ✔ a subscription is recorded without publishing the full wallet address (204.041803ms)
+  ✔ a document upload and a world-risk escalation are recorded (53.648217ms)
+  ✔ subscribers receive a connected frame, then live activity, filtered by case (35.81627ms)
+  ✔ idle streams get heartbeat comments so proxies do not drop them (50.73538ms)
+[agentbl] 6ccc39e4d519 503 sse_capacity: Too many live-stream subscribers; retry shortly
+  ✔ the number of concurrent subscribers is capped (7.915657ms)
+  ✔ closed subscribers are removed from the registry (24.221564ms)
+  ✔ closeActivityStreams ends every open stream (graceful shutdown) (4.141088ms)
+✔ agent activity feed (2148.005754ms)
+[agentbl] cf60960904d3 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: X402_PAY_TO is required in live mode
+▶ runtime mode switching requires the admin token
+  ✔ an anonymous caller cannot leave Live mode (the paywall-bypass chain is closed) (72.930447ms)
+  ✔ the correct token (Bearer or X-Admin-Token) switches the mode (1307.315099ms)
+  ✔ Demo -> Live on a server that is not Live-ready is refused by the controller, token or not (9.571373ms)
+  ✔ no-op requests and invalid modes need no token (11.25304ms)
+  ✔ once Live is configured, entering Live is protected as well (6.099526ms)
+  ✔ demo reset is unavailable in Live mode (2.84303ms)
+  ✔ without a configured (or with a too-short) token, leaving Live is impossible at runtime (7.871781ms)
+✔ runtime mode switching requires the admin token (1447.984882ms)
+✔ a pure demo deployment (nothing Live configured) keeps the toggle open and harmless (204.023319ms)
+▶ BE-15: Agent Activity API Tests
+  ✔ GET /api/agent/activity returns empty array initially (1319.732503ms)
+  ✔ GET /api/agent/activity returns logged activities (7.289413ms)
+  ✔ GET /api/agent/activity filters by case_id (3.192027ms)
+  ✔ GET /api/agent/activity filters by pool_id (2.809629ms)
+  ✔ GET /api/agent/activity/stream establishes SSE connection (106.823718ms)
+  ✔ Agent activities do not expose internal chain-of-thought (5.925415ms)
+✔ BE-15: Agent Activity API Tests (1476.317928ms)
+✔ anchor preflight requires the deployed testnet, exact version, explicit signer role and continuous head (47.501368ms)
+✔ anchor broadcast shares the signer lock, static-preflights and persists hash before waiting (3.362435ms)
+✔ confirmed anchors require exact calldata, sender, receipt event, current canonical block and chain batch (42.065766ms)
+✔ pending or underconfirmed anchors are never reported as confirmed; changed deployment bindings fail closed (5.136378ms)
+✔ broadcast recovery uses one exact event in a bounded scan, with no send or inferred hash (3.798922ms)
+✔ chain verification rechecks finality and inclusion instead of trusting a stored ANCHORED label (7.509667ms)
+✔ pricing and anchoring serialize by signer and a failed task cannot poison the shared queue (0.92381ms)
+✔ deployment plan validation rejects altered commitments and its default does not touch chain or files (3.737945ms)
+✔ anchor leaves use canonical JSON, domain separation and explicit terminal fields (20.176518ms)
+✔ approval identity, route, time, outcome and transaction are committed without source text or credentials (11.312351ms)
+✔ Merkle tree proves every leaf in a 1-record batch and rejects alterations (1.051902ms)
+✔ Merkle tree proves every leaf in a 2-record batch and rejects alterations (1.402767ms)
+✔ Merkle tree proves every leaf in a 3-record batch and rejects alterations (2.547027ms)
+✔ Merkle tree proves every leaf in a 5-record batch and rejects alterations (4.741423ms)
+✔ Merkle tree proves every leaf in a 16-record batch and rejects alterations (15.408078ms)
+✔ Merkle tree proves every leaf in a 255-record batch and rejects alterations (371.887946ms)
+✔ Merkle tree proves every leaf in a 256-record batch and rejects alterations (360.554165ms)
+✔ invalid or oversized tree/proof inputs fail closed (0.519859ms)
+✔ enabling anchoring does not change the agent version; policy, model and source changes do (4.737499ms)
+✔ anchor model metadata matches provider normalization for absent, empty, whitespace and explicit model names (3.933751ms)
+✔ concurrent finalizations allocate a continuous durable sequence; duplicates and restart keep it (365.592247ms)
+✔ a second OS process cannot take the active anchor sequence lock (129.940367ms)
+✔ a dead process lock is recovered without resetting sequence (122.008108ms)
+✔ failed persistence consumes no finalization sequence and leaves the prior state intact (16.761907ms)
+✔ tampered terminal data fails verification; finalized entries cannot be silently overwritten (7.794432ms)
+✔ corrupted sequence, leaf, version and batch root are rejected on load (11.932694ms)
+✔ legacy journals are explicitly marked with an unrecorded version (2.477799ms)
+✔ Demo and disabled Live form local trees without contacting a chain adapter (10.67874ms)
+✔ minimum batch, interval and version boundaries keep each batch homogeneous and continuous (46.340884ms)
+✔ Live batches persist intent and hash before confirmation; repeat ticks do not broadcast twice (10.418255ms)
+✔ uncertain send survives restart and recovers by observed hash without a repeat broadcast (23.553699ms)
+✔ preflight failure is retryable but a mode change before send never broadcasts (7.207062ms)
+✔ a failed hash checkpoint after broadcast stays uncertain until read-only recovery and never re-sends (20.001767ms)
+✔ runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick (1463.606753ms)
+▶ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq
+  ✔ EXECUTED (22.723782ms)
+  ✔ REJECTED (21.143508ms)
+  ✔ EXPIRED (23.102888ms)
+✔ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq (68.296721ms)
+✔ failed approved execution preserves the operator and terminal failure in its commitment (21.731432ms)
+✔ an autonomy override creates a new policy version without relabeling already created decisions (19.648234ms)
+✔ retention preserves independent proofs and live sequences; Demo reset discards only Demo proofs (25.368603ms)
+✔ HTTP exposes public proofs and behavioral tamper failures, with missing IDs returning 404 (99.632482ms)
+✔ CLI rechecks a disk audit without reading keys or mutating journals and exits nonzero for tampering (11330.744862ms)
+▶ agent API (Demo)
+  ✔ GET /api/agent/status is public and reports the runtime without exposing keys (1456.074856ms)
+  ✔ an injected world-risk event produces a decision, an executed simulated reprice and a trace (89.830433ms)
+  ✔ the same event again is a duplicate and does not execute twice (52.768019ms)
+  ✔ without ?wait the event is accepted (202) and processed in the background (40.687017ms)
+  ✔ invalid input is refused with a 4xx and a readable reason (79.684671ms)
+  ✔ control: autonomy and emergency stop change what the agent does (102.90982ms)
+  ✔ approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx (168.357556ms)
+  ✔ the admin token protects control, events and the approval queue once it is configured (87.010838ms)
+  ✔ the activity stream sends an id per event and replays what a reconnecting client missed (70.754584ms)
+  ✔ POST /api/demo/reset clears what the agent recorded in Demo and rebuilds the pools (288.469771ms)
+✔ agent API (Demo) (2472.471515ms)
+✔ agent API: in Live the admin token is mandatory even for actions Demo leaves open (36.034317ms)
+✔ approvals: create is idempotent per open decision and rejects bad input (3.745359ms)
+✔ approvals: approve and reject follow the state machine (2.318195ms)
+✔ approvals: a pending approval expires after its ttl and can no longer be approved (1.63651ms)
+✔ approvals: owner-signed steps are recorded in order and complete the approval (1.143334ms)
+✔ approvals: failures keep a bounded reason; an approval awaiting a signature can expire (1.198501ms)
+✔ approvals: state survives a restart and the record cap never drops open approvals (33.467415ms)
+✔ owner plan: departure and cancellation encode exact proofs; settlement refuses context-free legacy plans (25.384327ms)
+✔ owner plan: refuses what it cannot encode instead of guessing (2.038187ms)
+✔ verifyOwnerTx: accepts exactly the planned transaction and reports the confirmed events (12.547961ms)
+✔ verifyOwnerTx: refuses a made-up hash, an unmined tx and a malformed hash (3.338829ms)
+✔ verifyOwnerTx: wrong contract, method, argument, sender, revert or missing event each fail (44.570578ms)
+✔ verifyOwnerTx: a log from another contract does not satisfy the expected event (5.762697ms)
+✔ cli: argument parsing (3.583236ms)
+✔ cli: no action prints usage; unknown flags exit 2; --help exits 0 (1.449954ms)
+✔ cli: --list shows what waits for a signature, with the admin token (6.479017ms)
+✔ cli: the default is a dry run that preflights and sends nothing (1.925259ms)
+✔ cli: --confirm signs, waits, and reports the hash for the server to verify (1.788858ms)
+✔ cli: the private key never appears in any output (1.694548ms)
+✔ cli: a step the contract would reject stops everything before sending (0.867211ms)
+✔ cli: a key that is not the contract owner is refused (0.576715ms)
+✔ cli: without a local owner key it explains instead of failing silently (0.7725ms)
+✔ cli: only approvals waiting for an owner signature can be signed (2.821718ms)
+✔ cli: a terminal action on a protected pool is refused even with --confirm (1.637758ms)
+✔ cli: a server rejection of the reported transaction is surfaced and exits non-zero (0.842311ms)
+✔ cli: an unknown approval and a mined-but-reverted step are reported (1.340418ms)
+✔ cli: steps the server already recorded are skipped when resuming (1.061791ms)
+✔ chain configuration: independent polling defaults, interval bounds and opt-out (2.810328ms)
+✔ read-only chain context does not resolve any private key or create a wallet (50.782843ms)
+✔ confirmed logs are sorted, decoded, deduplicated, observed and committed after durable delivery (1426.008647ms)
+✔ confirmations defer recent logs and all snapshot reads use the confirmed batch block (41.154076ms)
+✔ each log request is capped at 5000 blocks, empty batches advance and catching up gates execution (44.572729ms)
+✔ restart resumes from the next block and restores a confirmed mirror without reprocessing logs (82.940827ms)
+✔ RPC failure keeps the cursor, sanitizes errors, backs off and recovers only on a fresh successful poll (35.349316ms)
+✔ hung RPC is bounded and cannot fabricate observations or advance a cursor (43.522894ms)
+✔ a restart with changed chain addresses preserves the cursor and requires reconciliation (48.156484ms)
+✔ wrong RPC chain never accepts logs or changes a mirror (20.412671ms)
+✔ a changed committed block freezes the original cursor and persists the reorg boundary (49.80327ms)
+✔ cursor corruption fails closed without replacing evidence (29.671461ms)
+✔ reject removed log without observation or cursor progress (26.75043ms)
+✔ reject wrong canonical hash log without observation or cursor progress (34.993494ms)
+✔ reject wrong address log without observation or cursor progress (39.541648ms)
+✔ reject invalid watched payload log without observation or cursor progress (44.116636ms)
+✔ reject pending index log without observation or cursor progress (26.956639ms)
+✔ conflicting duplicate positions fail instead of arbitrarily choosing one log (34.664247ms)
+✔ every promised event ABI is watched and remains informational, including both non-pool contracts (129.71008ms)
+✔ PaymentAttested correlates its SHA-256 case hash and does not assert trade repayment (28.788979ms)
+✔ unknown cargo is registered for chain monitoring but excluded from risk and investor eligibility (26.631791ms)
+✔ new terminal offerings remain history and existing CLI mappings are not replaced (43.083478ms)
+✔ current stop takes effect before history replay; historical false cannot release a current chain stop (31.921908ms)
+✔ chain stop release waits for confirmed state and preserves an independent local stop (41.289714ms)
+✔ Demo mode makes no RPC calls, restores independent Demo mirrors and preserves the Live cursor (27.599345ms)
+✔ a mode switch while an RPC is in flight cannot inject chain logs into Demo or commit a cursor (43.959026ms)
+✔ overlapping polls share one request and never apply a batch twice (30.137081ms)
+✔ delivery failure keeps the cursor and retries the same log without another observation or decision (38.292565ms)
+✔ missing deployment block resolves the canonical deployment receipt and never guesses an origin (47.461113ms)
+✔ deployment start override cannot silently skip historical logs (29.471826ms)
+✔ large atomic amounts remain exact strings and cannot acquire rounded UI prices (33.193468ms)
+✔ confirmed repayment proofs are observations and never fabricate a verified payment or SETTLE approval (44.777629ms)
+✔ unavailable chain observation blocks every state-changing proposal, including PAUSE, while records remain available (0.862386ms)
+✔ chain price drift is exposed without rewriting a priced quote hash or offering stale investor action cards (29.714769ms)
+✔ known collateral mismatch requires reconciliation rather than silently relinking a case (29.97679ms)
+✔ mode-change notification immediately restores Demo scope before the next scheduled poll (29.574326ms)
+✔ Demo reset discards old backup balances while preserving the Live cursor (30.981997ms)
+✔ cursor persistence failure retries an already delivered log without losing or duplicating its proof (69.022549ms)
+✔ an approved server action remains pending during a watcher outage and recovers after confirmation (60.672572ms)
+✔ an owner payment correction removes stale verification and decimal amounts from the Live mirror (33.133878ms)
+(node:159277) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ console: dynamic values never go through innerHTML (decisions carry event and chain data) (1.778273ms)
+✔ console: a link is only ever built from an https explorer_url, never from a hash or a demo reference (1.023205ms)
+✔ console: a simulated execution is labelled DEMO and has no link path (0.51602ms)
+✔ console: shortId shortens without repeating the value (0.39179ms)
+✔ judge-facing Agent terminal does not intercept browser diagnostics (1.58355ms)
+✔ high-frequency render helpers do not emit debug logs (0.265715ms)
+✔ measured Agent suites meet every frozen deterministic threshold using real components (2.744036ms)
+✔ scoring rejects missing and non-finite metrics rather than treating them as success (0.450601ms)
+✔ label boundary rejects leaked labels at any depth and freezes the component input (2.717147ms)
+✔ changing gold cannot change subject output, and broken extraction fails the quality gate (4036.146216ms)
+✔ empty or truncated evaluation suites are rejected, never awarded perfect safety scores (1.082551ms)
+✔ NDCG penalizes reversed rankings, irrelevant and duplicate results, and empty output (0.254508ms)
+✔ report shows failures and limits, and never claims an unrun provider evaluation (2919.828139ms)
+✔ events: normalizeEvent fills defaults and derives a stable event_id (6.863507ms)
+✔ events: invalid events are refused with a readable reason (4.269623ms)
+✔ events: payload keys beyond the checked ones are preserved but never trusted blindly (2.086488ms)
+✔ bus: an event is processed once; resubmitting it is a duplicate (8.573379ms)
+✔ bus: events of one case run one at a time in arrival order, other cases run in parallel (46.110011ms)
+✔ bus: concurrency is capped (47.826185ms)
+✔ bus: an event older than the last handled one for the same case and type is STALE and never runs (3.820892ms)
+✔ bus: a failing handler is retried, then the event is dead-lettered with its payload (1.342184ms)
+✔ bus: a handler that recovers on a later attempt ends DONE; a dead event can be retried (1.796531ms)
+✔ bus: state survives a restart; duplicates stay duplicates and STALE detection persists (23.202872ms)
+✔ bus: events that were queued or mid-flight when the process stopped are processed after restart (13.657056ms)
+✔ bus: a bus that is not started keeps events queued and reports them (1.039297ms)
+✔ bus: the index is pruned to its cap without losing unfinished or dead events (5.080425ms)
+✔ bus: the handler receives a copy, so it cannot corrupt the stored event (1.201874ms)
+✔ bus: submit refuses an event that was not normalised (0.518233ms)
+✔ poolRules: transitions mirror the contract (4.145668ms)
+✔ SimExecutor: REPRICE changes the offchain pool and returns a demo reference, never a hash (1.799866ms)
+✔ SimExecutor: the same idempotency key is applied once (0.532987ms)
+✔ SimExecutor: PAUSE then RESUME restores the previous state; illegal moves are refused (1.060071ms)
+✔ SimExecutor: settlement needs subscribers and both proofs, in order (1.093274ms)
+✔ SimExecutor: FREEZE, LIQUIDATE, WARNING and OPEN (0.714ms)
+✔ ChainExecutor: a PAUSE is sent once with the exact oracle arguments and confirmed from the receipt (39.321437ms)
+✔ ChainExecutor: each pricing action uses its oracle action code (RESUME = 6) (8.105341ms)
+✔ ChainExecutor: REPRICE must lower the price and not exceed the redemption value (4.732021ms)
+✔ ChainExecutor: a transaction the contract would reject is never sent (2.625625ms)
+✔ ChainExecutor: emergency stop, illegal states and missing mapping stop before any send (2.891808ms)
+✔ ChainExecutor: an action that is already in effect is skipped, not retried (2.082952ms)
+✔ ChainExecutor: a decision the oracle already processed is reconciled by its event, not re-sent (3.308736ms)
+✔ ChainExecutor: a confirmation timeout leaves the decision pending with the tx hash (21.410559ms)
+✔ ChainExecutor: a reverted receipt or missing events is a failure, not a success (2.393385ms)
+✔ ChainExecutor: one transaction per signer at a time, so nonces stay in order (43.846548ms)
+✔ ChainExecutor: executor-role actions go to an operator unless the optional AGENT_EXECUTOR key exists (2.407827ms)
+✔ ChainExecutor: findTransaction resolves a submitted hash only once it is mined (0.250528ms)
+✔ helpers: proofToBytes32 and oracleDecisionId match what the contracts compute (2.155645ms)
+▶ ingest API (Demo)
+  ✔ POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step (3533.334743ms)
+  ✔ uploading the same documents again is a 200 with the same job, not a second decision (208.523672ms)
+  ✔ a document that tries to steer the agent is held, and the answer says so (240.019221ms)
+  ✔ bad uploads are refused with a status and a code, and open no job (174.449975ms)
+  ✔ a document over the size limit is a 413 (85.655627ms)
+  ✔ exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them (332.364062ms)
+  ✔ scenarios: list, run one over HTTP, and the pool and approvals show the result (419.766144ms)
+  ✔ the admin token, once configured, protects scenarios but not Demo uploads (388.016138ms)
+  ✔ the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case (1212.037712ms)
+✔ ingest API (Demo) (6641.238403ms)
+✔ ingest API: in Live, uploads and preferences need the admin token (95.009862ms)
+✔ document review: corrected bytes re-run all checks, retain the HOLD decision and expose safe field provenance (2755.279324ms)
+✔ document review: acknowledging a new injected document does not waive the injection hold (220.59104ms)
+✔ document review: restoring previously valid bytes creates a new scoped attempt and repeated submissions are idempotent (336.196094ms)
+✔ ingest pipeline: three clean documents become an opened Demo pool, step by step (126.23499ms)
+✔ ingest pipeline: the same upload twice makes one decision, not two (122.607622ms)
+✔ ingest pipeline: a document set without a case id gets a stable one and still opens (128.442196ms)
+✔ ingest pipeline: the crude case opens too, priced in its own terms (123.073278ms)
+✔ ingest pipeline: text that tries to steer the agent holds the case and opens nothing (127.371804ms)
+✔ ingest pipeline: a payment address smuggled into a trade field holds the case (119.994635ms)
+✔ ingest pipeline: a sanctioned counterparty is rejected, not held (149.906596ms)
+✔ compliance v2 pipeline: near entity holds, corrected documents rerun screening and retain old evidence (297.05095ms)
+✔ compliance v2 pipeline: unknown ports and dual-use HS both prevent opening (291.142551ms)
+✔ compliance v2 pipeline: a transport port and synthetic IMO block with exact field evidence (343.842668ms)
+✔ compliance v2 pipeline: eBL HS cannot be overwritten by the clean invoice HS (185.121367ms)
+✔ compliance v2 pipeline: a later clean document of the same type cannot hide a blocked source (426.282513ms)
+✔ compliance v2 pipeline: CNY warehouse and incomplete invoice are screened before pricing exits (477.209562ms)
+✔ compliance v2 pipeline: asynchronous provider failure is a review, with no Demo fallback opening (206.776207ms)
+✔ compliance v2 pipeline: versioned report and matching evidence survive a restart (594.428685ms)
+✔ ingest pipeline: documents that disagree on the quantity are held for a person (285.916736ms)
+✔ ingest pipeline: a scanned PDF is stored and held as needing OCR, not guessed at (1087.515223ms)
+✔ ingest pipeline: text that is not a trade document is held with a reason (56.025716ms)
+✔ exporter preferences: a floor that no payout speed reaches holds the case; one that some speed reaches switches speed (273.760848ms)
+✔ exporter preferences: stored with the upload, and a later price cut below the floor needs a person (314.725734ms)
+✔ exporter preferences: the setter validates, records activity and clears with the Demo reset (40.396411ms)
+✔ ingest pipeline in Live: an opening is only a proposal, and nothing is faked on-chain (196.202407ms)
+✔ ingest pipeline: a failing pipeline marks the job failed and dead-letters the event instead of hanging (181.220622ms)
+✔ ingest pipeline: state survives a restart without repeating the decision (403.102387ms)
+✔ delegated quotations match the canonical engine at every payout speed, without touching a runtime (361.775446ms)
+✔ delegation preserves document mismatch and demo compliance blocks instead of granting execution (67.351914ms)
+✔ delegation rejects ambiguous source selection, missing cases, unsupported fields and unsafe numbers (16.263282ms)
+✔ only unexpired, case-bound server-delivered reports become neutral quote provenance (89.822571ms)
+✔ pricing concurrency is bounded and recovers after a failed lookup (15.225537ms)
+✔ MCP dry-run is side-effect free and invalid approval cannot change the queue (3534.291347ms)
+✔ MCP operator events retain Live restrictions even with a valid host token (1.144242ms)
+✔ MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots (30.571631ms)
+✔ stateless MCP recommendations preserve hard filters, never create sessions or execute actions (33.256576ms)
+✔ Agent Card uses the verified A2A 1.0 required fields, advertises one implemented skill and no unsupported transports (111.825685ms)
+✔ public origins reject credentials and cleartext remote URLs, and never trust Host or forwarded headers (29.155692ms)
+✔ A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation (65.407252ms)
+✔ A2A validates JSON-RPC framing, protocol negotiation, media and structured inputs before pricing (89.871712ms)
+✔ delegation input errors remain JSON-RPC errors without reflecting internal exception messages (44.71878ms)
+✔ discovery and card never publish Live payment accepts while the application is Demo (51.068877ms)
+✔ Live discovery, card and 402 header/body derive identical exact V2 requirements from the catalog (3.033222ms)
+✔ interoperability rate limits are applied before delegated work (38.070257ms)
+✔ untrusted JSON rejects reserved keys and complexity before schema traversal (28.116989ms)
+✔ stdio backend adapter rejects redirects, oversized or invalid replies and reports backend loss without local fallback (19.685354ms)
+✔ MCP runtime tools and resources hide unexpected storage or provider exception details (0.851598ms)
+✔ default live smoke performs reads only, including when keys happen to exist (4.541534ms)
+✔ confirmed smoke approves exactly REPRICE, PAUSE, RESUME on protected pool #2 and verifies each (2.570431ms)
+✔ uncertain broadcast and mismatched receipt abort without retries or a second proposal (3.292746ms)
+✔ recovery verifies the two saved receipts historically and approves only the remaining RESUME (1.156674ms)
+✔ read-only forecast separates oracle risk quotes from actual PAUSE/RESUME pool prices and states (55.266755ms)
+✔ PAUSE verifies a lower oracle quote while the actual offering price stays unchanged (100.455107ms)
+✔ RESUME verifies the contract-restored Repriced state and unchanged issue price (65.20158ms)
+✔ a saved REPRICE receipt is verified at its block even after a later PAUSE (45.283667ms)
+✔ receipt verification rejects a noncanonical block or mismatching transaction calldata/target (146.72074ms)
+✔ lifecycle mode stops with the separately authorized owner/wallet checklist (0.928283ms)
+✔ smoke rejects unconfirmed writes, insecure remote URLs and terminal actions (1.301677ms)
+✔ server smoke proposals enforce the pool, exact order and reuse the existing decision (5.557415ms)
+✔ risk tracker: the first look is a baseline, and an unchanged picture is never an event (3.038372ms)
+✔ risk tracker: a new or worse alert is reported with the alerts that are active now (2.3446ms)
+✔ risk tracker: risk counts as cleared only after the configured number of quiet looks in a row (0.911805ms)
+✔ risk tracker: one alert in the middle of the quiet restarts the count (no flapping) (0.508596ms)
+✔ risk tracker: state survives a restart, so a restart does not re-announce or forget (21.00638ms)
+✔ insurance: warns inside the window, pauses after expiry, and ignores cases that are not active (1.604899ms)
+✔ insurance monitor: Demo stays silent on the real clock; a scenario clock or Live checks the policy (1.106785ms)
+✔ world-risk monitor: baseline, change, repeat, escalation and clearing, with deterministic event ids (2.00791ms)
+✔ world-risk monitor: live evidence is labelled live, finished pools and unmapped Live pools are skipped, a failing feed is not fatal (0.937294ms)
+✔ runtime: a monitor source feeds the tick; the same fixture does not trigger the same decision twice (2150.9715ms)
+✔ runtime: a throwing source does not stop the other sources or the tick (3.497107ms)
+✔ opening: unregistered cargo has exactly three owner steps with receipt-dependent IDs and faithful metadata (43.724521ms)
+✔ opening: registered copper proposes only a verified existing association and preserves the legacy cargo hash (18.020539ms)
+✔ opening: unavailable or inconsistent chain, collateral, compliance and quote fail closed (37.002017ms)
+✔ opening receipt: checks the whole tuple and event arguments, and binds IDs from genuine matching logs (60.257836ms)
+✔ Live ingest: opening waits for approval and all three verified receipts before linking; counter changes are harmless (1982.715628ms)
+✔ Live ingest: blocked documents never get an opening approval or uniqueness query (86.730237ms)
+✔ Live ingest: registered cargo is linked only after approval, with no mint and no price change (114.976907ms)
+✔ Live ingest: a changed existing association fails after approval and never sends a transaction (102.602382ms)
+✔ opening: interrupted receipt attachment resumes after restart with durable bindings and does not remint (320.301444ms)
+✔ opening: expired approvals and mode changes reject new attachments (82.252562ms)
+✔ opening: operator state checks refuse newly registered cargo and pledge drift (12.302513ms)
+✔ opening: known cargo identity drift never falls through to another mint (77.463211ms)
+✔ opening: all verified receipts remain durable through mapping failure and late reconciliation (110.650422ms)
+✔ opening: duplicate concurrent attachment is idempotent and a hash cannot satisfy another step (78.402615ms)
+✔ opening CLI: dry run preflights only the ready step and never simulates a future dependency (2601.74188ms)
+✔ opening CLI: each explicit --step --confirm sends exactly one transaction and uses verified IDs (264.150107ms)
+✔ opening CLI: a broadcast with failed attachment recovers from the journal without a signer or resend (102.425632ms)
+✔ opening CLI: an uncertain broadcast blocks retry until explicit hash reconciliation (94.595081ms)
+✔ opening CLI: stale chain state, runtime mode and local emergency stop prevent sending (90.766194ms)
+✔ owner journal: a concurrent or abandoned process lock blocks signing and keeps evidence (65.39995ms)
+✔ opening CLI: a dry run after a previous broadcast reports reconciliation without sending (73.188216ms)
+✔ redteam corpus is deterministic, covers every planned mutation and leaves source data intact (11.806976ms)
+✔ generated mutations reach real screening, consistency, uniqueness and freshness subjects (507.938162ms)
+✔ freshness fails closed at expiry, on invalid/future times, unhealthy sources and stale children (0.98761ms)
+✔ stale evidence creates a review proposal and cannot mutate a pool or be approved (1972.251443ms)
+✔ fresh proposal expires between proposal and approval without an execution (20.808095ms)
+✔ uploaded evidence retains its observation time across reuse and cannot reopen after expiry (90.76419ms)
+✔ stale or fixture fallback does not advance Live risk hysteresis (1.15105ms)
+✔ monitor replay uses the saved pool and event, even after the current pool changes (28.31611ms)
+✔ ingest replay recomputes a quote from saved structured fields, including held injections (86.719394ms)
+✔ encrypted persistent snapshots replay after restart and CLI reports failures by exit code (69996.088649ms)
+✔ replay API is public in Demo, admin-only in Live, and never writes a second decision (126.246189ms)
+✔ policy: demo auto: a reversible action runs unattended (2.698364ms)
+✔ policy: demo auto: PAUSE runs unattended (0.298024ms)
+✔ policy: demo propose: needs approval (1.599814ms)
+✔ policy: autonomy off refuses everything (0.118599ms)
+✔ policy: observe only records (0.141897ms)
+✔ policy: live: every action needs approval (0.091019ms)
+✔ policy: live: even PAUSE needs approval (0.136775ms)
+✔ policy: emergency stop refuses a reprice (0.152625ms)
+✔ policy: emergency stop still lets PAUSE through (0.188345ms)
+✔ policy: protected pool: SETTLE refused (0.214709ms)
+✔ policy: protected pool: FREEZE refused (0.249935ms)
+✔ policy: protected pool: LIQUIDATE refused (0.413619ms)
+✔ policy: protected pool: CANCEL refused (0.193243ms)
+✔ policy: protected pool: REPRICE is fine (0.117474ms)
+✔ policy: protected pool: PAUSE and RESUME are fine (0.116425ms)
+✔ policy: prompt injection → hold for review (0.482746ms)
+✔ policy: compliance REVIEW → hold for review (0.115161ms)
+✔ policy: compliance BLOCK → reject (0.066174ms)
+✔ policy: an unrelated finding changes nothing (0.050799ms)
+✔ policy: a model-only signal is only observed (0.161952ms)
+✔ policy: stale evidence needs approval (0.071277ms)
+✔ policy: SETTLE always needs approval (0.069487ms)
+✔ policy: FREEZE always needs approval (0.061891ms)
+✔ policy: RECORD_PAYMENT always needs approval (0.050358ms)
+✔ policy: RECORD_ARRIVAL is reversible enough to run (0.376004ms)
+✔ policy: MARK_IN_TRANSIT runs in demo auto (0.240183ms)
+✔ policy: a price move above the cap needs approval (0.16675ms)
+✔ policy: a price move at the cap is fine (0.067657ms)
+✔ policy: a price below the exporter floor needs approval (0.075576ms)
+✔ policy: a price at the exporter floor is fine (0.04456ms)
+✔ policy: the cooldown blocks the same action on the same pool but not a different one (1.100463ms)
+✔ policy: the cooldown is configurable and the daily limit debounces a flapping signal (0.380081ms)
+✔ policy: the cooldown sits before the Live approval rule so a flapping signal never floods the queue (0.128691ms)
+✔ policy: the first matching rule decides the verdict, every matching rule is listed (1.35467ms)
+✔ policy: the unattended-irreversible exemption works in Demo only (0.517696ms)
+✔ policy: rejects unknown actions, modes and autonomy levels instead of guessing (2.220225ms)
+✔ config: Live never runs above propose, Demo defaults to auto (D1) (1.133626ms)
+✔ config: environment parsing, defaults and bounds (1.861077ms)
+✔ policy: informational actions (WARNING, HOLD_FOR_REVIEW, REJECT) are records and never wait for approval (0.794516ms)
+✔ audit projection scrubs nested secrets, source text and wallets while retaining valid evidence/tx hashes (7.07124ms)
+✔ operational journal keeps exact addresses encrypted and authenticates its public audit projection (56.943005ms)
+✔ runtime audit scan covers decisions, events, queue, activities and traces with adversarial values (4012.179037ms)
+✔ retention bounds decisions, rotated activity and trace files while preserving in-flight decisions (142.072927ms)
+✔ periodic retention also runs under the injected service clock (43.817319ms)
+✔ authenticated queue snapshots reject plaintext edits and missing encryption keys (30.534868ms)
+✔ legacy plaintext audit records migrate on startup without changing decision IDs or chain evidence (17.144368ms)
+✔ SSE sequence remains monotonic after all activity expires and a restart (29.576406ms)
+✔ matrix: late clearing cannot undo a newer escalation, including indexes written before the shared stream (5461.304516ms)
+✔ matrix: concurrent duplicate events produce one approval and one execution (210.209422ms)
+✔ matrix: RPC preflight timeout recovers with bounded retry and one broadcast (107.253742ms)
+✔ matrix: mined nonce conflict recovers with bounded retry and one broadcast (101.292541ms)
+✔ matrix: persistent RPC outage fails explicitly before any broadcast, never simulates (81.342149ms)
+✔ matrix: broadcast timeout survives restart and transient reconciliation outage without resending (462.086248ms)
+✔ matrix: approval granted just before restart resumes once; an ambiguous broadcast requires operator reconciliation (165.65204ms)
+✔ matrix: known reverted receipt fails decision and approval without retries (100.874144ms)
+✔ matrix: an interrupted pricing broadcast without a hash recovers read-only from exact oracle replay protection (98.86186ms)
+✔ matrix: confirmation after a mode change records the Live fact without mutating Demo pools (82.962312ms)
+✔ matrix: a completed decision repairs an interrupted approval checkpoint without another broadcast (70.03048ms)
+✔ matrix: injected clock expires approvals and synchronizes their decisions even if approve observed expiry first (72.052152ms)
+✔ matrix: switching away and back invalidates approvals and queued events by generation (81.830588ms)
+✔ matrix: mode changes while signer queue waits prevent broadcast (9.360605ms)
+✔ matrix: unavailable LLM and xAPI use labelled deterministic fallbacks and keep constraints (67.664208ms)
+✔ matrix: evidence expiring during RPC preflight blocks the signer before any broadcast (72.381404ms)
+✔ activity: append assigns a monotonic seq, stamps the mode and notifies subscribers (19.378285ms)
+✔ activity: the in-memory buffer is bounded and filterable (6.277476ms)
+✔ activity: persisted records survive a restart and the sequence continues (63.208932ms)
+✔ activity: records appended before persistence is attached are written after the existing ones (24.654743ms)
+✔ activity: since() answers from memory and falls back to the files when the client is far behind (50.248568ms)
+✔ activity: clearMode drops one mode from memory and from the files, never the other (97.407045ms)
+✔ activity: a disk failure is reported but never breaks append (16.709469ms)
+✔ trace: spans nest, time themselves and record errors (8.006667ms)
+✔ trace: secrets are redacted and LLM calls keep hashes, never text (14.163377ms)
+✔ trace: traces persist to a JSONL file and are found again by decision id (23.812912ms)
+✔ trace: bindDecision attaches the id once it is known (3.10967ms)
+✔ registry: offchain registration is idempotent; Demo reset keeps chain links (10.851097ms)
+✔ registry: linking verifies the chain first (4.1206ms)
+✔ registry: protection comes from the flag and from AGENT_PROTECTED_CHAIN_POOLS (1.980464ms)
+✔ registry: the known Live pool is linked from the chain, not trusted blindly (1.894612ms)
+✔ registry: state persists across a restart (19.834593ms)
+✔ registry: createChainReader turns contract reads into a pool description (4.634411ms)
+✔ scheduler: ticks repeatedly with jitter, never overlaps, and stops cleanly (15.612718ms)
+✔ scheduler: a failing task is reported and the schedule continues; setInterval reschedules (3.614843ms)
+✔ scheduler: drain waits for a tick that is in flight (22.319791ms)
+✔ pipeline: world risk that lowers the price proposes a REPRICE with the move in bps (102.506241ms)
+✔ pipeline: a critical event pauses; an already paused or non-active pool does not (22.074605ms)
+✔ pipeline: events that change nothing are ignored with a reason (19.357416ms)
+✔ pipeline: RESUME needs a paused pool and reuses its last verified quote (2.947739ms)
+✔ pipeline: insurance, departure, arrival and payment map to their actions (19.727988ms)
+✔ pipeline: the same event on the same pool always yields the same proposal (13.040612ms)
+✔ pipeline: text inside event data cannot change the proposal (9.856923ms)
+
+Interrupted while running:
+
+⚠ tests/agentScenarios.test.js (tests/agentScenarios.test.js:1:1)
+⚠ tests/agentService.test.js (tests/agentService.test.js:1:1)
+⚠ tests/agentSettlement.test.js (tests/agentSettlement.test.js:1:1)
+⚠ tests/agentSettlementCli.test.js (tests/agentSettlementCli.test.js:1:1)
+✖ tests/agentScenarios.test.js (42743.434945ms)
+✖ tests/agentService.test.js (30519.410109ms)
+✖ tests/agentSettlement.test.js (21505.911982ms)
+✖ tests/agentSettlementCli.test.js (6732.182565ms)
+✖ tests/agentStatelessApi.test.js
+✖ tests/apiRobustness.test.js
+✖ tests/apiValidation.test.js
+✖ tests/autonomousAgent.test.js
+✖ tests/cargoImages.test.js
+✖ tests/caseFixtures.test.js
+✖ tests/chainConfig.test.js
+✖ tests/complianceChecker.test.js
+✖ tests/contractHarness.test.js
+✖ tests/contractParity.test.js
+✖ tests/copilotActions.test.js
+✖ tests/copilotApi.test.js
+✖ tests/copilotContext.test.js
+✖ tests/copilotFrontend.test.js
+✖ tests/copilotRerank.test.js
+✖ tests/copilotRetrieval.test.js
+✖ tests/copilotService.test.js
+✖ tests/copilotWallet.test.js
+✖ tests/dashboardApi.test.js
+✖ tests/decisionLogger.test.js
+✖ tests/docsConsistency.test.js
+✖ tests/documentConsistency.test.js
+✖ tests/documentExtraction.test.js
+✖ tests/documentParser.test.js
+✖ tests/eblIngestion.test.js
+✖ tests/env.test.js
+✖ tests/httpHardening.test.js
+✖ tests/httpHelpers.test.js
+✖ tests/i18nCoverage.test.js
+✖ tests/ingest.test.js
+✖ tests/injectiveMcpAdapter.test.js
+✖ tests/injectivePrecompiles.test.js
+✖ tests/investmentAdvisor.test.js
+✖ tests/jsonStore.test.js
+✖ tests/judgeAssistant.test.js
+✖ tests/listen.test.js
+✖ tests/llmConsensus.test.js
+✖ tests/llmProjectModel.test.js
+✖ tests/llmProxy.test.js
+✖ tests/marketApi.test.js
+✖ tests/mcp-server.test.js
+✖ tests/mcp.test.js
+✖ tests/mcpProtocol.test.js
+✖ tests/mcpSecurity.test.js
+✖ tests/mysteryApi.test.js
+✖ tests/mysteryFairness.test.js
+✖ tests/mysteryFrontend.test.js
+✖ tests/mysteryMcp.test.js
+✖ tests/mysteryPassport.test.js
+✖ tests/mysteryPolicy.test.js
+✖ tests/mysteryStore.test.js
+✖ tests/noFabrication.test.js
+✖ tests/offeringSimulator.test.js
+✖ tests/oracle.test.js
+✖ tests/orchestrator.test.js
+✖ tests/paidReport.test.js
+✖ tests/phase4Workflow.test.js
+✖ tests/poolApi.test.js
+✖ tests/pricingEngine.test.js
+✖ tests/pricingNarrator.test.js
+✖ tests/pricingScenarioRunner.test.js
+✖ tests/pricingSchema.test.js
+✖ tests/pricingWorkflow.test.js
+✖ tests/rag.test.js
+✖ tests/rateLimit.test.js
+✖ tests/riskEngine.test.js
+✖ tests/riskIntel.test.js
+✖ tests/scenarioRunner.test.js
+✖ tests/smoke.test.js
+✖ tests/tracer.test.js
+✖ tests/valuationAgent.test.js
+✖ tests/vendorAssets.test.js
+✖ tests/verifyBytecode.test.js
+✖ tests/waveBGate.test.js
+✖ tests/web3Wallets.test.js
+✖ tests/worldRiskAgent.test.js
+✖ tests/x402-integration.test.js
+✖ tests/x402BrowserV2.test.js
+✖ tests/x402Client.test.js
+✖ tests/x402Config.test.js
+✖ tests/x402Endpoints.test.js
+✖ tests/x402Hardening.test.js
+✖ tests/x402LegacyRoute.test.js
+✖ tests/x402LiveGateway.test.js
+✖ tests/x402PricingEvidence.test.js
+✖ tests/x402ReportStore.test.js
+✖ tests/x402Server.test.js
+✖ tests/x402Settlement.test.js
+ℹ tests 496
+ℹ suites 0
+ℹ pass 404
+ℹ fail 0
+ℹ cancelled 92
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 239272.308713
+ℹ Error: 69.81% line coverage does not meet threshold of 88%.
+ℹ Error: 72.19% function coverage does not meet threshold of 86%.
+ℹ start of coverage report
+ℹ -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ file                          | line % | branch % | funcs % | uncovered lines
+ℹ -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ src                           |        |          |         | 
+ℹ  agent                        |        |          |         | 
+ℹ   api.js                      |  57.53 |    66.67 |   60.00 | 114-140 169 176-192 195-259
+ℹ   compliance                  |        |          |         | 
+ℹ    data.js                    | 100.00 |    64.29 |  100.00 | 
+ℹ    external.js                |  85.45 |    53.85 |   75.00 | 37-40 42-45
+ℹ    index.js                   |  92.73 |    87.22 |   94.44 | 55-58 82-83 88-89 120-121 155-156
+ℹ    matcher.js                 | 100.00 |    95.24 |  100.00 | 
+ℹ   complianceChecker.js        | 100.00 |   100.00 |  100.00 | 
+ℹ   decisionLogger.js           |  91.32 |    85.29 |   94.12 | 56-57 59-60 143-150 179-184 229-231
+ℹ   documentConsistency.js      | 100.00 |    97.18 |  100.00 | 
+ℹ   documentParser.js           |  88.96 |    81.25 |   94.12 | 463-476 489 491-505 531-545 552-563 567-570 574-577 610-614
+ℹ   evaluation                  |        |          |         | 
+ℹ    dataset.js                 | 100.00 |   100.00 |  100.00 | 
+ℹ    evaluationReport.js        | 100.00 |    72.22 |  100.00 | 
+ℹ    goldDataset.js             | 100.00 |   100.00 |  100.00 | 
+ℹ    runner.js                  |  99.67 |    86.23 |   94.64 | 251
+ℹ   executionReliability.js     |  56.04 |    56.52 |   42.86 | 8-9 19-20 23-29 62-90
+ℹ   ingest                      |        |          |         | 
+ℹ    extractionError.js         | 100.00 |   100.00 |  100.00 | 
+ℹ    ingestService.js           |  95.51 |    77.04 |   87.50 | 55 57 64-65 74-75 82-83 85-86 283-285 329-330
+ℹ    injectionScreen.js         |  96.12 |    88.57 |   94.12 | 125-129
+ℹ    modelExtraction.js         |  41.23 |   100.00 |   44.44 | 11-12 39-50 54-66 68-71 76-111
+ℹ    pdfText.js                 |  92.86 |    50.00 |   71.43 | 9-10 35
+ℹ   investmentAdvisor.js        |  21.67 |   100.00 |    0.00 | 11-13 28-42 46-49 61-161 163-180
+ℹ   llm                         |        |          |         | 
+ℹ    openaiCompatClient.js      |  58.96 |    66.67 |   33.33 | 61-63 78-89 102-111 130-137 143-144 152-160 170-212
+ℹ   orchestrator.js             |  72.24 |    77.16 |   83.93 | 39-40 61-79 99-102 105-113 133-136 183-186 247-259 384-389 409-412 415-416 457-458 472-475 529-628 632-634
+ℹ   pipelines                   |        |          |         | 
+ℹ    ingestPipeline.js          |  98.85 |    70.83 |   75.00 | 41
+ℹ    monitorPipeline.js         | 100.00 |    77.92 |  100.00 | 
+ℹ    settlementPipeline.js      |  41.18 |    42.11 |   35.71 | 22-28 31-34 39-41 47 52-85 91-94 103-107 114-118 120-140 148-153
+ℹ   pricingNarrator.js          |  32.43 |   100.00 |    0.00 | 16-26 28-44 53-74
+ℹ   redteam                     |        |          |         | 
+ℹ    generator.js               | 100.00 |   100.00 |  100.00 | 
+ℹ    runner.js                  | 100.00 |   100.00 |  100.00 | 
+ℹ   riskIntel.js                |  71.35 |    76.74 |   85.71 | 22-23 30-31 120-129 137-171
+ℹ   runtime                     |        |          |         | 
+ℹ    activityLog.js             |  99.44 |    93.33 |   96.55 | 174
+ℹ    agentService.js            |  87.62 |    77.47 |   81.95 | 137-141 184-185 277-279 283-284 286-312 314-316 324-331 334-353 443-445 450-455 458-472 567-569 670-671 697 717-718 720-721 743-744 758-764 784-785 882-886 892-893 962-965 1049-1051 1075-1076 1107-1108 1122-1134 1143-1144 1150-1154 1176-1179 1219-1222 1254-1259 1276-1278 1290
+ℹ    agentVersion.js            | 100.00 |    85.71 |  100.00 | 
+ℹ    anchorChain.js             |  95.92 |    92.59 |   82.35 | 95-98
+ℹ    anchoring.js               |  98.99 |    94.89 |   97.78 | 137-138
+ℹ    anchorProof.js             | 100.00 |    87.50 |  100.00 | 
+ℹ    anchorStore.js             | 100.00 |    89.47 |   80.00 | 
+ℹ    approvals.js               |  99.21 |    89.69 |   96.77 | 182-183
+ℹ    config.js                  | 100.00 |    91.67 |  100.00 | 
+ℹ    eventBus.js                |  99.38 |    93.70 |   87.18 | 288-289
+ℹ    events.js                  | 100.00 |    95.65 |  100.00 | 
+ℹ    executors                  |        |          |         | 
+ℹ     chainExecutor.js          |  91.96 |    74.68 |   87.80 | 102-103 142-145 179-180 238-239 268-273 361-362 428-431 433-441 443-447
+ℹ     simExecutor.js            | 100.00 |    94.83 |  100.00 | 
+ℹ    factory.js                 |  91.11 |    72.97 |   57.14 | 45-46 110-111 122-123 139-143 156-158 179-180
+ℹ    freshness.js               | 100.00 |    80.65 |  100.00 | 
+ℹ    liveSmoke.js               | 100.00 |    86.67 |   80.00 | 
+ℹ    liveSmokeVerification.js   | 100.00 |    83.64 |  100.00 | 
+ℹ    openingPlan.js             | 100.00 |    85.56 |  100.00 | 
+ℹ    ownerTxPlan.js             |  95.89 |    82.72 |   80.00 | 44-45 106-107 129-130
+ℹ    policy.js                  | 100.00 |   100.00 |  100.00 | 
+ℹ    poolRegistry.js            |  97.44 |    93.07 |  100.00 | 165-166 172-175
+ℹ    poolRules.js               | 100.00 |   100.00 |  100.00 | 
+ℹ    preferences.js             |  95.79 |    82.76 |   84.62 | 64-65 78 93
+ℹ    references.js              | 100.00 |    73.33 |   33.33 | 
+ℹ    replay.js                  |  96.30 |    67.74 |  100.00 | 49-50
+ℹ    retention.js               | 100.00 |    92.86 |  100.00 | 
+ℹ    scheduler.js               | 100.00 |   100.00 |   85.71 | 
+ℹ    settlementEvidence.js      |  46.51 |    83.33 |   60.00 | 19-21 23-42
+ℹ    sources                    |        |          |         | 
+ℹ     chainWatcher.js           |  93.78 |    87.63 |   64.04 | 153 300-301 324-325 391 398-417
+ℹ     riskTracker.js            | 100.00 |    85.37 |  100.00 | 
+ℹ     scenarioPlayer.js         |  78.20 |    57.69 |   72.00 | 40-41 72-73 127-128 164-165 210-226 258 283-284 288-292 296-334 338-340
+ℹ     voyageMonitor.js          | 100.00 |    94.12 |  100.00 | 
+ℹ     worldRiskMonitor.js       | 100.00 |    88.57 |  100.00 | 
+ℹ    trace.js                   |  98.86 |    86.54 |  100.00 | 157-158
+ℹ   security                    |        |          |         | 
+ℹ    dataFreshness.js           |  31.44 |    30.77 |   37.50 | 17-18 24-34 44-51 60-61 64-65 71-75 77-78 87-95 103-150 157-205 211-229
+ℹ    privacy.js                 | 100.00 |    97.30 |  100.00 | 
+ℹ    privateStore.js            | 100.00 |    96.00 |  100.00 | 
+ℹ    promptInjectionDefense.js  |  50.00 |   100.00 |    0.00 | 76-94 100-118 124-170
+ℹ   tools                       |        |          |         | 
+ℹ    copperValuationTools.js    |  80.14 |    51.22 |   46.67 | 23-33 45-54 57-64 66-68 111-133
+ℹ    worldRiskTools.js          |  82.10 |    31.58 |   72.41 | 24-25 53-56 88-96 127-131 165-175 180-187 202-203
+ℹ   tracing                     |        |          |         | 
+ℹ    tracer.js                  |  55.05 |    81.48 |   62.50 | 77-79 87-91 97-122 128-137 143-153 159-185 192-198
+ℹ   valuationAgent.js           |  67.86 |    38.10 |   62.50 | 60-70 72-76 79-115 161-167 209 213-223
+ℹ   worldRiskAgent.js           |  98.30 |    59.38 |   97.06 | 33-34 144 220-221
+ℹ   xapi                        |        |          |         | 
+ℹ    xapiClient.js              |  52.42 |    50.00 |   28.57 | 32-36 38-40 42-53 60-75 89-100 105 115-124
+ℹ  app                          |        |          |         | 
+ℹ   agentApiRoutes.js           |  45.71 |    57.14 |  100.00 | 13-14 16-22 24-33
+ℹ   agentRoutes.js              |  86.93 |    93.17 |   69.23 | 33 71-73 89-94 122-134 270-281 283-287 305-307
+ℹ   copilotRoutes.js            |  19.28 |    20.00 |   40.00 | 8 10-13 15-20 22-25 27-54 56-58 60-63 65-81
+ℹ   eniAdapter.js               |  74.34 |    54.55 |   62.50 | 15-17 34-35 40-42 46-47 54-55 60-61 63-64 67-68 96-97 102-110
+ℹ   http.js                     |  86.31 |    62.50 |   81.25 | 63-68 93-94 102-103 105-106 108-109 116-117 128 131-134 147-148
+ℹ   interopRoutes.js            | 100.00 |    98.08 |  100.00 | 
+ℹ   llmProxy.js                 |  23.63 |    25.00 |    8.33 | 38-40 42-44 46-51 53-62 64-76 78-89 93-118 122-129 131-146 148-155 162-237
+ℹ   security.js                 |  70.07 |    96.00 |   64.29 | 11-18 22-36 47-60 83-89
+ℹ   server.js                   |  62.66 |    67.31 |   59.26 | 107-109 114-115 131-145 193-197 210-217 228 230-233 250-251 258-259 261 263-264 266-267 271-272 441-442 455-457 461-462 502-505 508-516 565-574 580-588 594-595 599-600 626-627 636-637 654-663 666-670 681-683 686-688 745-747 750-752 757-760 763-766 769-772 775-778 781-784 787-790 793-799 802-805 847-856 860-868 872-884 887-898 902-914 917-922 935-956 1012-1035 1039-1078 1082-1096 1101-1111 1115-1123 1128-1134 1137-1139 1142-1145 1153-1156 1160-1178 1182-1195 1199-1202 1206-1210 1254-1261 1265-1269 1277-1287 1293-1306 1313-1314 1318-1397 1457-1468 1505 1507-1512 1533-1534 1545-1558 1560-1578 1581-1597 1604-1612
+ℹ   shapes.js                   | 100.00 |    75.00 |  100.00 | 
+ℹ   static.js                   |  28.36 |   100.00 |    0.00 | 36-43 45-50 53-134
+ℹ   store.js                    |  91.21 |    40.00 |  100.00 | 47-48 52-53 55-56 61-62
+ℹ   x402Services.js             |  53.13 |   100.00 |   11.11 | 13-15 25 32-46 66-72 75-93
+ℹ  chain                        |        |          |         | 
+ℹ   cargoIdentity.js            | 100.00 |    75.00 |  100.00 | 
+ℹ   signerKeys.js               |  76.00 |    40.00 |   25.00 | 35-37 54-63 68-70 74-75
+ℹ  copilot                      |        |          |         | 
+ℹ   actions.js                  |  57.43 |    48.00 |   50.00 | 23-26 57-59 61-62 65-67 71-101
+ℹ   context.js                  | 100.00 |    91.18 |  100.00 | 
+ℹ   intentRouter.js             |  95.90 |    78.26 |   90.00 | 108-112
+ℹ   narrative.js                |  53.66 |    81.82 |   60.00 | 14-28 33-34 38 40
+ℹ   ranking.js                  |  84.75 |    65.52 |   90.91 | 31-39
+ℹ   retrieval.js                | 100.00 |    60.00 |   95.00 | 
+ℹ   service.js                  |  70.81 |    68.75 |   64.44 | 83-85 118-119 124-129 159-174 177-181 184-187 209-236 242-267 270-277 295-297
+ℹ   snapshot.js                 |  64.06 |    62.50 |   91.67 | 23-29 49-64
+ℹ  core                         |        |          |         | 
+ℹ   contractHarness.js          |  25.56 |   100.00 |    0.00 | 53-57 59-61 63-65 67-95 98-223
+ℹ   offeringSimulator.js        |  29.13 |   100.00 |    0.00 | 33-36 38-40 45-55 61-72 84-115 129-216 218-230
+ℹ   oracle.js                   |  69.23 |    60.00 |   66.67 | 33-34 37-38 42-43 61-78
+ℹ   pricingEngine.js            |  99.44 |    75.54 |  100.00 | 329-331
+ℹ   pricingSchema.js            |  88.44 |    40.00 |  100.00 | 69-70 73-76 97-98 103-105 116-117 173 186-187 189-190 196-197 200-201 206-207 213-214
+ℹ   pricingWorkflow.js          |  37.25 |   100.00 |    0.00 | 20-51
+ℹ   riskEngine.js               |  15.27 |   100.00 |    0.00 | 16-19 21-26 28-30 33-118 120-131
+ℹ   scenarioRunner.js           |  32.91 |   100.00 |    0.00 | 15-17 20-24 27-43 46-48 51-56 59-64 67-79
+ℹ   schema.js                   |  30.61 |    50.00 |   13.33 | 74-77 80-82 84-87 89-93 95-106 108-112 114-119 121-123 126-180 182-194 197-227 230-262 265-294
+ℹ   workflow.js                 |  25.81 |   100.00 |    0.00 | 9-31
+ℹ   worldRiskPricing.js         | 100.00 |   100.00 |  100.00 | 
+ℹ  data                         |        |          |         | 
+ℹ   desensitizationStore.js     |  51.40 |   100.00 |    0.00 | 19-38 44-45 51-52 58-59 65-66 73-81 88-100 106-107
+ℹ  demo                         |        |          |         | 
+ℹ   mode.js                     | 100.00 |   100.00 |  100.00 | 
+ℹ  env.js                       |  34.78 |    66.67 |   33.33 | 8-20 22-31 40-46
+ℹ  interop                      |        |          |         | 
+ℹ   agentCard.js                | 100.00 |   100.00 |  100.00 | 
+ℹ   delegation.js               | 100.00 |    92.86 |   71.43 | 
+ℹ   validation.js               | 100.00 |    92.50 |  100.00 | 
+ℹ  lib                          |        |          |         | 
+ℹ   jsonStore.js                |  85.26 |    90.91 |   86.67 | 30-31 133-134 141-142 169-190
+ℹ  mcp                          |        |          |         | 
+ℹ   agentClient.js              | 100.00 |    74.19 |   50.00 | 
+ℹ   agentTools.js               |  99.01 |    86.49 |  100.00 | 88
+ℹ   mcpServer.js                |  90.61 |    90.00 |   12.50 | 265-266 288-304 319-324 340-345 358-360
+ℹ   resources.js                |  46.94 |    42.86 |   40.00 | 47-65 67-99 101-123 127-128 146
+ℹ   security.js                 |  38.93 |    90.00 |   28.57 | 29-36 39-47 49-61 63-74 85-89 106-149
+ℹ   tools.js                    |  16.28 |   100.00 |    0.00 | 28-34 41-74 84-95 102-110 117-233 240-268 275-380 387-405 412-419 421-433 440-512 519-559 566-596
+ℹ  mystery                      |        |          |         | 
+ℹ   fairness.js                 |  16.50 |   100.00 |    0.00 | 10-17 20-21 24-25 28-29 32-33 36-38 41-62 65-69 72-88 91-105 107-116 119-156 159-194 196-200
+ℹ   passport.js                 |  12.92 |   100.00 |    0.00 | 11-14 17-25 28-49 52-103 106-131 134-155 157-164 166-174 176-178
+ℹ   policy.js                   |  22.49 |   100.00 |    0.00 | 26-53 56-64 67-70 73-118 121-142 144-150 152-156 158-160 162-164 166-169
+ℹ   riskPassport.js             |   5.22 |   100.00 |    0.00 | 5-97 99-110 112-115
+ℹ   service.js                  |  23.45 |    18.18 |    9.09 | 15-21 23-27 30-49 52-78 81-113 116-135 143-148 151-152 154-155 170-197 200-208 211-219 222-226
+ℹ   store.js                    |  20.58 |   100.00 |    0.00 | 31-35 40-47 50-61 64-69 72-112 115-120 123-127 130-144 147-218 221-242 245-265 268-280 283-291 294-299 302-307 310-318 321-333 339-341 344-345
+ℹ  rag                          |        |          |         | 
+ℹ   knowledgeBase.js            |  89.51 |   100.00 |    0.00 | 524-532 535-536 539-540 543-591
+ℹ   search.js                   |  16.99 |   100.00 |    0.00 | 11-27 37-39 41-99 113-272 282-284 294-295 305-335 337-359
+ℹ  runtimePaths.js              | 100.00 |    75.00 |  100.00 | 
+ℹ  x402                         |        |          |         | 
+ℹ   config.js                   |  71.09 |    62.96 |   55.56 | 80 86-87 93-94 101-102 115-116 118-119 121-125 147-148 153-154 158-159 163-164 171-172 208-209 212-217 220-263 269-270 278-279 282-283 286-292 295-301
+ℹ   delivery.js                 |  15.38 |   100.00 |    0.00 | 15-91
+ℹ   discovery.js                | 100.00 |   100.00 |  100.00 | 
+ℹ   endpoints.js                |  20.29 |   100.00 |    0.00 | 16-49 52-86 89-127 130-131
+ℹ   liveGateway.js              |  30.14 |    33.33 |   10.00 | 28-29 31-36 39-48 58-73 88-91 101-208
+ℹ   paidReport.js               |  84.13 |    40.82 |   85.00 | 130-132 157-160 198-199 210-211 222-223 228-229 232-233 236-256 262-263 272-279 286-287
+ℹ   reportEvidence.js           | 100.00 |    90.91 |   85.71 | 
+ℹ   reportStore.js              |  65.25 |    58.33 |   63.64 | 26-37 47-51 62-64 88-91 96-104 111-118
+ℹ   server.js                   |  25.28 |    83.33 |   25.00 | 23-25 27-29 35-44 61-63 65-69 71-85 87-89 92-136 139-213 216-243 294-296 299-436
+ℹ   settlement.js               |  20.36 |    88.89 |   12.82 | 35-41 57-68 70-72 74-76 80-84 87-105 108-112 115-117 120-124 127-129 132-134 136-138 142-149 152-209 212-213 216-217 220-224 226-236 238-262 264-266 270-286 289-305 308-316 319-425 428-441 444-446 460-461 463-470 472-487 489-500 503-516 519-530 537-551 566-658
+ℹ -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ all files                     |  69.81 |    78.71 |   72.19 | 
+ℹ -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ end of coverage report
+
+✖ failing tests:
+
+test at tests/agentScenarios.test.js:1:1
+✖ tests/agentScenarios.test.js (42743.434945ms)
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/agentService.test.js:1:1
+✖ tests/agentService.test.js (30519.410109ms)
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/agentSettlement.test.js:1:1
+✖ tests/agentSettlement.test.js (21505.911982ms)
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/agentSettlementCli.test.js:1:1
+✖ tests/agentSettlementCli.test.js (6732.182565ms)
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/agentStatelessApi.test.js:1:1
+✖ tests/agentStatelessApi.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/apiRobustness.test.js:1:1
+✖ tests/apiRobustness.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/apiValidation.test.js:1:1
+✖ tests/apiValidation.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/autonomousAgent.test.js:1:1
+✖ tests/autonomousAgent.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/cargoImages.test.js:1:1
+✖ tests/cargoImages.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/caseFixtures.test.js:1:1
+✖ tests/caseFixtures.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/chainConfig.test.js:1:1
+✖ tests/chainConfig.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/complianceChecker.test.js:1:1
+✖ tests/complianceChecker.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/contractHarness.test.js:1:1
+✖ tests/contractHarness.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/contractParity.test.js:1:1
+✖ tests/contractParity.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotActions.test.js:1:1
+✖ tests/copilotActions.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotApi.test.js:1:1
+✖ tests/copilotApi.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotContext.test.js:1:1
+✖ tests/copilotContext.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotFrontend.test.js:1:1
+✖ tests/copilotFrontend.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotRerank.test.js:1:1
+✖ tests/copilotRerank.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotRetrieval.test.js:1:1
+✖ tests/copilotRetrieval.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotService.test.js:1:1
+✖ tests/copilotService.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/copilotWallet.test.js:1:1
+✖ tests/copilotWallet.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/dashboardApi.test.js:1:1
+✖ tests/dashboardApi.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/decisionLogger.test.js:1:1
+✖ tests/decisionLogger.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/docsConsistency.test.js:1:1
+✖ tests/docsConsistency.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/documentConsistency.test.js:1:1
+✖ tests/documentConsistency.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/documentExtraction.test.js:1:1
+✖ tests/documentExtraction.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/documentParser.test.js:1:1
+✖ tests/documentParser.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/eblIngestion.test.js:1:1
+✖ tests/eblIngestion.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/env.test.js:1:1
+✖ tests/env.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/httpHardening.test.js:1:1
+✖ tests/httpHardening.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/httpHelpers.test.js:1:1
+✖ tests/httpHelpers.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/i18nCoverage.test.js:1:1
+✖ tests/i18nCoverage.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/ingest.test.js:1:1
+✖ tests/ingest.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/injectiveMcpAdapter.test.js:1:1
+✖ tests/injectiveMcpAdapter.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/injectivePrecompiles.test.js:1:1
+✖ tests/injectivePrecompiles.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/investmentAdvisor.test.js:1:1
+✖ tests/investmentAdvisor.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/jsonStore.test.js:1:1
+✖ tests/jsonStore.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/judgeAssistant.test.js:1:1
+✖ tests/judgeAssistant.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/listen.test.js:1:1
+✖ tests/listen.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/llmConsensus.test.js:1:1
+✖ tests/llmConsensus.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/llmProjectModel.test.js:1:1
+✖ tests/llmProjectModel.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/llmProxy.test.js:1:1
+✖ tests/llmProxy.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/marketApi.test.js:1:1
+✖ tests/marketApi.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mcp-server.test.js:1:1
+✖ tests/mcp-server.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mcp.test.js:1:1
+✖ tests/mcp.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mcpProtocol.test.js:1:1
+✖ tests/mcpProtocol.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mcpSecurity.test.js:1:1
+✖ tests/mcpSecurity.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mysteryApi.test.js:1:1
+✖ tests/mysteryApi.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mysteryFairness.test.js:1:1
+✖ tests/mysteryFairness.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mysteryFrontend.test.js:1:1
+✖ tests/mysteryFrontend.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mysteryMcp.test.js:1:1
+✖ tests/mysteryMcp.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mysteryPassport.test.js:1:1
+✖ tests/mysteryPassport.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mysteryPolicy.test.js:1:1
+✖ tests/mysteryPolicy.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/mysteryStore.test.js:1:1
+✖ tests/mysteryStore.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/noFabrication.test.js:1:1
+✖ tests/noFabrication.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/offeringSimulator.test.js:1:1
+✖ tests/offeringSimulator.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/oracle.test.js:1:1
+✖ tests/oracle.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/orchestrator.test.js:1:1
+✖ tests/orchestrator.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/paidReport.test.js:1:1
+✖ tests/paidReport.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/phase4Workflow.test.js:1:1
+✖ tests/phase4Workflow.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/poolApi.test.js:1:1
+✖ tests/poolApi.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/pricingEngine.test.js:1:1
+✖ tests/pricingEngine.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/pricingNarrator.test.js:1:1
+✖ tests/pricingNarrator.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/pricingScenarioRunner.test.js:1:1
+✖ tests/pricingScenarioRunner.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/pricingSchema.test.js:1:1
+✖ tests/pricingSchema.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/pricingWorkflow.test.js:1:1
+✖ tests/pricingWorkflow.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/rag.test.js:1:1
+✖ tests/rag.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/rateLimit.test.js:1:1
+✖ tests/rateLimit.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/riskEngine.test.js:1:1
+✖ tests/riskEngine.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/riskIntel.test.js:1:1
+✖ tests/riskIntel.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/scenarioRunner.test.js:1:1
+✖ tests/scenarioRunner.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/smoke.test.js:1:1
+✖ tests/smoke.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/tracer.test.js:1:1
+✖ tests/tracer.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/valuationAgent.test.js:1:1
+✖ tests/valuationAgent.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/vendorAssets.test.js:1:1
+✖ tests/vendorAssets.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/verifyBytecode.test.js:1:1
+✖ tests/verifyBytecode.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/waveBGate.test.js:1:1
+✖ tests/waveBGate.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/web3Wallets.test.js:1:1
+✖ tests/web3Wallets.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/worldRiskAgent.test.js:1:1
+✖ tests/worldRiskAgent.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402-integration.test.js:1:1
+✖ tests/x402-integration.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402BrowserV2.test.js:1:1
+✖ tests/x402BrowserV2.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402Client.test.js:1:1
+✖ tests/x402Client.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402Config.test.js:1:1
+✖ tests/x402Config.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402Endpoints.test.js:1:1
+✖ tests/x402Endpoints.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402Hardening.test.js:1:1
+✖ tests/x402Hardening.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402LegacyRoute.test.js:1:1
+✖ tests/x402LegacyRoute.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402LiveGateway.test.js:1:1
+✖ tests/x402LiveGateway.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402PricingEvidence.test.js:1:1
+✖ tests/x402PricingEvidence.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402ReportStore.test.js:1:1
+✖ tests/x402ReportStore.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402Server.test.js:1:1
+✖ tests/x402Server.test.js
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at tests/x402Settlement.test.js:1:1
+✖ tests/x402Settlement.test.js
+  'Promise resolution is still pending but the event loop has already resolved'

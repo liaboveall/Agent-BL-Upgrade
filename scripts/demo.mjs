@@ -5,7 +5,7 @@ import { toOracleUpdate } from '../src/core/oracle.js';
 import { narratePricing } from '../src/agent/pricingNarrator.js';
 import { isConfigured } from '../src/agent/llm/openaiCompatClient.js';
 
-// Load .env so an AI provider (e.g. Tencent hy3-preview) can narrate the demo.
+// Load .env so the shared x-test-2 model can narrate the demo.
 // Optional: with no key the narrator falls back to deterministic text.
 try { process.loadEnvFile('.env'); } catch { /* no .env -> deterministic */ }
 const useLlm = !process.argv.includes('--no-llm') && isConfigured();
@@ -71,8 +71,8 @@ console.log(`  issue_price=${oracle.issue_price_usd}  risk=${oracle.risk_level} 
 console.log(`  evidence_hash: ${oracle.evidence_hash}`);
 console.log(`  quote_hash   : ${oracle.quote_hash}`);
 
-// --- AI narrative (optional hy3-preview polish, deterministic fallback) --------
+// --- AI narrative (optional x-test-2 polish, deterministic fallback) ----------
 const narrative = await narratePricing(comparison, { useLlm });
-console.log('\nAI demo narrative' + (useLlm ? ` (provider: ${narrative.provider})` : ' (deterministic — set an LLM key to narrate with hy3-preview)'));
+console.log('\nAI demo narrative' + (useLlm ? ` (provider: ${narrative.provider})` : ' (deterministic — set an LLM key to narrate with x-test-2)'));
 console.log('-'.repeat(58));
 console.log('  ' + narrative.text);

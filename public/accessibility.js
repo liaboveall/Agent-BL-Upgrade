@@ -56,6 +56,23 @@ export function wireModalFocus(root) {
   });
 }
 
+/** Restore a stable opener even when live rendering replaced the original button. */
+export function showAccessibleDialog(dialog, fallback) {
+  if (!dialog || dialog.open) return;
+  const doc = dialog.ownerDocument, opener = doc.activeElement;
+  const key = opener?.getAttribute('data-focus-key'), id = opener?.id;
+  dialog.addEventListener('close', () => {
+    const visible = (node) => node && node !== doc.body && node !== doc.documentElement && !node.disabled && node.getClientRects().length;
+    let target = opener?.isConnected ? opener : [...doc.querySelectorAll('[id], [data-focus-key]')].find((node) =>
+      key ? node.getAttribute('data-focus-key') === key : id && node.id === id);
+    const parent = [...doc.querySelectorAll('dialog[open]')].at(-1);
+    if (!visible(target) || parent && !parent.contains(target)) target = parent?.querySelector('button:not([disabled])') ?? doc.querySelector(fallback);
+    if (!visible(target)) target = doc.querySelector('[role="tab"][aria-selected="true"]');
+    target?.focus({ preventScroll: true });
+  }, { once: true });
+  dialog.showModal();
+}
+
 // Rebuilding live controls must not send a keyboard user back to the document body.
 // Call synchronously: never move focus after an awaited request while the user may have moved on.
 export function preserveFocus(root, render) {
@@ -64,8 +81,8 @@ export function preserveFocus(root, render) {
   const id = active?.id;
   const inside = active && root.contains(active);
   const result = render();
-  if (inside && !active.isConnected && (key || id)) {
-    const replacement = [...root.querySelectorAll('[data-focus-key], [id]')].find((node) =>
+  if (inside && (key || id) && (!active.isConnected || root.ownerDocument.activeElement !== active)) {
+    const replacement = active.isConnected ? active : [...root.querySelectorAll('[data-focus-key], [id]')].find((node) =>
       key ? node.getAttribute('data-focus-key') === key : node.id === id);
     if (replacement && !replacement.disabled) replacement.focus({ preventScroll: true });
   }

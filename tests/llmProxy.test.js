@@ -12,7 +12,7 @@ const RELAY_KEY = 'sk-unit-test-relay-key-0123';
 
 test('Copilot model adapter: an explicit token budget reaches the provider; no budget stays omitted', async (t) => {
   const upstream = await startUpstream(); t.after(upstream.close);
-  const env = { LLM_BASE_URL: upstream.base, LLM_API_KEY: RELAY_KEY, LLM_MODEL: 'test-model' };
+  const env = { LLM_BASE_URL: upstream.base, LLM_API_KEY: RELAY_KEY, LLM_MODEL: 'x-test-2' };
   await chatCompletion({ messages: [{ role: 'user', content: 'test' }], maxTokens: 8192 }, env);
   assert.equal(upstream.state.received.at(-1).body.max_tokens, 8192);
   await chatCompletion({ messages: [{ role: 'user', content: 'test' }], maxTokens: null }, env);
@@ -75,7 +75,7 @@ test('LLM relay', async (t) => {
     clearLlmEnv();
     process.env.LLM_BASE_URL = `${upstream.base}/v1`;
     process.env.LLM_API_KEY = RELAY_KEY;
-    process.env.LLM_MODEL = 'relay-model';
+    process.env.LLM_MODEL = 'x-test-2';
   };
   t.beforeEach(() => { configure(); upstream.state.mode = 'json'; upstream.state.received.length = 0; upstream.state.closedEarly = 0; });
   t.after(async () => { clearLlmEnv(); await app.close(); await upstream.close(); });
@@ -84,7 +84,7 @@ test('LLM relay', async (t) => {
     const res = await requestJson(app.base, 'GET', '/api/llm/status');
     assert.equal(res.status, 200);
     assert.deepEqual({ enabled: res.data.enabled, configured: res.data.configured, provider: res.data.provider, model: res.data.model },
-      { enabled: true, configured: true, provider: 'custom', model: 'relay-model' });
+      { enabled: true, configured: true, provider: 'custom', model: 'x-test-2' });
     assert.ok(!res.text.includes(RELAY_KEY));
   });
 
@@ -105,7 +105,7 @@ test('LLM relay', async (t) => {
     const [call] = upstream.state.received;
     assert.equal(call.url, '/v1/chat/completions');
     assert.equal(call.headers.authorization, `Bearer ${RELAY_KEY}`);
-    assert.equal(call.body.model, 'relay-model', 'client-chosen model is ignored');
+    assert.equal(call.body.model, 'x-test-2', 'client-chosen model is ignored');
     assert.equal(call.body.max_tokens, 2048, 'output size is capped by the server');
     assert.equal(call.body.temperature, 0.7);
     assert.equal(call.body.stream, false);
@@ -349,7 +349,7 @@ test('maxTokensCap and reasoningEffort read their settings strictly', () => {
 test('the agent client forwards LLM_REASONING_EFFORT too', async (t) => {
   const upstream = await startUpstream();
   t.after(() => upstream.close());
-  const env = { LLM_BASE_URL: `${upstream.base}/v1`, LLM_API_KEY: RELAY_KEY, LLM_MODEL: 'agent-model' };
+  const env = { LLM_BASE_URL: `${upstream.base}/v1`, LLM_API_KEY: RELAY_KEY, LLM_MODEL: 'x-test-2' };
   await chatCompletion({ messages: [userMessage()] }, env);
   assert.ok(!('reasoning_effort' in upstream.state.received.at(-1).body), 'not sent unless configured');
   await chatCompletion({ messages: [userMessage()] }, { ...env, LLM_REASONING_EFFORT: 'low' });

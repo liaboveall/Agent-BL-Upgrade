@@ -12,7 +12,10 @@
 //
 // Every accepted event is also appended to a JSONL audit log; the index file holds only state.
 
-import { appendJsonl, createWriteQueue, readJson, writeJsonAtomic } from '../../lib/jsonStore.js';
+import { pruneJsonl } from './retention.js';
+import { readPrivateJson, writePrivateJson } from '../security/privateStore.js';
+import { sanitizeAudit, stripSecretFields } from '../security/privacy.js';
+import { appendJsonl, createWriteQueue } from '../../lib/jsonStore.js';
 import { executeWithRetry } from '../executionReliability.js';
 
 export const EVENT_STATUS = Object.freeze({
@@ -70,7 +73,7 @@ export class EventBus {
   async init() {
     if (this.initialized) return this;
     if (this.indexFile) {
-      const saved = await readJson(this.indexFile, null);
+      const saved = await readPrivateJson(this.indexFile, null);
       for (const entry of saved?.entries ?? []) this.entries.set(entry.idempotency_key, entry);
       for (const [key, occurred] of Object.entries(saved?.last_occurred ?? {})) this.lastOccurred.set(key, occurred);
       // Older indexes kept clearing and escalation in separate streams. Preserve both high-water marks.
@@ -114,6 +117,7 @@ export class EventBus {
    */
   async submit(event) {
     await this.init();
+    event = stripSecretFields(event);
     const key = event.idempotency_key;
     if (!key) throw new TypeError('event.idempotency_key is required (use normalizeEvent)');
     const existing = this.entries.get(key);
@@ -135,7 +139,7 @@ export class EventBus {
       event
     };
     this.entries.set(key, entry);
-    if (this.eventsFile) await appendJsonl(this.eventsFile, { received_at: receivedAt, event });
+    if (this.eventsFile) await this.enqueueWrite(() => appendJsonl(this.eventsFile, sanitizeAudit({ received_at: receivedAt, event })));
     await this.flush();
     this.queue.push(key);
     this.#pump();
@@ -195,6 +199,15 @@ export class EventBus {
       if (![...this.entries.values()].some((entry) => stream(entry) === key)) this.lastOccurred.delete(key);
     }
     await this.flush();
+  }
+
+  async pruneRetention(options) {
+    const cutoff = options.now - options.retentionDays * 86400000;
+    for (const [key, entry] of this.entries) {
+      if ([EVENT_STATUS.DONE, EVENT_STATUS.STALE, EVENT_STATUS.FAILED].includes(entry.status) && Date.parse(entry.updated_at) < cutoff) this.entries.delete(key);
+    }
+    await this.flush();
+    if (this.eventsFile) await this.enqueueWrite(() => pruneJsonl(this.eventsFile, 3, { ...options, timestamp: 'received_at' }));
   }
 
   /** Put a DEAD event back in the queue (operator action). */
@@ -302,7 +315,7 @@ export class EventBus {
             last_occurred: Object.fromEntries(this.lastOccurred),
             entries: [...this.entries.values()]
           };
-          await this.enqueueWrite(() => writeJsonAtomic(this.indexFile, snapshot));
+          await this.enqueueWrite(() => writePrivateJson(this.indexFile, snapshot));
         }
       })().finally(() => { this.flushing = null; });
     }

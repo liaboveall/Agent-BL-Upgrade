@@ -33,4 +33,7 @@
 .ebl-job { margin:12px 0; border:1px solid var(--line); border-radius:12px; padding:12px; overflow-wrap:anywhere; }
 .ebl-fields { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:6px 12px; font-size:12px; }
 .ebl-fields dt,.ebl-fields dd { margin:0; overflow-wrap:anywhere; }
+.ebl-compliance { margin:12px 0; }
+.ebl-compliance summary { cursor:pointer; font-weight:600; }
+.ebl-compliance-check { padding:10px 0; border-top:1px solid var(--line); }
 @media(max-width:480px) { .cp-dialog { right:12px; bottom:76px; } .cp-launcher { right:12px; bottom:18px; } .ebl-fields { grid-template-columns:minmax(0,1fr); } }

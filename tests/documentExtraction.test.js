@@ -21,7 +21,7 @@ const read = (folder, name) => fs.readFile(new URL(`${folder}/${name}`, uploads)
 const names = ['bill-of-lading.md', 'commercial-invoice.md', 'insurance-policy.md'];
 const copperTexts = await Promise.all(names.map((name) => read('copper-sg-shanghai', name)));
 const invoice = copperTexts[1];
-const env = { LLM_BASE_URL: 'http://127.0.0.1:1', LLM_API_KEY: 'local-fixture-only', LLM_MODEL: 'fixture-vision' };
+const env = { LLM_BASE_URL: 'http://127.0.0.1:1', LLM_API_KEY: 'local-fixture-only', LLM_MODEL: 'x-test-2' };
 const visionOutput = (patch = {}) => ({ document_type: 'COMMERCIAL_INVOICE', text: invoice, fields: [], ...patch });
 const invoiceImage = { name: 'invoice.png', mime_type: 'image/png', content_base64: TINY_PNG.toString('base64') };
 const textDocs = () => names.map((name, index) => ({ name, mime_type: 'text/markdown', text: copperTexts[index] }));
@@ -113,6 +113,7 @@ test('PDF: the stored binary bundle actually opens once, and its bytes and sourc
   const replay = await upload(service, documents);
   assert.equal(replay.job_id, job.job_id);
   assert.equal((await service.listDecisions()).decisions.length, 1);
+  await service.stop(); // Restart with a single owner of the persisted anchor sequence.
   const loaded = await runtime(t, { dir });
   const bytes = await loaded.ingest.loadDocuments(job.document_ids);
   assert.ok(bytes.every((document) => document.buffer.subarray(0, 5).toString() === '%PDF-'));
@@ -184,7 +185,7 @@ test('model transport: the shared compatible client preserves schema and never s
   assert.equal(received.response_format.json_schema.strict, true);
   assert.equal(received.tools, undefined);
   assert.equal(received.tool_choice, undefined);
-  assert.equal(received.model, 'fixture-vision');
+  assert.equal(received.model, 'x-test-2');
 });
 
 test('text model: typed, grounded completion retains deterministic values and records conflicts', async () => {

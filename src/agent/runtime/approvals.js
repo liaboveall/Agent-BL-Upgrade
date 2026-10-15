@@ -10,7 +10,8 @@
 // action, and doing it, is the service's job.
 
 import crypto from 'node:crypto';
-import { createWriteQueue, readJson, writeJsonAtomic } from '../../lib/jsonStore.js';
+import { readPrivateJson, writePrivateJson } from '../security/privateStore.js';
+import { createWriteQueue } from '../../lib/jsonStore.js';
 
 export const APPROVAL_STATUS = Object.freeze({
   PENDING: 'PENDING',
@@ -62,7 +63,7 @@ export class ApprovalQueue {
   async init() {
     if (this.initialized) return this;
     if (this.file) {
-      const saved = await readJson(this.file, null);
+      const saved = await readPrivateJson(this.file, null);
       for (const record of saved?.approvals ?? []) this.records.set(record.approval_id, record);
     }
     this.initialized = true;
@@ -72,7 +73,16 @@ export class ApprovalQueue {
   async #persist() {
     if (!this.file) return;
     const snapshot = { version: 1, approvals: [...this.records.values()] };
-    await this.enqueueWrite(() => writeJsonAtomic(this.file, snapshot));
+    await this.enqueueWrite(() => writePrivateJson(this.file, snapshot));
+  }
+
+  async pruneRetention({ now, retentionDays, protectedDecisions }) {
+    const cutoff = now - retentionDays * 86400000;
+    for (const [id, record] of this.records) {
+      if (TERMINAL_APPROVAL_STATUSES.includes(record.status) && !protectedDecisions.has(record.decision_id) && Date.parse(record.updated_at) < cutoff) this.records.delete(id);
+    }
+    this.#prune();
+    await this.#persist();
   }
 
   #prune() {
@@ -97,7 +107,7 @@ export class ApprovalQueue {
   async create({ decision_id: decisionId, route, case_id: caseId, pool_id: poolId, action, mode, summary, plan, ttlSec }) {
     await this.init();
     if (!decisionId) throw new TypeError('decision_id is required');
-    if (!['sim', 'server', 'owner_cli'].includes(route)) throw new TypeError('route must be sim, server or owner_cli');
+    if (!['sim', 'server', 'owner_cli', 'link'].includes(route)) throw new TypeError('route must be sim, server, owner_cli or link');
     const open = [...this.records.values()].find((record) => record.decision_id === decisionId
       && !TERMINAL_APPROVAL_STATUSES.includes(record.status));
     if (open) return structuredClone(open);
@@ -180,7 +190,8 @@ export class ApprovalQueue {
     const nowMs = this.now().getTime();
     const expired = [];
     for (const record of this.records.values()) {
-      if ([S.PENDING, S.AWAITING_OWNER_SIGNATURE].includes(record.status) && Date.parse(record.expires_at) <= nowMs) {
+      const verifiedAll = record.plan?.steps?.length > 0 && record.steps_done.length === record.plan.steps.length;
+      if ([S.PENDING, S.AWAITING_OWNER_SIGNATURE].includes(record.status) && !verifiedAll && Date.parse(record.expires_at) <= nowMs) {
         record.status = S.EXPIRED;
         record.updated_at = this.now().toISOString();
         expired.push(structuredClone(record));
@@ -233,6 +244,7 @@ export class ApprovalQueue {
       throw new ApprovalError('step_out_of_order', `Step ${expectedIndex} must be recorded before step ${step.index}`);
     }
     record.steps_done.push(step);
+    if (step.bindings && record.plan) record.plan.bindings = { ...record.plan.bindings, ...step.bindings };
     record.updated_at = this.now().toISOString();
     await this.#persist();
     const total = record.plan?.steps?.length ?? 0;

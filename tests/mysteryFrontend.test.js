@@ -14,6 +14,20 @@ const {
   buildPassportShareCard,
   buildPassportShareText
 } = await import('../public/passport.js');
+const { riskFactorSegments } = await import('../public/mystery.js');
+
+test('MBOX-FE: quoted document evidence retains exact source text and marks only the original fields', () => {
+  const original = 'doc: Incoterms agreement (eBL/invoice): eBL "EXW 佛山仓库（现货库内交货）" vs invoice "EXW 佛山指定仓库 <img src=x onerror=alert(1)>"';
+  const segments = riskFactorSegments(original);
+  assert.equal(segments.map((part) => part.text).join(''), original);
+  assert.deepEqual(segments.filter((part) => part.source), [
+    { text: 'EXW 佛山仓库（现货库内交货）', source: 'bill_of_lading.incoterms' },
+    { text: 'EXW 佛山指定仓库 <img src=x onerror=alert(1)>', source: 'commercial_invoice.incoterms' }
+  ]);
+  const ordinary = 'Untranslated UI 文案 must remain in the localization check';
+  assert.deepEqual(riskFactorSegments(ordinary), [{ text: ordinary }]);
+  assert.deepEqual(riskFactorSegments('doc: unsupported quoted "原文"'), [{ text: 'doc: unsupported quoted "原文"' }]);
+});
 
 function fixture() {
   return createRevealProof({

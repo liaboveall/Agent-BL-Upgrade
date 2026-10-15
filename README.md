@@ -34,24 +34,38 @@ Demo Mode 是默认模式，**不需要钱包、API Key 或外部网络**：AI �
 | Run the application tests / 运行应用测试 | `npm test` (Node 20.11+) |
 | Run the contract tests / 运行合约测试 | `npm run test:contracts` (Node **22.13+**; run `npm --prefix hardhat install` once first) |
 | Run every release check / 运行全部发布检查 | `npm run preflight` |
+| Replay a saved decision / 重放历史决策 | `npm run agent:replay -- --decision <id>` (read-only / 只读) |
+| Generate adversarial scenarios / 红队变异检查 | `npm run agent:redteam` |
+| Testnet smoke plan / 测试网冒烟计划 | `npm run agent:smoke -- --help` (default read-only; explicit consent for writes / 默认只读，交易需明确授权) |
 | Measure Agent components and write the evaluation report / 实测 Agent 并生成报告 | `npm run eval:agent` (`-- --check` checks without overwriting evidence / 只检查，不覆盖证据) |
 | Run it in Docker / 用 Docker 运行 | `docker compose up -d --build` → http://localhost:3000 |
 | Compare the testnet deployment with the contract source / 对比链上合约与源码 | `npm run verify:bytecode` |
+
+2026-10-15 delivery acceptance / 开发交付验收：[scope, review fixes and evidence boundaries](docs/final-acceptance-20261015.md). The final report separates local acceptance, historical testnet evidence and pending external validation. / 最终报告分别记录本地验收、历史测试网证据及尚待完成的外部验证。
 
 ### Status at a glance | 当前状态
 
 | Area 模块 | State 状态 |
 |---|---|
+| Console integration and full Demo / 控制台整合与全流程演示 | **Phase 4 verified locally.** Shared evidence references across five views, saved historical quotes and a stoppable four-scenario player, including document intake through separate payment/settlement approvals. 1126/1126 tests and 107 new browser checks. [Guide and boundaries](docs/phase4-console-demo.md). / **Phase 4 本地验证完成**：五处证据与历史报价联动、可停止的四场景演示，完整单证场景保留付款/结算独立审批；1126/1126 测试、107 项新增浏览器检查，真实链上与人工验收另行进行。 |
+| PRD Agent API / 无状态分析接口 | **WP2.9 implemented locally.** Five stateless APIs reuse document parsing, verification, pricing, grounded briefs and canonical evidence graphs; no jobs or transactions. All API callers default to `x-test-2`. [Guide](docs/agent-api.md). / **WP2.9 本地实现**：五个接口复用单证、核验、定价、简报与证据图，不创建作业或交易；全项目 API 默认模型统一为 `x-test-2`，真实提供方另需验证。 |
+| Demo compliance / 演示合规 | **WP2.3 implemented locally.** Versioned fictional list, fuzzy names, source-by-source port/IMO/HS screening, CLEAR/REVIEW/BLOCK evidence and review. External transport is mock-tested and disabled by default. [Guide](docs/compliance-screening.md). / **WP2.3 本地实现完成**：版本化虚构名单、实体模糊匹配、逐份单证港口/IMO/HS 筛查、三态证据和人工复核；外部接口以 mock 验证，默认不连接真实服务。 |
+| Live settlement / Live 结算 | **WP2.6 verified locally.** Canonical USDC receipts, exact atomic amounts, persistent receipt claims, both on-chain proofs, separate approvals and owner CLI recovery. Real payments and owner transactions remain untested. [Guide](docs/live-settlement.md). / **WP2.6 本地验收完成**：规范链 USDC 回执、精确原子金额、持久防复用、链上双证明、独立审批与 owner CLI 恢复；真实付款/owner 交易未验收。 |
+| Chain monitoring / 链上监听 | **WP2.7 verified locally.** Confirmed read-only logs, persistent cursor, pool discovery, mirror reconciliation, independent emergency stops and RPC/reorg recovery; 40 new behavior tests and 91 browser checks. Real RPC operation needs separate acceptance. [Guide](docs/chain-watcher.md). / **WP2.7 本地自动化验证完成**：确认日志与持久游标、池发现/对账、独立紧急停止及失败/重组恢复；40 项新增行为测试、91 项浏览器检查；真实 RPC 运行另需验收。 |
 | Pricing, risk, RAG, MCP tools, dashboard / 定价、风险、RAG、MCP 工具、前端 | Working. Deterministic fallback keeps the demo running without any key. / 可用，没有任何 Key 也能完整演示 |
 | x402 paid intelligence / x402 付费情报 | **Demo:** simulated locally (no real funds). **Live:** x402 V2 (EIP-3009) through a facilitator, exercised end-to-end with a mock facilitator, the official `@injectivelabs/x402` client and the browser wallet flow; it needs a facilitator that lists `eip155:1439`, a payee address and a funded wallet; a real testnet payment and its on-chain attestation were re-verified on 2026-10-12 ([`docs/x402-integration.md`](docs/x402-integration.md)). / Demo 为本地模拟；Live 走 x402 V2，需要支持 `eip155:1439` 的 Facilitator、收款地址和有余额的钱包；2026-10-12 已用真实测试网付款和链上证明复验 |
-| Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The Injective testnet contracts were **redeployed as v2 on 2026-10-12**: `npm run verify:bytecode` confirms the on-chain code matches the source. / 源码已加固为 v2，测试网已于 2026-10-12 重新部署；`npm run verify:bytecode` 可确认链上代码与源码一致 |
-| Autonomous agent / 自主 Agent | **Runtime, document intake, monitoring and a Demo scenario player are in place.** Uploaded documents (`POST /api/agent/ingest`) run a nine-step pipeline (parse, injection screen, consistency, compliance, valuation, world risk, three-speed pricing, exporter constraints, decision) and end in OPEN, HOLD_FOR_REVIEW or REJECT; scheduled monitors turn *changes* in world risk and insurance deadlines into events; Demo scenarios replay a whole cargo story. Events (also injectable through `POST /api/agent/events`) become decisions with a recorded policy verdict; in Demo they run as simulated actions on the offchain pool (a `demo:` reference, never a tx hash), in Live they only wait in an approval queue and run after a human approves (pricing actions by the server's authorised key, owner-signed ones through `npm run agent:approve`). The Agent console (status, decision timeline, approvals, Demo event injector) is live. PDF text layers and optional image extraction now include provenance and human review ([guide](docs/document-extraction.md)). Not built yet: Live opening (the three owner transactions), the chain watcher. Plan: [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md). / **运行时、单证接入、监控和 Demo 场景播放器已就绪**：上传的单证（`POST /api/agent/ingest`）走九步流水线（解析、注入筛查、一致性、合规、估值、世界风险、三档定价、出口商约束、决策），结果是开盘、挂起复核或拒绝；定时监控把世界风险和保险到期的**变化**变成事件；Demo 场景可以回放一整批货的故事。通过 `POST /api/agent/events` 注入的事件也会变成带策略结论的决策；Demo 下是对链下池子的模拟执行（`demo:` 引用，没有交易哈希），Live 下只进审批队列，批准后才执行（定价类动作由服务器的已授权密钥发送，需要 owner 的动作用 `npm run agent:approve`）。Agent 控制台（状态、决策时间线、审批、Demo 事件注入器）已上线。PDF 文本层和可选图片抽取已接入，提供页码/来源及人工复核。尚未完成：Live 开盘（三笔 owner 交易）、链上监听。规划见 [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md) |
+| Smart contracts / 智能合约 | Source hardened (v2, see [`docs/contracts.md`](docs/contracts.md) §0). The original six Injective testnet contracts were **redeployed as v2 on 2026-10-12**; standalone AgentDecisionLog was deployed and initialized on 2026-10-15: `npm run verify:bytecode` confirms the on-chain code matches the source. / 原六份源码已加固为 v2，测试网已于 2026-10-12 重新部署；独立 AgentDecisionLog 于 2026-10-15 部署并初始化；`npm run verify:bytecode` 可确认链上代码与源码一致 |
+| Autonomous agent / 自主 Agent | **Runtime, document intake, monitoring and a Demo scenario player are in place.** Uploaded documents (`POST /api/agent/ingest`) run a nine-step pipeline (parse, injection screen, consistency, compliance, valuation, world risk, three-speed pricing, exporter constraints, decision) and end in OPEN, HOLD_FOR_REVIEW or REJECT; scheduled monitors turn *changes* in world risk and insurance deadlines into events; Demo scenarios replay a whole cargo story. Events (also injectable through `POST /api/agent/events`) become decisions with a recorded policy verdict; in Demo they run as simulated actions on the offchain pool (a `demo:` reference, never a tx hash), in Live they only wait in an approval queue and run after a human approves (pricing actions by the server's authorised key, owner-signed ones through `npm run agent:approve`). The Agent console (status, decision timeline, approvals, Demo event injector) is live. PDF text layers and optional image extraction now include provenance and human review ([guide](docs/document-extraction.md)). Live opening proposals and the owner CLI are implemented and verified with isolated chain fixtures ([guide](docs/live-opening.md)); real owner transactions remain untested. The read-only chain watcher is implemented locally; real RPC operation remains a separate acceptance gate. Plan: [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md). / **运行时、单证接入、监控和 Demo 场景播放器已就绪**：上传的单证（`POST /api/agent/ingest`）走九步流水线（解析、注入筛查、一致性、合规、估值、世界风险、三档定价、出口商约束、决策），结果是开盘、挂起复核或拒绝；定时监控把世界风险和保险到期的**变化**变成事件；Demo 场景可以回放一整批货的故事。通过 `POST /api/agent/events` 注入的事件也会变成带策略结论的决策；Demo 下是对链下池子的模拟执行（`demo:` 引用，没有交易哈希），Live 下只进审批队列，批准后才执行（定价类动作由服务器的已授权密钥发送，需要 owner 的动作用 `npm run agent:approve`）。Agent 控制台（状态、决策时间线、审批、Demo 事件注入器）已上线。PDF 文本层和可选图片抽取已接入，提供页码/来源及人工复核。Live 开盘提案与 owner CLI 已完成本地实现和链桩验收（[指南](docs/live-opening.md)）；三笔真实 owner 交易未验收。只读链上监听已完成本地实现；真实 RPC 运行另行验收。规划见 [`docs/agent-implementation-plan.md`](docs/agent-implementation-plan.md) |
 | Investor Copilot / 投资者 Copilot | **Phase 3 P0 + WP3.6/WP3.8 implemented locally.** Multi-turn preferences, explainable ranking, decision-driven SSE reranking and priced confirmation cards. Demo subscriptions/reports are verified locally; Live wallet helpers are tested with stubs, without a real transaction. Chat messages never execute actions. [Guide](docs/copilot.md). / **P0 与 WP3.6/WP3.8 本地实现完成**：多轮偏好、可解释排序、决策驱动重排与报价确认卡片；Demo 持仓/报告已验收，Live 钱包辅助函数以桩验证，未执行真实交易。消息本身不会执行操作。 |
 | Investor payments for RWA shares / 投资者认购的真实付款 | **Not implemented.** Subscriptions mint share receipts and record the amount owed; no stablecoin is escrowed. / **未实现**，认购只铸造份额凭证并记录应付金额 |
 | Localization, keyboard access and mobile / 国际化、键盘与移动端 | **WP4.6 verified locally.** Chinese/English, 1440px/390px, native controls, modal focus and SSE announcements: 40 page/dialog combinations and 255 browser checks. [Evidence and limits](docs/frontend-acceptance.md). / **WP4.6 本地验收完成**：中英、1440px/390px、原生控件、弹窗焦点和 SSE 播报，40 个页面/弹窗组合、255 项浏览器检查；人工读屏器、实体手机和 Live 钱包另行验收。 |
-| Agent quality and recovery / Agent 质量与恢复 | **Phase 5 P0 implemented locally.** Real-component deterministic evaluation, fault matrix, pending-transaction recovery and 61 release checks. Demo Live checks are SKIP; provider and real-chain validation remain separate. [Guide](docs/agent-reliability.md), [measured report](docs/evaluation-report.md). / **Phase 5 P0 已完成本地实现**：实际组件评测、故障矩阵、未确认交易对账和 61 项发布闸门；Demo 的 Live 检查记 SKIP，真实提供方/链上验收另有边界。 |
+| Agent quality and recovery / Agent 质量与恢复 | **Phase 5 complete.** Redteam, freshness, read-only replay, audit redaction/encrypted recovery, retention and 65 release checks. Three explicitly authorized testnet pricing transactions and their saved decision replays passed; protected pool #2 is active (Repriced) at 0.7910. [Phase 5](docs/phase5-security-replay.md), [live evidence](docs/evidence/agent-live-smoke.json), [security matrix](docs/agent-security-matrix.md), [measured report](docs/evaluation-report.md). / **Phase 5 完成**：红队、新鲜度、重放、隐私保留与发布闸门通过；本次三笔授权定价交易及重放通过，pool #2 最终可认购，状态 Repriced、价格 0.7910。可选 owner 生命周期、真实 LLM 与人工验收另有边界。 |
+| Agent interoperability / Agent 互操作 | **Phase 6 locally complete:** 15 MCP tools + 5 resources, A2A 1.0 synchronous quotes, four Bazaar descriptions and delivered-report provenance. 1179 Node tests and 69 release checks (5 Live SKIP). / **Phase 6 本地完成**；外部收录及内置窗格/人工验收另列。[Guide](docs/phase6-interoperability.md), [evidence](docs/evidence/phase6-completion.json). |
+| Decision anchoring / 决策锚定 | **Phase 7 verified locally:** standalone AgentDecisionLog, terminal sequences, approval commitments, Merkle proofs, HTTP/CLI verification and deployment recovery; 1222 Node tests, 86 contract tests, 296 browser checks and 71 release gates. Testnet deployment and initialization verified in 3 authorized transactions; first batch and background activation remain pending. / **Phase 7 本地验收与测试网部署初始化完成**；首次批次及后台启用待单独授权。[Guide](docs/phase7-decision-anchoring.md), [evidence](docs/evidence/phase7-completion.json). |
 
 ---
+
+Agent audit privacy / Agent 审计隐私：公开日志缩写钱包并移除密钥与单证原文；精确操作输入以 AES-256-GCM 认证加密，key 存于受限运行目录的 `*.key`。备份需同时包含日志与 key。`AGENT_RETENTION_DAYS` / `AGENT_MAX_DECISIONS` 清理终态审计数据，处理中与待对账记录保留；原始上传仅放私有 `uploads/` 供复核。详见 [权限与隐私矩阵](docs/agent-security-matrix.md)。
 
 ## 🌐 Project Overview | 项目概述
 
@@ -774,6 +788,10 @@ Demo Mode 下无需真实钱包即可演示核心流程。
 
 AgentBL exposes capabilities through the **Model Context Protocol (MCP)**.
 
+Phase 6 provides **15 tools + 5 resources**, an **A2A 1.0** synchronous JSONRPC pricing interface, and four Bazaar HTTP resource declarations. Runtime tools connect to the existing backend; event writes default to dry-run and require a host approval token. Delegated quotes may reference unexpired reports already delivered by the server, with payment neutral to price and risk. Demo discovery advertises no Live payment scheme. See [interoperability](docs/phase6-interoperability.md) for schema, configuration and evidence boundaries.
+
+Phase 6 已实现 **15 个工具、5 个资源、A2A 1.0 同步委托定价和四类 Bazaar 服务描述**。stdio 复用当前后端，事件写入默认 dry-run，真实入队需带外审批令牌。报价可引用已交付且未过期的付费报告，付款不改变价格、风险或执行权限；Demo 目录不公布 Live 可支付方案。[配置与验收说明](docs/phase6-interoperability.md)。
+
 The repository includes MCP tools and resources for operations such as:
 
 - retrieving trade cases;
@@ -828,12 +846,13 @@ The architecture uses Injective's EVM-compatible environment for Web3 execution.
 | **RWAOfferingPool** | [`0x38c52c33FEC5cc430f19F573768671c47E63b310`](https://testnet.blockscout.injective.network/address/0x38c52c33FEC5cc430f19F573768671c47E63b310) | Offering lifecycle state machine / 发行生命周期状态机 |
 | **RiskPricingOracle** | [`0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC`](https://testnet.blockscout.injective.network/address/0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC) | AI pricing → on-chain pricing action / AI 定价上链 |
 | **RWAToken** | [`0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C`](https://testnet.blockscout.injective.network/address/0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C) | Per-pool, non-transferable share receipts (not an ERC-20) / 每池不可转让的份额凭证（不是 ERC-20） |
+| **AgentDecisionLog** | [`0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec`](https://testnet.blockscout.injective.network/address/0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec) | Independent decision/version commitments; initialized on 2026-10-15, no batches yet / 独立决策与版本承诺；已初始化，尚无批次 |
 | **PaymentOracle** | [`0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8`](https://testnet.blockscout.injective.network/address/0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8) | Binds an x402 settlement to the paid AI report / 把 x402 付款与付费报告绑定 |
 
 [`public/chain-config.json`](public/chain-config.json) is the single source of truth for these addresses (a test keeps this table in sync with it).
 
-> **Deployment status | 部署状态:** the contracts above are the **v2** build, redeployed on 2026-10-12 (UTC) from [`hardhat/contracts`](hardhat/contracts) (collateral uniqueness, price bounds, settlement and ownership hardening — see [`docs/contracts.md`](docs/contracts.md) §0). `npm run verify:bytecode` confirms the testnet code matches the local source; after changing a contract, redeploy with `cd hardhat && npm run deploy:all`. The protocol is a demo: **do not put real funds in it** (there is no payment leg for subscriptions yet).
-> 上表是 **v2** 部署（2026-10-12 UTC 重新部署）；`npm run verify:bytecode` 可确认链上代码与本地源码一致，改动合约后用 `cd hardhat && npm run deploy:all` 重新部署。协议仅用于演示，**请勿放入真实资金**。
+> **Deployment status | 部署状态:** the original six protocol contracts are the **v2** build, redeployed on 2026-10-12 (UTC); the independent **AgentDecisionLog** was added on 2026-10-15 (UTC), with all three deployment/initialization transactions verified from [`hardhat/contracts`](hardhat/contracts) (collateral uniqueness, price bounds, settlement and ownership hardening — see [`docs/contracts.md`](docs/contracts.md) §0). `npm run verify:bytecode` confirms the testnet code matches the local source; any future protocol redeployment with `cd hardhat && npm run deploy:all` requires separate explicit authorization; Phase 7 uses only its standalone deployment entry. The protocol is a demo: **do not put real funds in it** (there is no payment leg for subscriptions yet).
+> 原六份协议合约是 **v2** 部署（2026-10-12 UTC 重新部署）；独立 **AgentDecisionLog** 于 2026-10-15 UTC 按授权完成部署与两笔初始化，原合约保持不变。`npm run verify:bytecode` 可确认链上代码与本地源码一致，未来使用 `cd hardhat && npm run deploy:all` 重部署协议须另行明确授权；Phase 7 仅使用独立部署入口。协议仅用于演示，**请勿放入真实资金**。
 
 ---
 
@@ -857,7 +876,8 @@ All configuration is optional in Demo Mode. [`.env.example`](.env.example) docum
 | Variable | Purpose 用途 |
 |---|---|
 | `AGENTBL_ADMIN_TOKEN` | Authorises switching the runtime mode into/out of Live (≥ 16 chars). Without it, mode switching is disabled whenever Live is configured. |
-| `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, … | LLM provider for the AI assistant; used only by the server-side relay. Set a spend limit on the key. Reasoning models (GLM, DeepSeek-R1, …) spend `max_tokens` on hidden thinking: raise `LLM_MAX_TOKENS_CAP` (default 2048; `0` = no cap, for a free gateway) and/or set `LLM_REASONING_EFFORT` (`low`/`medium`/`high`). |
+| `DEEPSEEK_API_KEY`, `DASHSCOPE_API_KEY`, … | LLM provider shared by server-side agents, Copilot and the relay; keys stay on the server. Set a spend limit on the key. Reasoning models (GLM, DeepSeek-R1, …) spend `max_tokens` on hidden thinking: raise `LLM_MAX_TOKENS_CAP` (default 2048; `0` = no cap, for a free gateway) and/or set `LLM_REASONING_EFFORT` (`low`/`medium`/`high`). |
+| `LLM_MODEL` | Shared by every API caller; defaults to `x-test-2` across all providers, including Tencent and Azure. The endpoint/deployment must support this model. / 全项目 API 共用，默认 `x-test-2`；端点或部署须实际提供该模型。 |
 | `X402_MODE=live`, `X402_FACILITATOR_URL`, `X402_PAY_TO` | The three settings Live x402 needs. Optional: `X402_PUBLIC_BASE_URL` behind a proxy. |
 | `PAYMENT_ATTESTOR_PRIVATE_KEY`, `PRICING_UPDATER_PRIVATE_KEY` | Dedicated signer keys; authorise them on-chain with `PaymentOracle.setAttestor` / `RiskPricingOracle.setUpdater`. |
 | `WHITE_AGENT_PRIVATE_KEY` | Buyer wallet for the CLI/agent x402 client. |
@@ -901,7 +921,7 @@ The preflight gate checks:
 - UI acceptance;
 - live-readiness configuration.
 
-The gate runs **61 checks**, including the Agent fault matrix, three complete Demo stories, measured quality thresholds and the no-fabrication suite. Live-only checks are **SKIP** in Demo. A passing gate does not establish real provider quality, user trials or current testnet execution. [Recovery and evidence guide](docs/agent-reliability.md).
+The gate runs **71 checks**, including the Agent fault matrix, three Demo stories, quality thresholds, no-fabrication, interoperability and decision-anchor recovery suites. Live-only checks are **SKIP** in Demo. A passing gate does not establish real provider quality, user trials or current testnet execution. [Recovery and evidence guide](docs/agent-reliability.md).
 
 Preflight 会检查：
 
@@ -915,7 +935,7 @@ Preflight 会检查：
 - UI；
 - Live Readiness。
 
-当前固定 **61 项**，包含 Agent 故障矩阵、三个完整 Demo 故事、实测质量阈值和禁止伪造套件。Demo 中的 Live 专属项是 **SKIP**。通过本地闸门不能替代真实提供方、用户试用或本次链上执行证据。
+当前固定 **71 项**，包含 Agent 故障矩阵、三个完整 Demo 故事、质量阈值、禁止伪造、互操作及决策锚定恢复套件。Demo 中的 Live 专属项是 **SKIP**。通过本地闸门不能替代真实提供方、用户试用或本次链上执行证据。
 
 Live-network checks may be skipped or reported as warnings in **Demo Mode**.
 
@@ -1043,6 +1063,7 @@ npm run smoke:x402:live   # explicit-consent testnet smoke (see docs/x402-integr
 npm run verify:wave-b -- --dry-run  # read-only replay-safe plan; signing requires a separately authorized --confirm
 npm run verify:bytecode   # compare deployed contracts with the local build
 npm run mcp:stdio         # MCP server over stdio
+npm run interop:demo -- --url http://127.0.0.1:3000  # read-only MCP SDK + A2A + discovery example
 ```
 
 Contract tests and deployment / 合约测试与部署：
@@ -1311,6 +1332,7 @@ Web3 Settlement
 
 ### Next Stage | 下一阶段
 
+- Live chain watcher with persistent cursor and state reconciliation (WP2.7)
 - Real-provider document extraction evaluation and scanned-PDF OCR
 - User-authorized Live wallet acceptance
 - Richer Logistics Context

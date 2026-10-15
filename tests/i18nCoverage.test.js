@@ -34,13 +34,21 @@ function referencedTranslationKeys() {
   for (const key of ['yield', 'risk', 'preference', 'coverage', 'penalties']) keys.add(`cp_score_${key}`);
   for (const key of ['QUEUED', 'RUNNING', 'DONE', 'FAILED', 'INTERRUPTED']) keys.add(`ebld_status_${key}`);
   for (const key of ['Created', 'Priced', 'Open', 'Subscribed', 'Funded', 'InTransit', 'Repriced', 'Paused', 'Frozen', 'Liquidated', 'Repaid', 'Cancelled', 'Unknown']) keys.add(`cp_state_${key}`);
-  for (const key of ['document_parse', 'injection_screen', 'document_consistency', 'compliance', 'cargo_valuation', 'world_risk', 'three_speed_pricing', 'exporter_constraints', 'decision']) keys.add(`ebld_step_${key}`);
+  for (const key of ['document_parse', 'injection_screen', 'document_consistency', 'compliance', 'cargo_valuation', 'world_risk', 'three_speed_pricing', 'exporter_constraints', 'decision', 'policy', 'execution_plan']) keys.add(`ebld_step_${key}`);
   for (const key of ['PASS', 'WARN', 'FAIL', 'SKIP', 'REVIEW']) keys.add(`ebld_step_status_${key}`);
   for (const key of ['OPEN', 'OPEN_WITH_WARNING', 'HOLD_FOR_REVIEW', 'REJECT']) keys.add(`ebld_action_${key}`);
   for (const key of ['bl_id', 'bl_no', 'invoice_no', 'cargo', 'quantity_mt', 'declared_value_usd', 'total_amount_usd', 'unit_price_usd_per_mt', 'currency', 'vessel', 'voyage_no', 'port_of_loading', 'port_of_discharge', 'eta', 'issue_date', 'coverage_ratio', 'insured_value_usd', 'expires_at']) keys.add(`ebld_field_${key}`);
   for (const status of ['DECIDED', 'EXECUTING', 'COMPLETED', 'FAILED', 'SKIPPED', 'REJECTED', 'PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE']) keys.add(`ac_status_${status}`);
   for (const verdict of ['AUTO', 'NEEDS_APPROVAL', 'OBSERVE_ONLY', 'REJECTED']) keys.add(`ac_verdict_${verdict}`);
   for (const level of ['off', 'observe', 'propose', 'auto']) keys.add(`ac_autonomy_${level}`);
+  for (const state of ['disabled', 'inactive', 'idle', 'healthy', 'catching-up', 'waiting-confirmations', 'degraded']) keys.add(`ac_chain_${state}`);
+  for (const action of ['RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE']) keys.add(`ac_set_reason_${action}`);
+  for (const status of ['CLEAR', 'REVIEW', 'BLOCK']) keys.add(`comp_status_${status}`);
+  for (const category of ['entity', 'vessel', 'imo', 'port', 'jurisdiction', 'hs', 'cargo', 'export_controls', 'standard', 'standards', 'fair_access', 'external']) keys.add(`comp_category_${category}`);
+  for (const code of ['ENTITY_CLEAR', 'ENTITY_MATCH_REVIEW', 'ENTITY_MATCH_BLOCK', 'INPUT_REVIEW', 'COUNTERPARTY_MISSING', 'INJECTION_REVIEW',
+    'JURISDICTION_BLOCK', 'PORT_CLEAR', 'PORT_UNKNOWN', 'PORT_AMBIGUOUS', 'PORT_MISSING', 'VESSEL_CLEAR', 'VESSEL_MATCH_REVIEW', 'VESSEL_MATCH_BLOCK', 'IMO_INVALID',
+    'HS_BLOCK', 'HS_REVIEW', 'HS_CLEAR', 'HS_MISSING', 'HS_INVALID', 'CARGO_BLOCK', 'CARGO_REVIEW', 'STANDARD_DECLARED', 'STANDARD_UNDECLARED', 'STANDARD_NOT_APPLICABLE', 'FAIR_ACCESS',
+    'EXTERNAL_CLEAR', 'EXTERNAL_REVIEW', 'EXTERNAL_BLOCK', 'EXTERNAL_UNAVAILABLE']) keys.add(`comp_code_${code}`);
   return [...keys].sort();
 }
 

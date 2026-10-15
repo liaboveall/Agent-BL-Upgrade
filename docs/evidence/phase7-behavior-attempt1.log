@@ -1,0 +1,52 @@
+✔ anchor leaves use canonical JSON, domain separation and explicit terminal fields (5.612886ms)
+✔ approval identity, route, time, outcome and transaction are committed without source text or credentials (1.91745ms)
+✔ Merkle tree proves every leaf in a 1-record batch and rejects alterations (0.552137ms)
+✔ Merkle tree proves every leaf in a 2-record batch and rejects alterations (0.285836ms)
+✔ Merkle tree proves every leaf in a 3-record batch and rejects alterations (0.42938ms)
+✔ Merkle tree proves every leaf in a 5-record batch and rejects alterations (0.603393ms)
+✔ Merkle tree proves every leaf in a 16-record batch and rejects alterations (1.94283ms)
+✔ Merkle tree proves every leaf in a 255-record batch and rejects alterations (57.093012ms)
+✔ Merkle tree proves every leaf in a 256-record batch and rejects alterations (35.793128ms)
+✔ invalid or oversized tree/proof inputs fail closed (0.395329ms)
+✔ enabling anchoring does not change the agent version; policy, model and source changes do (1.059987ms)
+✔ concurrent finalizations allocate a continuous durable sequence; duplicates and restart keep it (52.525515ms)
+✔ a second OS process cannot take the active anchor sequence lock (37.504771ms)
+✔ a dead process lock is recovered without resetting sequence (43.667227ms)
+✔ failed persistence consumes no finalization sequence and leaves the prior state intact (4.294075ms)
+✔ tampered terminal data fails verification; finalized entries cannot be silently overwritten (1.130765ms)
+✔ corrupted sequence, leaf, version and batch root are rejected on load (3.602893ms)
+✔ legacy journals are explicitly marked with an unrecorded version (0.679052ms)
+✔ Demo and disabled Live form local trees without contacting a chain adapter (1.515812ms)
+✔ minimum batch, interval and version boundaries keep each batch homogeneous and continuous (5.21307ms)
+✔ Live batches persist intent and hash before confirmation; repeat ticks do not broadcast twice (1.867848ms)
+✔ uncertain send survives restart and recovers by observed hash without a repeat broadcast (6.150908ms)
+✔ preflight failure is retryable but a mode change before send never broadcasts (0.974716ms)
+✖ runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick (340.283597ms)
+✖ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq (34.630217ms)
+✔ retention preserves independent proofs and live sequences; Demo reset discards only Demo proofs (17.929275ms)
+✔ HTTP exposes public proofs and behavioral tamper failures, with missing IDs returning 404 (58.507681ms)
+✔ CLI rechecks a disk audit without reading keys or mutating journals and exits nonzero for tampering (3455.00305ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 26
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15381.207056
+
+✖ failing tests:
+
+test at tests/agentAnchoring.test.js:226:1
+✖ runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick (340.283597ms)
+  TypeError: Cannot read properties of null (reading 'status')
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentAnchoring.test.js:235:25)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests/agentAnchoring.test.js:239:1
+✖ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq (34.630217ms)
+  TypeError: Cannot read properties of null (reading 'approval')
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentAnchoring.test.js:248:33)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)

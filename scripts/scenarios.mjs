@@ -5,6 +5,7 @@
 //
 // Keeping both under one command means the documented verification for the AI
 // pricing tasks (`npm run scenarios`) actually drives the pricing engine.
+import './agent-redteam.mjs';
 import { runHarnessScenarios } from '../src/core/scenarioRunner.js';
 import { runPricingScenarios } from '../src/core/pricingScenarioRunner.js';
 

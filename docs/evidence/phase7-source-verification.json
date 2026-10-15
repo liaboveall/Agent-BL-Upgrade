@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "phase": 7,
+  "checked_at": "2026-10-15T05:26:15.865813+00:00",
+  "passed": true,
+  "source_sha256": "e08e5726f8e6bcd03db18862900f21bb0bc17b76654bc0fc921fecd48e70cf9e",
+  "source_manifest": "docs/evidence/phase7-source-candidate.json",
+  "files_verified": 465,
+  "source_changes_after_final_tests": [],
+  "evaluation_files_verified": 2401,
+  "evaluation_source_sha256": "87357ac9434472bea5eba3227f6666aedb70dd5c7ae1693c8d5f325601268d4e",
+  "evaluation_source_changes": [],
+  "protected_files_verified": 9,
+  "protected_changes": [],
+  "git_commit": "9cefb50519aefdd2b1774036fd048cbfb27859ad",
+  "git_branch": "main",
+  "new_commits": 0,
+  "pushes": 0
+}

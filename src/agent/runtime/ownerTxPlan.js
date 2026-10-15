@@ -8,17 +8,15 @@
 // hash alone is never trusted.
 
 import { proofToBytes32 } from './executors/chainExecutor.js';
+import { buildOpeningPlan, OPENING_ACTIONS, positiveChainId } from './openingPlan.js';
+import { buildSettlementPlan, SETTLEMENT_ACTIONS } from '../pipelines/settlementPipeline.js';
 
 const POOL = 'RWAOfferingPool';
 
-/** What an owner-signed plan can contain today. OPEN (mint → pledge → createOffering) arrives with WP2.4. */
-export const OWNER_PLAN_ACTIONS = Object.freeze(['MARK_IN_TRANSIT', 'RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE', 'CANCEL']);
+export const OWNER_PLAN_ACTIONS = Object.freeze([...OPENING_ACTIONS, 'MARK_IN_TRANSIT', 'RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE', 'CANCEL']);
 
 const METHODS = {
   MARK_IN_TRANSIT: { method: 'markInTransit', events: ['DepartureRecorded'], describe: 'Record the departure proof and move the offering to InTransit' },
-  RECORD_PAYMENT: { method: 'recordImporterPayment', events: ['SettlementProofRecorded'], describe: 'Record the importer payment proof and amount' },
-  RECORD_ARRIVAL: { method: 'recordCargoArrival', events: ['SettlementProofRecorded'], describe: 'Record the cargo arrival proof' },
-  SETTLE: { method: 'settle', events: ['OfferingSettled'], describe: 'Settle the offering (records repayment; the contract holds no funds)' },
   CANCEL: { method: 'cancelOffering', events: ['OfferingCancelled'], describe: 'Cancel an offering nobody subscribed to' }
 };
 
@@ -37,7 +35,9 @@ export class OwnerPlanError extends Error {
  * @returns {{ network:string, chain_id:number, steps:Array<{index:number, contract:string, address:string, method:string,
  *            args:string[], description:string, expected_events:string[]}> }}
  */
-export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {}, chainConfig }) {
+export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {}, chainConfig, context, recipient, confirmations }) {
+  if (OPENING_ACTIONS.includes(action)) return buildOpeningPlan({ params, chainConfig, context });
+  if (SETTLEMENT_ACTIONS.includes(action)) return buildSettlementPlan({ action, chain_pool_id: poolId, params, chainConfig, context, recipient, confirmations });
   const spec = METHODS[action];
   if (!spec) throw new OwnerPlanError('unsupported_action', `${action} has no owner-signed plan`);
   if (!Number.isSafeInteger(Number(poolId)) || Number(poolId) < 1) {
@@ -48,11 +48,6 @@ export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {
 
   const args = [String(Number(poolId))];
   if (action === 'MARK_IN_TRANSIT') args.push(await proofToBytes32(params.departure_proof));
-  if (action === 'RECORD_PAYMENT') {
-    args.push(await proofToBytes32(params.payment_proof), String(BigInt(params.repayment_amount)));
-  }
-  if (action === 'RECORD_ARRIVAL') args.push(await proofToBytes32(params.arrival_proof));
-  if (action === 'SETTLE') args.push(String(BigInt(params.repayment_amount)));
   if (action === 'CANCEL') args.push(await proofToBytes32(params.reason ?? 'agent-cancel'));
 
   return {
@@ -71,6 +66,11 @@ export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {
 }
 
 const lower = (value) => String(value).toLowerCase();
+const matchesArg = (actual, expected) => {
+  if (Array.isArray(expected)) return expected.every((item, index) => matchesArg(actual?.[index], item));
+  if (expected && typeof expected === 'object') return Object.entries(expected).every(([key, item]) => matchesArg(actual?.[key], item));
+  return actual !== undefined && (typeof expected === 'boolean' ? actual === expected : lower(actual) === lower(expected));
+};
 
 /**
  * Check a reported transaction against a planned step, using only data read from the chain.
@@ -91,6 +91,9 @@ export async function verifyOwnerTx({ step, txHash, provider, iface, allowedSend
   if (!tx) return { ok: false, errors: ['transaction not found on the chain (not mined yet, or a made-up hash)'], confirmed_events: [] };
   if (!receipt) return { ok: false, errors: ['transaction has no receipt yet'], confirmed_events: [] };
   if (receipt.status !== 1) errors.push('transaction reverted');
+  if (tx.hash && lower(tx.hash) !== lower(txHash) || (receipt.hash ?? receipt.transactionHash) && lower(receipt.hash ?? receipt.transactionHash) !== lower(txHash)) errors.push('transaction or receipt hash does not match the reported hash');
+  if (tx.chainId !== undefined && step.chain_id !== undefined && Number(tx.chainId) !== Number(step.chain_id)) errors.push('transaction belongs to another chain');
+  if (BigInt(tx.value ?? 0) !== 0n) errors.push('owner plan does not authorize sending native funds');
   if (lower(tx.to ?? '') !== lower(step.address)) errors.push(`transaction targets ${tx.to}, not ${step.contract} ${step.address}`);
   if (allowedSenders?.length && !allowedSenders.map(lower).includes(lower(tx.from))) {
     errors.push(`transaction was sent by ${tx.from}, who is not an authorised signer`);
@@ -109,19 +112,19 @@ export async function verifyOwnerTx({ step, txHash, provider, iface, allowedSend
     if (parsed.name !== step.method) errors.push(`method is ${parsed.name}, expected ${step.method}`);
     step.args.forEach((expected, i) => {
       const actual = parsed.args[i];
-      if (actual === undefined || lower(actual) !== lower(expected)) {
+      if (!matchesArg(actual, expected)) {
         errors.push(`argument ${i} is ${String(actual)}, expected ${expected}`);
       }
     });
     if (parsed.args.length !== step.args.length) errors.push(`argument count is ${parsed.args.length}, expected ${step.args.length}`);
   }
 
-  const names = [];
+  const names = [], events = [];
   for (const log of receipt.logs ?? []) {
-    if (lower(log.address ?? step.address) !== lower(step.address)) continue;
+    if (lower(log.address ?? '') !== lower(step.address)) continue;
     try {
       const event = iface.parseLog(log);
-      if (event) names.push(event.name);
+      if (event) { names.push(event.name); events.push(event); }
     } catch {
       // A log from the same address that this ABI does not describe.
     }
@@ -129,6 +132,15 @@ export async function verifyOwnerTx({ step, txHash, provider, iface, allowedSend
   for (const wanted of step.expected_events ?? []) {
     if (!names.includes(wanted)) errors.push(`expected event ${wanted} is missing from the receipt`);
   }
-
-  return { ok: errors.length === 0, errors, block_number: receipt.blockNumber, from: tx.from, confirmed_events: names };
+  const bindings = {};
+  for (const check of step.event_checks ?? []) {
+    const matching = events.filter((event) => event.name === check.name && matchesArg(event.args, check.args));
+    if (matching.length !== 1) { errors.push(`expected event ${check.name} has missing, ambiguous or mismatched arguments`); continue; }
+    for (const [name, field] of Object.entries(check.bind ?? {})) {
+      try { bindings[name] = String(positiveChainId(matching[0].args[field])); }
+      catch { errors.push(`expected event ${check.name} has an invalid ${field}`); }
+    }
+  }
+  return { ok: errors.length === 0, errors, block_number: receipt.blockNumber, from: tx.from, confirmed_events: names,
+    ...(step.event_checks ? { bindings } : {}) };
 }

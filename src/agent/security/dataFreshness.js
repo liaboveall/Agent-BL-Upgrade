@@ -19,12 +19,15 @@ export class DataFreshnessValidator {
 
     const observedAt = new Date(data.observed_at).getTime();
     const ageMs = currentTime - observedAt;
+    if (!Number.isFinite(observedAt) || !Number.isFinite(currentTime)) return { fresh: false, age_ms: null, status: 'INVALID_TIMESTAMP' };
+    if (data.expires_at && (!Number.isFinite(Date.parse(data.expires_at)) || currentTime >= Date.parse(data.expires_at))) return { fresh: false, age_ms: ageMs, status: 'EXPIRED' };
+    if (['stale', 'unavailable', 'offline', 'error'].includes(data.source_status)) return { fresh: false, age_ms: ageMs, status: 'UNHEALTHY_SOURCE' };
 
     if (ageMs < 0) {
       return { fresh: false, age_ms: ageMs, status: 'FUTURE_TIMESTAMP' };
     }
 
-    if (ageMs > this.maxAgeMs) {
+    if (ageMs >= this.maxAgeMs) {
       return { fresh: false, age_ms: ageMs, status: 'EXPIRED' };
     }
 
@@ -52,7 +55,7 @@ export class DataFreshnessValidator {
    * @param {Object} source - 数据源信息
    * @returns {Object} - { healthy: boolean, status: string }
    */
-  checkSourceHealth(source) {
+  checkSourceHealth(source, currentTime = Date.now()) {
     if (!source || !source.name) {
       return { healthy: false, status: 'UNKNOWN_SOURCE' };
     }
@@ -63,7 +66,8 @@ export class DataFreshnessValidator {
 
     if (source.last_update) {
       const lastUpdate = new Date(source.last_update).getTime();
-      const timeSinceUpdate = Date.now() - lastUpdate;
+      const timeSinceUpdate = currentTime - lastUpdate;
+      if (!Number.isFinite(lastUpdate) || timeSinceUpdate < 0) return { healthy: false, status: 'INVALID_SOURCE_TIME' };
 
       // 如果数据源超过 1 小时未更新，标记为不健康
       if (timeSinceUpdate > 3600000) {
@@ -122,7 +126,7 @@ export class RiskIntelligence {
 
     // 检查数据源健康
     if (this.source) {
-      const sourceHealth = validator.checkSourceHealth(this.source);
+      const sourceHealth = validator.checkSourceHealth(this.source, currentTime);
       if (!sourceHealth.healthy) {
         return {
           usable: false,

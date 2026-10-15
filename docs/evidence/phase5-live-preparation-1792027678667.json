@@ -1,0 +1,72 @@
+{
+  "recorded_at": "2026-10-15T01:27:58.667Z",
+  "user_authorization": "授权这三笔测试网交易",
+  "scope": "Injective testnet chain 1439, protected pool #2, existing dedicated PRICING_UPDATER key",
+  "permitted_actions": [
+    "REPRICE",
+    "PAUSE",
+    "RESUME"
+  ],
+  "maximum_transactions": 3,
+  "permitted_prices_e6": [
+    "791000",
+    "783600",
+    "783600"
+  ],
+  "final_state": "Open",
+  "final_price_e6": "783600",
+  "owner_transactions_authorized": false,
+  "restore_price_transaction_authorized": false,
+  "run_id": "phase5-live-1792027678667",
+  "runtime_dir": "data/runtime/phase5-live-1792027678667",
+  "report": "docs/evidence/agent-live-smoke-1792027678667.json",
+  "verification": "docs/evidence/phase5-live-verification-1792027678667.json",
+  "status": "STOPPED_FOR_RECONCILIATION",
+  "real_transactions": null,
+  "broadcast_attempted": true,
+  "updater": "0xEB43623667f1Add616D0FbdEBbbE067a0F195F79",
+  "chain_id": 1439,
+  "initial_state": "Open",
+  "initial_price_e6": "800000",
+  "dedicated_updater_authorized": true,
+  "optional_executor_configured": false,
+  "owner_fallback_enabled": false,
+  "history_polls": 91,
+  "watcher": {
+    "enabled": true,
+    "state": "healthy",
+    "poll_sec": 15,
+    "confirmations": 1,
+    "batch_blocks": 5000,
+    "start_block": 143331433,
+    "next_block": 143794135,
+    "last_block": 143794134,
+    "last_block_hash": "0x7d139af0e4f862f50f2c3530de7002391ac2a7ada2d456347c77e8b432e188ab",
+    "latest_block": 143794134,
+    "confirmed_block": 143794134,
+    "lag_blocks": 0,
+    "last_poll_at": "2026-10-15T01:35:23.115Z",
+    "retry_at": null,
+    "failures": 0,
+    "reconciliation_required": false,
+    "pools": [
+      {
+        "case_id": "chain:1439:offering:1",
+        "pool_id": 1,
+        "state": "Repaid",
+        "block_number": 143794134,
+        "monitoring": "chain-only"
+      },
+      {
+        "case_id": "CASE-EBL-2026-CU-SG-SHA",
+        "pool_id": 2,
+        "state": "Open",
+        "block_number": 143794134,
+        "monitoring": "risk-and-chain"
+      }
+    ],
+    "last_error": null
+  },
+  "error": "Smoke runner stopped: FAIL; reconcile saved decisions, never resubmit blindly",
+  "note": "Keep this runtime directory. A failed client is not proof that no transaction was broadcast. No automatic runner retry."
+}

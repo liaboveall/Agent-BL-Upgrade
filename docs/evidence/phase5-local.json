@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "phase": 5,
+  "checked_at": "2026-10-15T02:04:55.558074+00:00",
+  "local_implementation_complete": true,
+  "phase_acceptance_complete": true,
+  "source": {
+    "commit": "9cefb50519aefdd2b1774036fd048cbfb27859ad",
+    "branch": "main",
+    "dirty": true,
+    "sha256": "d0bc0a0bc15597d549bb26e45737804019ac21f0467f4b665a663ff383ca8bb1",
+    "verified_phase5_files": [
+      "src/agent/decisionLogger.js",
+      "src/agent/orchestrator.js",
+      "src/agent/ingest/ingestService.js",
+      "src/agent/pipelines/ingestPipeline.js",
+      "src/agent/pipelines/monitorPipeline.js",
+      "src/agent/runtime/agentService.js",
+      "src/agent/runtime/activityLog.js",
+      "src/agent/runtime/approvals.js",
+      "src/agent/runtime/eventBus.js",
+      "src/agent/runtime/events.js",
+      "src/agent/runtime/factory.js",
+      "src/agent/runtime/trace.js",
+      "src/agent/runtime/sources/worldRiskMonitor.js",
+      "src/agent/runtime/freshness.js",
+      "src/agent/runtime/replay.js",
+      "src/agent/runtime/retention.js",
+      "src/agent/runtime/liveSmoke.js",
+      "src/agent/security/privacy.js",
+      "src/agent/security/privateStore.js",
+      "src/agent/security/dataFreshness.js",
+      "src/agent/tracing/tracer.js",
+      "src/agent/worldRiskAgent.js",
+      "src/agent/redteam/generator.js",
+      "src/agent/redteam/runner.js",
+      "src/agent/evaluation/dataset.js",
+      "src/agent/evaluation/goldDataset.js",
+      "src/agent/evaluation/runner.js",
+      "src/app/agentRoutes.js",
+      "scripts/preflight.mjs",
+      "scripts/scenarios.mjs",
+      "scripts/agent-redteam.mjs",
+      "scripts/agent-replay.mjs",
+      "scripts/agent-live-smoke.mjs",
+      "scripts/lib/agent-live-smoke.mjs",
+      "scripts/agent-smoke-plan.mjs",
+      "scripts/phase5-acceptance-server.mjs",
+      "scripts/phase5-acceptance-runner.mjs",
+      "tests/agentPhase5.test.js",
+      "tests/agentPrivacy.test.js",
+      "tests/agentLiveSmoke.test.js",
+      "tests/agentReliability.test.js",
+      "tests/agentEventBus.test.js",
+      "tests/agentRuntimeParts.test.js",
+      "tests/agentEvaluation.test.js",
+      "tests/helpers/phase5.js",
+      "package.json",
+      "src/agent/runtime/liveSmokeVerification.js",
+      "hardhat/test/deploySmoke.test.js"
+    ],
+    "public_files": {
+      "public/agent/api.js": "0d895e14f0a0a55ea38b597f41ae9a795263d1ce4ce45ddbd6b84969111371f4",
+      "public/agent/approvals.js": "5955229169b0e8eabfe6fb98b631db5d649e25e660906a751deecd3a429ad431",
+      "public/agent/decision-detail.js": "d497e8fbf9d65915a2773ccea9665b6b523fc3f6ce2bb8e5d11653be70b61273",
+      "public/agent/settlement.js": "a9a05afb422f28543d52c1aa4d52223e318f53de79bb09709ec61bdff421674c",
+      "public/i18n.js": "28c4afdea9f6d1342ab4c78b918480c3f310f9dd03735539b4fb56a753327180"
+    },
+    "public_sha256": "45f43f21380e8f0d8ac855548a8acc3fb63af7b5413094774b3986bfb93e555a",
+    "files_reverified": 2379,
+    "additional_files": {
+      "hardhat/test/deploySmoke.test.js": "13ae89e5e62ba26a772774eafc432216bc5fc1554b9cf00403faf828173421e0"
+    }
+  },
+  "work_packages": {
+    "WP5.1": "LOCAL_VERIFIED",
+    "WP5.2": "LOCAL_VERIFIED",
+    "WP5.3": "LOCAL_VERIFIED",
+    "WP5.4": "LOCAL_VERIFIED",
+    "WP5.5": "LOCAL_VERIFIED",
+    "WP5.6": "LOCAL_VERIFIED",
+    "WP5.7": "LOCAL_VERIFIED",
+    "WP5.8": "LOCAL_VERIFIED",
+    "WP5.9": "LIVE_VERIFIED; THREE AUTHORIZED TESTNET PRICING TRANSACTIONS"
+  },
+  "checks": {
+    "node_coverage": {
+      "tests": 1158,
+      "passed": 1158,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "lines_pct": 94.26,
+      "branches_pct": 84.2,
+      "functions_pct": 92.37,
+      "evidence": "docs/evidence/phase5-coverage-live-final.log"
+    },
+    "preflight": {
+      "counts": {
+        "PASS": 60,
+        "WARN": 0,
+        "SKIP": 5,
+        "FAIL": 0
+      },
+      "evidence": "docs/evidence/phase5-preflight-live-final.json"
+    },
+    "evaluation": {
+      "passed": true,
+      "gates": 20,
+      "injection": {
+        "attacks": 26,
+        "successful_attacks": 0,
+        "benign_controls": 1
+      },
+      "generated_redteam": {
+        "cases": 17,
+        "detected": 17,
+        "seed": 5322
+      },
+      "evidence": "docs/evidence/agent-eval.json"
+    },
+    "browser": {
+      "checks": 41,
+      "widths": [
+        1440,
+        390
+      ],
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "evidence": "docs/evidence/phase5-browser-1792024793070.json",
+      "screenshots": [
+        "docs/evidence/phase5-1792024793070-1440-zh.png",
+        "docs/evidence/phase5-1792024793070-1440-en.png",
+        "docs/evidence/phase5-1792024793070-390-zh.png",
+        "docs/evidence/phase5-1792024793070-390-en.png"
+      ],
+      "ui_files_unchanged_since_evidence": true
+    },
+    "browser_regression": {
+      "checks": 256,
+      "evidence": "docs/evidence/phase5-browser-1792024811933.json",
+      "screenshots": [
+        "docs/evidence/phase5-regression-1792024811933-desktop-en.png",
+        "docs/evidence/phase5-regression-1792024811933-mobile-decision-zh.png",
+        "docs/evidence/phase5-regression-1792024811933-mobile-mystery-zh.png",
+        "docs/evidence/phase5-regression-1792024811933-mobile-documents-en.png",
+        "docs/evidence/phase5-regression-1792024811933-mobile-voyage-en.png",
+        "docs/evidence/phase5-regression-1792024811933-mobile-passport-en.png",
+        "docs/evidence/phase5-regression-1792024811933-mobile-copilot-en.png"
+      ],
+      "ui_files_unchanged_since_evidence": true
+    },
+    "lint": "PASS",
+    "repository_check": "PASS",
+    "git_diff_check": "PASS",
+    "docs_delivery": {
+      "status": "PASS",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "evidence": "docs/evidence/phase5-docs-live-final.log"
+    },
+    "contracts": {
+      "passed": 75,
+      "failed": 0,
+      "network": "local Hardhat",
+      "evidence": "docs/evidence/phase5-preflight-live-final.log"
+    },
+    "live_smoke": {
+      "status": "PASS",
+      "real_transactions": 3,
+      "decision_replays_passed": 3,
+      "evidence": "docs/evidence/agent-live-smoke.json",
+      "independent_verification": "docs/evidence/phase5-live-verification-final-1792029472229.json"
+    }
+  },
+  "readonly_testnet_plan": {
+    "evidence": "docs/evidence/phase5-smoke-plan-1792023986531.json",
+    "ready_at_observation": true,
+    "pool_id": 2,
+    "state": "Open",
+    "initial_price_e6": "800000",
+    "actions": [
+      {
+        "action": "REPRICE",
+        "issue_price_usd": 0.791,
+        "evidence_hash": "0x8d09723ab37d60d5f6e974dc27ad07c227a9ba7d0f5ca556ee3b81dcc0c12d22",
+        "quote_hash": "0x3732975401edd4e8ea79154d0c27715a6231fb468b123f77ae72aef7972ffff3",
+        "from_state": "Open"
+      },
+      {
+        "action": "PAUSE",
+        "issue_price_usd": 0.7836,
+        "evidence_hash": "0xab8b83f64b591ab8bb07fa9d410cd679e0ce8d8f5eb73ebb235c99ffdfe6f994",
+        "quote_hash": "0x40c53b3059e5ecc875c6d3e8b8a1e7949e28f9d669229540ae0e9ac0074598c6",
+        "from_state": "Repriced"
+      },
+      {
+        "action": "RESUME",
+        "issue_price_usd": 0.7836,
+        "evidence_hash": "0x550602191d250e515acbbc9b8d3468a78099f6fa5f6cf36b3c99f9d1fdb00910",
+        "quote_hash": "0x40c53b3059e5ecc875c6d3e8b8a1e7949e28f9d669229540ae0e9ac0074598c6",
+        "from_state": "Paused"
+      }
+    ],
+    "transactions_sent": 0,
+    "forecast_superseded": true,
+    "correction": "PAUSE/RESUME do not update the offering issue price. Oracle risk-quote price and effective offering price are verified separately. RESUME restores Repriced.",
+    "verified_effects": "docs/evidence/phase5-live-verification-final-1792029472229.json"
+  },
+  "boundaries": {
+    "real_provider_calls": 0,
+    "real_testnet_transactions": 3,
+    "live_smoke": "PASS",
+    "builtin_browser_control": false,
+    "human_acceptance": false,
+    "physical_device_acceptance": false,
+    "new_commits": 0,
+    "pushes": 0,
+    "remote_ci": "NOT_RUN_FOR_THIS_WORKSPACE",
+    "existing_dirty_work_preserved": true,
+    "real_rpc_monitoring": "PASS; full deployment history and these pricing events",
+    "real_llm_provider_calls": 0,
+    "owner_transactions": 0,
+    "lifecycle_acceptance": false,
+    "price_restore_transactions": 0,
+    "provider_call_scope": "LLM and paid intelligence only; testnet RPC evidence is recorded separately"
+  },
+  "history": {
+    "evidence": "docs/evidence/phase5-attempt-history.json",
+    "prior_evaluation": "docs/evidence/agent-eval-pre-phase5-p1.json",
+    "earlier_source_checkpoint": "docs/evidence/agent-eval-phase5-before-final-migration.json",
+    "pre_live_snapshot": "docs/evidence/phase5-local-pre-live.json",
+    "pre_verifier_evaluation": "docs/evidence/agent-eval-phase5-before-live-verifier.json",
+    "before_doc_finalization": "docs/evidence/phase5-local-before-doc-finalization.json"
+  },
+  "next": {
+    "required": "Phase 6 WP6.1 MCP"
+  },
+  "delivery_status": "COMPLETE"
+}

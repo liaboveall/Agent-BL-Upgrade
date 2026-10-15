@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { Interface } from 'ethers';
 import { createPool, resetStore, storeState } from '../src/app/store.js';
 import { quoteFromCase } from '../src/core/pricingEngine.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
@@ -367,6 +368,7 @@ test('a replayed event whose decision already exists does not decide again', asy
   await settle(service, replayed);
   const decision = await lastDecision(service);
   // The bus index is lost (e.g. restored from an older backup) but the decision log remains.
+  await service.stop(); // Release the exclusive Phase 7 sequence writer before simulating a restart.
   await fs.rm(path.join(dir, 'agent-event-index.json'), { force: true });
   const fresh = await demoService({ dir, withIron: true });
   const result = await settle(fresh.service, replayed);
@@ -382,16 +384,26 @@ const TXH = `0x${'ab'.repeat(32)}`;
 
 function fakeLiveContext(state = { stateIndex: 2, subscribed: 0, price: 790_000 }) {
   const sent = [];
-  const parse = { parseLog: (log) => (log.name ? { name: log.name } : null) };
-  const receipt = { status: 1, blockNumber: 4242, logs: [{ name: 'PricingUpdated' }, { name: 'OfferingPaused' }, { name: 'OfferingRepriced' }, { name: 'OfferingResumed' }] };
-  const updatePricing = Object.assign(async (...args) => { sent.push(args); return { hash: TXH, wait: async () => receipt }; }, { staticCall: async () => {} });
+  const oracle = '0x1111111111111111111111111111111111111111', pool = '0x2222222222222222222222222222222222222222';
+  const updater = '0x3333333333333333333333333333333333333333', blockHash = `0x${'cd'.repeat(32)}`;
+  const iface = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32)']);
+  const parse = { parseLog: (log) => (log.name ? { name: log.name } : null), encodeFunctionData: iface.encodeFunctionData.bind(iface) };
+  const receipt = { hash: TXH, from: updater, to: oracle, status: 1, blockNumber: 4242, blockHash,
+    logs: ['PricingUpdated', 'OfferingPaused', 'OfferingRepriced', 'OfferingResumed'].map((name) => ({ name, address: name === 'PricingUpdated' ? oracle : pool })) };
+  const transaction = { hash: TXH, from: updater, to: oracle, chainId: 1439n, value: 0n };
+  const updatePricing = Object.assign(async (...args) => {
+    sent.push(args); transaction.data = iface.encodeFunctionData('updatePricing', args);
+    return { hash: TXH, wait: async () => receipt };
+  }, { staticCall: async () => {} });
   return {
-    sent, state,
-    provider: { getBlockNumber: async () => 1, getTransactionReceipt: async () => receipt },
+    sent, state, receipt,
+    provider: { send: async () => '0x59f', getBlockNumber: async () => 5000, getBlock: async () => ({ hash: blockHash }),
+      getTransaction: async () => transaction, getTransactionReceipt: async () => receipt },
     explorerBase: 'https://explorer.example',
-    signers: { PRICING_UPDATER: '0xUpdater' },
-    oracle: { interface: parse, isDecisionProcessed: async () => false, updatePricing, filters: {}, queryFilter: async () => [] },
+    signers: { PRICING_UPDATER: updater },
+    oracle: { target: oracle, interface: parse, isDecisionProcessed: async () => false, updatePricing, filters: {}, queryFilter: async () => [] },
     pool: {
+      target: pool,
       interface: parse,
       owner: async () => '0xOwner',
       stateOf: async () => state.stateIndex,
@@ -560,19 +572,20 @@ test('Live: only proof-carrying events can be injected by hand', async () => {
   await service.submitEvent(copperEv('CARGO_DEPARTED', { event_id: 'ok-1', data: { departure_proof: 'p' } }), { origin: 'api' });
 });
 
-test('Live: a hand-injected arrival without a proof is ignored rather than invented', async () => {
+test('Live: a hand-injected arrival without a proof is rejected before queueing', async () => {
   const { service } = await liveService();
-  await settle(service, copperEv('CARGO_ARRIVED', { event_id: 'noproof' }), { origin: 'api' });
+  await assert.rejects(settle(service, copperEv('CARGO_ARRIVED', { event_id: 'noproof' }), { origin: 'api' }), { code: 'proof_required' });
   assert.equal((await service.listDecisions()).count, 0);
-  const ignored = service.activity.list({ limit: 100 }).find((r) => r.action === 'EVENT_IGNORED');
-  assert.match(ignored.details.reason, /arrival_proof is required/u);
+  assert.equal(service.bus.get('event:noproof'), null);
 });
 
 test('Live: a broadcast transaction that is not yet confirmed stays EXECUTING and is reconciled on the next tick', async () => {
   const context = fakeLiveContext();
   let confirmed = false;
-  const receipt = { status: 1, blockNumber: 7, logs: [{ name: 'PricingUpdated' }, { name: 'OfferingPaused' }] };
-  context.oracle.updatePricing = Object.assign(async () => ({ hash: TXH, wait: () => new Promise(() => {}) }), { staticCall: async () => {} });
+  const receipt = context.receipt, send = context.oracle.updatePricing;
+  context.oracle.updatePricing = Object.assign(async (...args) => {
+    await send(...args); return { hash: TXH, wait: () => new Promise(() => {}) };
+  }, { staticCall: async () => {} });
   context.provider.getTransactionReceipt = async () => (confirmed ? receipt : null);
   const { service } = await liveService({ context });
   service.getChain = async () => new ChainExecutor({ getContext: async () => context, txTimeoutMs: 30 });

@@ -1,0 +1,366 @@
+✖ delegated quotations match the canonical engine at every payout speed, without touching a runtime (87.839693ms)
+✖ delegation preserves document mismatch and demo compliance blocks instead of granting execution (10.718302ms)
+✔ delegation rejects ambiguous source selection, missing cases, unsupported fields and unsafe numbers (3.066875ms)
+✔ only unexpired, case-bound server-delivered reports become neutral quote provenance (23.952725ms)
+✔ pricing concurrency is bounded and recovers after a failed lookup (3.13981ms)
+✔ MCP dry-run is side-effect free and invalid approval cannot change the queue (25.475831ms)
+✔ MCP operator events retain Live restrictions even with a valid host token (0.638411ms)
+✖ MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots (20.173845ms)
+✔ stateless MCP recommendations preserve hard filters, never create sessions or execute actions (13.946929ms)
+✔ Agent Card uses the verified A2A 1.0 required fields, advertises one implemented skill and no unsupported transports (54.020023ms)
+✔ public origins reject credentials and cleartext remote URLs, and never trust Host or forwarded headers (20.952723ms)
+✖ A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation (30.149669ms)
+✔ A2A validates JSON-RPC framing, protocol negotiation, media and structured inputs before pricing (50.771385ms)
+✔ delegation input errors remain JSON-RPC errors without reflecting internal exception messages (30.752139ms)
+✔ discovery and card never publish Live payment accepts while the application is Demo (28.176808ms)
+✔ Live discovery, card and 402 header/body derive identical exact V2 requirements from the catalog (1.363175ms)
+✔ interoperability rate limits are applied before delegated work (21.351831ms)
+✔ untrusted JSON rejects reserved keys and complexity before schema traversal (11.517859ms)
+✔ stdio backend adapter rejects redirects, oversized or invalid replies and reports backend loss without local fallback (5.321898ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 15
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9407.978758
+
+✖ failing tests:
+
+test at tests/agentInterop.test.js:44:1
+✖ delegated quotations match the canonical engine at every payout speed, without touching a runtime (87.839693ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      ai_verified_collateral_value_usd: 6531250,
+      base_issue_price_usd: 0.9231,
+      binding_constraint: 'EXPORTER_PROFIT',
+      bl_id: 'EBL-2026-CU-04417',
+  ...
+      max_safe_redemption_exposure_usd: 5878125,
+  +   min_acceptable_issue_price: undefined,
+      payout_speed: 'FAST',
+      pricing_action: 'OPEN_OFFERING',
+      quote_hash: '0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e',
+      recommended_token_supply: 4125000,
+      redemption_coverage_limit: 0.9,
+  
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentInterop.test.js:53:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { case_id: 'CASE-EBL-2026-CU-SG-SHA', bl_id: 'EBL-2026-CU-04417', payout_speed: 'FAST', target_redemption_value_usd: 1, ai_verified_collateral_value_usd: 6531250, redemption_coverage_limit: 0.9, max_safe_redemption_exposure_usd: 5878125, requested_cash_usd: 3300000, exporter_cost_of_goods_usd: 5500000, exporter_gross_profit_usd: 1375000, exporter_gross_margin_pct: 0.2, base_issue_price_usd: 0.9231, urgency_discount_bps: 955, risk_discount_bps: 276, indicative_issue_price_usd: 0.8, final_issue_price_usd: 0.8, binding_constraint: 'EXPORTER_PROFIT', recommended_token_supply: 4125000, target_redemption_exposure_usd: 4125000, expected_cash_to_exporter_usd: 3300000, financing_cost_usd: 825000, exporter_profit_share_bps: 6000, exporter_net_profit_usd: 550000, implied_gross_yield_bps: 2500, risk_level: 'MEDIUM', risk_score_bps: 350, risk_factors: [ 'war_risk/warning (Middle East / Strait of Hormuz): +200bps', 'commodity_volatility/warning (Global): +150bps' ], pricing_action: 'OPEN_OFFERING', rejected_by_exporter: false, min_acceptable_issue_price: undefined, evidence_graph: [ [Object], [Object], [Object], [Object] ], investor_explanation: 'This eBL-backed RWA is offered at USD 0.80 per token versus a USD 1.00 target redemption value — an implied 25.0% gross upside. The exporter chose FAST payout, which sets a 50% base share of their verified trade margin as investor compensation; current MEDIUM trade risk (war_risk/warning (Middle East / Strait of Hormuz): +200bps; commodity_volatility/warning (Global): +150bps) adds 276bps of discount. Target redemption is not guaranteed: it depends on importer payment, cargo settlement and insurance coverage.', exporter_explanation: 'Choosing FAST payout advances USD 3,300,000 now at an issue price of USD 0.80. The financing cost is USD 825,000 — 60.0% of your USD 1,375,000 verified trade profit — leaving an estimated USD 550,000 net. A LOW_COST payout would lower the financing cost but release cash more slowly.', evidence_hash: '0x2787720faa7d963582d119e9086a685db93b60eb523d46d9aea44b24de21ca87', quote_hash: '0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e' },
+    expected: { case_id: 'CASE-EBL-2026-CU-SG-SHA', bl_id: 'EBL-2026-CU-04417', payout_speed: 'FAST', target_redemption_value_usd: 1, ai_verified_collateral_value_usd: 6531250, redemption_coverage_limit: 0.9, max_safe_redemption_exposure_usd: 5878125, requested_cash_usd: 3300000, exporter_cost_of_goods_usd: 5500000, exporter_gross_profit_usd: 1375000, exporter_gross_margin_pct: 0.2, base_issue_price_usd: 0.9231, urgency_discount_bps: 955, risk_discount_bps: 276, indicative_issue_price_usd: 0.8, final_issue_price_usd: 0.8, binding_constraint: 'EXPORTER_PROFIT', recommended_token_supply: 4125000, target_redemption_exposure_usd: 4125000, expected_cash_to_exporter_usd: 3300000, financing_cost_usd: 825000, exporter_profit_share_bps: 6000, exporter_net_profit_usd: 550000, implied_gross_yield_bps: 2500, risk_level: 'MEDIUM', risk_score_bps: 350, risk_factors: [ 'war_risk/warning (Middle East / Strait of Hormuz): +200bps', 'commodity_volatility/warning (Global): +150bps' ], pricing_action: 'OPEN_OFFERING', rejected_by_exporter: false, evidence_graph: [ [Object], [Object], [Object], [Object] ], investor_explanation: 'This eBL-backed RWA is offered at USD 0.80 per token versus a USD 1.00 target redemption value — an implied 25.0% gross upside. The exporter chose FAST payout, which sets a 50% base share of their verified trade margin as investor compensation; current MEDIUM trade risk (war_risk/warning (Middle East / Strait of Hormuz): +200bps; commodity_volatility/warning (Global): +150bps) adds 276bps of discount. Target redemption is not guaranteed: it depends on importer payment, cargo settlement and insurance coverage.', exporter_explanation: 'Choosing FAST payout advances USD 3,300,000 now at an issue price of USD 0.80. The financing cost is USD 825,000 — 60.0% of your USD 1,375,000 verified trade profit — leaving an estimated USD 550,000 net. A LOW_COST payout would lower the financing cost but release cash more slowly.', evidence_hash: '0x2787720faa7d963582d119e9086a685db93b60eb523d46d9aea44b24de21ca87', quote_hash: '0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e' },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/agentInterop.test.js:65:1
+✖ delegation preserves document mismatch and demo compliance blocks instead of granting execution (10.718302ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'demo'
+  
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentInterop.test.js:77:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'demo',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/agentInterop.test.js:158:1
+✖ MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots (20.173845ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   event: {
+  +     case_id: 'CASE-EBL-2026-CU-SG-SHA',
+  +     data: {
+  +       events: [
+  +         {
+  +           date: '2026-10-15',
+  +           description: 'Typhoon',
+  +           region: 'East China Sea',
+  +           severity: 'critical',
+  +           type: 'severe_weather'
+  +         }
+  +       ]
+  +     },
+  +     event_id: 'phase5-risk',
+  +     expires_at: '2026-10-16T00:00:00.000Z',
+  +     idempotency_key: 'event:phase5-risk',
+  +     observed_at: '2026-10-15T00:00:00.000Z',
+  +     occurred_at: '2026-10-15T00:00:00.000Z',
+  +     runtime_generation: 1,
+  +     runtime_mode: 'demo',
+  +     source: 'admin',
+  +     source_mode: 'demo',
+  +     source_status: 'fixture',
+  +     type: 'WORLD_RISK_UPDATED'
+  +   },
+  +   kind: 'monitor',
+  +   mode: 'demo',
+  +   now_ms: 1792022400000,
+  +   pool: {
+  +     caseData: {
+  +       bill_of_lading: {
+  +         bl_id: 'EBL-2026-CU-04417',
+  +         bl_no: 'BSCL/SIN/SHA/2026/04417',
+  +         bl_type: 'negotiable_to_order',
+  +         cargo: 'Copper Cathodes (LME Grade A, Cu-CATH-1)',
+  +         carrier: 'BlueStrait Container Lines',
+  +         consignee: 'TO ORDER OF DBS BANK LTD., SINGAPORE',
+  +         containers: "20 x 20'GP (200 bundles)",
+  +         declared_value_usd: 6875000,
+  +         document_hash: '0x9a1f4c77e2b8d063a5519e4c2f8b71d4c0a6e93f17b2da845c61f0e9b8773a2c',
+  +         ebl_platform: 'WaveBL',
+  +         ebl_title_ref: 'WAVE-EBL-7F3A91C4',
+  +         eta: '2026-06-15',
+  +         incoterms: 'CIF Shanghai',
+  +         issue_date: '2026-06-03',
+  +         notify_party: 'Donghai Copper Materials Co., Ltd., Shanghai, China',
+  +         port_of_discharge: 'Shanghai (Yangshan)',
+  +         port_of_loading: 'Singapore',
+  +         quantity_mt: 500,
+  +         shipped_on_board: '2026-06-03',
+  +         shipper: 'Strait Resources Trading Pte. Ltd.',
+  +         vessel: 'MV Marina Star',
+  +         voyage_no: 'V.0048E'
+  +       },
+  +       cargo: {
+  +         commodity: 'Copper Cathode',
+  +         grade: 'LME Grade A (Cu-CATH-1), >= 99.9935% Cu',
+  +         hs_code: '740311',
+  +         lme_brand: 'ATACAMA-SX (demo)',
+  +         quantity: 500,
+  +         unit: 'MT'
+  +       },
+  +       case_id: 'CASE-EBL-2026-CU-SG-SHA',
+  +       commercial_invoice: {
+  +         currency: 'USD',
+  +         incoterms: 'CIF Shanghai',
+  +         invoice_date: '2026-06-03',
+  +         invoice_no: 'SRT-INV-2026-04417',
+  +         is_provisional: true,
+  +         payment_terms: 'Irrevocable L/C at sight',
+  +         pricing_basis: 'LME Copper Grade A cash settlement (QP = month of B/L) + CIF Shanghai premium',
+  +         qp_reference_price_usd_per_mt: 13680,
+  +         quantity_mt: 500,
+  +         regional_premium_usd_per_mt: 70,
+  +         sales_contract: 'SRT-DH-COP-2026-018',
+  +         total_amount_usd: 6875000,
+  +         unit_price_usd_per_mt: 13750
+  +       },
+  +       financing: {
+  +         currency: 'USDC',
+  +         max_ltv: 0.9,
+  +         payout_speed: 'FAST',
+  +         redemption_coverage_limit: 0.9,
+  +         requested_cash_usd: 3300000,
+  +         target_redemption_value_usd: 1
+  +       },
+  +       insurance: {
+  +         coverage_ratio: 1.1,
+  +         expires_at: '2026-07-05',
+  +         insured_value_usd: 7562500,
+  +         policy_hash: '0x4b2e8f1c90a7d3556e0c1a9f72b4d8e63c5170af9d2e84b1c6f30a72e5841db9',
+  +         policy_type: 'ICC(A) all risks, war & strikes clauses',
+  +         provider: 'Lion City Marine Insurance Pte. Ltd. (demo)'
+  +       },
+  +       macro_risk_events: [
+  +         {
+  +           date: '2026-06-04',
+  +           description: 'Escalating conflict and near-closure of the Strait of Hormuz are driving commodity supply fears and a broad war premium across metals and energy.',
+  +           region: 'Middle East / Strait of Hormuz',
+  +           severity: 'warning',
+  +           type: 'war_risk'
+  +         },
+  +         {
+  +           date: '2026-06-04',
+  +           description: 'LME copper near record highs (~USD 13,700/MT) on Chile supply weakness and US tariff arbitrage; realized volatility elevated, so collateral valuation should apply a war-premium haircut.',
+  +           region: 'Global',
+  +           severity: 'warning',
+  +           type: 'commodity_volatility'
+  +         }
+  +       ],
+  +       market: {
+  +         as_of: '2026-06-04',
+  +         benchmark: 'LME Copper Grade A Cash Settlement',
+  +         commodity: 'Copper',
+  +         current_price_usd_per_mt: 13680,
+  +         initial_price_usd_per_mt: 9850,
+  +         landed_price_usd_per_mt: 13750,
+  +         price_unit: 'USD/MT',
+  +         reference_price_usd_per_mt: 13680,
+  +         regional_premium_usd_per_mt: 70,
+  +         source: 'calibrated to LME June 2026 (Strait of Hormuz war-premium environment)'
+  +       },
+  +       model: 'ai-dynamic-pricing-rwa-v0.2',
+  +       note: 'Simulated user upload. Copper cathodes, Singapore -> Shanghai. Fields align to docs/PRD.md PricingQuote model. All entities fictional.',
+  +       shipment_events: [
+  +         {
+  +           date: '2026-06-03',
+  +           description: '500 MT copper cathodes loaded on board MV Marina Star at PSA Singapore.',
+  +           severity: 'info',
+  +           type: 'loaded_on_board'
+  +         },
+  +         {
+  +           date: '2026-06-06',
+  +           description: 'Vessel transiting South China Sea on schedule, cargo intact.',
+  +           severity: 'info',
+  +           type: 'no_damage_reported'
+  +         }
+  +       ],
+  +       trade_economics: {
+  +         cost_basis_usd_per_mt: 11000,
+  +         cost_of_goods_usd: 5500000,
+  +         expected_gross_profit_usd: 1375000,
+  +         gross_margin_pct: 0.2,
+  +         note: 'Exporter sourced/contracted the copper pre-Hormuz spike (~USD 11,000/MT) versus the CIF Shanghai invoice of USD 13,750/MT; the war premium is embedded margin. Profit (= invoice 6,875,000 - COGS 5,500,000 = 1,375,000) is what funds the RWA discount.'
+  +       },
+  +       uploaded_documents: {
+  +         bill_of_lading_file: 'data/uploads/copper-sg-shanghai/bill-of-lading.md',
+  +         commercial_invoice_file: 'data/uploads/copper-sg-shanghai/commercial-invoice.md'
+  +       }
+  +     },
+  +     poolId: 'CASE-EBL-2026-CU-SG-SHA',
+  +     quote: {
+  +       ai_verified_collateral_value_usd: 6531250,
+  +       base_issue_price_usd: 0.9231,
+  +       binding_constraint: 'EXPORTER_PROFIT',
+  +       bl_id: 'EBL-2026-CU-04417',
+  +       case_id: 'CASE-EBL-2026-CU-SG-SHA',
+  +       evidence_graph: [
+  +         {
+  +           basis: 'Patient-money anchor: LOW_COST gives up 20% of verified profit',
+  +           component: 'base_issue_price',
+  +           evidence: [
+  +             'verified gross profit USD 1,375,000 = invoice - cost_of_goods'
+  +           ],
+  +           price_usd: 0.9231
+  +         },
+  +         {
+  +           basis: 'BALANCED payout gives up 33% of profit for speed',
+  +           component: 'urgency_discount',
+  +           discount_bps: 440,
+  +           evidence: [
+  +             'payout_speed = BALANCED'
+  +           ]
+  +         },
+  +         {
+  +           basis: 'MEDIUM trade risk (350bps) widens the discount',
+  +           component: 'risk_discount',
+  +           discount_bps: 311,
+  +           evidence: [
+  +             'war_risk/warning (Middle East / Strait of Hormuz): +200bps',
+  +             'commodity_volatility/warning (Global): +150bps',
+  +             'MRI-COPPER-VOL-2026-06 (mock-LME-desk)',
+  +             'MRI-HORMUZ-WAR-2026-06 (mock-geopolitical-feed (GDELT-style))',
+  +             'MRI-BRENT-2026-06 (mock-ICE-desk)'
+  +           ]
+  +         },
+  +         {
+  +           basis: 'Safe redemption coverage caps exposure (collateral x 0.9)',
+  +           binding: false,
+  +           component: 'collateral_floor',
+  +           evidence: [
+  +             'AI-verified collateral USD 6,531,250 -> max safe USD 5,878,125'
+  +           ],
+  +           price_usd: 0.5614
+  +         }
+  +       ],
+  +       evidence_hash: '0x2787720faa7d963582d119e9086a685db93b60eb523d46d9aea44b24de21ca87',
+  +       expected_cash_to_exporter_usd: 3299999.51,
+  +       exporter_cost_of_goods_usd: 5500000,
+  +       exporter_explanation: 'Choosing BALANCED payout advances USD 3,300,000 now at an issue price of USD 0.85. The financing cost is USD 591,050 — 43.0% of your USD 1,375,000 verified trade profit — leaving an estimated USD 783,950 net. A LOW_COST payout would lower the financing cost but release cash more slowly.',
+  +       exporter_gross_margin_pct: 0.2,
+  +       exporter_gross_profit_usd: 1375000,
+  +       exporter_net_profit_usd: 783949.51,
+  +       exporter_profit_share_bps: 4299,
+  +       final_issue_price_usd: 0.8481,
+  +       financing_cost_usd: 591050.49,
+  +       implied_gross_yield_bps: 1791,
+  +       indicative_issue_price_usd: 0.8481,
+  +       investor_explanation: 'This eBL-backed RWA is offered at USD 0.85 per token versus a USD 1.00 target redemption value — an implied 17.9% gross upside. The exporter chose BALANCED payout, which sets a 33% base share of their verified trade margin as investor compensation; current MEDIUM trade risk (war_risk/warning (Middle East / Strait of Hormuz): +200bps; commodity_volatility/warning (Global): +150bps) adds 311bps of discount. Target redemption is not guaranteed: it depends on importer payment, cargo settlement and insurance coverage.',
+  +       max_safe_redemption_exposure_usd: 5878125,
+  +       min_acceptable_issue_price: undefined,
+  +       payout_speed: 'BALANCED',
+  +       pricing_action: 'OPEN_OFFERING',
+  +       quote_hash: '0x7fe871e6dce302f6da584efc6095e5e0d99d7a1f6cc68ae85defaaf307a7d3eb',
+  +       recommended_token_supply: 3891050,
+  +       redemption_coverage_limit: 0.9,
+  +       rejected_by_exporter: false,
+  +       requested_cash_usd: 3300000,
+  +       risk_discount_bps: 311,
+  +       risk_factors: [
+  +         'war_risk/warning (Middle East / Strait of Hormuz): +200bps',
+  +         'commodity_volatility/warning (Global): +150bps'
+  +       ],
+  +       risk_level: 'MEDIUM',
+  +       risk_score_bps: 350,
+  +       target_redemption_exposure_usd: 3891050,
+  +       target_redemption_value_usd: 1,
+  +       urgency_discount_bps: 440
+  +     },
+  +     settlement: undefined,
+  +     status: 'Open',
+  +     subscribedUsd: 0
+  +   },
+  +   proposal_index: 0,
+  +   schema: 'agent-replay-v1'
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentInterop.test.js:167:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { schema: 'agent-replay-v1', kind: 'monitor', event: { event_id: 'phase5-risk', type: 'WORLD_RISK_UPDATED', case_id: 'CASE-EBL-2026-CU-SG-SHA', source: 'admin', data: [Object], occurred_at: '2026-10-15T00:00:00.000Z', observed_at: '2026-10-15T00:00:00.000Z', expires_at: '2026-10-16T00:00:00.000Z', source_status: 'fixture', source_mode: 'demo', idempotency_key: 'event:phase5-risk', runtime_generation: 1, runtime_mode: 'demo' }, pool: { poolId: 'CASE-EBL-2026-CU-SG-SHA', status: 'Open', caseData: [Object], quote: [Object], subscribedUsd: 0, settlement: undefined }, mode: 'demo', proposal_index: 0, now_ms: 1792022400000 },
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/agentInterop.test.js:230:1
+✖ A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation (30.149669ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  ... Skipped lines
+  
+    {
+      assessment: {
+        compliance: {
+          as_of: '2026-10-14',
+          checks: [
+  ...
+        max_safe_redemption_exposure_usd: 5878125,
+  +     min_acceptable_issue_price: undefined,
+        payout_speed: 'FAST',
+        pricing_action: 'OPEN_OFFERING',
+        quote_hash: '0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e',
+        recommended_token_supply: 4125000,
+        redemption_coverage_limit: 0.9,
+  
+      at TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentInterop.test.js:244:85)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { stateless: true, chain_action_executed: false, assessment: { verification: [Object], compliance: [Object], missing_fields: [], findings: [], requires_human_review: true, status: 'HOLD_FOR_REVIEW', input_source: 'caller-supplied', registry_verified: false }, quote: { case_id: 'CASE-EBL-2026-CU-SG-SHA', bl_id: 'EBL-2026-CU-04417', payout_speed: 'FAST', target_redemption_value_usd: 1, ai_verified_collateral_value_usd: 6531250, redemption_coverage_limit: 0.9, max_safe_redemption_exposure_usd: 5878125, requested_cash_usd: 3300000, exporter_cost_of_goods_usd: 5500000, exporter_gross_profit_usd: 1375000, exporter_gross_margin_pct: 0.2, base_issue_price_usd: 0.9231, urgency_discount_bps: 955, risk_discount_bps: 276, indicative_issue_price_usd: 0.8, final_issue_price_usd: 0.8, binding_constraint: 'EXPORTER_PROFIT', recommended_token_supply: 4125000, target_redemption_exposure_usd: 4125000, expected_cash_to_exporter_usd: 3300000, financing_cost_usd: 825000, exporter_profit_share_bps: 6000, exporter_net_profit_usd: 550000, implied_gross_yield_bps: 2500, risk_level: 'MEDIUM', risk_score_bps: 350, risk_factors: [Array], pricing_action: 'OPEN_OFFERING', rejected_by_exporter: false, min_acceptable_issue_price: undefined, evidence_graph: [Array], investor_explanation: 'This eBL-backed RWA is offered at USD 0.80 per token versus a USD 1.00 target redemption value — an implied 25.0% gross upside. The exporter chose FAST payout, which sets a 50% base share of their verified trade margin as investor compensation; current MEDIUM trade risk (war_risk/warning (Middle East / Strait of Hormuz): +200bps; commodity_volatility/warning (Global): +150bps) adds 276bps of discount. Target redemption is not guaranteed: it depends on importer payment, cargo settlement and insurance coverage.', exporter_explanation: 'Choosing FAST payout advances USD 3,300,000 now at an issue price of USD 0.80. The financing cost is USD 825,000 — 60.0% of your USD 1,375,000 verified trade profit — leaving an estimated USD 550,000 net. A LOW_COST payout would lower the financing cost but release cash more slowly.', evidence_hash: '0x2787720faa7d963582d119e9086a685db93b60eb523d46d9aea44b24de21ca87', quote_hash: '0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e' }, indicative_only: true, request_id: 'external-agent-request', input_hash: '0x7239da5508fa38a42bb136ef290784960a74487b05a37e84d11c0725c6009105', result_hash: '0xdf9eed44bdfbc6edf0afebdfbba5081b464d30fa03e37e5d4512eba38430c7ce', payment_evidence: [], authorization: { quotation_only: true, payment_executed: false, offering_created: false, chain_action_executed: false } },
+    expected: { stateless: true, chain_action_executed: false, assessment: { verification: [Object], compliance: [Object], missing_fields: [], findings: [], requires_human_review: true, status: 'HOLD_FOR_REVIEW', input_source: 'caller-supplied', registry_verified: false }, quote: { case_id: 'CASE-EBL-2026-CU-SG-SHA', bl_id: 'EBL-2026-CU-04417', payout_speed: 'FAST', target_redemption_value_usd: 1, ai_verified_collateral_value_usd: 6531250, redemption_coverage_limit: 0.9, max_safe_redemption_exposure_usd: 5878125, requested_cash_usd: 3300000, exporter_cost_of_goods_usd: 5500000, exporter_gross_profit_usd: 1375000, exporter_gross_margin_pct: 0.2, base_issue_price_usd: 0.9231, urgency_discount_bps: 955, risk_discount_bps: 276, indicative_issue_price_usd: 0.8, final_issue_price_usd: 0.8, binding_constraint: 'EXPORTER_PROFIT', recommended_token_supply: 4125000, target_redemption_exposure_usd: 4125000, expected_cash_to_exporter_usd: 3300000, financing_cost_usd: 825000, exporter_profit_share_bps: 6000, exporter_net_profit_usd: 550000, implied_gross_yield_bps: 2500, risk_level: 'MEDIUM', risk_score_bps: 350, risk_factors: [Array], pricing_action: 'OPEN_OFFERING', rejected_by_exporter: false, evidence_graph: [Array], investor_explanation: 'This eBL-backed RWA is offered at USD 0.80 per token versus a USD 1.00 target redemption value — an implied 25.0% gross upside. The exporter chose FAST payout, which sets a 50% base share of their verified trade margin as investor compensation; current MEDIUM trade risk (war_risk/warning (Middle East / Strait of Hormuz): +200bps; commodity_volatility/warning (Global): +150bps) adds 276bps of discount. Target redemption is not guaranteed: it depends on importer payment, cargo settlement and insurance coverage.', exporter_explanation: 'Choosing FAST payout advances USD 3,300,000 now at an issue price of USD 0.80. The financing cost is USD 825,000 — 60.0% of your USD 1,375,000 verified trade profit — leaving an estimated USD 550,000 net. A LOW_COST payout would lower the financing cost but release cash more slowly.', evidence_hash: '0x2787720faa7d963582d119e9086a685db93b60eb523d46d9aea44b24de21ca87', quote_hash: '0x082e3f95c1cbf57d03fd5f8f69c739b07698fc0e1d874b20150cece94dcee36e' }, indicative_only: true, request_id: 'external-agent-request', input_hash: '0x7239da5508fa38a42bb136ef290784960a74487b05a37e84d11c0725c6009105', result_hash: '0xdf9eed44bdfbc6edf0afebdfbba5081b464d30fa03e37e5d4512eba38430c7ce', payment_evidence: [], authorization: { quotation_only: true, payment_executed: false, offering_created: false, chain_action_executed: false } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

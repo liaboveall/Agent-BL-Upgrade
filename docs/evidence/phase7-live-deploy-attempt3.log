@@ -1,0 +1,11 @@
+
+{
+  "dry_run": false,
+  "address": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+  "deploy_tx": "0x27208e6af3ec24c543d5566ea215fea725d0093bb6f36a6fd5b0849bbdc4ac3b",
+  "initializations": [
+    "0xaad5df123c763ec5443efd121d123e7075c57c9cdeee90c85c56eb2b70ed663f",
+    "0xe20002c73f75e67dc30f0e50ee759cba1ed9162f84514818292f0a187ecabd97"
+  ],
+  "broadcasts": 3
+}

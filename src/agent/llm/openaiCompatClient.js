@@ -1,15 +1,19 @@
 // OpenAI-compatible chat client for tool calling.
 //
 // Works with any provider that speaks the OpenAI /chat/completions schema:
-//   - Tencent    (TokenHub / Hunyuan, model hy3-preview ONLY)  Tencent_API_KEY + Tencent_BASE_URL
-//   - DeepSeek   (https://api.deepseek.com, model deepseek-chat)        DEEPSEEK_API_KEY
-//   - Qwen       (DashScope OpenAI-compatible mode, model qwen-plus)    DASHSCOPE_API_KEY
+//   - Tencent    (TokenHub / Hunyuan)                                Tencent_API_KEY + Tencent_BASE_URL
+//   - DeepSeek   (https://api.deepseek.com)                           DEEPSEEK_API_KEY
+//   - Qwen       (DashScope OpenAI-compatible mode)                   DASHSCOPE_API_KEY
 //   - OpenAI     (https://api.openai.com/v1)                            OPENAI_API_KEY
 //   - Custom     LLM_BASE_URL / LLM_API_KEY / LLM_MODEL
 //
 // No SDK dependency: uses the global fetch shipped with Node >= 18.
 // If no key is configured, isConfigured() returns false and the caller
 // should fall back to the deterministic valuation path.
+
+// One project-wide model for direct agents, document extraction, Copilot, the relay and CLI.
+// LLM_MODEL remains an explicit operator override; no provider has a separate model lock.
+export const DEFAULT_LLM_MODEL = 'x-test-2';
 
 const PROVIDERS = {
   azure: {
@@ -21,17 +25,13 @@ const PROVIDERS = {
     apiVersion: '2024-02-15-preview'
   },
   tencent: {
-    // Tencent Cloud TokenHub (Hunyuan), OpenAI-compatible. ONLY hy3-preview is
-    // permitted on this account, so the model is locked and ignores LLM_MODEL.
+    // Tencent Cloud TokenHub (Hunyuan), OpenAI-compatible.
     baseUrl: 'https://tokenhub.tencentmaas.com/v1',
     baseUrlEnv: 'Tencent_BASE_URL',
-    model: 'hy3-preview',
-    keyEnv: 'Tencent_API_KEY',
-    lockModel: true
+    keyEnv: 'Tencent_API_KEY'
   },
   deepseek: {
     baseUrl: 'https://api.deepseek.com',
-    model: 'deepseek-chat',
     keyEnv: 'DEEPSEEK_API_KEY'
   },
   qwen: {
@@ -40,13 +40,11 @@ const PROVIDERS = {
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     baseUrlEnv: 'DASHSCOPE_BASE_URL',
     baseUrlEnvAliases: ['Ali_BASE_URL'],
-    model: 'qwen-plus',
     keyEnv: 'DASHSCOPE_API_KEY',
     keyEnvAliases: ['Ali_API_KEY']
   },
   openai: {
     baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o-mini',
     keyEnv: 'OPENAI_API_KEY'
   }
 };
@@ -93,10 +91,11 @@ export function buildChatEndpoint(cfg) {
 /**
  * Resolve which provider to use from the environment.
  * Priority: explicit LLM_PROVIDER / custom LLM_* > first provider whose key is set
- * (Tencent hy3-preview is first, so it wins when configured).
+ * (Tencent is first among built-in non-Azure providers).
  * @returns {{provider:string, baseUrl:string, model:string, apiKey:string}|null}
  */
 export function resolveProvider(env = process.env) {
+  const model = String(env.LLM_MODEL ?? '').trim() || DEFAULT_LLM_MODEL;
   // Azure OpenAI Service (check first as it requires special handling)
   const azureCfg = PROVIDERS.azure;
   if (env[azureCfg.keyEnv] && env[azureCfg.baseUrlEnv] && env[azureCfg.deploymentEnv]) {
@@ -106,7 +105,8 @@ export function resolveProvider(env = process.env) {
       deployment: env[azureCfg.deploymentEnv],
       apiVersion: azureCfg.apiVersion,
       apiKey: env[azureCfg.keyEnv],
-      model: env[azureCfg.deploymentEnv] // Azure uses deployment name as model
+      // The deployment is an Azure routing identifier, not a second model setting.
+      model
     };
   }
 
@@ -115,7 +115,7 @@ export function resolveProvider(env = process.env) {
     return {
       provider: 'custom',
       baseUrl: env.LLM_BASE_URL.replace(/\/$/, ''),
-      model: env.LLM_MODEL ?? 'gpt-4o-mini',
+      model,
       apiKey: env.LLM_API_KEY
     };
   }
@@ -131,8 +131,7 @@ export function resolveProvider(env = process.env) {
       return {
         provider: name,
         baseUrl: baseUrl.replace(/\/$/, ''),
-        // A lockModel provider (Tencent: only hy3-preview is allowed) never honours LLM_MODEL.
-        model: cfg.lockModel ? cfg.model : (env.LLM_MODEL ?? cfg.model),
+        model,
         apiKey
       };
     }
@@ -164,6 +163,9 @@ export function configuredProviders(env = process.env) {
  * Single /chat/completions call with optional tools.
  * Returns the raw assistant message object: { role, content, tool_calls? }.
  */
+const completionUsage = new WeakMap();
+export const completionMetadata = (message) => structuredClone(completionUsage.get(message) ?? null);
+
 export async function chatCompletion({ messages, tools, toolChoice = 'auto', temperature = 0.2, timeoutMs = 45000, maxTokens, responseFormat }, env = process.env) {
   const cfg = resolveProvider(env);
   if (!cfg) throw new Error('No LLM provider configured. Set DEEPSEEK_API_KEY / DASHSCOPE_API_KEY / OPENAI_API_KEY / AZURE_OPENAI_* or LLM_BASE_URL+LLM_API_KEY.');
@@ -181,6 +183,7 @@ export async function chatCompletion({ messages, tools, toolChoice = 'auto', tem
   const { url, headers } = buildChatEndpoint(cfg);
 
   const controller = new AbortController();
+  const started = Date.now();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, {
@@ -198,6 +201,10 @@ export async function chatCompletion({ messages, tools, toolChoice = 'auto', tem
     const json = await response.json();
     const message = json.choices?.[0]?.message;
     if (!message) throw new Error(`LLM returned no message: ${JSON.stringify(json).slice(0, 500)}`);
+    const tokens = Object.fromEntries(['prompt_tokens', 'completion_tokens', 'total_tokens'].filter((key) =>
+      Number.isSafeInteger(json.usage?.[key]) && json.usage[key] >= 0).map((key) => [key, json.usage[key]]));
+    completionUsage.set(message, { provider: cfg.provider, model: cfg.model,
+      latency_ms: Math.max(0, Date.now() - started), tokens: Object.keys(tokens).length ? tokens : null });
     return message;
   } finally {
     clearTimeout(timer);

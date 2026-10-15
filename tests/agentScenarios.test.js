@@ -48,7 +48,7 @@ const noChainTraces = (service) => {
 test('scenarios: the catalog lists every shipped scenario with a bilingual title', async () => {
   const { service } = await runtime();
   const list = await service.scenarios.list();
-  assert.deepEqual(list.map((s) => s.name), ['copper-typhoon', 'insurance-gap', 'warcrisis-hormuz']);
+  assert.deepEqual(list.map((s) => s.name), ['copper-lifecycle', 'copper-typhoon', 'insurance-gap', 'warcrisis-hormuz']);
   for (const scenario of list) {
     assert.ok(scenario.title.en && scenario.title.zh, scenario.name);
     assert.ok(scenario.steps >= 3);

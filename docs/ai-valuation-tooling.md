@@ -62,11 +62,11 @@ max_safe_redemption = ai_verified_collateral × redemption_coverage_limit   # �
 
 | 提供方 | 用途 | env 变量 | 费用 | 申请地址 | 模型 |
 |---|---|---|---|---|---|
-| **DeepSeek** | tool calling 主力（推荐，便宜、国内可用） | `DEEPSEEK_API_KEY` | 低价付费 | platform.deepseek.com | `deepseek-chat` |
-| **Qwen 通义千问** | DashScope OpenAI 兼容模式 | `DASHSCOPE_API_KEY` | 有免费额度 | dashscope.console.aliyun.com | `qwen-plus` / `qwen-max` |
+| **DeepSeek** | OpenAI 兼容入口 | `DEEPSEEK_API_KEY` | 另行核实 | platform.deepseek.com | `x-test-2` |
+| **Qwen 通义千问** | DashScope OpenAI 兼容入口 | `DASHSCOPE_API_KEY` | 另行核实 | dashscope.console.aliyun.com | `x-test-2` |
 | 自定义 | 任何 OpenAI 兼容端点 | `LLM_BASE_URL` + `LLM_API_KEY` | — | — | `LLM_MODEL` |
 
-> 这两家都原生支持 OpenAI 的 `tools` / `tool_calls` 协议，所以同一份代码不用改。
+> 2026-10-15 全项目 API 默认模型为 `x-test-2`，由 `LLM_MODEL` 共用控制；上表仅列兼容入口。实际端点是否提供该模型、工具/视觉能力、费用和额度尚未验证，优先沿用已配置的兼容端点。
 
 ### 4.2 实时铜价（任选其一；不填用 mock）
 

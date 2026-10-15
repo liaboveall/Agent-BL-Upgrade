@@ -13,7 +13,8 @@
     "deploy:injective": "hardhat run scripts/deploy-agentbl.js --network injective_testnet",
     "deploy:payment-oracle": "hardhat run scripts/deploy-payment-oracle.js --network injective_testnet",
     "deploy:protocol": "hardhat run scripts/deploy-protocol.js --network injective_testnet",
-    "deploy:all": "npm run deploy:protocol && npm run deploy:payment-oracle"
+    "deploy:all": "npm run deploy:protocol && npm run deploy:payment-oracle",
+    "deploy:agent-log": "hardhat run scripts/deploy-agent-log.js --network injective_testnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.2.0",

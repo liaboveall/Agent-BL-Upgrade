@@ -18,25 +18,14 @@ import { decodePaymentSignatureHeader } from '@injectivelabs/x402/client';
 import { loadX402Config, X402_SERVICES } from './config.js';
 import { deliverPaidReport } from './delivery.js';
 import { createX402Runtime } from './server.js';
-import { usdcToAtomic } from './settlement.js';
+import { paidRouteMap } from './discovery.js';
 
 const JSON_LIMIT = '1mb';
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/u;
 
 /** Route map (the shape createX402PaymentMiddleware expects) derived from the paid-service catalog. */
 export function liveRouteMap(config, services = X402_SERVICES) {
-  return Object.fromEntries(services.map((service) => [`POST ${service.endpoint}`, {
-    id: service.serviceId,
-    method: 'POST',
-    path: service.endpoint,
-    description: service.description,
-    mimeType: 'application/json',
-    amount: usdcToAtomic(service.priceUSDC, config.assetDecimals).toString(),
-    network: config.network,
-    asset: config.asset,
-    payTo: config.payTo,
-    maxTimeoutSeconds: config.ttlSeconds
-  }]));
+  return paidRouteMap(config, services);
 }
 
 function trustedHops(value) {
@@ -100,7 +89,7 @@ export async function createLiveGateway(options = {}) {
   const runtime = await createX402Runtime({
     config,
     routes: liveRouteMap(config, services),
-    baseUrl: options.baseUrl ?? env.X402_PUBLIC_BASE_URL,
+    baseUrl: options.baseUrl ?? env.AGENTBL_PUBLIC_BASE_URL ?? env.X402_PUBLIC_BASE_URL,
     fetchImpl: options.fetchImpl,
     store: options.store,
     settlementService: options.settlementService,

@@ -1,0 +1,49 @@
+{
+  "schema": "agentbl-phase7-live-preflight-v1",
+  "checked_at": "2026-10-15T05:39:24.684Z",
+  "status": "READY",
+  "authorization": {
+    "source": "Direct user reply 授权 to the reviewed three-transaction deployment request",
+    "transactions": 3,
+    "plan_sha256": "cc6ee0e0ae781765f35e9ae5bd39cfa7088430e560e43bbe59006baaabfc8bd6",
+    "first_anchor_batch": false,
+    "enable_background": false
+  },
+  "chain_id": 1439,
+  "block_number": 143820651,
+  "owner": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+  "anchorer": "0xEB43623667f1Add616D0FbdEBbbE067a0F195F79",
+  "owner_balance_INJ": "0.6354705",
+  "owner_nonce": 33,
+  "pending_nonce": 33,
+  "predicted_contract": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+  "deploy_estimated_gas": "862255",
+  "fee_cap_wei": "320000000",
+  "conservative_three_transaction_fee_allowance_INJ": "0.0004039216",
+  "approved_version": {
+    "policy_hash": "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+    "code_commit": "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
+    "model_id": "x-test-2",
+    "version_id": "0xa365b230c8fec402b51d3291f3cd1623da1f93acc674515d471171be0558d49a"
+  },
+  "artifact_creation_keccak256": "0x1c495f69537a30c00e4014c5e52d99a78d0d1c339e88417f98a0ac2284df07e5",
+  "artifact_runtime_keccak256": "0xd640be8fcc656a2c8f1f5aa288f60de77356b202edafd051ade992130943167b",
+  "source_manifest_verified": 465,
+  "protected_files_verified": 9,
+  "registry_before_sha256": "30b051739224f385bf22d357594a6a41bf8bcb9da7a72b5baf44eec0fdb5f7b0",
+  "existing_contracts": {
+    "AgentBLRWA": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+    "PaymentOracle": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+    "EBLRegistry": "0x8152FE274497C84850Ce79822feA3B885295cf53",
+    "RWAToken": "0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C",
+    "RWAOfferingPool": "0x38c52c33FEC5cc430f19F573768671c47E63b310",
+    "RiskPricingOracle": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC"
+  },
+  "protected_pool_2": {
+    "state": "6",
+    "issue_price_e6": "791000"
+  },
+  "anchor_enabled": false,
+  "existing_deployment_checkpoints": [],
+  "broadcasts": 0
+}

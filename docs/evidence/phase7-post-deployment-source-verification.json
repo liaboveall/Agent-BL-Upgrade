@@ -1,0 +1,26 @@
+{
+  "schema": "agentbl-phase7-post-deployment-source-verification-v1",
+  "checked_at": "2026-10-15T05:46:19.316Z",
+  "status": "PASS",
+  "historical_manifest": "phase7-source-candidate.json",
+  "historical_manifest_files": 465,
+  "unchanged_manifest_files": 463,
+  "expected_changes": [
+    {
+      "file": "public/chain-config.json",
+      "before_sha256": "30b051739224f385bf22d357594a6a41bf8bcb9da7a72b5baf44eec0fdb5f7b0",
+      "after_sha256": "e22fd9fa207dde5d46287af2c76d49a9c3ee2d0eb20fc09b86a9992be6541540"
+    },
+    {
+      "file": "tests/verifyBytecode.test.js",
+      "before_sha256": "190dc407e8c5c3e5adbf743a018a7c937a4439abc7762d880752e9c9e3537752",
+      "after_sha256": "bd1d4db292cf09fd128a6e4717dc24defa07b429bfac2ab79594343834befe0a"
+    }
+  ],
+  "unapproved_changes": [],
+  "runtime_source_commit": "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
+  "runtime_source_commit_matches_registered_plan": true,
+  "protected_solidity_sources_unchanged": 8,
+  "baseline_dirty_paths_preserved": 376,
+  "background_anchor_enabled": false
+}

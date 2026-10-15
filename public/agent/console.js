@@ -10,6 +10,10 @@ import { agent, safeExplorerUrl } from './api.js';
 import { approvalControls, renderApprovalsPanel } from './approvals.js';
 import { showDecisionDetail } from './decision-detail.js';
 import { renderInjector } from './injector.js';
+import { renderSettlementIntake } from './settlement.js';
+import { watcherStatus } from './chain-watcher.js';
+import { renderReferences } from './references.js';
+import { loadDemoCatalog, renderDemoPlayback } from './demo.js';
 import { badge, copyButton, formatTime, kv, modeBadge, shortId, statusBadge, verdictBadge } from './ui.js';
 
 const POLL_MS = 10_000;
@@ -74,7 +78,7 @@ function statusCard(status) {
         badge(`${role} ${info.configured ? '✓' : '—'}`, info.configured ? 'tone-ok' : 'tone-muted')))),
       kv(t('ac_pending'), t('ac_pending_value', { pending: status.pending_approvals, owner: status.awaiting_owner_signature })),
       kv(t('ac_emergency'), status.emergency_stop ? badge(t('ac_emergency_on'), 'tone-err') : badge(t('ac_emergency_off'), 'tone-muted')),
-      status.last_error ? kv(t('ac_last_error'), el('span', { class: 'ac-error' }, status.last_error.message)) : null));
+      status.last_error ? kv(t('ac_last_error'), el('span', { class: 'ac-error' }, status.last_error.message)) : null), watcherStatus(status));
 }
 
 function controlsCard(status) {
@@ -93,15 +97,16 @@ function controlsCard(status) {
   const select = el('select', { id: 'ac-autonomy', class: 'ac-select', 'aria-label': t('ac_autonomy') },
     ['off', 'observe', 'propose', 'auto'].map((level) => el('option', { value: level, selected: level === (status?.autonomy.effective ?? 'propose') }, t(`ac_autonomy_${level}`))));
   select.addEventListener('change', () => run({ action: 'set_autonomy', autonomy: select.value }, 'ac_autonomy_set'));
+  const localStopped = status?.emergency_stop_sources?.local ?? status?.emergency_stop;
   root.append(
     el('header', { class: 'ac-panel-head' }, el('h3', {}, t('ac_controls_h'))),
     el('div', { class: 'ac-actions ac-wrap' },
       el('button', { class: 'btn ghost', type: 'button', 'data-focus-key': 'control:running', onclick: () => run({ action: status?.running ? 'stop' : 'start' }, status?.running ? 'ac_stopped_toast' : 'ac_started_toast') }, status?.running ? t('ac_stop') : t('ac_start')),
       el('button', { class: 'btn ghost', type: 'button', 'data-focus-key': 'control:tick', onclick: () => run({ action: 'tick' }, 'ac_tick_toast') }, t('ac_tick')),
       el('button', {
-        class: `btn ${status?.emergency_stop ? '' : 'ghost'} ac-danger`, type: 'button', 'data-focus-key': 'control:emergency',
-        onclick: () => run({ action: 'emergency_stop', stopped: !status?.emergency_stop }, status?.emergency_stop ? 'ac_emergency_lifted' : 'ac_emergency_set')
-      }, status?.emergency_stop ? t('ac_emergency_lift') : t('ac_emergency_stop'))),
+        class: `btn ${localStopped ? '' : 'ghost'} ac-danger`, type: 'button', 'data-focus-key': 'control:emergency',
+        onclick: () => run({ action: 'emergency_stop', stopped: !localStopped }, localStopped ? 'ac_emergency_lifted' : 'ac_emergency_set')
+      }, localStopped ? t('ac_emergency_lift') : t('ac_emergency_stop'))),
     el('label', { class: 'ac-field', for: 'ac-autonomy' }, el('span', {}, t('ac_autonomy')), select),
     el('p', { class: 'muted ac-small' }, status?.mode === 'live' ? t('ac_live_note') : t('ac_demo_note')));
 }
@@ -128,19 +133,20 @@ function txCell(decision) {
 function timelineRow(decision) {
   const row = el('div', {
     class: `ac-row${decision.decision_id === view.openDecisionId ? ' is-open' : ''}`, role: 'listitem',
-    onclick: (event) => { if (!event.target.closest('button, a')) openDrawer(decision.decision_id); }
+    onclick: (event) => { if (!event.target.closest('button, a, details')) openDrawer(decision.decision_id); }
   },
   el('span', { class: 'ac-row-time' }, formatTime(decision.created_at)),
   el('span', { class: 'ac-row-trigger' },
     el('span', {}, triggerLabel(decision)),
+    el('span', { class: 'muted ac-small' }, t('ac_trigger_source', { source: decision.input_snapshot?.source ?? (decision.event_type === 'DOCUMENTS_INGESTED' ? 'ingest' : '—') })),
     el('span', { class: 'muted ac-small' }, decision.case_id),
-    el('span', { class: 'ac-row-badges' }, modeBadge(decision.mode), view.protectedCases.has(decision.case_id) ? badge(t('ac_protected'), 'tone-warn', t('ac_protected_hint')) : null)),
+    el('span', { class: 'ac-row-badges' }, modeBadge(decision.input_snapshot?.source_mode ?? decision.mode), view.protectedCases.has(decision.case_id) ? badge(t('ac_protected'), 'tone-warn', t('ac_protected_hint')) : null)),
   el('span', { class: 'ac-row-action' }, el('button', { type: 'button', class: 'ac-row-open', 'data-focus-key': `decision:${decision.decision_id}`,
     'aria-label': t('ac_open_decision', { action: decision.action, case: decision.case_id }), onclick: () => openDrawer(decision.decision_id) }, el('strong', {}, decision.action)),
   decision.proposed_action && decision.proposed_action !== decision.action ? el('span', { class: 'muted ac-small' }, `(${decision.proposed_action})`) : null),
   el('span', { class: 'ac-row-state' }, verdictBadge(decision.policy?.verdict), statusBadge(decision.status)),
   el('span', { class: 'ac-row-tx' }, txCell(decision)),
-  el('span', { class: 'ac-row-id' }, el('code', {}, shortId(decision.decision_id, 11, 4)), copyButton(decision.decision_id)));
+  el('span', { class: 'ac-row-id' }, el('code', {}, shortId(decision.decision_id, 11, 4)), copyButton(decision.decision_id), renderReferences(decision.references)));
   return row;
 }
 
@@ -268,6 +274,8 @@ function render() {
 function renderPanels() {
   statusCard(view.status);
   controlsCard(view.status);
+  const demo = $('#ac-demo');
+  if (demo) renderDemoPlayback(demo, view.status, refresh);
   const approvalsRoot = $('#ac-approvals');
   if (approvalsRoot) {
     renderApprovalsPanel(approvalsRoot, view.decisions, {
@@ -278,8 +286,9 @@ function renderPanels() {
   }
   const injector = $('#ac-injector');
   if (injector) {
-    injector.hidden = view.status?.mode !== 'demo';
-    if (!injector.hidden) {
+    injector.hidden = !view.status;
+    if (view.status?.mode === 'live') renderSettlementIntake(injector, { cases: view.cases, status: view.status, onSubmitted: refresh });
+    else if (!injector.hidden) {
       renderInjector(injector, {
         cases: view.cases,
         selectedCaseId: view.selectedCase,
@@ -317,6 +326,8 @@ function closeStream() {
 export async function showAgentConsole() {
   view.active = true;
   view.renderSnapshot = null;
+  // Cached panels may belong to a different language; update them before awaiting fresh data.
+  if (view.status) render();
   const drawer = drawerElement();
   if (drawer && !view.wired) {
     view.wired = true;
@@ -325,6 +336,7 @@ export async function showAgentConsole() {
   }
   statusCard(null);
   await loadCases();
+  await loadDemoCatalog().catch(() => {});
   await refresh();
   openStream();
   clearInterval(view.pollTimer);

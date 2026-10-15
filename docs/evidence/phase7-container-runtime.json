@@ -1,0 +1,32 @@
+{
+  "phase": 7,
+  "passed": true,
+  "node": "v22.23.3",
+  "platform": "linux",
+  "mode": "demo",
+  "anchoring": {
+    "enabled": false,
+    "mode": "demo",
+    "finalized": 0,
+    "batches": 0,
+    "last_seq": 0,
+    "last_batch_status": null,
+    "version": {
+      "policy_hash": "0xfaf3e777168e26b15718b81f77b79e7c2a30c968cbfafae143537f91c2540ce3",
+      "code_commit": "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
+      "model_id": "x-test-2",
+      "version_id": "0xa365b230c8fec402b51d3291f3cd1623da1f93acc674515d471171be0558d49a"
+    },
+    "last_error": null,
+    "interval_sec": 3600
+  },
+  "network": "none",
+  "read_only": true,
+  "real_transactions": 0,
+  "real_provider_calls": 0,
+  "image_tag": "agentbl-phase7-local:20261015",
+  "image_id": "sha256:35c6cd8530d5df0d8853292e6749ba2e6c81b37e5204b85fe9c5fcd84647585b",
+  "runtime_source_matches_host_plan": true,
+  "published": false,
+  "container_removed": true
+}

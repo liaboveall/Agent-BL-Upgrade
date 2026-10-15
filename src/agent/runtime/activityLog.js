@@ -10,8 +10,10 @@
 // `explorer_url` are copied through as given, `reference` holds `demo:` identifiers.
 
 import crypto from 'node:crypto';
+import { sanitizeAudit } from '../security/privacy.js';
+import { pruneJsonl, retainRecords } from './retention.js';
 import { promises as fs } from 'node:fs';
-import { appendJsonl, createWriteQueue, readJsonl, writeFileAtomic } from '../../lib/jsonStore.js';
+import { appendJsonl, createWriteQueue, readJson, readJsonl, writeFileAtomic, writeJsonAtomic } from '../../lib/jsonStore.js';
 
 const MAX_MEMORY = 1000;
 
@@ -57,10 +59,11 @@ export class ActivityLog {
     if (maxFileBytes) this.maxFileBytes = maxFileBytes;
     if (keepFiles !== undefined) this.keepFiles = keepFiles;
     const saved = await readJsonl(file, { tail: this.maxMemory, includeRotated: true, keepFiles: this.keepFiles });
-    const lastOnDisk = saved.reduce((max, record) => Math.max(max, Number(record.seq) || 0), 0);
+    const checkpoint = await readJson(`${file}.sequence.json`, { seq: 0 });
+    const lastOnDisk = saved.reduce((max, record) => Math.max(max, Number(record.seq) || 0), Number(checkpoint.seq) || 0);
     const early = this.buffer.splice(0, this.buffer.length);
     this.seq = lastOnDisk;
-    this.buffer.push(...saved);
+    this.buffer.push(...saved.map((record) => sanitizeAudit(record)));
     for (const record of early) {
       this.seq += 1;
       record.seq = this.seq;
@@ -86,7 +89,7 @@ export class ActivityLog {
       id: `activity-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
       timestamp: this.now().toISOString(),
       mode: this.currentMode(),
-      ...activity,
+      ...sanitizeAudit(activity),
       seq: this.seq
     };
     this.buffer.push(record);
@@ -141,6 +144,18 @@ export class ActivityLog {
     await this.flush();
     const fromDisk = await readJsonl(this.file, { filter: matches, includeRotated: true, keepFiles: this.keepFiles });
     return fromDisk.slice(0, limit);
+  }
+
+  async prune(options) {
+    const watermark = this.seq;
+    return this.enqueueWrite(async () => {
+      // Persist the high-water mark BEFORE cleanup so a crash cannot reuse an expired SSE id.
+      if (this.file) await writeJsonAtomic(`${this.file}.sequence.json`, { seq: watermark });
+      const kept = this.file ? await pruneJsonl(this.file, this.keepFiles, { ...options, timestamp: 'timestamp' })
+        : retainRecords(this.buffer, { ...options, timestamp: 'timestamp' });
+      const appended = this.buffer.filter((record) => record.seq > watermark);
+      this.store.agentActivities = [...kept, ...appended].slice(-this.maxMemory);
+    });
   }
 
   /** Forget every record of one mode (Demo reset). Live records are never touched. */

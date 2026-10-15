@@ -24,7 +24,7 @@ const npmCli = process.env.npm_execpath && /npm-cli\.c?js$/u.test(process.env.np
   : null;
 const npm = npmCli ?? (process.platform === 'win32' ? 'npm.cmd' : 'npm');
 const results = [];
-const EXPECTED_CHECKS = 61;
+const EXPECTED_CHECKS = 71;
 const { values: options } = parseArgs({ options: { report: { type: 'string' } } });
 
 function result(group, name, status, detail = '') {
@@ -57,13 +57,13 @@ const withoutLiveSettings = (testRunner = false) => ({ ...Object.fromEntries(Obj
   // Node sets its own marker inside test workers. Setting it on the test runner would suppress every test.
   ...(!testRunner ? { NODE_TEST_CONTEXT: 'preflight-offline' } : {}), DEMO_MODE: 'true', LLM_PROXY_ENABLED: 'false' });
 
-async function command(group, name, binary, args, cwd = root, env = process.env) {
+async function command(group, name, binary, args, cwd = root, env = process.env, timeoutMs = 180_000) {
   const viaNode = binary === npmCli;
   try {
     const { stdout, stderr } = await execFileAsync(viaNode ? process.execPath : binary, viaNode ? [binary, ...args] : args, {
       cwd,
       env,
-      timeout: 180_000,
+      timeout: timeoutMs,
       maxBuffer: 12 * 1024 * 1024,
       windowsHide: true,
       // node.exe often lives under "Program Files": execFile handles that path without a shell.
@@ -145,9 +145,10 @@ const nodeTests = await command(
   'Executable suites',
   'Full Node unit/integration suite',
   npm,
-  ['test', '--', '--test-concurrency=4'],
+  ['test'],
   root,
-  withoutLiveSettings(true)
+  withoutLiveSettings(true),
+  600_000 // Full integration suite on a Windows/WSL-mounted checkout; individual assertions are unchanged.
 );
 // The exit code already decides pass/fail; this also reads the summary line (TAP "# fail N",
 // spec reporter "ℹ fail N") so a runner that exits 0 while reporting failures is still caught.
@@ -166,8 +167,8 @@ check('Executable suites', 'Critical JavaScript modules imported', true, 'server
 
 // 26-31: MCP business tools
 console.log('\n[MCP tools]');
-check('MCP tools', 'MCP manifest exposes exactly 9 tools + 3 resources',
-  MCP_TOOLS_MANIFEST.length === 9 && MCP_RESOURCES.length === 3);
+check('MCP tools', 'MCP manifest exposes exactly 15 tools + 5 resources',
+  MCP_TOOLS_MANIFEST.length === 15 && MCP_RESOURCES.length === 5);
 await mcpCheck('get_trade_case', { case_id: 'CASE-EBL-2026-0001' });
 await mcpCheck('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
 await mcpCheck('search_knowledge_base', { query: 'copper war risk' });
@@ -190,6 +191,34 @@ try {
   check('HTTP and x402', 'One-click demo reset', runtimeMode.demoMode ? reset.response.ok : reset.response.status === 409);
   const catalog = await getJson(`${api}/api/x402/config`);
   check('HTTP and x402', 'x402 catalog returns four reports', catalog.body.services?.length === 4);
+
+  const post = (path, body, headers = {}) => getJson(`${api}${path}`, { method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  const agentStatus = await post('/api/mcp/call', { tool: 'get_agent_status' });
+  const preview = await post('/api/mcp/call', { tool: 'submit_agent_event', params: {
+    event: { type: 'CARGO_DEPARTED', case_id: demoCase.case_id, data: {} } } });
+  const agentAfter = await post('/api/mcp/call', { tool: 'get_agent_status' });
+  check('Interop', 'MCP runtime adapter reads status and defaults events to a side-effect-free dry-run',
+    agentStatus.body.result?.mode === runtimeMode.mode && preview.body.result?.dry_run === true && preview.body.result?.submitted === false
+      && JSON.stringify(agentStatus.body.result?.queue) === JSON.stringify(agentAfter.body.result?.queue));
+  const agentCard = await getJson(`${api}/.well-known/agent-card.json`);
+  const legacyCard = await getJson(`${api}/.well-known/agent.json`);
+  check('Interop', 'A2A 1.0 Agent Card and compatibility alias advertise only the implemented interface',
+    agentCard.response.ok && JSON.stringify(agentCard.body) === JSON.stringify(legacyCard.body)
+      && agentCard.body.supportedInterfaces?.[0]?.protocolVersion === '1.0'
+      && agentCard.body.skills?.[0]?.id === 'delegate_pricing' && agentCard.body.capabilities?.streaming === false);
+  const discovery = await getJson(`${api}/api/x402/discovery`);
+  check('Interop', 'Bazaar declarations cover the four services with mode-correct payment requirements',
+    discovery.response.ok && discovery.body.items?.length === 4 && discovery.body.items.every((item) =>
+      item.extensions?.bazaar?.info?.input?.method === 'POST'
+      && (runtimeMode.demoMode ? item.accepts?.length === 0 : item.accepts?.[0]?.scheme === 'exact')));
+  const delegated = await post('/api/agent/delegate-pricing', { case_id: demoCase.case_id });
+  const a2aQuote = await post('/api/a2a', { jsonrpc: '2.0', id: 'preflight-pricing', method: 'SendMessage',
+    params: { message: { messageId: 'preflight-pricing', role: 'ROLE_USER', parts: [{ data: { case_id: demoCase.case_id } }] } } }, { 'A2A-Version': '1.0' });
+  check('Interop', 'HTTP and A2A delegation return the same canonical quote without payment or execution',
+    delegated.body.ok === true && delegated.body.authorization?.chain_action_executed === false
+      && delegated.body.authorization?.payment_executed === false
+      && a2aQuote.body.result?.message?.parts?.[0]?.data?.quote?.quote_hash === delegated.body.quote?.quote_hash);
 
   for (const service of X402_SERVICES) {
     // Demo answers an unpaid GET with 402. Live (x402 V2) only accepts POST (GET gets 405) and answers an unpaid
@@ -280,6 +309,8 @@ await command('Agent release gates', 'Agent reliability fault matrix', process.e
 await command('Agent release gates', 'Three Demo Agent stories including approved settlement', process.execPath, ['scripts/agent-demo-check.mjs'], root, withoutLiveSettings());
 const evaluationCheck = await command('Agent release gates', 'Measured deterministic Agent quality thresholds', npm, ['run', 'eval:agent', '--', '--check'], root, withoutLiveSettings());
 await command('Agent release gates', 'No fabricated transactions, activity or capabilities', process.execPath, ['--test', 'tests/noFabrication.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Decision anchor proofs, terminal approvals, durable sequences and restart recovery', process.execPath, ['--test', 'tests/agentAnchoring.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Anchor chain reconciliation, shared signer queue and deployment dry-run safety', process.execPath, ['--test', 'tests/agentAnchorChain.test.js'], root, withoutLiveSettings(true));
 
 // 52-56: UI acceptance hooks
 console.log('\n[UI acceptance]');
@@ -292,7 +323,12 @@ check('UI acceptance', 'Paid report market tab and pipeline', html.includes('vie
 check('UI acceptance', 'priceFlash/riskPulse/paymentFlow hooks', /priceFlash/u.test(css) && /riskPulse/u.test(css) && /particleFlow/u.test(css));
 check('UI acceptance', 'Reduced-motion safety rule', /prefers-reduced-motion:\s*reduce/u.test(css));
 
-// 57-61: live readiness and documentation consistency
+await command('Agent release gates', 'Generated redteam corpus detects all seeded mutations', process.execPath, ['scripts/agent-redteam.mjs'], root, withoutLiveSettings());
+await command('Agent release gates', 'Evidence freshness and read-only decision replay', process.execPath, ['--test', 'tests/agentPhase5.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Audit privacy, encrypted recovery and retention', process.execPath, ['--test', 'tests/agentPrivacy.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Live smoke is read-only by default and fails closed', process.execPath, ['--test', 'tests/agentLiveSmoke.test.js'], root, withoutLiveSettings(true));
+
+// 61-65: live readiness and documentation consistency
 console.log('\n[Live readiness]');
 if (!runtimeMode.demoMode && x402Config?.facilitatorUrl) {
   await liveHttpCheck('Facilitator /supported is reachable', `${x402Config.facilitatorUrl}/supported`);
