@@ -4,7 +4,7 @@
   "status": "PASS_SELECTED_DEVELOPMENT_SCOPE",
   "scope": "Implementation plan section 13: Phase 0-6 and selected WP7.1; excludes deferred roadmap and remaining real-provider/owner/human acceptance",
   "base_commit": "9cefb50519aefdd2b1774036fd048cbfb27859ad",
-  "commit_and_remote_ci": "Pending at recording time; user explicitly authorized commit and push. Exact delivered SHA and its CI result are reported after pushing.",
+  "commit_and_remote_ci": "Implementation committed and pushed as 4268562225749127b740f632a0a85b60f1cb52df. First remote CI found missing application dependencies in the isolated contract job; workflow-only correction is being verified in a follow-up commit. Exact final SHA and CI are reported after pushing.",
   "verification": {
     "node": {
       "tests": 1259,
@@ -94,7 +94,8 @@
     "model": "x-test-2",
     "historical_registered_code_commit": "0x949c2be11c9a9fe81e4bffad490e1b3867b39c1ac4c0dda62069271ede35820f",
     "new_code_registration_performed": false,
-    "original_contracts_and_registry": "final-acceptance-20261015-protected-source.json"
+    "original_contracts_and_registry": "final-acceptance-20261015-protected-source.json",
+    "ci_followup_delta": "final-acceptance-20261015-ci-source-delta.json"
   },
   "review_fixes": [
     "stateless API vision switch",

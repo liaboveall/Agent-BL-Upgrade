@@ -74,8 +74,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-          cache-dependency-path: hardhat/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            hardhat/package-lock.json
       - run: npm ci
+      - name: Install application dependencies for shared proof verification
+        run: npm --prefix .. ci --omit=dev --ignore-scripts
       - run: npm test
 
   docker:

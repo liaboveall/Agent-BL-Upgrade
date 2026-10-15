@@ -1,0 +1,136 @@
+
+> agentbl-contracts@0.1.0 test
+> hardhat test
+
+No contracts to compile
+
+Running Solidity tests
+
+
+Running Mocha tests
+
+
+  AgentDecisionLog append-only decision commitments
+    ✔ only the owner registers immutable versions and role permissions (47ms)
+    ✔ rejects empty version metadata, zero role addresses and unknown versions
+    ✔ requires the explicit anchorer role, including for the owner, and permits revocation
+    ✔ commits exact continuous ranges and events without duplicate or skipped sequences
+    ✔ rejects empty roots, mismatched counts, reversed ranges and batches over 256
+    ✔ verifies JavaScript-generated proofs on the real local contract (1 leaves)
+    ✔ verifies JavaScript-generated proofs on the real local contract (3 leaves)
+    ✔ verifies JavaScript-generated proofs on the real local contract (256 leaves) (41ms)
+    ✔ ownership transfer preserves batch history and does not implicitly grant the new owner an anchorer role
+    ✔ deployment defaults to zero broadcasts and needs no signer, network, keys or filesystem
+    ✔ deploys and initializes locally, merges only the new contract, verifies bytecode and resumes without retransmission (59ms)
+
+  AgentBLRWA (browser demo contract)
+    ✔ tokenizes an eBL, mints RWA = floor(financing*1e6/price) to the caller
+    ✔ caps minted RWA at tokenSupply when financing exceeds it
+    ✔ increments poolId per tokenize call
+    ✔ reprices an offering on an in-transit event and emits Repriced
+    ✔ rejects price=0 / supply=0 and reprice on a missing pool
+
+  RWAOfferingPool hardening
+    collateral: one eBL backs one live offering
+      ✔ refuses a second offering on an eBL that already backs a live one (59ms)
+      ✔ frees the eBL when an unsubscribed offering is cancelled, so it can be offered again (55ms)
+      ✔ releases the pledge when an offering is repaid, so the eBL can move again (61ms)
+      ✔ still settles when the registry owner already released the pledge, and reports it (62ms)
+      ✔ stops selling shares once the eBL is no longer pledged to the pool (51ms)
+    pricing bounds
+      ✔ never lets the oracle price an offering above its target redemption value (50ms)
+      ✔ REPRICE_DOWN has to lower the price (53ms)
+      ✔ allows a recovery: an OPEN action may raise a repriced offering again, up to the target (55ms)
+      ✔ rejects an out-of-range risk level at the oracle and a zero pool (49ms)
+    settlement
+      ✔ refuses proofs and settlement for an offering nobody subscribed to (52ms)
+      ✔ lets only the owner correct a mistaken importer payment, and keeps the audit trail (63ms)
+      ✔ validates a correction (54ms)
+      ✔ records the departure proof and the oracle / token wiring in the event log (47ms)
+    cancelOffering
+      ✔ is owner-only and needs an existing offering (41ms)
+      ✔ cannot cancel an offering that already has subscribers (39ms)
+      ✔ works from Open, Repriced and Paused, also during a global emergency stop (71ms)
+      ✔ rejects a second cancel and any state that is not cancellable (53ms)
+    documented limitation
+      ✔ subscribe records an amount owed but holds no funds (no payment leg yet) (40ms)
+
+  EBLRegistry hardening
+    ✔ registers a legacy document only once, whoever holds it
+    ✔ only the owner can register eBLs, and a V2 cargo hash can never be registered twice (39ms)
+    ✔ only the holder can transfer or endorse, never while pledged, and never to a bad recipient (58ms)
+
+  PaymentOracle ownership
+    ✔ hands the contract over in two steps and moves the attestor role with it (55ms)
+    ✔ keeps an explicitly authorised attestor across an ownership transfer
+
+  two-step ownership of the protocol contracts
+    ✔ registry: a transfer completes only when the nominee accepts (45ms)
+    ✔ token: a transfer completes only when the nominee accepts (42ms)
+    ✔ pool: a transfer completes only when the nominee accepts (44ms)
+    ✔ oracle: a transfer completes only when the nominee accepts (39ms)
+    ✔ gate: a transfer completes only when the nominee accepts (38ms)
+    ✔ a nomination can be replaced before it is accepted
+    ✔ the new pool owner takes over the administrative powers (44ms)
+    ✔ the oracle updater role moves with ownership, like the deployer role it started as
+
+  AgentBLRWA hardening
+    ✔ only the wallet that tokenized an offering can reprice it
+    ✔ rejects out-of-range actions, risk levels and scores when repricing
+    ✔ rejects out-of-range risk inputs when tokenizing
+
+  AgentBL contracts
+    ✔ creates an offering and opens it (39ms)
+    ✔ lets an arbitrary testnet investor subscribe and mints RWA shares
+    ✔ keeps testnet access permissionless by default
+    ✔ writes evidence and quote hash on PricingUpdated and reprices the pool
+    ✔ drives the pool into liquidation on a critical action
+    ✔ rejects pricing updates from non-updaters
+
+  deploy-protocol.js smoke sequence
+    ✔ testnet smoke keeps the repriced offering price when PAUSE commits a lower risk quote (48ms)
+    ✔ create -> subscribe -> reprice -> pause -> resume -> settle ends Repaid at the repriced issue price (60ms)
+
+  EBLRegistry V2
+    ✔ registers one unique cargo with structured trade metadata
+    ✔ rejects duplicate cargoHash while accepting a distinct cargo
+    ✔ records ordered transfer and endorsement history
+    ✔ locks transfers while pledged and releases custody safely
+    ✔ prevents an offering from opening before the eBL is pledged to that pool
+
+  RWAOfferingPool vs. reference model (randomised)
+    ✔ agrees with the model on seed 11 (1610ms)
+    ✔ agrees with the model on seed 22 (1660ms)
+    ✔ agrees with the model on seed 33 (1335ms)
+    ✔ agrees with the model on seed 44 (910ms)
+    ✔ agrees with the model on seed 55 (1987ms)
+    ✔ agrees with the model on seed 66 (1693ms)
+      states reached: Cancelled, Frozen, Funded, InTransit, Liquidation, Open, Paused, Repaid, Repriced, Subscribed
+    ✔ the random walks actually reached the interesting states and rejections
+
+  RWAOfferingPool autonomous state machine (WEB3-15/16)
+    ✔ allows permissionless testnet subscriptions but enforces a pluggable production gate (54ms)
+    ✔ lets only an authorized executor pause and resume the exact prior state (41ms)
+    ✔ resumes a paused offering through the oracle RESUME_OFFERING action (40ms)
+    ✔ requires payment and arrival proofs before settlement and rejects duplicates (50ms)
+    ✔ settles a fully funded offering and records an ordered legal lifecycle (46ms)
+    ✔ global emergency stop blocks autonomous and investor actions while preserving human pause (45ms)
+    ✔ rejects executor impersonation, illegal transitions and repayment mismatch (51ms)
+    ✔ rejects replaying one oracle decision (43ms)
+
+  PaymentOracle
+    ✔ binds report, case, original payment transaction, payer, asset and amount
+    ✔ rejects a duplicate receipt id
+    ✔ rejects replaying an original payment tx under a different receipt
+    ✔ rejects zero receipt, report, case and payment transaction hashes
+    ✔ rejects zero payer and asset addresses
+    ✔ rejects a zero payment amount
+    ✔ rejects unauthorised callers and supports owner-managed attestors
+    ✔ only lets the owner manage attestors and exposes unknown-receipt failure
+
+
+  86 passing (12s)
+
+
+86 passing (86 mocha)
+
