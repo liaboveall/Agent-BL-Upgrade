@@ -11,7 +11,7 @@ const { artifacts } = hre;
 const { ethers, networkName } = await hre.network.create();
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const EXPLORER = 'https://testnet.blockscout.injective.network';
-const EXPLORER_API = 'https://testnet.blockscout-api.injective.network/api';
+const EXPLORER_API = 'https://testnet.blockscout.injective.network/api';
 const RPC_URL = process.env.INJECTIVE_RPC_URL || 'https://k8s.testnet.json-rpc.injective.network';
 const DEPLOY_OVERRIDES = Object.freeze({ gasLimit: 6_000_000n });
 const CALL_OVERRIDES = Object.freeze({ gasLimit: 1_000_000n });
@@ -195,7 +195,7 @@ async function main() {
     wsUrls: ['wss://k8s.testnet.ws.injective.network/'],
     cosmosRpcUrl: 'https://testnet.sentry.tm.injective.network:443',
     explorerBase: EXPLORER,
-    explorerApi: 'https://testnet.blockscout-api.injective.network/api',
+    explorerApi: 'https://testnet.blockscout.injective.network/api',
     accessModel: 'permissionless',
     contracts: { ...activeBefore.contracts, ...addresses },
     abis,

@@ -55,26 +55,8 @@ API 模型默认统一为 **`x-test-2`**。Agent、文档视觉/补全、Copilot
 
 未知/伪造顶层字段、非数值金额、异常日期或过深结构返回 400；错误方法 405；非 JSON 或字节/声明类型不符 415；体积超限 413；缺少可定价输入 422；限流/并发返回 429 并附 `Retry-After`。同时保留服务器通用读写限流、代理来源规则和 `Cache-Control: no-store`。
 
-## 本地验证与复现
+## 测试
 
-```bash
+```text
 node --test tests/agentStatelessApi.test.js tests/llmProjectModel.test.js
-npm run lint
-npm test
-npm run test:coverage
-npm run check
-npm run preflight
 ```
-
-浏览器使用隔离服务器，不加载开发者 `.env`，无真实提供方、密钥或 RPC；仅本地模型桩验证请求体 `model`。先启动，再将输出 URL 传给 runner：
-
-```bash
-node scripts/agent-api-acceptance-server.mjs
-node scripts/agent-api-acceptance-runner.mjs --url http://127.0.0.1:<printed-port> --playwright-module <installed-playwright/index.mjs> --browser-executable <installed-chromium>
-```
-
-本地验证：54 项新增行为测试通过；全量覆盖率执行 1115/1115，行 94.65% / 分支 84.00% / 函数 92.13%。API 核心及路由行/函数覆盖率均为 100%。中英 × 1440/390px 共 54 项浏览器检查通过，Windows 本机入口返回模型 x-test-2。Lint 与完整性检查通过。最终发布总闸门为 56 PASS / 0 WARN / 5 Live SKIP / 0 FAIL，合约测试 74/74。
-
-证据：[本地工程验收](evidence/agent-api-local.json)、[浏览器验收](evidence/agent-api-browser.json)、[发布总闸门](evidence/agent-api-preflight.json)；[首轮测试失败](evidence/agent-api-test-attempt1.json)、[首次 Lint 失败](evidence/agent-api-lint-attempt1.json) 和前一浏览器通过快照均保留。首次发布闸门因隔离命令误设 `X402_MODE=mock` 而失败，保留 [原始失败报告](evidence/agent-api-preflight-attempt1.json)；改用 `demo` 后通过，没有修改产品逻辑来绕过失败。桌面控制工具在初始化前报 `sandboxCwd is not a local file URI`，本轮使用本机 Chromium；内置窗格操作、真实提供方支持/准确率、实际链上写入和用户人工验收各自未确认。
-
-下一入口 **WP4.4 ID 贯通**，随后 WP4.5 一键演示。建议提交分组：① `feat(agent): expose stateless PRD analysis APIs`；② `fix(llm): use x-test-2 across project API callers`；③ `test(agent): record stateless API acceptance`。本轮不提交、不推送，保留此前改动与失败记录。

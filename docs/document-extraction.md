@@ -30,36 +30,8 @@
 
 布局重建支持普通行和有横向间隔的表格列；复杂排版、旋转阅读顺序、缺少字体映射、文本层与扫描图像不一致不保证正确。页内行号指重建文本行，可能和 PDF 阅读器的视觉换行不同。置信度是规则分数，没有被解释成现实准确率。
 
-## 本地验收结果
+## 测试
 
-最终应用测试 **943/943**；覆盖率 **lines 94.11% / branches 83.11% / functions 91.60%**，高于 88/72/86 门槛；lint 零警告，仓库 check 通过。61 项 preflight 为 **56 PASS / 0 WARN / 5 SKIP / 0 FAIL**，其中合约 74 项通过，Live 五项明确跳过。浏览器 **118** 项通过，页面脚本错误为零。截图复查发现步骤状态漏翻译，保留原截图和 DOM 证据，补齐状态/缺字段翻译并扩大原先过窄的翻译检查。
-
-2026-10-14 提交阶段补充 Windows 专项：初次 16/17 通过，仓单测试把文件 URL 的 `pathname` 当作本地路径，导致重复盘符和 ENOENT。改为 `fileURLToPath()` 后，Windows / Linux 均 17/17 通过，lint 仍为零警告；原阶段 JSON 保留初始快照，失败与修复后的独立证据见 [Windows 路径复验](evidence/document-extraction-windows-path.json)。
-
-## 复现与证据
-
-```bash
-node --test tests/documentExtraction.test.js tests/documentParser.test.js tests/documentConsistency.test.js tests/agentIngestPipeline.test.js
-npm run lint
-npm run check
-npm run test:coverage
+```text
+node --test tests/documentExtraction.test.js
 ```
-
-运行时兼容检查：`npm exec --yes --package=node@20.11.1 -- node --test tests/documentExtraction.test.js`（22/24 同理）。Alpine 可用 `python3 scripts/document-extraction-alpine-check.py` 复验，需要 Linux、Python 3.12+、bwrap 和网络；自动校验官方 rootfs、安装 Node、只读挂载源码，结束后删除临时 rootfs。
-
-浏览器使用独立、无需凭据的验收服务器（图片提供方固定为 **mock fixture**）：
-
-```bash
-node scripts/document-extraction-acceptance-server.mjs
-# 使用上一步打印的 URL：
-playwright-cli -s=agentbl-wp22 open <URL> --browser=msedge
-playwright-cli -s=agentbl-wp22 --raw run-code --filename=scripts/document-extraction-acceptance.playwright.js
-playwright-cli -s=agentbl-wp22 close
-# 在服务器终端 Ctrl+C，停止自己启动的服务器并清理临时运行时目录。
-```
-
-脚本生成确定性的实际 PDF 文件，通过真实文件输入上传，验证 PDF 数值/页码、扫描挂起、模拟视觉 75% 上限、中英切换、1440/390px、重复上传、修正补件重跑、缺字段提示及历史 HOLD 保留。CLI 文件选择器的模态状态会滞留，所以脚本只抑制原生选择器，仍点击真实复核按钮并通过真实 input 的 change 事件提交；它不证明原生文件选择器的人工操作。内置浏览器面板返回 queued，自动化交互在本机 Edge 完成。Windows curl 另外核对 WSL 服务器入口。
-
-验收结果见 [本地记录](evidence/document-extraction-local.json) 和 [浏览器记录](evidence/document-extraction-browser.json)。真实视觉/文本提供方、真实扫描 OCR、用户人工试用、远端 CI、提交、推送与部署均不能从这些本地检查推断。
-
-下一工作包为 **WP2.3 合规 v2**。本阶段建议单独提交 `feat(agent): extract PDF text and review model document fields`；未经用户要求不提交、不推送。

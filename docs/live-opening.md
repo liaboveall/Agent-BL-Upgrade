@@ -44,33 +44,10 @@ npm run agent:approve -- --id <审批号> --step 0 --attach-tx <交易哈希>
 
 半完成的审批到期后停止新增步骤，已核验记录仍保留。若三笔已核验而池映射写入失败，审批保持等待对账，页面隐藏新的发送命令；后续 tick 或重复回填最后一笔可完成映射，不重发。重启读取已核验的 eBL/pool bindings，不重新铸造。
 
-## 本地验证
-
-行为测试覆盖三步提案、真实 ABI 回执解码、元数据和事件篡改、既有铜身份、链不可用、owner/网络/状态不符、依赖编号、乱序、并发/重复回填、到期、模式切换、重启、映射检查点失败、CLI 广播不明与本地进程锁。
+## 测试
 
 ```text
 node --test tests/agentOpening.test.js tests/agentOpeningCli.test.js
-npm run lint
-npm run check
-npm test
-npm run test:coverage
-npm run eval:agent -- --check
-npm run preflight -- --report docs/evidence/opening-preflight.json
 ```
 
-浏览器复现使用隔离服务器，跳过开发者 `.env`，没有签名者、真实 RPC 或提供方；专用步骤接口只改变内存链桩，不包含在产品服务器中。
-
-```text
-node scripts/opening-acceptance-server.mjs
-playwright-cli -s=agentbl-wp24 open <输出的 URL> --browser=msedge
-playwright-cli -s=agentbl-wp24 --raw run-code --filename=scripts/opening-acceptance.playwright.js
-playwright-cli -s=agentbl-wp24 close
-```
-
-中英 × 1440px/390px 验证实际文件上传、待审批、逐步回执核验、默认 dry-run 命令、依赖提示、键盘展开、刷新保持进度、铜货只关联和横向溢出。截图均带隔离链桩标签。
-
-全量测试 **986/986**，零跳过/取消；覆盖率 lines **94.30%**、branches **83.60%**、functions **92.04%**，高于 88/72/86 门槛。lint/check 通过，确定性评测 **19/19** 阈值通过。Demo preflight 为 **56 PASS / 5 SKIP / 0 FAIL**，其中 Live 检查未执行。浏览器 **102/102** 项通过，页面脚本错误为零；Windows curl 确认隔离入口可访问。验收用 Playwright Chromium 153，复现命令支持 Edge；浏览器阻止外部请求。没有声称内置浏览器窗格控制或实体手机试用，隔离服务器已停止并清理临时目录。
-
-工程结果见 [本地记录](evidence/opening-local.json)、[浏览器记录](evidence/opening-browser.json)和 [Demo 发布闸门](evidence/opening-preflight.json)。首轮依赖提示隐藏在折叠参数内，[失败记录](evidence/opening-browser-first.json)保留；第二轮关联批准尚未完成即读取结果，[失败记录](evidence/opening-browser-second.json)保留；第三轮刷新后在初始化结束前点击导航，[失败记录](evidence/opening-browser-third.json)保留。最终脚本等待实际批准响应和初始化完成，检查条件保持不变。
-
-这些证据不覆盖真实 owner 签名/链上交易、人工用户试用、实体设备、远端 CI 或部署。后续 WP2.6 已在独立本地批次完成，见 [Live 结算指南](live-settlement.md)；当前下一入口为 WP2.7 链上监听。
+本地测试不覆盖真实 owner 签名/链上交易、人工用户试用、实体设备、远端 CI 或部署。

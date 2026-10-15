@@ -13,7 +13,7 @@ import { atomicJson, loadDotEnv, requiredEnv, waitBlockscoutTransaction } from '
 
 const root = path.resolve(import.meta.dirname, '..');
 const live = process.argv.includes('--live');
-const explorerApi = 'https://testnet.blockscout-api.injective.network/api/v2';
+const explorerApi = 'https://testnet.blockscout.injective.network/api/v2';
 const defaultAccount = '0xFf86f010D005d15bd43e1f254C12ACabEFae218d';
 
 await loadDotEnv(root);

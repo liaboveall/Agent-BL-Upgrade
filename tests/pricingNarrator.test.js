@@ -5,7 +5,7 @@ import { compareSpeeds } from '../src/core/pricingEngine.js';
 import { buildPricingNarrative, narratePricing } from '../src/agent/pricingNarrator.js';
 
 // BE-10: the demo narrator is deterministic-first; the LLM only rephrases and
-// must fall back to the grounded text on any error (so `npm run demo` never breaks).
+// must fall back to the grounded text on any error (so a CLI demo never breaks).
 
 const copperCase = JSON.parse(
   await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8')

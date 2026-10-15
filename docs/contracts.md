@@ -1,7 +1,7 @@
 # AgentBL Web3 Contract Interface
 
 状态：WEB3-1 ~ WEB3-4 设计冻结  
-命名来源：以 `docs/PRD.md` v0.2 和 `docs/tasks.md` 为准  
+命名来源：以 `docs/PRD.md` v0.2 为准  
 范围：先定义可被 JS contract mock、Hardhat 合约和前端共同复用的最小接口，不做公开募资、不做 AMM、不承诺保本收益。
 
 ## 0. 当前实现（v2）
@@ -12,7 +12,7 @@
 
 | 项目 | 状态 |
 |---|---|
-| 链上（Injective inEVM 测试网，chainId 1439） | 运行的是 **v2 字节码**：2026-10-12（UTC）重新部署，`npm run verify:bytecode` 确认六个合约都与本地构建一致；部署者与 owner 是 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，构造函数把它设为初始的 attestor / updater；服务器专用密钥已另行授权：attestor `0x0dAaa9093971eE7F0BD15f184E86C4fDAE6a1b70`、updater `0xEB43623667f1Add616D0FbdEBbbE067a0F195F79` |
+| 链上（Injective EVM 测试网，chainId 1439） | 运行的是 **v2 字节码**：2026-10-12（UTC）重新部署，`npm run verify:bytecode` 确认六个合约都与本地构建一致；部署者与 owner 是 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，构造函数把它设为初始的 attestor / updater；服务器专用密钥已另行授权：attestor `0x0dAaa9093971eE7F0BD15f184E86C4fDAE6a1b70`、updater `0xEB43623667f1Add616D0FbdEBbbE067a0F195F79` |
 | 本仓库源码 | 已包含 v2 加固（见 0.3），**已在链上生效**；之后再改合约仍需重新部署 |
 | 重新部署（未来另行授权） | 原六份当前不改、不重部署；未来明确授权协议升级后才执行 `cd hardhat && npm run deploy:all`（需要持有测试网 INJ 的 `DEPLOYER_PRIVATE_KEY`），部署脚本会自动更新 `public/chain-config.json` |
 | 对比链上与源码 | `npm run verify:bytecode`（只读，调用 `eth_getCode`）；加 `-- --strict` 可在两者不一致时返回非零退出码 |

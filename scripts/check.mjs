@@ -12,9 +12,6 @@ const requiredFiles = [
   'README.md',
   'docs/background.md',
   'docs/PRD.md',
-  'docs/acceptance.md',
-  'docs/award-roadmap.md',
-  'docs/tasks.md',
   'docs/wave-b.md',
   'docs/evidence/wave-b-gate.json',
   'docs/evidence/wave-b-protocol.json',
@@ -81,7 +78,7 @@ for (const file of requiredFiles) {
 
 const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'));
 for (const script of [
-  'postinstall', 'dev', 'test', 'check', 'demo', 'smoke', 'scenarios', 'mcp',
+  'postinstall', 'dev', 'test', 'check', 'smoke', 'scenarios', 'mcp',
   'mcp:stdio', 'deploy:protocol', 'verify:wave-b', 'smoke:mcp:injective',
   'migrate:chain-config', 'eval:agent', 'agent:verify-anchor', 'agent:anchor-plan'
 ]) {

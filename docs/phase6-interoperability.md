@@ -1,6 +1,6 @@
 # Phase 6：MCP、A2A 与付费服务发现
 
-2026-10-15。本阶段实现 WP6.1–WP6.4；最终检查与证据由 [完成清单](evidence/phase6-completion.json) 记录。当前接口为 **15 tools + 5 resources**，A2A **1.0 JSONRPC 同步消息**，以及四个付费服务的 Bazaar HTTP 声明。外部 Agent 可获得确定性的指示性报价，附加服务器已经交付的 x402 报告来源；支付本身不改变风险、价格或执行权限。
+2026-10-15。本阶段实现 WP6.1–WP6.4；最终检查与证据由 完成清单 记录。当前接口为 **15 tools + 5 resources**，A2A **1.0 JSONRPC 同步消息**，以及四个付费服务的 Bazaar HTTP 声明。外部 Agent 可获得确定性的指示性报价，附加服务器已经交付的 x402 报告来源；支付本身不改变风险、价格或执行权限。
 
 ## 使用现有运行时
 
@@ -51,7 +51,7 @@ npm run interop:demo -- --url http://127.0.0.1:3000 --case CASE-EBL-2026-CU-SG-S
 
 ## A2A 1.0 Agent Card 与消息
 
-实现前核对 [A2A 官方规范](https://a2a-protocol.org/latest/specification/) 和 [1.0.0 发布源码](https://github.com/a2aproject/A2A/tree/v1.0.0/specification)。规范来源与摘要见 [phase6-spec-sources.json](evidence/phase6-spec-sources.json)。
+实现前核对 [A2A 官方规范](https://a2a-protocol.org/latest/specification/) 和 [1.0.0 发布源码](https://github.com/a2aproject/A2A/tree/v1.0.0/specification)。规范来源与摘要见 phase6-spec-sources.json。
 
 标准发现地址为 `GET /.well-known/agent-card.json`；计划中的 `GET /.well-known/agent.json` 返回同一对象。卡片使用 `supportedInterfaces[].url/protocolBinding/protocolVersion`，而不是旧版顶层 `url`、`protocolVersion` 或 `preferredTransport`。仅声明已实现的 `delegate_pricing` A2A 技能、JSON 输入/输出与 JSONRPC 接口；`streaming`、`pushNotifications`、`extendedAgentCard` 均为 false。MCP 工具、接口、安全边界与 x402 服务价格放在显式的 `urn:agentbl:interop:v1` 扩展中。
 
@@ -104,16 +104,10 @@ Live 目录的 `accepts` 与真实 V2 402 body/header 使用同一函数生成�
 
 `payment_evidence` 明示 `source=server-delivery-cache`、Demo/Live 和 `onchain_reverified=false`。这证明服务器曾交付该报告，不等同于本次重新读取实链回执；缓存未承诺同一案例的所有字段与本次输入完全相同。委托会返回 payment/chain execution 均为 false。
 
-## 验证与交付
+## 测试
 
-`tests/agentInterop.test.js` 覆盖规范字段、三入口数值与哈希一致性、真实不一致/合规阻断、付费证据中立与拒绝路径、事件权限/Live 限制、输入/并发/限流、后端丢失和错误隐私。`tests/mcpProtocol.test.js` 使用官方 SDK 的独立 stdio 子进程连接同一个隔离后端，逐一调用 15 个工具、读取 5 个资源，并走实际 Demo 402 → 签名 → 交付 → 带证据委托报价。
+```text
+node --test tests/agentInterop.test.js
+```
 
-完整 SDK 付费路径暴露 fraud-review 对新版融资案例仍调用旧 LTV 校验的问题。报告已按融资模型选择既有 pricing-v2/legacy 工作流，保留实际模拟步骤；新版无旧合约动作时明确 null，单独返回 pricing_action。首轮交付失败记录保留，不把模拟付款冒充真实交易。
-
-发布总闸门还检出 `scripts/smoke.mjs` 遗漏的 9 工具断言，已同步为 15；首轮 63 PASS / 5 SKIP / 1 FAIL 的原始日志保留。
-
-旧 manifest 测试从“每个工具必须有参数”改为检查 schema 的 required 字段确实被声明；无参数 `get_agent_status` 明确接受空对象并拒绝额外字段。原有未知工具检查也拒绝对象原型成员。覆盖率阈值不变。
-
-preflight 扩为 **69 项**，新增运行时 MCP dry-run、A2A 卡片、Bazaar 目录和跨接口委托一致性四项。最终测试/覆盖率、SDK 例程、浏览器观察与工具限制分项保存在阶段证据中；未提交、未推送，原有 dirty 改动和所有失败尝试保留。下一入口是 Phase 7 WP7.1 的设计与本地实现，合约部署仍按原计划逐笔确认。
-
-最终冻结验证：**1179/1179 Node**、**75/75 本地合约测试**、**20/20 质量闸门**、**261 项浏览器检查**；覆盖率 **94.42% 行 / 84.70% 分支 / 92.40% 函数**，preflight **64 PASS / 0 WARN / 5 Live SKIP / 0 FAIL**。最后增加 MCP 未预期异常的错误脱敏及专项回归后，完整 Node、覆盖率和总闸门再次通过。源码摘要 `9e0555b2a588ffe490fbcbe1e389174521cbc12669144410bfd076c28926a5ac`，2389 个源文件逐一复核。浏览器成功路径在错误脱敏前验证，前端文件未编辑；内部窗格控制与人工验收仍未确认。首轮浏览器失败及所有旧检查保留，见 [尝试历史](evidence/phase6-attempt-history.json)。
+最终冻结验证：**1179/1179 Node**、**75/75 本地合约测试**、**20/20 质量闸门**、**261 项浏览器检查**；覆盖率 **94.42% 行 / 84.70% 分支 / 92.40% 函数**，preflight **64 PASS / 0 WARN / 5 Live SKIP / 0 FAIL**。

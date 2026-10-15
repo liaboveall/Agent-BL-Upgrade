@@ -64,7 +64,7 @@ function explorer(base, type, value) {
   return `${base}/${type}/${value}`;
 }
 
-const explorerApi = 'https://testnet.blockscout-api.injective.network/api/v2';
+const explorerApi = 'https://testnet.blockscout.injective.network/api/v2';
 
 async function waitForExplorerTransaction(txHash, options = {}) {
   const attempts = options.attempts ?? 45;

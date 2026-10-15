@@ -16,7 +16,7 @@ const NETWORK_DEFAULTS = Object.freeze({
     cosmosRpcUrl: 'https://testnet.sentry.tm.injective.network:443',
     cosmosExplorerTxBase: 'https://testnet.explorer.injective.network/transaction/',
     explorerBase: 'https://testnet.blockscout.injective.network',
-    explorerApi: 'https://testnet.blockscout-api.injective.network/api',
+    explorerApi: 'https://testnet.blockscout.injective.network/api',
     faucetUrl: 'https://testnet.faucet.injective.network/',
     nativeCurrency: { name: 'Injective', symbol: 'INJ', decimals: 18 },
     accessModel: 'permissionless'
@@ -32,7 +32,7 @@ const NETWORK_DEFAULTS = Object.freeze({
     cosmosRpcUrl: 'https://sentry.tm.injective.network:443',
     cosmosExplorerTxBase: 'https://explorer.injective.network/transaction/',
     explorerBase: 'https://blockscout.injective.network',
-    explorerApi: 'https://blockscout-api.injective.network/api',
+    explorerApi: 'https://blockscout.injective.network/api',
     faucetUrl: null,
     nativeCurrency: { name: 'Injective', symbol: 'INJ', decimals: 18 },
     accessModel: 'compliance-gated'

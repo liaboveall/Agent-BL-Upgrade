@@ -46,45 +46,10 @@ owner CLI 的本地进程锁和 SENDING/SUBMITTED/ATTACHED 检查点复用 WP2.4
 
 部署仍要求单个 Agent 运行时写入该 JSON 数据目录。此处的服务内串行声明和 owner CLI 进程锁不等于跨多个 Web 服务副本的分布式资金账本。
 
-## 本地验证与边界
-
-35 项新增行为测试覆盖精确金额、虚假/篡改/未确认/重组回执、保护池与映射、先付款/先到港、三次独立审批、重启、重复及跨池消费、写入失败、可选执行者路径和 CLI 模式/期限/广播恢复。
+## 测试
 
 ```text
 node --test tests/agentSettlement.test.js tests/agentSettlementCli.test.js
-npm run lint
-npm run check
-npm test
-npm run test:coverage
-npm run eval:agent -- --check
-npm run preflight -- --report docs/evidence/settlement-preflight.json
 ```
 
-浏览器隔离服务器跳过开发者 `.env`，没有签名者或真实 RPC。专用 `/__acceptance__/` 只存在于该脚本，不能写入真实链：
-
-```text
-node scripts/settlement-acceptance-server.mjs
-playwright-cli -s=agentbl-wp26 open <输出的 URL> --browser=msedge
-playwright-cli -s=agentbl-wp26 --raw run-code --filename=scripts/settlement-acceptance.playwright.js
-playwright-cli -s=agentbl-wp26 close
-```
-
-部分 Playwright CLI 版本的 VM 不允许场景里的 `import('node:fs/promises')`。此时运行仓库的原生 runner，`--playwright-module` 指向本机已安装 Playwright 的 `index.mjs`，`--browser-executable` 在需要时指定本机浏览器路径；不需要修改项目依赖：
-
-```text
-node scripts/settlement-acceptance-runner.mjs --url <输出的本地 URL> --playwright-module <Playwright index.mjs 路径> --browser-executable <本机浏览器路径>
-```
-
-本轮使用这个 runner 执行同一场景，工具错误日志单独记录。内置浏览器打开请求返回 queued，不声称完成其控制。Windows curl 单独核验隔离入口可访问。
-
-最终记录见 [本地证据](evidence/settlement-local.json)、[浏览器证据](evidence/settlement-browser.json)及 [Demo 发布闸门](evidence/settlement-preflight.json)。全量 **1021/1021**；覆盖率 lines **94.36%**、branches **83.83%**、functions **92.11%**，高于 88/72/86。浏览器中英 × 1440px/390px 的 **112/112** 项检查覆盖提交、错误反馈、核验摘要、审批、逐步回执、键盘和 SSE 草稿保持，并检查地址换行和意外空值。
-
-终检完整套件使用 `--test-concurrency=4`，不跳过测试。MCP stdio 子进程明确使用离线环境，避免读取开发者配置；SSE 关闭断言等待完整事件帧，并保留关闭代码与 EOF 检查。覆盖率首轮暴露的分块读取问题和重启前发布闸门失败记录都保留；不以增加 MCP 超时、取消断言或重写旧证据来完成验收。
-
-lint/check 和 19/19 确定性评测阈值通过。Demo preflight 为 **56 PASS / 0 WARN / 5 Live SKIP / 0 FAIL**，包含最终源码上的全部 Node 用例及 74 项本地 Solidity 测试。失败记录分别见 [首轮发布闸门](evidence/settlement-preflight-attempt1.json)和 [首轮覆盖率](evidence/settlement-coverage-attempt1.json)。隔离服务器已停止，临时运行目录已清理；完整验证日志保留在忽略的工作区目录，路径及输出哈希见本地证据。
-
-这些证据不覆盖真实钱包/USDC 转账、真实 owner 签名、人工用户验收、远端 CI 或部署。本包未提交、未推送，先前合规和开盘历史均保留。下一入口为 **WP2.7 链上监听**。
-
-建议提交分组：① `feat(agent): verify and persist Live USDC settlement evidence`；② `feat(cli): revalidate and recover approved settlement transactions`；③ `feat(frontend): submit and explain localized Live settlement evidence`；④ `test(agent): record settlement recovery and browser acceptance`。
-
-核验参考：[ERC-20 Transfer 事件](https://eips.ethereum.org/EIPS/eip-20)、[ethers 交易、回执与区块 API](https://docs.ethers.org/v6/api/providers/)。资产映射与现有部署 ABI 以本仓库当前文件为准。
+本地测试不覆盖真实钱包/USDC 转账、真实 owner 签名、人工用户验收、远端 CI 或部署。

@@ -116,7 +116,7 @@ issue_price    = cash / (cash + financing_cost)          # = cash / (cash + shar
 
 一句话：**“很快到账”让出约 60% 盈利（投资者 25% 上行），“正常到账”只让出约 30% 盈利（投资者 12.5% 上行）。** 风险升高会进一步压低发行价，抵押覆盖不足会抬高价格地板或暂停发行。1.00 是目标兑付价，不是保本。
 
-> 实现见 `src/core/pricingEngine.js`（`priceRwaOffering` / `quoteFromCase` / `compareSpeeds`），Python 参考规范见 `scripts/pricing_model.py`，命令 `npm run price` / `npm run demo`。
+> 实现见 `src/core/pricingEngine.js`（`priceRwaOffering` / `quoteFromCase` / `compareSpeeds`），命令 `npm run price`。
 
 ## 3. 目标用户
 

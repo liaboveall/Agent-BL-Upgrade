@@ -1,6 +1,6 @@
 # WP2.7 链上监听
 
-2026-10-15：只读监听、确认游标、事件接入、池发现、镜像对账和紧急停止已实现；40 项新增行为测试，全量 1061/1061，覆盖率 lines 94.50% / branches 83.89% / functions 91.95%，lint/check 通过；中英 × 1440/390px 的 91/91 项浏览器检查通过。本批的工程及浏览器检查记录于 [evidence/chain-watcher-local.json](evidence/chain-watcher-local.json)。这些检查使用真实合约 ABI 编码的内存日志，不代表真实 Injective RPC 长时间运行、链上写入或用户人工验收。
+2026-10-15：只读监听、确认游标、事件接入、池发现、镜像对账和紧急停止已实现；40 项新增行为测试，全量 1061/1061，覆盖率 lines 94.50% / branches 83.89% / functions 91.95%，lint/check 通过；中英 × 1440/390px 的 91/91 项浏览器检查通过。本批的工程及浏览器检查记录于 evidence/chain-watcher-local.json。这些检查使用真实合约 ABI 编码的内存日志，不代表真实 Injective RPC 长时间运行、链上写入或用户人工验收。
 
 最终 Demo preflight：56 PASS / 0 WARN / 5 Live SKIP / 0 FAIL。记录绑定本批组件及运行时依赖的 44 个文件摘要；preflight 自带的 source_sha256 属于确定性评测组件，范围与本批摘要不同。没有当前改动的提交 SHA 或远端 CI 声明。
 
@@ -46,31 +46,8 @@ RPC 失败/超时标记 degraded，不推进游标、不编造事件；错误输
 
 已提交区块改变、配置与游标冲突或抵押映射冲突时，保存 `reconciliation_required`，暂停并保留原游标，不自动回退、重发交易或清空证据。恢复需要运维核对分叉、部署和已有审批：先停止 Agent，备份运行时游标/事件/决策/审批记录，确认规范链与曾观察的交易，再使用独立目录从部署区块重建观察记录。不要在未对账时删除原证据或复用旧审批；真实交易仍须按实施规划 §16 单独授权。
 
-## 本地验证
+## 测试
 
-行为测试：
-
-```bash
+```text
 node --test tests/agentChainWatcher.test.js
-npm run lint
-npm test -- --test-concurrency=4
-npm run check
-npm run test:coverage -- --test-concurrency=4
 ```
-
-隔离浏览器服务与复现入口：
-
-```bash
-node scripts/chain-watcher-acceptance-server.mjs
-node scripts/chain-watcher-acceptance-runner.mjs --url http://127.0.0.1:<printed-port> --playwright-module <installed-playwright/index.mjs> --browser-executable <installed-chromium>
-```
-
-服务默认不读开发者 `.env`，删除签名角色配置，使用专属临时目录和明确的测试管理员令牌。`/__acceptance__/` 操作只存在于该脚本，不在产品服务器开放。浏览器覆盖中英 × 1440/390px、只读事件、价格差异、未知货物、键盘控制、本地与合约停止、失败/重试、Demo 隔离及重组审查。此前失败报告另存 attempt 文件，页面截图明确标出内存链和零真实交易。
-
-内置浏览器打开请求返回 queued；Node REPL 浏览器连接因 `sandboxCwd is not a local file URI`（WSL 路径）未能初始化。本批浏览器证据来自原生 Playwright/Chromium，Windows curl 另行核对服务可访问性；不将它们称为内置窗格操作、实体设备或人工验收。
-
-接口依据：[ethers v6 Provider / Interface](https://docs.ethers.org/v6/single-page/)、[Ethereum JSON-RPC](https://ethereum.org/developers/docs/apis/json-rpc/)。实际解码使用仓库部署 ABI，现有合约保持不变。
-
-下一入口：**WP2.9 PRD Agent API**。本批不提交、不推送，也不执行真实签名、付款、部署或管理员交易。
-
-建议提交分组：① `feat(agent): persist confirmed read-only chain observations`；② `feat(frontend): show chain monitoring and independent emergency stops`；③ `test(agent): record chain watcher recovery acceptance`。先前 WP2.3 / WP2.4 / WP2.6 的未提交改动保留，不由本批自动提交。

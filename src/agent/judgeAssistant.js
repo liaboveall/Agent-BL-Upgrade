@@ -269,7 +269,7 @@ export const JUDGE_QUESTIONS = [
 ];
 
 /**
- * Run the full judge-rehearsal Q&A set. Used by `npm run qa` and the AI-12 test.
+ * Run the full judge-rehearsal Q&A set. Used by the AI-12 test.
  * @param {object} [options] { caseData, env, useLlm }
  */
 export async function runJudgeRehearsal(options = {}) {

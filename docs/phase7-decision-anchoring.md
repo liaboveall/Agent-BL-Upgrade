@@ -75,7 +75,7 @@ npm run agent:anchor-plan -- --out <new-plan.json>
 
 登记版本为 `0xa365b230c8fec402b51d3291f3cd1623da1f93acc674515d471171be0558d49a`，使用已审阅计划的默认策略和模型 `x-test-2`。实际运行服务器启用前仍须比较其公开 `anchoring.version`；本次未登记其他策略或遗留未知版本。owner 为 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，显式 anchorer 为 `0xEB43623667f1Add616D0FbdEBbbE067a0F195F79`；owner 未隐式获得 anchorer 权限。
 
-部署后的 7 份注册合约字节码均精确匹配本地工件；原六个条目的地址、ABI、部署记录及其他网络逐项未变，8 份受保护 Solidity 源文件未变。pool #2 仍为 Repriced（6）/ 0.7910。`batchCount=0`、`lastSeq=0`，后台开关保持 false，首次批次没有执行。完整证据见 [只读实链核验](evidence/phase7-live-deployment-verification.json)、[独立复核](evidence/phase7-live-independent-review.json) 和 [字节码](evidence/phase7-live-bytecode.json)。
+部署后的 7 份注册合约字节码均精确匹配本地工件；原六个条目的地址、ABI、部署记录及其他网络逐项未变，8 份受保护 Solidity 源文件未变。pool #2 仍为 Repriced（6）/ 0.7910。`batchCount=0`、`lastSeq=0`，后台开关保持 false，首次批次没有执行。完整证据见 [只读实链核验](evidence/phase7-live-deployment-verification.json)、独立复核 和 [字节码](evidence/phase7-live-bytecode.json)。
 
 owner 余额实际减少 **0.000248193865 INJ**，逐笔历史余额验证其等于 `gasLimit × maxFeePerGas` 合计。回执 `gasUsed × effectiveGasPrice` 合计为 **0.00020450820091012 INJ**，两个数值分别记录，未推断网络退款机制。
 
@@ -83,16 +83,11 @@ owner 余额实际减少 **0.000248193865 INJ**，逐笔历史余额验证其等
 
 WSL 使用 Windows 安装的 Hardhat 时，先用无害检查确认计划文件可读、确认变量存在及计划 SHA-256；跨 Windows 进程需在 WSLENV 追加 `AGENT_ANCHOR_DEPLOY_PLAN/p:AGENT_ANCHOR_DEPLOY_CONFIRM`。Linux 原生安装可直接使用 Linux Node，但必须具备对应 EDR 平台依赖。保留所有尝试日志，出现未知广播时仍按原 checkpoint 对账。
 
-## 验证与局限
+## 测试
 
-Node 覆盖规范叶子、审批、1/奇数/256 条树、版本切批、并发定稿、真实第二 OS 进程锁、死进程恢复、写失败、未知广播、模式切换、RPC/回执/事件/规范区块、保留、HTTP 和 CLI 篡改失败。Hardhat 覆盖新合约、JS→Solidity 证明、部署初始化/合并/重跑/字节码。中英与 1440/390px 浏览器验证覆盖实际界面。
+```text
+node --test tests/agentAnchoring.test.js tests/agentAnchorChain.test.js
+npm run test:contracts
+```
 
-preflight 扩为 **71 项**。完整当前结果、工具限制、源文件清单和失败历史见 [phase7-completion.json](evidence/phase7-completion.json)。本地假链/合约测试不代表 Injective 部署、真实模型或人工/实体设备验收。本地根可以连同档案一起被改写；只有确认上链后才可供第三方检测后续篡改。连续序号防止已提交批次跳号，不证明定稿前没有隐瞒事件，也不证明输入事实或审批身份经过外部认证。
-
-建议提交分组（本轮未提交、未推送）：① 独立合约与默认 dry-run 的部署/恢复工具；② 终态归档、版本、批处理与 API/CLI；③ 中英详情与焦点修复；④ 回归、发布闸门、文档和验收证据。先前阶段 dirty 改动应按原功能保留分组。
-
-Phase 7 独立只读复核发现的模型空值/空格规范化和 UTF-8 长度边界均已修复：版本与实际请求共用默认模型语义，部署计划按合约的 128 字节上限在任何广播前拒绝超限输入。
-
-生产镜像现同时复制 package.json 和 package-lock.json，供运行时版本承诺使用。已用 Node 22.23.3 容器在 `--network none --read-only` 下启动和停止 Agent，验证版本计算及默认关闭的广播状态；没有发布镜像或部署服务。
-
-最终本地验收：1222/1222 Node、86 项本地合约测试、20/20 确定性质量闸门、296 项中英/1440/390px 浏览器检查；preflight 66 PASS / 0 WARN / 5 Live SKIP / 0 FAIL（71 项）；覆盖率行/分支/函数 94.47% / 85.03% / 92.42%。禁网、只读 Node 22.23.3 容器启动和 Windows HTTP 200 通过；独立复核两项 P2 已修复并复核闭合。完整清单见 [phase7-completion.json](evidence/phase7-completion.json)。部署前 465 项源文件逐项复核无变化，原有协议/配置 9 项哈希未变；授权部署后该清单仅 chain-config 新增条目及字节码验证测试的新增合约夹具发生变化，376 个既有 dirty 路径保留；临时服务器和验证容器已停止。原测试报告及失败历史均保留，未提交、未推送。
+本地假链/合约测试不代表 Injective 部署、真实模型或人工/实体设备验收。

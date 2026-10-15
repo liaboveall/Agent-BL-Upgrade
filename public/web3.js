@@ -1,6 +1,6 @@
 // Browser web3 integration for AgentBL.
 //
-// Target: Injective Testnet (inEVM, chainId 1439)
+// Target: Injective EVM Testnet (chainId 1439)
 //
 // Reads /chain-config.json at runtime to determine the target network.
 // Wallet connection auto-detects the chain and prompts the user to switch.
@@ -20,7 +20,7 @@ const COSMOS_STARGATE_MODULE_URL = '/vendor/cosmjs-stargate-0.33.1.js';
 // --- Chain presets ---
 const CHAIN_PRESETS = {
   injective_testnet: {
-    chainName: 'Injective Testnet (inEVM)',
+    chainName: 'Injective EVM Testnet',
     nativeCurrency: { name: 'INJ', symbol: 'INJ', decimals: 18 },
     rpcUrls: [
       'https://k8s.testnet.json-rpc.injective.network',

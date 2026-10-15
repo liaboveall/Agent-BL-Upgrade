@@ -1,4 +1,4 @@
-.PHONY: install dev test test-all test-contracts check preflight demo smoke scenarios mcp docker-build docker-up
+.PHONY: install dev test test-all test-contracts check preflight smoke scenarios mcp docker-build docker-up
 
 install:
 	npm install
@@ -20,9 +20,6 @@ check:
 
 preflight:
 	npm run preflight
-
-demo:
-	npm run demo
 
 smoke:
 	npm run smoke

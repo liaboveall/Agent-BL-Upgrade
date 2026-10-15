@@ -1,6 +1,6 @@
 # Phase 5：评测、安全、可靠性与决策重放
 
-2026-10-15。Phase 5 本阶段范围全量完成：补齐 WP5.2 / 5.3 / 5.5 / 5.6 / 5.7，复验 WP5.1 / 5.4 / 5.8，并按用户本次授权完成 WP5.9 的三笔真实测试网定价交易。[完成清单](evidence/phase5-completion.json)、[本地证据](evidence/phase5-local.json) 与 [实链证据](evidence/agent-live-smoke.json) 分别记录范围、检查与回执。真实模型和用户人工验收仍有独立状态。
+2026-10-15。Phase 5 本阶段范围全量完成：补齐 WP5.2 / 5.3 / 5.5 / 5.6 / 5.7，复验 WP5.1 / 5.4 / 5.8，并按用户本次授权完成 WP5.9 的三笔真实测试网定价交易。完成清单、本地证据 与 [实链证据](evidence/agent-live-smoke.json) 分别记录范围、检查与回执。真实模型和用户人工验收仍有独立状态。
 
 ## 红队与评测
 
@@ -52,28 +52,9 @@ npm run agent:smoke -- --server http://127.0.0.1:3000 --lifecycle
 
 `--lifecycle` 提供原油新池的 owner / 钱包逐步清单，明确停在 `OWNER_ACTION_REQUIRED`；每笔 owner 交易由既有 `agent:approve --step N --confirm` 单独授权。它不把清单返回冒充生命周期通过，也不自动支付 USDC 或签 owner 交易。输出按 attempt 命名的 JSON，不覆盖历史证据；只有真实步骤全部核验才会 `live_acceptance=true`。
 
-## 验证记录
+## 测试
 
-preflight 扩为 65 项：红队、新鲜度/重放、隐私/保留、冒烟安全边界加入现有运行时、全量测试、故障矩阵、三故事、质量和禁止伪造检查。Demo 的 Live 专属检查仍为 SKIP。MCP 保持 9 tools + 3 resources，Phase 6 更新时再同步数量。
-
-两项旧测试适配了新契约：重启测试通过认证存储构造合法的 PROCESSING 检查点，直接篡改加密文件仍拒绝；确定性流水线测试复用同一份完整事件，包括观察/到期时间。首轮回归暴露过度脱敏交易引用/浏览器链接的缺陷，已修复；原失败输出保留在 evidence 的 attempt 记录中。
-
-中英、1440/390px 自动化浏览器检查覆盖键盘重放、PASS/FAIL、过期徽标和审批拒绝、无横向溢出。浏览器运行在隔离临时目录，屏蔽外部请求，链上交易和真实提供方调用均为零。截图及结果见本地证据；不声称实体设备、内置窗格控制或人工试用已通过。
-
-最终冻结代码本地结果：**1,158/1,158 测试通过**（新增 32 项），覆盖率 **94.26% 行 / 84.20% 分支 / 92.37% 函数**；20/20 质量闸门、17/17 生成变异检测、26 个注入样本攻击成功数 0。浏览器新流程 41/41、全站回归 256/256；preflight **60 PASS / 0 WARN / 5 Live SKIP / 0 FAIL**，另有 75 项本地合约测试。评测和 preflight 的源摘要均为 `d0bc0a0bc15597d549bb26e45737804019ac21f0467f4b665a663ff383ca8bb1`；完整记录见 [phase5-local.json](evidence/phase5-local.json)。
-
-WP5.9 的三笔交易已按用户明确授权完成。执行前复核 chain 1439 / pool #2 为 Open / 0.80，专用定价账户的链上权限及余额通过预检；隔离运行从真实部署区块 143331433 补齐完整监听历史后才开始广播。
-
-初版只读预检把 PAUSE 的风险报价 0.7836 当成池价，且错误预测 RESUME 回到 Open。实际合约的 PAUSE/RESUME 只切换状态，池价保持 0.7910，RESUME 恢复暂停前的 Repriced。首轮在两笔成功交易后因错误断言停止；对照合约与真实回执修正核验/预览后，复用同一个运行编号和日志，只补执行了第三笔 RESUME。独立核验包装器也曾保留同类错误断言，其失败报告与后续只读复核报告均保留，没有重复广播。
-
-最终三笔均核对网络、签名账户、Oracle 目标、精确 calldata、成功回执与规范区块、PricingUpdated 参数、历史池价/状态及防重放标记；三份持久决策重放均 PASS，待审批为零。最终为 **Repriced（可认购）/ 0.7910**。未做第四笔价格恢复、owner 或生命周期交易。
-
-| 动作 | 区块 | Oracle 报价 | 实际池价 | 历史状态 | 交易 |
-|---|---|---|---|---|---|
-| REPRICE | 143794168 | 0.7910 | 0.7910 | Repriced | [0xad1110be0b…](https://testnet.blockscout.injective.network/tx/0xad1110be0b676640aaa7a634e553e7d4200884fa584bfbd640ed19c18891c703) |
-| PAUSE | 143794185 | 0.7836 | 0.7910 | Paused | [0x627ac1186b…](https://testnet.blockscout.injective.network/tx/0x627ac1186be1b3789cccaf4c28201b71ac17446ecdb086af916e1589df154cee) |
-| RESUME | 143795077 | 0.7910 | 0.7910 | Repriced | [0x94047bd679…](https://testnet.blockscout.injective.network/tx/0x94047bd679a3736b3bd5e492f6e6a131d02cb509454ff3ed13e995122250d247) |
-
-运行时日志、认证加密快照、审批与游标保留在 `data/runtime/phase5-live-1792027678667`。见 [实链报告](evidence/agent-live-smoke.json)、[独立只读核验](evidence/phase5-live-verification-final-1792029472229.json) 和 [尝试历史](evidence/phase5-attempt-history.json)。发布 preflight 的 5 个 Demo 下 Live SKIP 保留原状，本次三笔定价的真实链上结果由独立证据补充。
-
-修正后新增六项 Node 回归和一项本地真实合约回归。已完成的运行不可直接重跑：当前价格若缺少匹配的结构化报价及更低的新报价，只读预检会拒绝，不会修改报价字段凑步骤。真实 LLM、可选 owner 生命周期、内置窗格操作和人工/实体设备试用均未运行。下一入口 **Phase 6 WP6.1 MCP**。未提交、未推送，既有 dirty 改动与失败历史保留。
+```text
+node --test tests/agentPhase5.test.js
+npm run agent:redteam
+```

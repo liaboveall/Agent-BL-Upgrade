@@ -52,7 +52,7 @@ test('runtime audit scan covers decisions, events, queue, activities and traces 
     const text = await fs.readFile(path.join(dir, file), 'utf8');
     for (const forbidden of [wallet, privateKey, apiKey, 'raw document marker']) assert.equal(text.includes(forbidden), false, `${file} leaked a synthetic sensitive value`);
   }
-  await service.stop(); await fs.rm(dir, { recursive: true, force: true });
+  await service.stop(); await fs.rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });
 
 test('retention bounds decisions, rotated activity and trace files while preserving in-flight decisions', async (t) => {

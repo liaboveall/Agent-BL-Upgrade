@@ -49,18 +49,8 @@ Live 卡片只用于已映射池：先读链上报价、状态和剩余份额，
 
 `买估值报告` / `buy a valuation report`，以及风险、反欺诈报告取服务目录价格；确认后走现有 Demo smoke 或 Live V2 钱包路径。Demo 显示 `demo:x402:` 收据并移除旧接口合成交易哈希；报告与完成状态支持语言切换。Live/report 确认置为 `CONFIRMING`，阻止重复准备；服务器此状态本身不证明支付或链上完成。V2 仍核对 challenge 数额、网络和签名账户。
 
-### P1 本地验收
+### 测试
 
-[浏览器记录](evidence/copilot-p1-browser.json)：Edge Chromium 155，中文/英文 × 1440px/390px，110 项检查；双面板独立订阅、台风暂停/恢复、排名、决策详情、焦点、取消、重复点击、实际 Demo 持仓、估值报告和语言切换均通过，无页面脚本错误。截图见同目录 `copilot-p1-mobile-*.png`。工程检查、覆盖率、源码摘要与边界见 [本地记录](evidence/copilot-p1-local.json)。
-
-最终工程检查：`npm test` 913/913、零跳过；`npm run lint` 零警告、`npm run check` 通过；覆盖率 lines 94.30% / branches 82.98% / functions 91.55%，门槛 88/72/86 未降低。[发布闸门](evidence/copilot-p1-preflight.json) 56 PASS / 0 WARN / 5 SKIP / 0 FAIL（61 项，包含 74 个合约测试）；Demo 的 Live 检查保持 SKIP。
-
-保留诊断记录：[Agent 被关闭的首次环境](evidence/copilot-p1-browser-before-fix.json)、[详情短 ID 的旧断言](evidence/copilot-p1-browser-short-id-check.json)、[默认 30 次/分钟限流](evidence/copilot-p1-browser-rate-limit.json)、[跨面板选择器的旧断言](evidence/copilot-p1-browser-scope-check.json)、[确认通知覆盖排名变化](evidence/copilot-p1-browser-phase-delta-before-fix.json)。最后一项是已修复的产品时序问题，新增双订阅测试；其余通过修正隔离环境/验收脚本解决。
-
-复现时跳过本机 `.env`，使用独立 `AGENTBL_RUNTIME_DIR`、`DEMO_MODE=true`、`X402_MODE=demo`、`AGENT_ENABLED=true`、`LLM_PROXY_ENABLED=false`、`AGENT_VALUATION_LLM=false`、空 `XAPI_KEY`。四组连续自动化使用 `LLM_RATE_LIMIT_PER_MIN=120`，默认仍是 30。启动服务器后执行 `playwright-cli -s=agentbl-copilot-p1 --raw run-code --filename=scripts/copilot-p1-acceptance.playwright.js`。脚本重置 Demo、播放场景、模拟认购和解锁报告，只可针对隔离 Demo 数据运行；结束后停掉自己启动的服务。
-
-内置浏览器面板返回 queued，交互在本机 Edge/Playwright 完成。没有真实 LLM、钱包签名、链上写入或用户人工试用；浏览器可读取公开测试网部署信息。本批次后的 WP0.6 已完成本地及只读实链验收，见 [wave-b.md](wave-b.md)；后续 WP2.2 的 PDF/可选视觉已完成本地验收，见 [document-extraction.md](document-extraction.md)；当前入口为 WP2.3 合规 v2，Live USDC 回执和监听等仍待完成。
-
-### 历史 Phase 3 P0 验证
-
-本阶段验证：857 个用例全部通过，lint/check 通过，覆盖率为 lines 94.12% / branches 82.48% / functions 91.50%。新增用例覆盖数值越权、并发更新、会话删除/过期、模式切换、最新报价、SSE 分帧和断流、单证复核不能绕过注入，以及普通监控事件不能解除单证 HOLD。浏览器使用本机 Chromium 通过中英文、390px、键盘操作、文件上传和复核、持仓及决策跳转检查；[本地验收记录](evidence/copilot-phase3-local.json) 绑定代码摘要，没有将其描述为用户人工试用、真实提供方或链上验收。
+```text
+node --test tests/copilotService.test.js tests/copilotApi.test.js tests/copilotRerank.test.js tests/copilotActions.test.js tests/copilotFrontend.test.js
+```

@@ -11,7 +11,7 @@ import chainConfigLib from './lib/chain-config.cjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const explorer = 'https://testnet.blockscout.injective.network';
-const explorerApi = 'https://testnet.blockscout-api.injective.network/api/v2';
+const explorerApi = 'https://testnet.blockscout.injective.network/api/v2';
 
 async function loadDotEnv() {
   let source;

@@ -91,10 +91,10 @@ npm run preflight
 
 未登记货物的计划包含 mint→pledge→createOffering→pricing。已登记且池活跃时只复用并计划 pricing；暂停、终态、质押错误或已登记但没有活跃池均明确拒绝。同一报告/报价已经处理且当前仍一致时返回 `ALREADY_CURRENT`，不再发 `PricingUpdated`；已处理而当前值已变时拒绝重放，需新的真实报告或报价。合法未处理的 OPEN 可能将受保护 pool #2 调回报告价，复验不会再支付 x402。
 
-2026-10-13 20:05 SGT 的 [只读实链记录](evidence/wave-b-repeatable-readonly-2026-10-13.json) 为 `ALREADY_CURRENT`：eBL #2 / pool #2 仍 Open，价格 $0.80。没有新的签名或交易，历史 `wave-b-gate.json` 字节保持不变。
+2026-10-13 20:05 SGT 的 只读实链记录 为 `ALREADY_CURRENT`：eBL #2 / pool #2 仍 Open，价格 $0.80。没有新的签名或交易，历史 `wave-b-gate.json` 字节保持不变。
 
 仅在用户明确同意实际链上动作后，由运维者运行 `npm run verify:wave-b -- --confirm`。该参数才会加载本机配置和 owner key；每步静态模拟并验证回执，不确定广播/不匹配事件保留待对账，禁止自动重发。新证据保存为 `docs/evidence/wave-b-attempt-*.json`，历史 Gate B 和 Live smoke 均不覆盖。可用 `--report <新文件.json>` 指定新记录，已有文件会被拒绝。
 
-离线行为回归 `node --test tests/waveBGate.test.js` 使用假 provider/签名者，包括新建、复用、暂停、Oracle 重放、历史保护与中途失败；不访问真实链或提供方。最终本地检查见 [wave-b-repeatable-local.json](evidence/wave-b-repeatable-local.json)。共享 cargo 模块可供后续 Agent/owner 的 Live OPEN 复用，该功能仍在 WP2.4 待办。
+离线行为回归 `node --test tests/waveBGate.test.js` 使用假 provider/签名者，包括新建、复用、暂停、Oracle 重放、历史保护与中途失败；不访问真实链或提供方。最终本地检查见 wave-b-repeatable-local.json。共享 cargo 模块可供后续 Agent/owner 的 Live OPEN 复用，该功能仍在 WP2.4 待办。
 
-最终工程检查：全量 926/926、零跳过，lint 零警告、check 通过；覆盖率 lines 94.33% / branches 82.93% / functions 91.63%，保持 88/72/86 门槛。发布闸门 56 PASS / 0 WARN / 5 SKIP / 0 FAIL（61 项，含 74 个合约测试），见 [发布记录](evidence/wave-b-repeatable-preflight.json)。Copilot 的 110 项浏览器记录单独保留；本次最终回归另验证删除一个会话不会中断其他会话的推送。未提交、未推送、未部署或写入真实链。
+最终工程检查：全量 926/926、零跳过，lint 零警告、check 通过；覆盖率 lines 94.33% / branches 82.93% / functions 91.63%，保持 88/72/86 门槛。发布闸门 56 PASS / 0 WARN / 5 SKIP / 0 FAIL（61 项，含 74 个合约测试），见 发布记录。Copilot 的 110 项浏览器记录单独保留；本次最终回归另验证删除一个会话不会中断其他会话的推送。未提交、未推送、未部署或写入真实链。

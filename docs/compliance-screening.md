@@ -38,33 +38,10 @@ WP2.3 使用带版本的内置演示名单替换了名字关键词规则。CLEAR
 
 默认超时 1500ms，允许 1–30000ms；禁止重定向、带凭据或 fragment 的 URL。超时中止请求，即使 transport 不响应 AbortSignal 也结束等待。失败或无效结果保留内置证据并转 REVIEW，外部 CLEAR 不能覆盖本地 BLOCK/REVIEW。没有连接真实筛查服务。
 
-## 验证与复现
+## 测试
 
 ```text
 node --test tests/complianceChecker.test.js tests/agentIngestPipeline.test.js
-npm run lint
-npm run check
-npm test
-npm run test:coverage
-npm run eval:agent -- --check
-npm run preflight -- --report docs/evidence/compliance-preflight.json
 ```
 
-浏览器在中英 × 1440px/390px 下执行真实文件上传、干净开盘、近似挂起、重复上传、修正复核、旧报告保留、精确阻断、未知港口、两用 HS 与合成 IMO，检查证据折叠、键盘、语言切换和横向溢出。隔离服务器跳过开发者 .env，不配置签名者，不调用提供方或链，结束后停止并删除其临时目录。
-
-```text
-node scripts/compliance-acceptance-server.mjs
-playwright-cli -s=agentbl-wp23 open <输出的 URL> --browser=msedge
-playwright-cli -s=agentbl-wp23 --raw run-code --filename=scripts/compliance-acceptance.playwright.js
-playwright-cli -s=agentbl-wp23 close
-```
-
-本地全量测试 **965/965**、零跳过/取消；覆盖率 lines **94.17%** / branches **83.59%** / functions **91.85%**，超过 88/72/86 门槛。lint/check 通过，确定性评测 **19/19** 阈值通过，包含 20 个三态合规样例。
-
-浏览器 **122/122** 项通过，页面脚本错误为零，Windows curl 也确认 API 入口可用。本次使用 WSL 中的 Playwright Chromium 153，本机可复现命令仍支持 Edge；没有声称完成 Codex 内置窗格控制、实体手机或人工试用。隔离服务器已停止，其临时目录已清理。
-
-证据见 [本地记录](evidence/compliance-local.json)和[浏览器记录](evidence/compliance-browser.json)。首轮缺少类别翻译，[失败记录](evidence/compliance-browser-first.json)保留 passed: false；[第二轮](evidence/compliance-browser-second.json)和[第三轮](evidence/compliance-browser-third.json)记录键盘检查失败。最终界面保留展开状态/焦点，验收显式等待 Demo reset 完成，再执行同一组键盘和刷新保持检查。没有放宽通过条件。
-
-评测使用新的三态金标，旧关键词金标仍在源码，上一版 [JSON](evidence/agent-eval-pre-compliance-v2.json)和[报告](evaluation-report-pre-compliance-v2.md)分别保留；阈值未降低。
-
-自动化不代表官方筛查、真实提供方准确率、人工试用、实体设备、真实链上写入、远端 CI 或部署验收。后续 WP2.4 Live 开盘提案与 owner CLI 已完成本地链桩验收，见 [live-opening.md](live-opening.md)；真实交易逐笔遵守实施规划 §16。
+自动化不代表官方筛查、真实提供方准确率、人工试用、实体设备、真实链上写入、远端 CI 或部署验收。

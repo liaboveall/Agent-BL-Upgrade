@@ -2,7 +2,7 @@
 
 > 给非国际贸易、非供应链金融背景同学的黑客松补课材料。
 > 目标是让团队在 30-60 分钟内理解：为什么电子提单可以成为 RWA 贸易融资的核心资产，为什么 **AI Pricing & Risk Agent** 不是装饰，而是这个项目真正给 RWA 折价定价、控制发行额度的核心引擎。
-> 更新时间：2026-06-06。当前主线见 `docs/PRD.md`（v0.2 AI Dynamic Pricing RWA）与 `docs/tasks.md`。本文用于项目设计和学习，不构成法律意见、投资建议、融资建议或合规意见。
+> 更新时间：2026-06-06。当前主线见 `docs/PRD.md`（v0.2 AI Dynamic Pricing RWA）。本文用于项目设计和学习，不构成法律意见、投资建议、融资建议或合规意见。
 >
 > ⚠️ 模型已升级：早期版本把项目描述成"许可型资金池放贷 + RiskReport 风控"。现在的主线是 **AI 动态定价的 eBL-backed RWA 折价发行**——AI 不只是给风险打分，而是直接决定 RWA 的发行折价、出口商最多能融多少、合约是否暂停发行。本文已对齐新模型。
 
@@ -976,7 +976,6 @@ Demo 阶段使用 mock 数据。真实落地可接入电子提单平台、承运
 - `Materials/web3_trade_finance_consolidated/web3_trade_finance_consolidated.md`
 - `Materials/20260602会议.md`
 - `docs/PRD.md`（当前主线：v0.2 AI Dynamic Pricing RWA）
-- `docs/tasks.md`（任务拆分）
 - `data/uploads/`（拟真提单 + 商业发票样例：新加坡铜 / 原油）
 - `data/demo-case.json`（旧 RiskReport harness 数据，迁移中）
 - `docs/ai-valuation-tooling.md`（AI 估值与历史成交价 tool calling）
