@@ -48,6 +48,9 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
   }
   const pool = storeState.pools.get(poolId);
   if (!pool) throw new HttpError(404, 'pool_not_found', 'Pool not found');
+  if (pool.caseData?.historical === true) {
+    throw new HttpError(409, 'pool_historical', 'This is a historical demo pool kept for its testnet record; it is not open for subscription');
+  }
   if (!['Open', 'Repriced', 'Subscribed'].includes(pool.status)) {
     throw new HttpError(409, 'pool_not_open', `Cannot subscribe to pool in status: ${pool.status}`);
   }

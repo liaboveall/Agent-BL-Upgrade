@@ -1,5 +1,7 @@
 {
   "case_id": "CASE-EBL-2026-0001",
+  "date_anchor": "2026-10-16",
+  "note": "Default demo case: copper cathodes Shanghai -> Hamburg round the Cape of Good Hope, whose delay pushes arrival past the insurance expiry. All entities fictional; dates move with today when loaded.",
   "bill_of_lading": {
     "bl_id": "EBL-2026-0001",
     "shipper": "Shanghai Metals Export Co.",
@@ -10,64 +12,77 @@
     "port_of_discharge": "Hamburg",
     "cargo": "Copper Cathodes",
     "quantity_mt": 1000,
-    "declared_value_usd": 8500000,
-    "issue_date": "2026-06-01",
-    "eta": "2026-07-16",
+    "declared_value_usd": 14300000,
+    "issue_date": "2026-09-26",
+    "eta": "2026-11-10",
     "document_hash": "0xdemoebl0001"
   },
   "insurance": {
     "provider": "Demo Marine Insurance Ltd.",
-    "insured_value_usd": 8000000,
-    "expires_at": "2026-07-20",
+    "insured_value_usd": 13500000,
+    "expires_at": "2026-11-14",
     "policy_hash": "0xdemoinsurance0001"
   },
   "trade_economics": {
-    "cost_basis_usd_per_mt": 7400,
-    "cost_of_goods_usd": 7400000,
-    "expected_gross_profit_usd": 1100000,
-    "gross_margin_pct": 0.129,
-    "note": "Exporter contracted 1,000 MT copper at ~USD 7,400/MT versus the USD 8,500/MT declared CIF value; the ~USD 1.1M verified gross profit (= declared 8,500,000 - COGS 7,400,000) is what funds the RWA discount."
+    "cost_basis_usd_per_mt": 13950,
+    "cost_of_goods_usd": 13950000,
+    "expected_gross_profit_usd": 350000,
+    "gross_margin_pct": 0.0245,
+    "note": "Exporter bought 1,000 MT copper at ~USD 13,950/MT and sold CIF Hamburg at USD 14,300/MT; the ~USD 350k gross profit (= 14,300,000 - 13,950,000) is what funds the RWA discount."
   },
   "financing": {
-    "requested_amount_usd": 5600000,
+    "requested_amount_usd": 9400000,
     "duration_days": 45,
     "expected_yield_bps": 600,
     "initial_ltv": 0.7,
     "liquidation_threshold": 0.85,
     "currency": "USDC",
-    "requested_cash_usd": 5600000,
+    "requested_cash_usd": 9400000,
     "payout_speed": "BALANCED",
     "target_redemption_value_usd": 1,
     "redemption_coverage_limit": 0.9
   },
   "market": {
     "commodity": "Copper",
-    "initial_price_usd_per_mt": 8500,
-    "current_price_usd_per_mt": 7480,
-    "source": "mock-market-feed"
+    "benchmark": "COMEX copper futures (HG=F), LME-linked",
+    "benchmark_key": "copper",
+    "initial_price_usd_per_mt": 14800,
+    "current_price_usd_per_mt": 14532,
+    "as_of": "2026-10-16",
+    "source": "Yahoo Finance · COMEX copper futures (HG=F) on the anchor day"
+  },
+  "route_profile": {
+    "chokepoints": ["Malacca Strait", "Cape of Good Hope", "Dover Strait"],
+    "waypoints": [
+      { "name": "Indian Ocean", "lat": -12.0, "lon": 75.0 },
+      { "name": "Agulhas (off South Africa)", "lat": -36.0, "lon": 22.0 },
+      { "name": "Bay of Biscay", "lat": 46.0, "lon": -6.0 }
+    ],
+    "news_queries": ["\"Cape of Good Hope\" OR Agulhas shipping", "copper price"],
+    "news_terms": ["Malacca", "Cape of Good Hope", "Agulhas", "Bay of Biscay", "Hamburg"]
   },
   "shipment_events": [
     {
-      "date": "2026-06-01",
+      "date": "2026-09-26",
       "type": "loaded_on_board",
       "description": "Cargo loaded on board at Shanghai.",
       "severity": "info"
     },
     {
-      "date": "2026-06-12",
+      "date": "2026-10-07",
       "type": "bad_weather",
       "description": "Vessel encountered severe weather in the Indian Ocean.",
       "severity": "warning"
     },
     {
-      "date": "2026-06-19",
+      "date": "2026-10-14",
       "type": "delay",
       "description": "Estimated arrival delayed by 5 days.",
       "severity": "warning",
       "delay_days": 5
     },
     {
-      "date": "2026-06-20",
+      "date": "2026-10-15",
       "type": "insurance_expiry_risk",
       "description": "New ETA is close to insurance expiry date.",
       "severity": "warning"

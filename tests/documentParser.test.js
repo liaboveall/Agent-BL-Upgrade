@@ -16,7 +16,8 @@ import { checkDocumentConsistency } from '../src/agent/documentConsistency.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 test('written calendar dates keep the same day in Singapore, UTC and US timezones', async () => {
-  const code = "import {parseDocument} from './src/agent/documentParser.js'; const out = await parseDocument({path:'data/uploads/soybean-sh-sg/commercial-invoice.md'}); process.stdout.write(out.fields.invoice_date);";
+  // The curated fixtures use ISO dates (they move with the demo day); a written date is parsed inline.
+  const code = "import {parseDocument} from './src/agent/documentParser.js'; const out = await parseDocument({text:'# COMMERCIAL INVOICE\\n| **Invoice No.** | INV-TZ-1 | **Invoice Date** | 15 May 2026 |\\n**Total Invoice Value: USD 1,000.00**', filename:'invoice.md'}); process.stdout.write(out.fields.invoice_date);";
   for (const timezone of ['Asia/Singapore', 'UTC', 'America/Los_Angeles']) {
     const result = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', code], {
       cwd: root, env: { ...process.env, TZ: timezone }, windowsHide: true
@@ -26,16 +27,16 @@ test('written calendar dates keep the same day in Singapore, UTC and US timezone
 });
 const bolPath = path.join(root, 'data/uploads/copper-sg-shanghai/bill-of-lading.md');
 const invoicePath = path.join(root, 'data/uploads/copper-sg-shanghai/commercial-invoice.md');
-const insurancePath = path.join(root, 'data/uploads/soybean-sh-sg/insurance-policy.md');
+const insurancePath = path.join(root, 'data/uploads/soybean-ssz-dlc/insurance-policy.md');
 const copperCase = JSON.parse(await fs.readFile(path.join(root, 'data/cases/copper-sg-shanghai.case.json'), 'utf8'));
 
 test('AI-17: parses the demo eBL with field-level provenance and confidence', async () => {
   const result = await parseDocument({ path: bolPath });
   assert.equal(result.document_type, 'EBL');
-  assert.equal(result.fields.bl_no, 'BSCL/SIN/SHA/2026/04417');
-  assert.equal(result.fields.bl_id, 'WAVE-EBL-7F3A91C4');
+  assert.equal(result.fields.bl_no, 'BSCL/SIN/SHA/0517');
+  assert.equal(result.fields.bl_id, 'WAVE-EBL-3C81D2A9');
   assert.equal(result.fields.quantity_mt, 500);
-  assert.equal(result.fields.declared_value_usd, 6_875_000);
+  assert.equal(result.fields.declared_value_usd, 7_267_500);
   assert.equal(result.fields.hs_code, '740311');
   assert.match(result.fields.document_hash, /^0x[0-9a-f]{64}$/u);
   assert.ok(result.provenance.quantity_mt.line > 0);
@@ -47,12 +48,12 @@ test('AI-17: parses the demo eBL with field-level provenance and confidence', as
 test('AI-17: parses invoice totals, unit price, parties and shipment references', async () => {
   const result = await parseDocument(invoicePath);
   assert.equal(result.document_type, 'COMMERCIAL_INVOICE');
-  assert.equal(result.fields.invoice_no, 'SRT-INV-2026-04417');
-  assert.equal(result.fields.invoice_date, '2026-06-03');
-  assert.equal(result.fields.bl_no, 'BSCL/SIN/SHA/2026/04417');
+  assert.equal(result.fields.invoice_no, 'SRT-INV-0517');
+  assert.equal(result.fields.invoice_date, '2026-10-13');
+  assert.equal(result.fields.bl_no, 'BSCL/SIN/SHA/0517');
   assert.equal(result.fields.quantity_mt, 500);
-  assert.equal(result.fields.unit_price_usd_per_mt, 13_750);
-  assert.equal(result.fields.total_amount_usd, 6_875_000);
+  assert.equal(result.fields.unit_price_usd_per_mt, 14_535);
+  assert.equal(result.fields.total_amount_usd, 7_267_500);
   assert.match(result.fields.seller, /Strait Resources/iu);
   assert.match(result.fields.buyer, /Donghai Copper/iu);
   assert.equal(result.requires_human_review, false);
@@ -62,9 +63,9 @@ test('AI-17: merges a document bundle over a structured template without losing 
   const parsed = await parseDocuments([{ path: bolPath }, { path: invoicePath }], { templateCase: copperCase });
   assert.equal(parsed.case_id, copperCase.case_id);
   assert.equal(parsed.documents.length, 2);
-  assert.equal(parsed.case_data.financing.requested_cash_usd, 3_300_000);
-  assert.equal(parsed.case_data.bill_of_lading.bl_no, 'BSCL/SIN/SHA/2026/04417');
-  assert.equal(parsed.case_data.commercial_invoice.total_amount_usd, 6_875_000);
+  assert.equal(parsed.case_data.financing.requested_cash_usd, 5_000_000);
+  assert.equal(parsed.case_data.bill_of_lading.bl_no, 'BSCL/SIN/SHA/0517');
+  assert.equal(parsed.case_data.commercial_invoice.total_amount_usd, 7_267_500);
   assert.equal(parsed.requires_human_review, false);
   const consistency = checkDocumentConsistency(parsed.case_data);
   assert.equal(consistency.has_critical, false);
@@ -82,13 +83,13 @@ test('AI-17: PDF/image extraction is injectable and AI failure falls back determ
     aiExtractor: async () => { throw new Error('provider unavailable'); }
   });
   assert.equal(result.source.extractor, 'injected-ocr');
-  assert.equal(result.fields.invoice_no, 'SRT-INV-2026-04417');
+  assert.equal(result.fields.invoice_no, 'SRT-INV-0517');
   assert.ok(result.warnings.some((warning) => warning.includes('deterministic fallback')));
 
   const insurance = await parseDocument(insurancePath);
   assert.equal(insurance.document_type, 'INSURANCE_POLICY');
-  assert.equal(insurance.fields.policy_no, 'MCI-2026-001');
-  assert.equal(insurance.fields.insured_value_usd, 2_860_000);
+  assert.equal(insurance.fields.policy_no, 'AMS-SOY-2208');
+  assert.equal(insurance.fields.insured_value_usd, 40_801_200);
   assert.equal(insurance.fields.coverage_ratio, 1.1);
 });
 
@@ -100,7 +101,7 @@ test('WP2.2: an invalid binary PDF is distinguished from a scan needing OCR', as
 });
 
 test('WP2.2: a crude cargo quoted in barrels parses completely, using the tonnes the document states', async () => {
-  const folder = path.join(root, 'data/uploads/crude-sg-ulsan');
+  const folder = path.join(root, 'data/uploads/crude-fuj-sin');
   const bundle = await parseDocuments([
     { path: path.join(folder, 'bill-of-lading.md') },
     { path: path.join(folder, 'commercial-invoice.md') },
@@ -109,16 +110,16 @@ test('WP2.2: a crude cargo quoted in barrels parses completely, using the tonnes
   assert.equal(bundle.requires_human_review, false);
   assert.deepEqual(bundle.documents.map((document) => document.missing_fields), [[], [], []]);
   const bl = bundle.case_data.bill_of_lading;
-  assert.equal(bl.port_of_loading, 'Universal Terminal, Jurong Island, Singapore (SGSIN)');
-  assert.equal(bl.shipped_on_board, '2026-06-01');
-  assert.equal(bl.quantity_bbl, 600_000);
-  assert.equal(bl.quantity_mt, 78_221, 'tonnes are read from the document, not converted from barrels');
+  assert.equal(bl.port_of_loading, 'Fujairah Oil Terminal, Fujairah, UAE (AEFJR)');
+  assert.equal(bl.shipped_on_board, '2026-10-12');
+  assert.equal(bl.quantity_bbl, 700_000);
+  assert.equal(bl.quantity_mt, 92_105, 'tonnes are read from the document, not converted from barrels');
   const invoice = bundle.case_data.commercial_invoice;
-  assert.equal(invoice.unit_price_usd_per_bbl, 96.5, 'the unit price keeps the unit it was quoted in');
+  assert.equal(invoice.unit_price_usd_per_bbl, 107.1, 'the unit price keeps the unit it was quoted in');
   assert.equal(invoice.unit_price_usd_per_mt, undefined);
-  assert.equal(invoice.total_amount_usd, 57_900_000);
-  assert.equal(bundle.case_data.insurance.insured_value_usd, 63_690_000);
-  assert.equal(bundle.case_data.insurance.expires_at, '2026-07-02');
+  assert.equal(invoice.total_amount_usd, 74_970_000);
+  assert.equal(bundle.case_data.insurance.insured_value_usd, 82_467_000);
+  assert.equal(bundle.case_data.insurance.expires_at, '2026-11-30');
   assert.equal(checkDocumentConsistency(bundle.case_data).has_critical, false);
 });
 

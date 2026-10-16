@@ -1,0 +1,143 @@
+{
+  "case_id": "CASE-EBL-SOY-SSZ-DLC",
+  "model": "ai-dynamic-pricing-rwa-v0.3",
+  "date_anchor": "2026-10-16",
+  "note": "Brazilian soybeans on a Panamax, Santos -> Dalian round the Cape of Good Hope: the main real-world soybean flow into China. All companies, banks, vessels, people and document numbers are fictional. Dates are written around date_anchor and move with today when loaded; prices are calibrated to public quotes on the anchor day and marked to market live when real data is on.",
+  "uploaded_documents": {
+    "bill_of_lading_file": "data/uploads/soybean-ssz-dlc/bill-of-lading.md",
+    "commercial_invoice_file": "data/uploads/soybean-ssz-dlc/commercial-invoice.md",
+    "insurance_policy_file": "data/uploads/soybean-ssz-dlc/insurance-policy.md"
+  },
+  "bill_of_lading": {
+    "bl_id": "EBL-SOY-SSZ-2208",
+    "bl_no": "SULB/SSZ/DLC/2208",
+    "bl_type": "negotiable_to_order",
+    "ebl_platform": "TradeTrust (MLETR)",
+    "ebl_title_ref": "TT-EBL-SOY-2208-5A3C",
+    "shipper": "Cerrado Grains Exportadora Ltda.",
+    "consignee": "TO ORDER OF BANCO ATLANTICO SUL S.A.",
+    "notify_party": "Dalian Liaohai Oilseed Crushing Co., Ltd.",
+    "carrier": "South Atlantic Bulk Lines",
+    "vessel": "MV Ipe Amarelo",
+    "voyage_no": "V.12E",
+    "port_of_loading": "Santos, Brazil",
+    "port_of_discharge": "Dalian, China",
+    "incoterms": "CFR Dalian",
+    "cargo": "Soybeans (Brazil, GMO, yellow, for crushing)",
+    "quantity_mt": 66000,
+    "declared_value_usd": 37092000,
+    "issue_date": "2026-10-04",
+    "shipped_on_board": "2026-10-04",
+    "eta": "2026-11-15",
+    "document_hash": "0x4034cae8a4eb9b5b5f9761f1c6f97c7b11017d3c462aa4f62fd64ed17cd7165e"
+  },
+  "commercial_invoice": {
+    "invoice_no": "CGE-INV-2208",
+    "invoice_date": "2026-10-04",
+    "sales_contract": "CGE-LHO-SOY-2208",
+    "incoterms": "CFR Dalian",
+    "payment_terms": "Irrevocable L/C at sight",
+    "pricing_basis": "CBOT soybean futures + Santos FOB premium + Panamax freight",
+    "cbot_reference_price_usd_per_mt": 470,
+    "fob_premium_usd_per_mt": 40,
+    "freight_usd_per_mt": 52,
+    "unit_price_usd_per_mt": 562,
+    "quantity_mt": 66000,
+    "total_amount_usd": 37092000,
+    "currency": "USD",
+    "is_provisional": false
+  },
+  "cargo": {
+    "commodity": "Soybean",
+    "grade": "Brazil soybeans, protein >= 36%, moisture <= 14%, foreign matter <= 1%",
+    "hs_code": "120190",
+    "quantity": 66000,
+    "unit": "MT"
+  },
+  "insurance": {
+    "provider": "Atlantico Marine Seguros (demo)",
+    "policy_type": "ICC(A) all risks + heating & sweating (bulk grains)",
+    "coverage_ratio": 1.1,
+    "insured_value_usd": 40801200,
+    "expires_at": "2026-12-15",
+    "policy_hash": "0x90c44263acc9460c0ef9547a5e7331b2d2305516c5a6c71106b29ebbb1fedaa5"
+  },
+  "trade_economics": {
+    "cost_basis_usd_per_mt": 538,
+    "cost_of_goods_usd": 35508000,
+    "expected_gross_profit_usd": 1584000,
+    "gross_margin_pct": 0.0427,
+    "note": "Origination cost FOB Santos plus fixed freight against a CFR Dalian sale."
+  },
+  "financing": {
+    "requested_cash_usd": 25000000,
+    "payout_speed": "BALANCED",
+    "target_redemption_value_usd": 1,
+    "redemption_coverage_limit": 0.9,
+    "max_ltv": 0.8,
+    "currency": "USDC"
+  },
+  "market": {
+    "commodity": "Soybean",
+    "benchmark": "CBOT soybean futures (ZS=F)",
+    "benchmark_key": "soybeans",
+    "price_unit": "USD/MT",
+    "reference_price_usd_per_mt": 463.71,
+    "regional_premium_usd_per_mt": 92,
+    "landed_price_usd_per_mt": 555.71,
+    "initial_price_usd_per_mt": 470,
+    "current_price_usd_per_mt": 463.71,
+    "as_of": "2026-10-16",
+    "source": "Yahoo Finance · CBOT soybean futures (ZS=F) on the anchor day"
+  },
+  "route_profile": {
+    "chokepoints": [
+      "Cape of Good Hope",
+      "Malacca Strait",
+      "Bohai Strait"
+    ],
+    "waypoints": [
+      {
+        "name": "South Atlantic",
+        "lat": -30,
+        "lon": -20
+      },
+      {
+        "name": "Agulhas (off South Africa)",
+        "lat": -36,
+        "lon": 22
+      },
+      {
+        "name": "South China Sea",
+        "lat": 14.5,
+        "lon": 113.5
+      }
+    ],
+    "news_queries": [
+      "\"Cape of Good Hope\" OR Agulhas shipping",
+      "soybean price China Brazil"
+    ],
+    "news_terms": [
+      "Cape of Good Hope",
+      "Agulhas",
+      "Santos",
+      "Malacca",
+      "Dalian"
+    ]
+  },
+  "shipment_events": [
+    {
+      "date": "2026-10-04",
+      "type": "loaded_on_board",
+      "description": "66,000 MT soybeans loaded on MV Ipe Amarelo at Santos.",
+      "severity": "info"
+    },
+    {
+      "date": "2026-10-13",
+      "type": "no_damage_reported",
+      "description": "Vessel crossing the South Atlantic towards the Cape; holds ventilated, cargo condition normal.",
+      "severity": "info"
+    }
+  ],
+  "macro_risk_events": []
+}

@@ -1,10 +1,10 @@
 # 海运货物保险单 (Marine Cargo Insurance Policy)
 
-> 拟真样例数据，用于 AgentBL demo。公司、保险人、单号、船名均为**虚构**，不指向任何真实实体。
+> 拟真样例数据，用于 AgentBL demo。公司、保险人、单号、船名均为**虚构**，不指向任何真实实体。日期随 Demo 的"今天"平移。
 
 | | |
 |---|---|
-| **Policy No.** | LCM-2026-CU-04417 |
+| **Policy No.** | LCM-CU-0517 |
 | **Policy Type** | ICC(A) all risks, war & strikes clauses |
 | **Insurer** | **Lion City Marine Insurance Pte. Ltd. (demo)** |
 
@@ -13,8 +13,8 @@
 ## Insured
 
 **Strait Resources Trading Pte. Ltd.**
-8 Marina View, #34-01 Asia Square Tower 1, Singapore 018960
-Loss payee: DBS Bank Ltd., Singapore (as holder of the eBL)
+18 Harbour Front Walk, #21-04, Singapore 098631 (demo address)
+Loss payee: Merlion Trade Bank Ltd., Singapore (as holder of the eBL)
 
 ---
 
@@ -24,8 +24,8 @@ Loss payee: DBS Bank Ltd., Singapore (as holder of the eBL)
 |---|---|
 | From | Singapore (SGSIN) |
 | To | Shanghai - Yangshan (CNSHG) |
-| Vessel | MV Marina Star / V.0048E |
-| Departure Date | 3 June 2026 |
+| Vessel | MV Lumen Bay / V.0112N |
+| Departure Date | 2026-10-13 |
 | Conveyance | Container vessel (20 x 20'GP) |
 
 ---
@@ -36,7 +36,7 @@ Loss payee: DBS Bank Ltd., Singapore (as holder of the eBL)
 |---|---|
 | Commodity | Copper Cathodes (LME Grade A, Cu-CATH-1) |
 | Quantity | 500 MT (200 bundles) |
-| Marks | SRT / CU-CATH-1 / SHA-2026-04417 |
+| Marks | SRT / CU-CATH-1 / SHA-0517 |
 
 ---
 
@@ -44,11 +44,11 @@ Loss payee: DBS Bank Ltd., Singapore (as holder of the eBL)
 
 | | |
 |---|---|
-| CIF Value | USD 6,875,000.00 |
+| CIF Value | USD 7,267,500.00 |
 | Coverage Ratio | 110% |
-| **Insured Amount** | **USD 7,562,500.00** |
+| **Insured Amount** | **USD 7,994,250.00** |
 | Deductible | USD 25,000.00 |
-| Expiry | 2026-07-05 |
+| Expiry | 2026-11-25 |
 
 ---
 
@@ -61,5 +61,5 @@ Loss payee: DBS Bank Ltd., Singapore (as holder of the eBL)
 | Institute Strikes Clauses (Cargo) | Covered |
 | General Average | Per York-Antwerp Rules 2016 |
 
-| Policy Hash | 0x4b2e8f1c90a7d3556e0c1a9f72b4d8e63c5170af9d2e84b1c6f30a72e5841db9 |
+| Policy Hash | 0x140ba34fed96729c55558c514eeb3ea0aa67bf14430ac1adc45c2b87180fa8c9 |
 |---|---|

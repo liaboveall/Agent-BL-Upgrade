@@ -14,10 +14,15 @@ test('AI-11: corpus loads from the risk-intel feed', () => {
 });
 
 test('AI-11: copper case retrieves the Hormuz war + copper volatility intel', () => {
-  const matches = retrieveRiskIntel(copperCase, { k: 3 });
+  // The events a Hormuz-exposed copper cargo gets from src/realdata at load time.
+  const exposed = { ...copperCase, macro_risk_events: [
+    { type: 'war_risk', region: 'Middle East / Strait of Hormuz', severity: 'critical' },
+    { type: 'commodity_volatility', region: 'Global', severity: 'warning' }
+  ] };
+  const matches = retrieveRiskIntel(exposed, { k: 3 });
   const ids = matches.map((m) => m.id);
-  assert.ok(ids.includes('MRI-HORMUZ-WAR-2026-06'));
-  assert.ok(ids.includes('MRI-COPPER-VOL-2026-06'));
+  assert.ok(ids.includes('MRI-HORMUZ-CLOSURE-2026-10'));
+  assert.ok(ids.includes('MRI-COPPER-2026-10'));
   // scores are sorted descending and carry a source for citation
   assert.ok(matches[0].score >= matches[matches.length - 1].score);
   assert.ok(matches.every((m) => m.source));
@@ -52,7 +57,7 @@ test('case retrieval only cites intel that shares the commodity, a region or a g
     assert.deepEqual(retrieveRiskIntel(await read(name)), [], name);
   }
   const copper = retrieveRiskIntel(await read('copper-sg-shanghai')).map((doc) => doc.id);
-  assert.ok(copper.includes('MRI-COPPER-VOL-2026-06'));
+  assert.ok(copper.includes('MRI-COPPER-2026-10'));
   assert.ok(copper.includes('MRI-PORT-CONGESTION-SHA-2026'), 'the discharge port counts as a case region');
-  assert.ok(!copper.includes('MRI-KRW-FX-2026-06'), 'a crude-specific item never reaches a copper cargo');
+  assert.ok(!copper.includes('MRI-ASIA-FX-2026-10'), 'a crude-specific item never reaches a copper cargo');
 });

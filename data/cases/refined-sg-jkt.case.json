@@ -1,73 +1,68 @@
 {
-  "case_id": "CASE-EBL-2026-REFINED-SG-JKT",
-  "model": "ai-dynamic-pricing-rwa-v0.2",
-  "note": "Simulated user upload. Refined oil products (Gasoline 92 RON + Diesel 50ppm), Singapore → Jakarta. All entities fictional.",
-  "uploaded_documents": {
-    "bill_of_lading_file": "data/uploads/refined-sg-jkt/bill-of-lading.md",
-    "commercial_invoice_file": "data/uploads/refined-sg-jkt/commercial-invoice.md"
-  },
+  "case_id": "CASE-EBL-GASOIL-SIN-JKT",
+  "model": "ai-dynamic-pricing-rwa-v0.3",
+  "date_anchor": "2026-10-16",
+  "note": "Gasoil 10ppm, Singapore -> Jakarta on an MR tanker. Fixes the old invoice whose total did not equal quantity x unit price. All companies, banks, vessels, people and document numbers are fictional. Dates are written around date_anchor and move with today when loaded; prices are calibrated to public quotes on the anchor day and marked to market live when real data is on.",
   "bill_of_lading": {
-    "bl_id": "EBL-2026-REF-0332",
-    "bl_no": "SPC-REFINED-2026-0332",
+    "bl_id": "EBL-GO-SIN-JKT-0772",
+    "bl_no": "SPC/SIN/JKT/0772",
     "bl_type": "negotiable_to_order",
-    "ebl_platform": "CargoX",
-    "ebl_title_ref": "CX-EBL-REF-0332-B81F",
-    "shipper": "Singapore Petroleum Trading Co. Pte. Ltd.",
-    "consignee": "TO ORDER",
-    "notify_party": "PT Energi Nusantara, Jakarta, Indonesia",
-    "carrier": "Strait Product Carriers Ltd. (MT Clean Horizon)",
-    "vessel": "MT Clean Horizon",
-    "voyage_no": "V.112",
+    "ebl_platform": "TradeTrust (MLETR)",
+    "ebl_title_ref": "TT-EBL-GO-0772-41C0",
+    "shipper": "Straits Petroleum Commerce Pte. Ltd.",
+    "consignee": "TO ORDER OF MERLION TRADE BANK LTD., SINGAPORE",
+    "notify_party": "PT Nusantara Energi Distribusi, Jakarta",
+    "carrier": "Lion Gate Tankers Pte. Ltd.",
+    "vessel": "MT Batam Breeze",
+    "voyage_no": "V.18S",
     "port_of_loading": "Singapore (Jurong Refinery Terminal)",
     "port_of_discharge": "Jakarta (Tanjung Priok), Indonesia",
     "incoterms": "CIF Jakarta",
-    "cargo": "Refined Oil Products (Gasoline 92 RON 30,000 MT + Diesel 50ppm 20,000 MT)",
-    "quantity_mt": 50000,
-    "declared_value_usd": 31250000,
-    "issue_date": "2026-06-08",
-    "shipped_on_board": "2026-06-08",
-    "eta": "2026-06-11",
-    "document_hash": "0x8c2f1a67d4e9b053c8a31f79e6d2b4a8710c5f39e4a8b612d7c3f05a91e7b834"
+    "cargo": "Gasoil 10ppm sulphur (diesel)",
+    "quantity_mt": 30000,
+    "declared_value_usd": 41550000,
+    "issue_date": "2026-10-15",
+    "shipped_on_board": "2026-10-15",
+    "eta": "2026-10-18",
+    "document_hash": "0xee3117f720bc70dff5b68324af1c0f9ecdcf8de507fbca0db928f58c04e56e9b"
   },
   "commercial_invoice": {
-    "invoice_no": "SPC-INV-2026-0332",
-    "invoice_date": "2026-06-08",
-    "sales_contract": "SPC-PTEN-REF-2026-07",
+    "invoice_no": "SPC-INV-0772",
+    "invoice_date": "2026-10-15",
+    "sales_contract": "SPC-NED-GO-0772",
     "incoterms": "CIF Jakarta",
     "payment_terms": "Irrevocable L/C at sight",
-    "pricing_basis": "MOPS 92 RON Gasoline + MOPS 50ppm Gasoil (Platts Singapore)",
-    "gasoline_price_usd_per_mt": 695,
-    "diesel_price_usd_per_mt": 720,
-    "blended_unit_price_usd_per_mt": 705,
-    "quantity_mt": 50000,
-    "total_amount_usd": 31250000,
+    "pricing_basis": "Platts Singapore gasoil 10ppm (MOPS) + CIF Jakarta premium",
+    "unit_price_usd_per_mt": 1385,
+    "quantity_mt": 30000,
+    "total_amount_usd": 41550000,
     "currency": "USD",
     "is_provisional": false
   },
   "cargo": {
-    "commodity": "Refined Oil Products",
-    "grade": "Gasoline 92 RON (30,000 MT) + Diesel 50ppm (20,000 MT)",
-    "hs_code": "271012",
-    "quantity": 50000,
+    "commodity": "Refined Oil Products (gasoil)",
+    "grade": "Gasoil 10ppm sulphur, cetane >= 51",
+    "hs_code": "271019",
+    "quantity": 30000,
     "unit": "MT"
   },
   "insurance": {
     "provider": "Lion City Marine Insurance Pte. Ltd. (demo)",
     "policy_type": "Marine cargo all risks (clean products)",
     "coverage_ratio": 1.1,
-    "insured_value_usd": 34375000,
-    "expires_at": "2026-07-10",
-    "policy_hash": "0x3e7a1b29c4d5f086e1a23b6f4c8d0e95a1732b4c6d5e8f0123456a7b8c9d0e1f"
+    "insured_value_usd": 45705000,
+    "expires_at": "2026-11-15",
+    "policy_hash": "0xc20dfb0d85770fd712e5afb74a22ef23d21e3c6adbd0c74e75e1f6212b41f8c7"
   },
   "trade_economics": {
-    "cost_basis_usd_per_mt": 560,
-    "cost_of_goods_usd": 28000000,
-    "expected_gross_profit_usd": 3250000,
-    "gross_margin_pct": 0.104,
-    "note": "Refinery margin compression: tight Singapore crack spreads, modest profit. Short-haul route limits transit risk."
+    "cost_basis_usd_per_mt": 1350,
+    "cost_of_goods_usd": 40500000,
+    "expected_gross_profit_usd": 1050000,
+    "gross_margin_pct": 0.0253,
+    "note": "Bought ex-refinery at USD 1,350/MT and sold CIF Jakarta at USD 1,385/MT (30,000 MT x 1,385 = 41,550,000). Diesel cracks are at records with the Gulf disrupted; the trade margin stays thin."
   },
   "financing": {
-    "requested_cash_usd": 1200000,
+    "requested_cash_usd": 30000000,
     "payout_speed": "FAST",
     "target_redemption_value_usd": 1,
     "redemption_coverage_limit": 0.9,
@@ -76,34 +71,45 @@
   },
   "market": {
     "commodity": "Refined Oil Products",
-    "benchmark": "MOPS 92 RON Gasoline / MOPS 50ppm Gasoil (Platts Singapore)",
+    "benchmark": "NYMEX ULSD futures (HO=F) as a gasoil proxy, Singapore discount applied",
+    "benchmark_key": "gasoil",
     "price_unit": "USD/MT",
-    "reference_price_usd_per_mt": 705,
-    "as_of": "2026-06-08",
-    "source": "Singapore spot market, June 2026 window"
+    "bbl_per_mt": 7.45,
+    "reference_price_usd_per_mt": 1431.29,
+    "regional_premium_usd_per_mt": -45,
+    "landed_price_usd_per_mt": 1386.29,
+    "initial_price_usd_per_mt": 1425,
+    "current_price_usd_per_mt": 1431.29,
+    "as_of": "2026-10-16",
+    "source": "Yahoo Finance · NYMEX ULSD futures (HO=F) on the anchor day"
+  },
+  "route_profile": {
+    "chokepoints": [],
+    "waypoints": [
+      {
+        "name": "Java Sea",
+        "lat": -5,
+        "lon": 107.5
+      }
+    ],
+    "news_queries": [
+      "\"Tanjung Priok\" OR \"Jakarta port\"",
+      "diesel gasoil price Asia"
+    ],
+    "news_terms": [
+      "Java Sea",
+      "Tanjung Priok",
+      "Jakarta",
+      "Singapore Strait"
+    ]
   },
   "shipment_events": [
     {
-      "date": "2026-06-08",
+      "date": "2026-10-15",
       "type": "loaded_on_board",
-      "description": "50,000 MT refined products loaded at Jurong Refinery Terminal onto MT Clean Horizon.",
+      "description": "30,000 MT gasoil loaded on MT Batam Breeze at Jurong.",
       "severity": "info"
     }
   ],
-  "macro_risk_events": [
-    {
-      "date": "2026-06-08",
-      "type": "demand_risk",
-      "region": "Indonesia",
-      "severity": "info",
-      "description": "Indonesia Q3 fuel demand forecast slightly below seasonal average; moderate downside to importer payment timing."
-    },
-    {
-      "date": "2026-06-08",
-      "type": "weather_risk",
-      "region": "South China Sea / Java Sea",
-      "severity": "warning",
-      "description": "Early monsoon season in Java Sea with above-average rainfall forecast; minor risk of discharge delays at Tanjung Priok."
-    }
-  ]
+  "macro_risk_events": []
 }

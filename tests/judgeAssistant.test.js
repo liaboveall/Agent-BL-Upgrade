@@ -34,7 +34,7 @@ test('AI-12: the pricing question explains the profit-share model with real numb
   assert.match(res.answer, /share/i);
   assert.match(res.answer, /profit/i);
   // It quotes the real verified profit figure from the engine.
-  assert.match(res.answer, /1,375,000/);
+  assert.match(res.answer, /237,500/);
 });
 
 test('AI-12: the risk-rises answer cites the pause action from the real engine', async () => {

@@ -38,14 +38,20 @@ const price = (q) => q.final_issue_price_usd.toFixed(2);
 const yieldPct = (q) => (q.implied_gross_yield_bps / 100).toFixed(1);
 const sharePct = (q) => (q.exporter_profit_share_bps / 100).toFixed(0);
 
-/** Escalate a case to a war-crisis stress so the assistant can cite the pause. */
+/**
+ * Stress a case as if its route ran through a closed Strait of Hormuz (what the public data shows for
+ * Gulf loadings in October 2026: transits ~94% below a year earlier, markets pricing a long closure), so
+ * the assistant can cite the pause the real engine takes.
+ */
 function escalate(caseData) {
   const stressed = structuredClone(caseData);
+  const date = caseData.market?.as_of ?? caseData.bill_of_lading?.issue_date ?? null;
   stressed.macro_risk_events = [
     ...(stressed.macro_risk_events ?? []).map((e) =>
       e.type === 'war_risk' || e.type === 'commodity_volatility' ? { ...e, severity: 'critical' } : e
     ),
-    { date: '2026-06-09', type: 'war_risk', region: 'Middle East / Strait of Hormuz', severity: 'critical', description: 'Strait closed; extreme war premium.' }
+    { date, type: 'chokepoint_disruption', region: 'Strait of Hormuz', severity: 'critical', description: 'Stress: transits through the strait collapse.' },
+    { date, type: 'war_risk', region: 'Middle East / Strait of Hormuz', severity: 'critical', description: 'Stress: strait closed to merchant traffic.' }
   ];
   return stressed;
 }

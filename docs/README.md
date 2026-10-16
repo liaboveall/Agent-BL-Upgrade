@@ -10,6 +10,8 @@
 | [background.md](./background.md) | 贸易金融、电子提单与 RWA 的背景入门 |
 | [agent-implementation-plan.md](./agent-implementation-plan.md) | Agent 的架构、设计原则与决策记录（已实施完成；代码注释中的 § 编号指向这里） |
 | [agent-security-matrix.md](./agent-security-matrix.md) | 自主级别 × 签名角色 × 动作的权限矩阵与人工兜底 |
+| [next-steps.md](./next-steps.md) | 接下来的两项改动：真实数据与新案例、前端 UI 重构 |
+| [real-data.md](./real-data.md) | 免费公开数据源、离线快照、相对日期、当前案例集与历史 pool #2 |
 
 ## 功能说明
 

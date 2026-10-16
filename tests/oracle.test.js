@@ -4,6 +4,7 @@ import test from 'node:test';
 import { quoteFromCase } from '../src/core/pricingEngine.js';
 import { toChainPricingArgs, toOracleUpdate } from '../src/core/oracle.js';
 import { PRICING_ACTION_TO_UINT8, RISK_LEVEL_TO_UINT8 } from '../src/core/contractHarness.js';
+import { loadCuratedCase } from '../src/core/curatedCases.js';
 
 // BE-8: the quote must serialise into the exact payload the on-chain
 // RiskPricingOracle / RWAOfferingPool need, carrying both anchoring hashes.
@@ -11,9 +12,8 @@ import { PRICING_ACTION_TO_UINT8, RISK_LEVEL_TO_UINT8 } from '../src/core/contra
 const copperCase = JSON.parse(
   await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8')
 );
-const warCase = JSON.parse(
-  await fs.readFile(new URL('../data/cases/copper-sg-shanghai-warcrisis.case.json', import.meta.url), 'utf8')
-);
+// The Hormuz-transit aluminium case with the offline real-data snapshot attached: CRITICAL, paused.
+const warCase = await loadCuratedCase(new URL('../data/cases/alu-dxb-rtm.case.json', import.meta.url));
 
 test('BE-8: toOracleUpdate maps an opening quote to the oracle payload', () => {
   const quote = quoteFromCase(copperCase, { payout_speed: 'FAST' });

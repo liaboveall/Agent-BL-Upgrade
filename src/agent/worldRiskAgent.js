@@ -23,6 +23,7 @@ import {
   searchNews,
   getPredictionMarket
 } from './tools/worldRiskTools.js';
+import { getNews, loadSnapshot, routeRiskEvents } from '../realdata/index.js';
 
 const WATCHLIST_URL = new URL('../../data/world-intel/watchlist.json', import.meta.url);
 
@@ -88,6 +89,14 @@ export function buildQueryProfile(caseData = {}) {
     : (load && discharge ? `${load} → ${discharge}` : (load || discharge || 'route'));
   const regionTerm = hormuzExposed ? 'Strait of Hormuz' : (load || routeRegion);
 
+  // Places the cargo actually passes: a headline about somewhere else is not evidence about this route.
+  const routeProfile = caseData.route_profile ?? {};
+  const routeTerms = [
+    ...(routeProfile.chokepoints ?? []), ...(routeProfile.nearby_chokepoints ?? []),
+    ...(routeProfile.waypoints ?? []).map((point) => point.name), ...(routeProfile.news_terms ?? []),
+    load, discharge
+  ].filter(Boolean).map((term) => lc(term).replace(/\s*\(.*\)\s*/u, '').trim()).filter((term) => term.length > 3);
+
   const commodityKey = Object.keys(WATCHLIST.commodity_aliases ?? {}).find((k) => lc(commodity).includes(k));
   const commodityTerms = (WATCHLIST.commodity_aliases?.[commodityKey] ?? [lc(commodity)]).filter(Boolean);
 
@@ -105,6 +114,9 @@ export function buildQueryProfile(caseData = {}) {
     routeRegion,
     regionTerm,
     hormuzExposed,
+    routeTerms,
+    newsQueries: (routeProfile.news_queries ?? []).length ? routeProfile.news_queries.slice(0, 3)
+      : [`"${regionTerm}" shipping`, `${commodity} price`],
     counterparties: [bl.shipper, bl.consignee, bl.notify_party].filter(Boolean),
     officials: (WATCHLIST.official_handles ?? []).slice(0, 2),
     queries: {
@@ -220,23 +232,110 @@ function buildSummary(events, profile, live) {
     return `No elevated real-world risk signals detected for ${profile.commodity} on ${profile.routeRegion}.`;
   }
   const top = events.slice(0, 3).map((e) => `${e.type.replace(/_/g, ' ')} (${e.severity})`).join(', ');
-  const mode = live ? 'Live xAPI signals' : 'Offline fixture signals';
+  const mode = typeof live === 'string' ? live : live ? 'Live xAPI signals' : 'Offline fixture signals';
   return `${mode} for ${profile.commodity} on ${profile.routeRegion}: ${top}. `
     + `${events.length} world-risk event(s) folded into the cargo's risk score.`;
 }
 
+const PUBLIC_SOURCES = ['IMF PortWatch', 'Polymarket', 'Open-Meteo Marine', 'Yahoo Finance', 'Google News'];
+
+/** Headline-derived events: only about this route or commodity, and never above `warning` on their own. */
+function headlineEvents(news, profile) {
+  const text = (item) => lc(`${item.title} ${item.snippet ?? ''}`);
+  // Route events (war, port, weather) need a place on this route; market events need this commodity.
+  const aboutRoute = news.filter((item) => profile.routeTerms.some((term) => text(item).includes(term)));
+  const aboutCommodity = news.filter((item) => profile.commodityTerms.some((term) => text(item).includes(lc(term))));
+  const marketTypes = new Set(['commodity_volatility', 'sanction_risk']);
+  const scored = [
+    ...scoreWorldSignals({ news: aboutRoute }, profile).filter((event) => !marketTypes.has(event.type)),
+    ...scoreWorldSignals({ news: aboutCommodity }, profile).filter((event) => marketTypes.has(event.type))
+  ];
+  return scored.map((event) => ({
+    ...event,
+    severity: event.severity === 'critical' ? 'warning' : event.severity,
+    description: `Headline signal: ${event.type.replace(/_/g, ' ')} for ${profile.commodity} on ${event.region}, from ${event.signal_count} headline(s) via Google News (capped at warning without a quantitative source).`,
+    source: 'Google News'
+  }));
+}
+
+/** Union by type + region, keeping the more severe reading (quantitative sources come first). */
+function mergeEvents(primary, secondary) {
+  const out = new Map();
+  for (const event of [...primary, ...secondary]) {
+    const key = `${event.type}|${event.region}`;
+    const seen = out.get(key);
+    if (!seen || (SEVERITY_RANK[event.severity] ?? 0) > (SEVERITY_RANK[seen.severity] ?? 0)) out.set(key, event);
+  }
+  return [...out.values()].sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] || a.type.localeCompare(b.type));
+}
+
+/** The free public sources: route data (src/realdata) plus headlines; the snapshot when they are off. */
+async function assessFromPublicSources(caseData, profile, opts) {
+  const { env = process.env, forceFallback = false } = opts;
+  const sourceEnv = forceFallback ? { ...env, REAL_DATA: 'off' } : env;
+  const sourceOpts = { env: sourceEnv, fetchImpl: opts.fetchImpl };
+  const [route, ...newsResults] = await Promise.all([
+    routeRiskEvents(caseData, sourceOpts),
+    ...profile.newsQueries.map((query) => getNews(query, sourceOpts))
+  ]);
+  const news = newsResults.flatMap((result) => result.items ?? []).slice(0, 12).map((item) => ({ ...item, snippet: item.snippet ?? '' }));
+  const statuses = [route.status, ...newsResults.map((result) => result.status)].filter((status) => status !== 'unavailable');
+  const live = statuses.some((status) => status === 'live' || status === 'stale');
+  // A quantitative reading (transits, odds, waves, prices) of a risk type supersedes headlines about it.
+  const measured = new Set(route.events.map((event) => event.type));
+  const events = mergeEvents(route.events, headlineEvents(news, profile).filter((event) => !measured.has(event.type)));
+  const clockMs = opts.now?.() ?? Date.now();
+  const fetched = newsResults.map((result) => Date.parse(result.fetched_at ?? '')).filter(Number.isFinite);
+  const observedMs = live ? (fetched.length ? Math.min(...fetched) : clockMs) : clockMs;
+  const allLive = statuses.length > 0 && statuses.every((status) => status === 'live');
+  const snapshotAt = loadSnapshot().captured_at;
+  const signals = {
+    tweets: [],
+    officials: [],
+    news: news.map((item) => ({ title: item.title, snippet: '', source: item.source, date: item.date, url: item.url })),
+    prediction_markets: route.evidence.markets.map((item) => ({ market: item.question, question: item.question, implied_prob: item.implied_prob, platform: 'Polymarket', url: item.url })),
+    chokepoints: route.evidence.chokepoints,
+    sea_state: route.evidence.sea_state,
+    price: route.evidence.price
+  };
+  const label = live ? `Live public data (${PUBLIC_SOURCES.join(', ')})` : `Offline snapshot of public data${snapshotAt ? ` captured ${snapshotAt.slice(0, 10)}` : ''}`;
+  return {
+    observed_at: new Date(observedMs).toISOString(),
+    expires_at: new Date(observedMs + EVIDENCE_TTL_MS).toISOString(),
+    source_status: live ? (allLive ? 'live' : 'stale') : 'fixture',
+    events,
+    signals,
+    sources: { route: route.status, news: newsResults.map((result) => result.status) },
+    summary: buildSummary(events, profile, label),
+    provider: live ? 'public-live' : 'public-snapshot',
+    live,
+    data_status: live ? (allLive ? 'live' : 'mixed') : 'offline',
+    snapshot_captured_at: snapshotAt,
+    evidence_hash: hashEvidence({
+      case_id: caseData.case_id,
+      queries: profile.newsQueries,
+      events: events.map((e) => ({ type: e.type, severity: e.severity, region: e.region, n: e.signal_count ?? 1 }))
+    }),
+    queried: { news: profile.newsQueries, route: caseData.route_profile ?? null },
+    profile: { commodity: profile.commodity, route_region: profile.routeRegion, hormuz_exposed: profile.hormuzExposed }
+  };
+}
+
 /**
- * Assess real-world risk for a cargo via xAPI and return structured events.
+ * Assess real-world risk for a cargo and return structured events. With an xAPI key (or an injected
+ * executor) the signals come from xAPI; otherwise from the free public sources in src/realdata, or
+ * their offline snapshot when REAL_DATA is off, a source is down, or `forceFallback` is set.
  * @param {object} caseData a AgentBL case
- * @param {object} [opts] { env, execute, forceFallback }
+ * @param {object} [opts] { env, execute, forceFallback, fetchImpl, now }
  *   - execute: injectable xAPI executor (tests) — see xapiClient.executeAction
- *   - forceFallback: skip live calls, use offline fixtures
+ *   - forceFallback: skip live calls, use offline data
  * @returns {Promise<{events, signals, summary, provider, live, evidence_hash, queried}>}
  */
 export async function assessWorldRisk(caseData, opts = {}) {
   const { env = process.env, execute, forceFallback = false } = opts;
   const profile = buildQueryProfile(caseData);
-  profile.asOf = caseData.market?.as_of ?? '2026-06-08';
+  profile.asOf = caseData.market?.as_of ?? new Date(opts.now?.() ?? Date.now()).toISOString().slice(0, 10);
+  if (forceFallback || !(execute || isXapiConfigured(env))) return assessFromPublicSources(caseData, profile, opts);
 
   const toolOpts = forceFallback ? { env: {} } : { env, execute };
 

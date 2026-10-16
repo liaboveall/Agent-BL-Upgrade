@@ -17,7 +17,8 @@ function toMacroEvent(event = {}) {
     region: event.region,
     severity: event.severity,
     description: event.description,
-    source: event.source ?? 'xAPI/world-intel'
+    source: event.source ?? 'xAPI/world-intel',
+    ...(event.data_status ? { data_status: event.data_status } : {})
   };
 }
 
@@ -27,11 +28,18 @@ function toMacroEvent(event = {}) {
  */
 export function mergeWorldRiskIntoCase(caseData, events = []) {
   if (!Array.isArray(events) || events.length === 0) return caseData;
-  return {
-    ...caseData,
-    macro_risk_events: [...(caseData.macro_risk_events ?? []), ...events.map(toMacroEvent)]
-  };
+  // The same risk on the same region counts once: a curated case already carries the route data
+  // (src/realdata), so the world-risk read only adds what is new or more severe.
+  const merged = [...(caseData.macro_risk_events ?? [])];
+  for (const event of events.map(toMacroEvent)) {
+    const at = merged.findIndex((item) => item.type === event.type && item.region === event.region);
+    if (at < 0) merged.push(event);
+    else if ((SEVERITY_RANK[event.severity] ?? 0) > (SEVERITY_RANK[merged[at].severity] ?? 0)) merged[at] = event;
+  }
+  return { ...caseData, macro_risk_events: merged };
 }
+
+const SEVERITY_RANK = { info: 0, warning: 1, critical: 2 };
 
 function round(value, digits = 4) {
   const scale = 10 ** digits;

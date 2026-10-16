@@ -2,18 +2,43 @@
 //
 // Each tool is exposed to the LLM as an OpenAI-compatible "function" spec and
 // has a matching executor. External-data tools (live price, historical trades)
-// call real APIs when their key is set, and fall back to deterministic mock
-// data (calibrated to June 2026 levels) when it is not — so the whole agent
-// runs offline for the demo. The valuation tool is pure/local.
+// call real APIs when their key is set; without a key the live price comes from the free
+// public futures quotes in src/realdata (or their dated offline snapshot), and the remaining
+// tools fall back to deterministic mock data — so the whole agent runs offline for the demo.
+// The valuation tool is pure/local.
 //
 // Required env (all optional; missing -> mock):
-//   COMMODITY_PRICE_PROVIDER   "metalprice" | "alphavantage" | "mock" (auto if unset)
+//   COMMODITY_PRICE_PROVIDER   "metalprice" | "alphavantage" | "public" | "mock" (auto if unset)
 //   METALPRICE_API_KEY         metalpriceapi.com (LME copper, USD/MT)
 //   ALPHAVANTAGE_API_KEY       alphavantage.co  (COPPER global price, USD/MT)
 //   COMTRADE_PRIMARY_KEY       comtradeapi.un.org (historical trade unit values)
 //   REGION_PREMIUM_USD_PER_MT  override regional physical premium (e.g. Yangshan)
 
+import { getMarketQuote } from '../../realdata/index.js';
+
 const MOCK = 'mock-fallback';
+const BBL_PER_MT_CRUDE = 7.6;
+
+/** Which public benchmark quotes a commodity (src/realdata BENCHMARKS), or null. */
+function benchmarkFor(commodity) {
+  const name = String(commodity ?? '').toLowerCase();
+  if (/crude|brent|petroleum/u.test(name)) return 'brent';
+  if (/gasoil|diesel|refined/u.test(name)) return 'gasoil';
+  if (/alumin/u.test(name)) return 'aluminium';
+  if (/soy/u.test(name)) return 'soybeans';
+  if (/copper|cathode/u.test(name)) return 'copper';
+  return null;
+}
+
+/** The free public quote (live or the dated offline snapshot) in USD per tonne, or null. */
+async function publicLivePrice(commodity, env) {
+  const key = benchmarkFor(commodity);
+  const quote = key ? await getMarketQuote(key, { env }) : null;
+  if (!quote) return null;
+  const perMt = quote.price_usd_per_mt ?? (quote.price_usd_per_bbl ? quote.price_usd_per_bbl * BBL_PER_MT_CRUDE : null);
+  if (!Number.isFinite(perMt)) return null;
+  return { commodity, price_usd_per_mt: round(perMt, 2), currency: 'USD', as_of: quote.as_of, source: `${quote.source} (${quote.status})`, data_status: quote.status };
+}
 
 function round(value, digits = 2) {
   const scale = 10 ** digits;
@@ -38,7 +63,7 @@ async function fetchJson(url, options = {}, timeoutMs = 20000) {
 export async function getLiveCommodityPrice(args = {}, env = process.env) {
   const commodity = args.commodity ?? 'copper';
   const provider = env.COMMODITY_PRICE_PROVIDER
-    ?? (env.METALPRICE_API_KEY ? 'metalprice' : env.ALPHAVANTAGE_API_KEY ? 'alphavantage' : 'mock');
+    ?? (env.METALPRICE_API_KEY ? 'metalprice' : env.ALPHAVANTAGE_API_KEY ? 'alphavantage' : 'public');
 
   try {
     if (provider === 'metalprice' && env.METALPRICE_API_KEY) {
@@ -63,20 +88,24 @@ export async function getLiveCommodityPrice(args = {}, env = process.env) {
       }
     }
   } catch (error) {
-    // fall through to mock with a note
-    return mockLivePrice(commodity, `mock-fallback (live API error: ${error.message})`);
+    // fall through to the public quote, then mock, with a note
+    return await publicLivePrice(commodity, env) ?? mockLivePrice(commodity, `mock-fallback (live API error: ${error.message})`);
   }
 
+  if (provider !== 'mock') {
+    const quote = await publicLivePrice(commodity, env);
+    if (quote) return quote;
+  }
   return mockLivePrice(commodity);
 }
 
 function mockLivePrice(commodity, sourceOverride) {
   const isOil = /crude|oil|petroleum/i.test(commodity ?? '');
   if (isOil) {
-    // Brent ~USD 95/bbl x ~7.67 bbl/MT -> ~USD 740/MT-equivalent (June 2026 calibrated).
-    return { commodity, price_usd_per_mt: 740, currency: 'USD', as_of: '2026-06-05', source: sourceOverride ?? `${MOCK} (Brent June 2026, USD/MT-equiv)` };
+    // Brent ~USD 105/bbl x 7.6 bbl/MT -> ~USD 800/MT-equivalent (calibrated 2026-10-16).
+    return { commodity, price_usd_per_mt: 800, currency: 'USD', as_of: '2026-10-16', source: sourceOverride ?? `${MOCK} (Brent 2026-10-16 calibrated, USD/MT-equiv)` };
   }
-  return { commodity, price_usd_per_mt: 13680, currency: 'USD', as_of: '2026-06-04', source: sourceOverride ?? `${MOCK} (LME copper June 2026 calibrated)` };
+  return { commodity, price_usd_per_mt: 14450, currency: 'USD', as_of: '2026-10-16', source: sourceOverride ?? `${MOCK} (LME copper 2026-10-16 calibrated)` };
 }
 
 // ---------------------------------------------------------------------------
@@ -144,7 +173,8 @@ function mockComparables(hsCode, reporter, sourceOverride) {
       { period: '2025-Q4', partner: 'World', unit_value_usd_per_mt: 575, trade_value_usd: 82_000_000_000, source: MOCK },
       { period: '2026-Q1', partner: 'World', unit_value_usd_per_mt: 650, trade_value_usd: 90_000_000_000, source: MOCK },
       { period: '2026-04', partner: 'World', unit_value_usd_per_mt: 705, trade_value_usd: 31_000_000_000, source: MOCK },
-      { period: '2026-05', partner: 'World', unit_value_usd_per_mt: 730, trade_value_usd: 33_000_000_000, source: MOCK }
+      { period: '2026-05', partner: 'World', unit_value_usd_per_mt: 730, trade_value_usd: 33_000_000_000, source: MOCK },
+      { period: '2026-Q3', partner: 'World', unit_value_usd_per_mt: 780, trade_value_usd: 96_000_000_000, source: MOCK }
     ];
     return { hs_code: hsCode, reporter_code: reporter, comparables, source: sourceOverride ?? `${MOCK} (China crude import unit values, calibrated)` };
   }
@@ -155,7 +185,8 @@ function mockComparables(hsCode, reporter, sourceOverride) {
     { period: '2025-Q4', partner: 'World', unit_value_usd_per_mt: 10400, trade_value_usd: 4_380_000_000, source: MOCK },
     { period: '2026-Q1', partner: 'World', unit_value_usd_per_mt: 11900, trade_value_usd: 4_910_000_000, source: MOCK },
     { period: '2026-04', partner: 'World', unit_value_usd_per_mt: 12800, trade_value_usd: 1_690_000_000, source: MOCK },
-    { period: '2026-05', partner: 'World', unit_value_usd_per_mt: 13250, trade_value_usd: 1_770_000_000, source: MOCK }
+    { period: '2026-05', partner: 'World', unit_value_usd_per_mt: 13250, trade_value_usd: 1_770_000_000, source: MOCK },
+    { period: '2026-Q3', partner: 'World', unit_value_usd_per_mt: 14100, trade_value_usd: 5_640_000_000, source: MOCK }
   ];
   return { hs_code: hsCode, reporter_code: reporter, comparables, source: sourceOverride ?? `${MOCK} (China copper-cathode import unit values, calibrated)` };
 }

@@ -1,50 +1,61 @@
 {
-  "feed_version": "2026-06-06",
-  "note": "Mock macro risk-intelligence feed + project policy notes for AgentBL's RAG retriever (AI-11). Calibrated to the June 2026 Strait of Hormuz war-premium narrative. Not real intelligence; demo data only.",
+  "feed_version": "2026-10-16",
+  "note": "Macro risk-intelligence notes + project policy notes for AgentBL's RAG retriever (AI-11). MRI-* notes summarise public data captured on 2026-10-16 (IMF PortWatch transits, Polymarket odds, Yahoo Finance futures, news headlines; see data/real-data/snapshot.json); entries marked illustrative are demo background, not intelligence. Live route evidence for a case comes from src/realdata, not from this file.",
   "documents": [
     {
-      "id": "MRI-HORMUZ-WAR-2026-06",
+      "id": "MRI-HORMUZ-CLOSURE-2026-10",
       "type": "war_risk",
       "region": "Middle East / Strait of Hormuz",
       "commodity": "all",
       "severity": "critical",
-      "period": "2026-06",
-      "source": "mock-geopolitical-feed (GDELT-style)",
-      "tags": ["war", "hormuz", "iran", "strait", "sanction", "energy", "metals"],
-      "text": "Escalating US-Iran conflict and the threatened closure of the Strait of Hormuz are the dominant driver of a broad commodity war premium across both energy and metals. Cargoes transiting or loading near the Gulf carry elevated war-risk surcharges; cargoes loading ex-Singapore avoid the transit war exposure but not the benchmark price risk."
+      "period": "2026-10",
+      "source": "IMF PortWatch, Polymarket, news headlines (snapshot 2026-10-16)",
+      "tags": ["war", "hormuz", "iran", "strait", "closure", "chokepoint", "energy", "metals", "gulf"],
+      "text": "IMF PortWatch counted about 4 ship transits a day through the Strait of Hormuz in the week to 2026-10-11, against about 70 a year earlier, and merchant ships were attacked and sunk near the strait in mid-October. Polymarket prices under 1% on traffic returning to normal by 31 October and about 11% by 31 December. Cargoes that must transit the strait (Gulf loadings such as Jebel Ali) face indefinite delay; Fujairah loadings bypass it but sit next to it and pay war-risk premiums."
     },
     {
-      "id": "MRI-COPPER-VOL-2026-06",
+      "id": "MRI-COPPER-2026-10",
       "type": "commodity_volatility",
       "region": "Global",
       "commodity": "copper",
       "severity": "warning",
-      "period": "2026-06",
-      "source": "mock-LME-desk",
-      "tags": ["copper", "lme", "volatility", "chile", "tariff", "metals"],
-      "text": "LME copper is near record highs (~USD 13,700/MT) on Chilean supply weakness and US tariff arbitrage. Realized volatility is elevated, so RWA collateral valuation against copper cargo should apply a war-premium haircut before pricing the discount."
+      "period": "2026-10",
+      "source": "Yahoo Finance COMEX HG=F (snapshot 2026-10-16), news headlines",
+      "tags": ["copper", "lme", "comex", "volatility", "tariff", "record", "metals"],
+      "text": "Copper trades around USD 14,500/MT (COMEX about USD 6.59/lb on 2026-10-16), close to record levels after mine disruptions and US tariff-driven stockpiling. An unwind of the tariff trade could take prices down quickly, so copper collateral keeps a volatility haircut and is re-marked to the live benchmark rather than the contract price."
     },
     {
-      "id": "MRI-BRENT-2026-06",
+      "id": "MRI-BRENT-2026-10",
       "type": "commodity_volatility",
       "region": "Global",
       "commodity": "crude oil",
       "severity": "warning",
-      "period": "2026-06",
-      "source": "mock-ICE-desk",
-      "tags": ["crude", "brent", "oil", "volatility", "inventory", "energy"],
-      "text": "Brent is near USD 95/bbl, up ~43% year-on-year, with falling US inventories. Large daily swings mean crude-backed RWA collateral needs a volatility haircut on the embedded war premium; the benchmark, not the route, is the main price risk for ex-Singapore loadings."
+      "period": "2026-10",
+      "source": "Yahoo Finance ICE BZ=F and NYMEX HO=F (snapshot 2026-10-16)",
+      "tags": ["crude", "brent", "oil", "diesel", "gasoil", "volatility", "energy"],
+      "text": "Brent trades around USD 105/bbl with the Strait of Hormuz largely closed to merchant traffic. Diesel and gasoil cracks are near records, yet ULSD futures fell about 13% over the past month: large swings both ways, so crude- and product-backed collateral needs a volatility haircut."
     },
     {
-      "id": "MRI-INSURANCE-WAR-CLAUSE-2026",
+      "id": "MRI-INSURANCE-WAR-CLAUSE-2026-10",
       "type": "insurance",
       "region": "Middle East / Global",
       "commodity": "all",
       "severity": "warning",
-      "period": "2026-06",
-      "source": "mock-marine-underwriting-bulletin",
-      "tags": ["insurance", "war", "strikes", "icc", "coverage", "expiry"],
-      "text": "Marine war & strikes clauses are repricing sharply; underwriters are shortening cover windows and adding Gulf exclusions. Verify that ICC(A) all-risks plus war cover remains valid through the full transit, with a buffer beyond ETA, or the cargo may be under-insured at delivery."
+      "period": "2026-10",
+      "source": "illustrative underwriting note",
+      "tags": ["insurance", "war", "strikes", "icc", "coverage", "expiry", "gulf"],
+      "text": "War-risk cover for Gulf and Gulf of Oman voyages carries additional premiums and short notice of cancellation. Verify that ICC(A) all-risks plus war cover stays valid through the full transit, with a buffer beyond ETA, or the cargo may be under-insured on arrival."
+    },
+    {
+      "id": "MRI-RED-SEA-2026-10",
+      "type": "war_risk",
+      "region": "Red Sea / Bab el-Mandeb",
+      "commodity": "all",
+      "severity": "warning",
+      "period": "2026-10",
+      "source": "IMF PortWatch (snapshot 2026-10-16), news headlines",
+      "tags": ["red sea", "bab el-mandeb", "suez", "houthi", "reroute", "cape of good hope"],
+      "text": "Bab el-Mandeb transits ran about 17% below a year earlier in the week to 2026-10-11, and Suez traffic is near last year's level but still far below pre-2024 volumes. Many Asia-Europe services keep routing round the Cape of Good Hope, which adds 10-14 days to a Shanghai-Hamburg voyage."
     },
     {
       "id": "MRI-PORT-CONGESTION-SHA-2026",
@@ -52,21 +63,21 @@
       "region": "Shanghai (Yangshan)",
       "commodity": "all",
       "severity": "info",
-      "period": "2026-05",
-      "source": "mock-port-ops-feed",
+      "period": "2026-10",
+      "source": "illustrative port-operations note",
       "tags": ["port", "congestion", "shanghai", "yangshan", "discharge"],
-      "text": "Yangshan discharge berth waiting times are slightly above seasonal norms but within normal range; no material delay risk currently priced for copper-cathode discharge at Shanghai."
+      "text": "Illustrative: Yangshan discharge berth waiting times sit within the normal seasonal range; no material delay risk is priced for copper-cathode discharge at Shanghai."
     },
     {
-      "id": "MRI-KRW-FX-2026-06",
+      "id": "MRI-ASIA-FX-2026-10",
       "type": "fx_volatility",
-      "region": "South Korea (KRW)",
+      "region": "Asia (KRW, IDR, INR)",
       "commodity": "crude oil",
       "severity": "info",
-      "period": "2026-06",
-      "source": "mock-fx-desk",
-      "tags": ["fx", "krw", "korea", "inflation", "energy"],
-      "text": "Energy-driven inflation is pressuring the Korean won. Because the buyer pays in USD under the L/C, direct FX exposure to the financing pool is limited; KRW weakness is a buyer-side, not pool-side, risk."
+      "period": "2026-10",
+      "source": "illustrative FX note",
+      "tags": ["fx", "krw", "idr", "asia", "inflation", "energy"],
+      "text": "The oil shock pressures energy-importing Asian currencies. Because buyers pay in USD under the L/C, direct FX exposure to the financing pool is limited; currency weakness is a buyer-side, not pool-side, risk."
     },
     {
       "id": "MRI-SANCTION-SCREEN-2026",
@@ -74,10 +85,10 @@
       "region": "Global",
       "commodity": "all",
       "severity": "info",
-      "period": "2026-06",
-      "source": "mock-OFAC-style-list",
+      "period": "2026-10",
+      "source": "demo screening list (data/compliance)",
       "tags": ["sanction", "ofac", "screening", "counterparty"],
-      "text": "Counterparty and vessel screening against sanctions lists shows no hits for the demo trade parties; sanction risk is low but must be re-screened if the route or counterparties change."
+      "text": "Counterparty and vessel screening against the demo sanctions list shows no hits for the demo trade parties; sanction risk is low but must be re-screened if the route or counterparties change."
     },
     {
       "id": "POL-TARGET-REDEMPTION-NOT-GUARANTEED",
@@ -85,7 +96,7 @@
       "region": "n/a",
       "commodity": "all",
       "severity": "info",
-      "period": "2026-06",
+      "period": "2026-10",
       "source": "AgentBL docs/PRD.md §7",
       "tags": ["policy", "redemption", "guarantee", "compliance", "non-principal-protection"],
       "text": "1 RWA = 1.00 USD is a TARGET redemption value, not a guaranteed repayment. Investor returns come from buying at a discount and from trade repayment; actual redemption depends on importer payment, cargo settlement and insurance coverage. Demo uses permissioned mock investors and does no real fundraising."
@@ -96,7 +107,7 @@
       "region": "n/a",
       "commodity": "all",
       "severity": "info",
-      "period": "2026-06",
+      "period": "2026-10",
       "source": "AgentBL docs/PRD.md §2.3/§2.4",
       "tags": ["policy", "collateral", "coverage", "guardrail", "exposure"],
       "text": "Target redemption exposure must stay within AI-verified collateral times the redemption coverage limit (default 0.9). This collateral guardrail caps how much can be issued and acts as a floor on the issue price."
@@ -107,10 +118,10 @@
       "region": "n/a",
       "commodity": "all",
       "severity": "info",
-      "period": "2026-06",
+      "period": "2026-10",
       "source": "AgentBL docs/PRD.md §2.4",
-      "tags": ["policy", "pricing", "profit", "discount", "speed", "yield"],
-      "text": "The RWA discount is priced as a share of the exporter's verified trade profit: faster payout gives up a larger share (FAST 50% / BALANCED 33% / LOW_COST 20% base), risk adds to the share, and the issue price is cash/(cash + share x profit)."
+      "tags": ["policy", "pricing", "profit", "discount", "speed", "yield", "tenor"],
+      "text": "The RWA discount is the lower of two caps: a share of the exporter's verified trade profit (faster payout gives up a larger share, and risk adds to it) and an annual-rate ceiling over the financing tenor (FAST 12%, BALANCED 9%, LOW_COST 7% a year, plus 2 points per 100 bps of risk). The issue price is cash / (cash + financing cost)."
     }
   ]
 }

@@ -1,17 +1,18 @@
 # NEGOTIABLE ELECTRONIC BILL OF LADING (eBL)
 
-> 拟真样例数据，用于 AgentBL demo。以下所有公司、人名、船名、单号、地址均为**虚构**，不指向任何真实实体或真实货运。
+> 拟真样例数据，用于 AgentBL demo。以下所有公司、银行、人名、船名、单号、地址均为**虚构**，不指向任何真实实体或真实货运。
+> 日期写在 2026-10-16 前后，Demo 加载时会整体平移到"今天"前后。
 > Issued as a sole electronic original on an MLETR-compliant eBL platform.
 
 | | |
 |---|---|
 | **Carrier** | BlueStrait Container Lines Pte. Ltd. (SCAC: BSCL) |
-| **B/L No.** | BSCL/SIN/SHA/2026/04417 |
+| **B/L No.** | BSCL/SIN/SHA/0517 |
 | **B/L Type** | Negotiable — "To Order" (货权可转让) |
 | **eBL Platform** | WaveBL (MLETR / Singapore ETA 2021 compliant) |
-| **eBL Token / Title Ref** | WAVE-EBL-7F3A91C4 |
-| **Booking No.** | BSCL-BK-2026-118840 |
-| **Service Contract** | SI-COP-2026-0091 |
+| **eBL Token / Title Ref** | WAVE-EBL-3C81D2A9 |
+| **Booking No.** | BSCL-BK-0517-2290 |
+| **Service Contract** | SI-COP-0517 |
 
 ---
 
@@ -19,17 +20,17 @@
 
 **Shipper / Exporter**
 Strait Resources Trading Pte. Ltd.
-8 Marina View, #34-01 Asia Square Tower 1, Singapore 018960
+18 Harbour Front Walk, #21-04, Singapore 098631 (demo address)
 UEN: 201634789K  |  Tel: +65 6555 0148
 
 **Consignee**
-TO ORDER OF DBS BANK LTD., SINGAPORE
-(Negotiable — endorsed to bearer / order per documentary credit)
+TO ORDER OF MERLION TRADE BANK LTD., SINGAPORE
+(Negotiable — endorsed to order per documentary credit)
 
 **Notify Party**
 Donghai Copper Materials Co., Ltd.
-No. 1788 Pudong South Road, Pudong New Area, Shanghai 200122, P.R. China
-USCC: 91310115MA1K9P8X2N  |  Attn: Import Dept. / Mr. Chen Weiguo
+No. 88 Lingang Avenue, Pudong New Area, Shanghai, P.R. China (demo address)
+Attn: Import Dept. / Mr. Chen Weiguo
 
 ---
 
@@ -37,44 +38,28 @@ USCC: 91310115MA1K9P8X2N  |  Attn: Import Dept. / Mr. Chen Weiguo
 
 | Field | Value |
 |---|---|
-| Vessel / Voyage | MV MARINA STAR / V.0048E |
-| Carrier IMO | 9## (demo) |
+| Vessel / Voyage | MV LUMEN BAY / V.0112N |
 | Place of Receipt | Singapore (PSA, CY) |
 | Port of Loading | **Singapore (SGSIN)** |
 | Port of Discharge | **Shanghai – Yangshan Deep-Water Port (CNSHG)** |
 | Place of Delivery | Shanghai (CY) |
 | Movement | CY / CY (FCL/FCL) |
-| Shipped on Board | **2026-06-03** |
-| Estimated Time of Arrival (ETA) | 2026-06-15 |
+| Shipped on Board | **2026-10-13** |
+| Estimated Time of Arrival (ETA) | 2026-10-20 |
 | Freight | **FREIGHT PREPAID** |
 
 ---
 
 ## Particulars Furnished by Shipper
 
-**Marks & Numbers:** STRAIT / COPPER / CIF SHANGHAI / GRADE-A / S.O. 04417
+**Marks & Numbers:** STRAIT / COPPER / CIF SHANGHAI / GRADE-A / S.O. 0517
 **No. of Packages:** 200 bundles in 20 × 20' GP containers (FCL)
 
 | Description of Goods | HS Code | Quantity | Net Weight | Gross Weight |
 |---|---|---|---|---|
 | Copper Cathodes — LME Grade A (Cu-CATH-1), purity ≥ 99.9935% Cu, conforming to BS EN 1978:1998. LME-registered brand "ATACAMA-SX" (demo). Full-plate cathodes, steel-strapped in bundles. | **7403.11** | 500.000 MT | 500,000 kg | 502,360 kg |
 
-**Container & Seal Numbers (20 × 20'GP, ~25 MT each):**
-
-```
-BSLU2210041 / Seal CN8841001    BSLU2210058 / Seal CN8841002
-BSLU2210063 / Seal CN8841003    BSLU2210079 / Seal CN8841004
-BSLU2210084 / Seal CN8841005    BSLU2210090 / Seal CN8841006
-BSLU2210107 / Seal CN8841007    BSLU2210113 / Seal CN8841008
-BSLU2210128 / Seal CN8841009    BSLU2210134 / Seal CN8841010
-BSLU2210149 / Seal CN8841011    BSLU2210155 / Seal CN8841012
-BSLU2210160 / Seal CN8841013    BSLU2210176 / Seal CN8841014
-BSLU2210181 / Seal CN8841015    BSLU2210197 / Seal CN8841016
-BSLU2210202 / Seal CN8841017    BSLU2210218 / Seal CN8841018
-BSLU2210223 / Seal CN8841019    BSLU2210239 / Seal CN8841020
-```
-
-**Declared Cargo Value (for carriage):** USD 6,875,000.00 (CIF Shanghai)
+**Declared Cargo Value (for carriage):** USD 7,267,500.00 (CIF Shanghai)
 
 ---
 
@@ -87,11 +72,11 @@ BSLU2210223 / Seal CN8841019    BSLU2210239 / Seal CN8841020
 
 | | |
 |---|---|
-| **Place & Date of Issue** | Singapore, 2026-06-03 |
+| **Place & Date of Issue** | Singapore, 2026-10-13 |
 | **Signed for the Carrier** | BlueStrait Container Lines Pte. Ltd., as Carrier |
-| **Document Hash (SHA-256)** | 0x9a1f4c77e2b8d063a5519e4c2f8b71d4c0a6e93f17b2da845c61f0e9b8773a2c |
+| **Document Hash (SHA-256)** | 0xd0eb36e3b553a44da6f35996484ec7d4599448f469e84ca74d2e5398ebf2bd4e |
 
 ---
 
-> 说明（给团队）：本提单对应商业发票 `commercial-invoice.md` 与结构化案例 `data/cases/copper-sg-shanghai.case.json`。
+> 说明（给团队）：本提单对应商业发票 `commercial-invoice.md`、保险单 `insurance-policy.md` 与结构化案例 `data/cases/copper-sg-shanghai.case.json`。
 > 货权凭证 (To Order)、可背书转让，正是它能作为 RWA 抵押物的法律基础。

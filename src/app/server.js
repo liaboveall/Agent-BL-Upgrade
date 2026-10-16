@@ -10,6 +10,7 @@ import { runHarnessScenarios, runScenario } from '../core/scenarioRunner.js';
 import { assertRiskReport, assertTradeCase, ValidationError } from '../core/schema.js';
 import { simulateWorkflow } from '../core/workflow.js';
 import { compareSpeeds, quoteFromCase } from '../core/pricingEngine.js';
+import { loadCuratedCase } from '../core/curatedCases.js';
 import { simulateOffering } from '../core/offeringSimulator.js';
 import { simulatePricingWorkflow } from '../core/pricingWorkflow.js';
 import { toOracleUpdate } from '../core/oracle.js';
@@ -74,21 +75,23 @@ const rootDir = path.resolve(__dirname, '../..');
 const publicDir = path.join(rootDir, 'public');
 const dataPath = path.join(rootDir, 'data/demo-case.json');
 const casesDir = path.join(rootDir, 'data/cases');
+const archivedCasesDir = path.join(casesDir, 'archive');
 
 // FE-7 support: human labels + a risk-ladder ordering for the curated demo
 // cases, so the frontend scenario selector can present clean -> warning ->
 // critical without bundling case JSON. Cases not listed here still load (with a
 // derived label) so adding a *.case.json file is enough to surface it.
 const CASE_META = {
-  'CASE-EBL-2026-CU-SG-SHA': { label: '铜矿 · Singapore → Shanghai', risk_hint: 'MEDIUM', order: 1 },
-  'CASE-EBL-2026-REFINED-SG-JKT': { label: '成品油 · Singapore → Jakarta', risk_hint: 'LOW', order: 2 },
-  'CASE-EBL-2026-RUBBER-BKK-QD': { label: '橡胶 · Bangkok → Qingdao', risk_hint: 'MEDIUM', order: 3 },
-  'CASE-EBL-2026-0001': { label: '铜矿 · Shanghai → Hamburg (保险缺口)', risk_hint: 'WARNING', order: 4 },
-  'CASE-EBL-2026-OIL-SG-ULS': { label: '原油 · Singapore → Ulsan', risk_hint: 'MEDIUM', order: 5 },
-  'CASE-EBL-2026-IRONORE-AU-TJ': { label: '铁矿石 · Port Hedland → Tianjin', risk_hint: 'LOW', order: 6 },
-  'CASE-EBL-2026-ALU-DXB-RTM': { label: '铝 · Dubai → Rotterdam (Hormuz)', risk_hint: 'WARNING', order: 7 },
-  'CASE-EBL-2026-CUCONC-ANF-LYG': { label: '铜精矿 · Antofagasta → Lianyungang', risk_hint: 'MEDIUM', order: 8 },
-  'CASE-EBL-2026-CU-SG-SHA-WARCRISIS': { label: '铜矿 · Hormuz 战争危机 · Singapore → Shanghai', risk_hint: 'CRITICAL', order: 9 }
+  'CASE-EBL-CU-SIN-SHA': { label: '铜 · Singapore → Shanghai', risk_hint: 'LOW', order: 1 },
+  'CASE-EBL-GASOIL-SIN-JKT': { label: '柴油 · Singapore → Jakarta', risk_hint: 'MEDIUM', order: 2 },
+  'CASE-EBL-RUBBER-LCB-TAO': { label: '橡胶 · Laem Chabang → Qingdao', risk_hint: 'LOW', order: 3 },
+  'CASE-EBL-2026-0001': { label: '铜 · Shanghai → Hamburg (保险缺口)', risk_hint: 'WARNING', order: 4 },
+  'CASE-EBL-OIL-FUJ-SIN': { label: '原油 · Fujairah → Singapore (邻近霍尔木兹)', risk_hint: 'WARNING', order: 5 },
+  'CASE-EBL-IRONORE-PHE-TSN': { label: '铁矿石 · Port Hedland → Tianjin', risk_hint: 'LOW', order: 6 },
+  'CASE-EBL-SOY-SSZ-DLC': { label: '大豆 · Santos → Dalian', risk_hint: 'LOW', order: 7 },
+  'CASE-EBL-CUCONC-ANF-LYG': { label: '铜精矿 · Antofagasta → Lianyungang', risk_hint: 'LOW', order: 8 },
+  'CASE-EBL-ALU-JEA-RTM': { label: '铝 · Jebel Ali → Rotterdam (经霍尔木兹)', risk_hint: 'CRITICAL', order: 9 },
+  'CASE-EBL-2026-CU-SG-SHA': { label: '历史演示池 #2 · 铜 Singapore → Shanghai (2026-06)', risk_hint: null, order: 100 }
 };
 
 // ---------------------------------------------------------------------------
@@ -144,8 +147,9 @@ function getStaticHandler() {
   return staticHandler;
 }
 
+// The default case as the app shows it: dates moved to today, today's market and route data attached.
 async function loadDemoCase() {
-  return JSON.parse(await fs.readFile(dataPath, 'utf8'));
+  return loadCuratedCase(dataPath);
 }
 
 /**
@@ -159,13 +163,15 @@ async function loadCaseCatalog() {
   const add = (data) => { if (data?.case_id && !files.has(data.case_id)) files.set(data.case_id, data); };
 
   try { add(await loadDemoCase()); } catch { /* ignore */ }
-  try {
-    const entries = await fs.readdir(casesDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith('.case.json')) continue;
-      try { add(JSON.parse(await fs.readFile(path.join(casesDir, entry.name), 'utf8'))); } catch { /* skip bad file */ }
-    }
-  } catch { /* no cases dir */ }
+  const readDir = async (dir, extra = {}) => {
+    const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+    const names = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.case.json')).map((entry) => entry.name).sort();
+    const loaded = await Promise.all(names.map((name) => loadCuratedCase(path.join(dir, name)).catch(() => null)));
+    for (const data of loaded) if (data) add({ ...data, ...extra });
+  };
+  await readDir(casesDir);
+  // Archived cases stay listed only because a deployed testnet pool still points at them (pool #2).
+  await readDir(archivedCasesDir, { historical: true });
 
   // Cases the agent built from uploaded documents (they survive a restart in the runtime directory).
   try {
@@ -182,6 +188,8 @@ async function loadCaseCatalog() {
       cargo: bl.cargo ?? null,
       risk_hint: meta.risk_hint ?? null,
       order: meta.order ?? 99,
+      historical: data.historical === true,
+      real_data_status: data.real_data?.status ?? data.market?.data_status ?? null,
       case: data
     };
   });
@@ -576,7 +584,8 @@ const ensureMockPools = async (options = {}) => {
     for (const c of cases) {
       const caseData = c.case;
       if (!caseData || !caseData.financing) continue;
-      createPool(c.case_id, caseData, quotePoolCase(caseData));
+      // A historical case (kept for a deployed testnet pool) is listed but never offered to investors.
+      createPool(c.case_id, caseData, quotePoolCase(caseData), caseData.historical ? { investorEligible: false } : {});
     }
   }
 
@@ -946,7 +955,7 @@ async function routeRequest(request, response, url) {
   if (method === 'GET' && pathname === '/api/market/listings') {
     await ensureMockPools();
     const activePools = Array.from(storeState.pools.values())
-      .filter((pool) => ['Open', 'Repriced'].includes(pool.status));
+      .filter((pool) => ['Open', 'Repriced'].includes(pool.status) && pool.investorEligible !== false);
     sendJson(response, 200, { ok: true, count: activePools.length, pools: activePools });
     return;
   }
@@ -957,7 +966,7 @@ async function routeRequest(request, response, url) {
     await ensureMockPools();
 
     const availableCases = Array.from(storeState.pools.values())
-      .filter((pool) => ['Open', 'Repriced'].includes(pool.status))
+      .filter((pool) => ['Open', 'Repriced'].includes(pool.status) && pool.investorEligible !== false)
       .map(poolToAdvisorCase);
 
     const preference = typeof body?.preference === 'string' ? body.preference.slice(0, 500) : undefined;

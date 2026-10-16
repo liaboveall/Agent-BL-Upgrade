@@ -36,7 +36,8 @@ cp .env.example .env
 | `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_DEPLOYMENT` / `AZURE_OPENAI_API_KEY` | 也可改用 Azure OpenAI 作为 LLM 提供方 |
 | `METALPRICE_API_KEY` / `ALPHAVANTAGE_API_KEY` | 实时铜价 |
 | `COMTRADE_PRIMARY_KEY` | UN Comtrade 历史成交价 |
-| `XAPI_KEY` | 世界风险情报（新闻 / 社交 / 预测市场） |
+| `XAPI_KEY` | 可选：世界风险改走 xAPI（新闻 / 社交 / 预测市场）；不填时用免费公开数据 |
+| `REAL_DATA` | 免费公开数据开关，默认开；服务器需要能出站访问 HTTPS，设 `off` 只用离线快照 |
 | `INJECTIVE_RPC_URL` | Injective 测试网 RPC（有默认值） |
 | `X402_MODE=live`、`X402_FACILITATOR_URL`、`X402_PAY_TO`、`X402_PUBLIC_BASE_URL` | Live 模式的 x402 付费情报，详见 [x402-integration.md](./x402-integration.md) |
 | `AGENTBL_MCP_API_URL` | stdio 新增运行时工具/资源连接的现有后端，默认 `http://127.0.0.1:3000`；远程必须 HTTPS，禁止 URL 凭据和重定向 |

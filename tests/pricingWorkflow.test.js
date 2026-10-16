@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import test from 'node:test';
 import { simulatePricingWorkflow } from '../src/core/pricingWorkflow.js';
 import { assertPricingQuote } from '../src/core/pricingSchema.js';
+import { loadCuratedCase } from '../src/core/curatedCases.js';
 
 // BE-6: the merged workflow simulation must fuse the AI PricingQuote, a compact
 // risk_report and the RWA offering lifecycle into ONE object, and they must agree.
@@ -10,9 +11,8 @@ import { assertPricingQuote } from '../src/core/pricingSchema.js';
 const copperCase = JSON.parse(
   await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8')
 );
-const warCase = JSON.parse(
-  await fs.readFile(new URL('../data/cases/copper-sg-shanghai-warcrisis.case.json', import.meta.url), 'utf8')
-);
+// The Hormuz-transit aluminium case with the offline real-data snapshot attached: CRITICAL, paused.
+const warCase = await loadCuratedCase(new URL('../data/cases/alu-dxb-rtm.case.json', import.meta.url));
 
 test('BE-6: merged workflow carries pricing_quote + risk_report + offering that agree', () => {
   const wf = simulatePricingWorkflow(copperCase, { payout_speed: 'FAST' });

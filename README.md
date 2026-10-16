@@ -11,7 +11,14 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-默认是 Demo 模式，不需要钱包、API Key 或外部网络：估值、行情、世界风险情报和 x402 付款都使用本地的确定性数据。需要 Node.js 20.11+（合约工程需要 22.13+）。
+默认是 Demo 模式，不需要钱包或 API Key：
+
+- 案例的市场价和航线风险来自免费公开数据（IMF PortWatch、Polymarket、Open-Meteo、Yahoo Finance、Google News）；
+- 联不上网，或设了 `REAL_DATA=off` 时，改用注明采集日期的离线快照，界面会标出"离线"；
+- 案例日期随今天平移，任何一天打开都在航行中（见 [docs/real-data.md](docs/real-data.md)）；
+- x402 付款仍是本地模拟。
+
+需要 Node.js 20.11+（合约工程需要 22.13+）。
 
 用 Docker 运行：`docker compose up -d --build`。部署到服务器见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
@@ -20,6 +27,7 @@ npm run dev        # http://localhost:3000
 | 模块 | 说明 | 文档 |
 |---|---|---|
 | 定价与风险 | 单证核验、估值、航线/世界风险评分，按回款速度给出三档发行价 | [PRD](docs/PRD.md)、[AI 估值](docs/ai-valuation-tooling.md) |
+| 真实数据 | 咽喉通行量、预测市场、海况、期货行情盯市；离线快照与相对日期 | [真实数据](docs/real-data.md) |
 | 自主 Agent | 单证接入九步流水线、事件 → 决策 → 策略 → 执行；Live 下所有动作都要人工批准 | [实现规划](docs/agent-implementation-plan.md)、[权限矩阵](docs/agent-security-matrix.md) |
 | 单证与合规 | PDF 文本层/可选视觉抽取、人工复核，演示名单的实体/港口/IMO/HS 筛查 | [单证抽取](docs/document-extraction.md)、[合规](docs/compliance-screening.md) |
 | Live 开盘与结算 | owner CLI 三步开盘、USDC 回执核验、双证明结算，均需逐笔审批 | [开盘](docs/live-opening.md)、[结算](docs/live-settlement.md) |
@@ -45,7 +53,8 @@ npm run preflight         # 发布前全部检查；Demo 下 Live 专属项为 S
 npm run eval:agent        # 实测 Agent 并写入评测报告（-- --check 只检查不覆盖）
 npm run scenarios         # 风险/定价场景回归
 npm run price             # 命令行给案例定价
-npm run intel             # 世界风险情报（无 key 时用离线数据）
+npm run intel             # 世界风险情报（默认免费公开数据，REAL_DATA=off 时用离线快照）
+npm run realdata:snapshot # 重新采集离线快照（data/real-data/snapshot.json）
 npm run agent:replay -- --decision <id>   # 只读重放一条历史决策
 npm run agent:redteam     # 红队变异检查
 npm run smoke:x402        # Demo x402：402 → 签名 → 结算 → 解锁
@@ -78,6 +87,8 @@ npm run deploy:protocol   # 部署协议合约，需要 DEPLOYER_PRIVATE_KEY 和
 | `PAYMENT_ATTESTOR_PRIVATE_KEY`、`PRICING_UPDATER_PRIVATE_KEY` | 服务器专用签名密钥，需在链上分别授权；`SIGNER_KEYS_STRICT=true` 禁止回退到 owner 密钥 |
 | `TRUST_PROXY`、`HOST`、`PORT` | 反向代理与监听设置 |
 | `AGENTBL_RUNTIME_DIR` | 持久化目录（x402 收据、报告缓存、决策日志、Copilot 偏好） |
+| `REAL_DATA` / `REAL_DATA_TIMEOUT_MS` | 免费公开数据开关（默认开，`off` 只用离线快照）与单次请求超时 |
+| `AGENTBL_DEMO_TODAY` | 把演示用的"今天"固定为某一天（截图、复现） |
 
 切换到 Live：配置上面的 x402 变量和管理员令牌，确保收款方和买方有测试网 USDC/INJ，然后在页面上切换（会要求输入令牌），或用 `DEMO_MODE=false` 启动。
 
@@ -93,7 +104,14 @@ npm run deploy:protocol   # 部署协议合约，需要 DEPLOYER_PRIVATE_KEY 和
 | PaymentOracle | [`0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8`](https://testnet.blockscout.injective.network/address/0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8) | 把 x402 付款与付费报告绑定 |
 | AgentDecisionLog | [`0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec`](https://testnet.blockscout.injective.network/address/0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec) | 决策与版本承诺（已初始化，尚无批次） |
 
-地址以 [public/chain-config.json](public/chain-config.json) 为准（有测试保证本表与它一致）。前六个是 2026-10-12 重新部署的 v2 版本，AgentDecisionLog 于 2026-10-15 部署。合约设计、权限和已知限制见 [docs/contracts.md](docs/contracts.md)；链上付费定价闭环的证据见 [docs/wave-b.md](docs/wave-b.md)，可用 `npm run verify:wave-b -- --dry-run` 只读复验。
+地址以 [public/chain-config.json](public/chain-config.json) 为准（有测试保证本表与它一致）。
+
+测试网上的两个池：
+
+- **pool #3**（eBL #3）：当前的 Live 演示池。2026-10-16 用新铜案例 `CASE-EBL-CU-SIN-SHA` 开出，发行价 0.9893，证据见 [docs/evidence/live-opening-pool3.json](docs/evidence/live-opening-pool3.json)。
+- **pool #2**：**历史演示池**。2026-06 的铜案例，链上价格 0.7910 来自旧定价模型，只为链上记录保留，不对认购开放。
+
+详见 [docs/real-data.md](docs/real-data.md)。前六个是 2026-10-12 重新部署的 v2 版本，AgentDecisionLog 于 2026-10-15 部署。合约设计、权限和已知限制见 [docs/contracts.md](docs/contracts.md)；链上付费定价闭环的证据见 [docs/wave-b.md](docs/wave-b.md)，可用 `npm run verify:wave-b -- --dry-run` 只读复验。
 
 ## 目录结构
 
@@ -119,7 +137,9 @@ docs/         文档；docs/evidence 只保留链上交易与评测的关键证�
 - 合约没有认购的付款环节：`subscribe` 只铸造份额凭证并记录应付金额，不托管稳定币；`settle` 也不向投资者分配回款。
 - 测试网合约的 owner 是单个部署者密钥，没有多签。
 - 池子与认购状态保存在服务器内存，重启后清空（收据、报告缓存、决策日志和偏好会持久化）。
-- 演示案例、单证、合规名单和离线情报都是虚构或校准过的演示数据；真实物流、保险和行情需要接入正式数据源。
+- 案例里的公司、船名、单证和合规名单都是虚构的。
+- 市场价和航线风险来自免费公开数据或其离线快照。Yahoo 行情是非官方接口；铁矿石、橡胶和人民币铝锭只有参考价。
+- 真实的物流跟踪、保险和交易所行情仍需要正式数据源。
 - AI 风险评估用于真实金融场景前，需要人工与机构层面的控制。
 
 许可证：MIT（见 `package.json`）。

@@ -18,6 +18,7 @@ import { subscribeToPool } from '../../../app/store.js';
 import { RiskTracker } from './riskTracker.js';
 import { insuranceEvents } from './voyageMonitor.js';
 import { hashSnapshot } from '../../decisionLogger.js';
+import { rebaseCaseDates, rebaseDocumentText } from '../../../core/caseDates.js';
 
 const SCENARIO_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../data/agent-scenarios');
 const NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/u;
@@ -79,7 +80,7 @@ export class ScenarioPlayer {
       for (const file of names.sort()) {
         const name = file.replace(/\.json$/u, '');
         if (!NAME_PATTERN.test(name)) continue;
-        const data = validateScenario(JSON.parse(await fs.readFile(path.join(this.dir, file), 'utf8')), name);
+        const data = validateScenario(rebaseCaseDates(JSON.parse(await fs.readFile(path.join(this.dir, file), 'utf8'))), name);
         this.catalog.push({ name, title: data.title ?? { en: name }, description: data.description ?? null, case_id: data.case_id, steps: data.steps.length });
       }
     }
@@ -90,7 +91,8 @@ export class ScenarioPlayer {
     if (!NAME_PATTERN.test(String(name))) throw new ScenarioError('invalid_scenario_name', 'Unknown scenario', 404);
     let raw;
     try {
-      raw = JSON.parse(await fs.readFile(path.join(this.dir, `${name}.json`), 'utf8'));
+      // Scenarios are written around the demo anchor day; they play out from today like the cases do.
+      raw = rebaseCaseDates(JSON.parse(await fs.readFile(path.join(this.dir, `${name}.json`), 'utf8')));
     } catch {
       throw new ScenarioError('scenario_not_found', `No scenario named ${name}`, 404);
     }
@@ -130,7 +132,7 @@ export class ScenarioPlayer {
       scenario,
       generation,
       index: 0,
-      clock_ms: Date.parse(scenario.start_at ?? '2026-06-10T00:00:00Z'),
+      clock_ms: Date.parse(scenario.start_at ?? new Date().toISOString()),
       tracker: new RiskTracker({ clearTicks: this.clearTicks }),
       log: []
     };
@@ -208,7 +210,7 @@ export class ScenarioPlayer {
     switch (step.kind) {
       case 'documents': {
         const documents = await Promise.all(['bill-of-lading.md', 'commercial-invoice.md', 'insurance-policy.md'].map(async (name) => ({
-          name, mime_type: 'text/markdown', text: await fs.readFile(new URL(`../../../../data/uploads/copper-sg-shanghai/${name}`, import.meta.url), 'utf8')
+          name, mime_type: 'text/markdown', text: rebaseDocumentText(await fs.readFile(new URL(`../../../../data/uploads/copper-sg-shanghai/${name}`, import.meta.url), 'utf8'))
         })));
         assertCurrent();
         const uploaded = await service.submitDocuments({ case_id: caseId, documents }, { source: 'scenario', occurredAt, generation: run.generation });

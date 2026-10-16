@@ -1,13 +1,48 @@
 {
   "name": "insurance-gap",
-  "title": { "en": "Insurance runs out while the offering is open", "zh": "发行期间保险到期" },
-  "description": { "en": "The cargo policy approaches its expiry: the agent warns a week ahead, then pauses the offering once cover has lapsed. Simulated clock.", "zh": "货运保险临近到期：Agent 提前一周预警，保险失效后暂停发行。使用模拟时钟。" },
+  "title": {
+    "en": "Insurance runs out while the offering is open",
+    "zh": "发行期间保险到期"
+  },
+  "description": {
+    "en": "The cargo policy approaches its expiry: the agent warns a week ahead, then pauses the offering once cover has lapsed. Simulated clock.",
+    "zh": "货运保险临近到期：Agent 提前一周预警，保险失效后暂停发行。使用模拟时钟。"
+  },
   "case_id": "CASE-EBL-2026-0001",
-  "start_at": "2026-07-05T00:00:00Z",
+  "date_anchor": "2026-10-16",
+  "start_at": "2026-10-30T00:00:00Z",
   "steps": [
-    { "kind": "clock", "after_hours": 0, "label": { "en": "15 days of cover left", "zh": "保险还剩 15 天" } },
-    { "kind": "clock", "after_hours": 192, "label": { "en": "8 days left: outside the warning window", "zh": "还剩 8 天：尚未进入预警窗口" } },
-    { "kind": "clock", "after_hours": 48, "label": { "en": "6 days left: warning", "zh": "还剩 6 天：发出预警" } },
-    { "kind": "clock", "after_hours": 144, "label": { "en": "Policy expired: pause", "zh": "保险已失效：暂停" } }
+    {
+      "kind": "clock",
+      "after_hours": 0,
+      "label": {
+        "en": "15 days of cover left",
+        "zh": "保险还剩 15 天"
+      }
+    },
+    {
+      "kind": "clock",
+      "after_hours": 192,
+      "label": {
+        "en": "8 days left: outside the warning window",
+        "zh": "还剩 8 天：尚未进入预警窗口"
+      }
+    },
+    {
+      "kind": "clock",
+      "after_hours": 48,
+      "label": {
+        "en": "6 days left: warning",
+        "zh": "还剩 6 天：发出预警"
+      }
+    },
+    {
+      "kind": "clock",
+      "after_hours": 144,
+      "label": {
+        "en": "Policy expired: pause",
+        "zh": "保险已失效：暂停"
+      }
+    }
   ]
 }

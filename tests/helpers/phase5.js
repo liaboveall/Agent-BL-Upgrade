@@ -3,7 +3,7 @@ import { createAgentService } from '../../src/agent/runtime/factory.js';
 import { loadAgentConfig } from '../../src/agent/runtime/config.js';
 import { quoteFromCase } from '../../src/core/pricingEngine.js';
 
-export const copper = JSON.parse(await fs.readFile(new URL('../../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8'));
+export const copper = JSON.parse(await fs.readFile(new URL('../../data/cases/archive/copper-sg-shanghai-2026-06.case.json', import.meta.url), 'utf8'));
 export const documents = await Promise.all(['bill-of-lading.md', 'commercial-invoice.md', 'insurance-policy.md'].map(async (name) => ({
   name, kind: 'text', mime_type: 'text/markdown', text: await fs.readFile(new URL(`../../data/uploads/copper-sg-shanghai/${name}`, import.meta.url), 'utf8')
 })));

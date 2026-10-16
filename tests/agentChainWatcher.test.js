@@ -444,3 +444,98 @@ test('an owner payment correction removes stale verification and decimal amounts
   assert.equal(proof.payment_proof, hash(456)); assert.equal(proof.repayment_amount_atomic, '1234567');
   assert.equal(proof.payment_verification, undefined); assert.equal(proof.repayment_amount, undefined);
 });
+
+// Hold the next getLogs call so a poll stays in flight after it has read the head and the stop state.
+function holdLogs(chain) {
+  const original = chain.provider.getLogs; let release = null;
+  chain.provider.getLogs = (filter) => new Promise((resolve, reject) => {
+    release = () => original.call(chain.provider, filter).then(resolve, reject);
+  });
+  return { reached: async () => { while (!release) await new Promise((resolve) => setImmediate(resolve)); },
+    release: () => { chain.provider.getLogs = original; release(); } };
+}
+let riskEvents = 0;
+async function riskDecision(service) {
+  const id = `watch-mid-poll-${++riskEvents}`;
+  await service.submitEvent({ event_id: id, type: 'WORLD_RISK_UPDATED', case_id: copper.case_id, source: 'admin', source_mode: 'live',
+    data: { events: [{ type: 'severe_weather', severity: 'warning', region: 'East China Sea', description: 'typhoon', date: '2026-10-15' }] } });
+  await service.bus.idle();
+  const [decision] = await service.logger.list({ event_id: id });
+  assert.ok(decision, 'the event produced a decision');
+  return decision;
+}
+const rules = (decision) => decision.policy.reasons.map((reason) => reason.rule);
+
+test('a routine poll in flight keeps a caught-up watcher confirmed: Live proposals, approval and broadcast checks proceed', async () => {
+  const h = await watcherService(); await h.poll();
+  assert.equal(h.service.chainSafetyUnknown, false);
+  let sent = 0;
+  h.service.getChain = async () => ({ execute: async (command) => {
+    command.assertCurrent(); sent++; return { mode: 'chain', tx_hash: hash(98766), confirmed_events: ['PricingUpdated'], block_number: 111 };
+  } });
+  h.chain.state.latest++; const hold = holdLogs(h.chain);
+  const running = h.watcher.poll(h.service); await hold.reached();
+  // Before the fix every poll set chainSafetyUnknown here, so this proposal was REJECTED.
+  assert.equal(h.service.chainSafetyUnknown, false); assert.equal(h.service.emergencyStopped, false);
+  const decision = await riskDecision(h.service);
+  assert.equal(decision.policy.verdict, 'NEEDS_APPROVAL');
+  assert.ok(!rules(decision).includes('CHAIN_OBSERVATION_UNAVAILABLE')); assert.ok(!rules(decision).includes('EMERGENCY_STOP'));
+  const approval = h.service.approvals.list({ status: 'PENDING' }).find((item) => item.decision_id === decision.decision_id);
+  await h.service.approve(approval.approval_id); await h.service.bus.idle();
+  assert.equal(sent, 1);
+  hold.release(); assert.equal((await running).state, 'healthy');
+  assert.equal(h.service.chainSafetyUnknown, false);
+});
+
+test('startup stays fail-closed while the first poll is in flight', async () => {
+  const h = await watcherService(); const hold = holdLogs(h.chain);
+  const running = h.watcher.poll(h.service); await hold.reached();
+  assert.equal(h.service.chainSafetyUnknown, true);
+  const decision = await riskDecision(h.service);
+  assert.equal(decision.policy.verdict, 'REJECTED'); assert.equal(rules(decision)[0], 'CHAIN_OBSERVATION_UNAVAILABLE');
+  hold.release(); await running;
+  assert.equal(h.service.chainSafetyUnknown, false);
+});
+
+test('a poll that finds the watcher behind by more than one batch fails closed before replaying logs', async () => {
+  const h = await watcherService(); await h.poll();
+  assert.equal(h.service.chainSafetyUnknown, false);
+  h.chain.state.latest += 6000; const hold = holdLogs(h.chain);
+  const running = h.watcher.poll(h.service); await hold.reached();
+  assert.equal(h.service.chainSafetyUnknown, true);
+  assert.equal(rules(await riskDecision(h.service))[0], 'CHAIN_OBSERVATION_UNAVAILABLE');
+  hold.release(); assert.equal((await running).state, 'catching-up');
+  assert.equal(h.service.chainSafetyUnknown, true);
+});
+
+test('an emergency stop seen at head applies mid-poll; its release waits for the poll to commit', async () => {
+  const h = await watcherService(); await h.poll();
+  h.chain.state.headStop = true; h.chain.state.latest++;
+  let hold = holdLogs(h.chain); let running = h.watcher.poll(h.service); await hold.reached();
+  assert.equal(h.service.chainEmergencyStopped, true); assert.equal(h.service.emergencyStopped, true);
+  const decision = await riskDecision(h.service);
+  assert.equal(decision.policy.verdict, 'REJECTED'); assert.equal(rules(decision)[0], 'EMERGENCY_STOP');
+  hold.release(); await running;
+  h.chain.state.headStop = false; h.chain.state.latest++;
+  hold = holdLogs(h.chain); running = h.watcher.poll(h.service); await hold.reached();
+  assert.equal(h.service.chainEmergencyStopped, true);
+  hold.release(); await running;
+  assert.equal(h.service.chainEmergencyStopped, false); assert.equal(h.service.emergencyStopped, false);
+  assert.deepEqual(h.service.activity.buffer.filter((e) => e.action === 'CHAIN_EMERGENCY_STOP_CHANGED').map((e) => e.details.stopped), [true, false]);
+});
+
+test('a failed poll and an aged confirmation both fail closed', async () => {
+  const h = await watcherService(); await h.poll();
+  h.chain.state.latest++; h.chain.state.failLogs = true; await h.poll();
+  assert.equal(h.service.chainSafetyUnknown, true);
+  assert.equal(rules(await riskDecision(h.service))[0], 'CHAIN_OBSERVATION_UNAVAILABLE');
+  h.chain.state.failLogs = false; h.advance(15000); await h.poll();
+  assert.equal(h.service.chainSafetyUnknown, false);
+  // No poll completes within the bound (stopped scheduler, stuck non-RPC step): the last confirmation expires.
+  h.advance(h.watcher.maxStaleMs + 1);
+  assert.equal(h.service.chainSafetyUnknown, true);
+  const status = await h.service.status();
+  assert.equal(status.chain_watcher.stale, true); assert.equal(status.emergency_stop_sources.chain_unknown, true);
+  assert.equal(rules(await riskDecision(h.service))[0], 'CHAIN_OBSERVATION_UNAVAILABLE');
+  await h.poll(); assert.equal(h.service.chainSafetyUnknown, false);
+});

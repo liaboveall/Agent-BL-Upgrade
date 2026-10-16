@@ -8,11 +8,15 @@ import { z } from 'zod';
 import { runEvaluation } from '../src/agent/evaluation/runner.js';
 import { renderEvaluationReport } from '../src/agent/evaluation/evaluationReport.js';
 import { writeJsonAtomic, writeFileAtomic } from '../src/lib/jsonStore.js';
+import { DEMO_DATE_ANCHOR } from '../src/core/caseDates.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const execFileAsync = promisify(execFile);
 const args = process.argv.slice(2);
 if (args.some((arg) => !['--check', '--live-llm'].includes(arg))) throw new Error('Usage: npm run eval:agent -- [--check] [--live-llm]');
+// Measure the curated data as written (no date shift, offline real-data snapshot) so reruns compare.
+process.env.AGENTBL_DEMO_TODAY ??= DEMO_DATE_ANCHOR;
+process.env.REAL_DATA ??= 'off';
 const evaluation = await runEvaluation();
 const git = async (argv) => (await execFileAsync('git', argv, { cwd: root, windowsHide: true })).stdout.trim();
 const fileHashes = {};
@@ -25,7 +29,7 @@ async function digest(target) {
     fileHashes[target] = crypto.createHash('sha256').update(await fs.readFile(path.join(root, target))).digest('hex');
   }
 }
-for (const target of ['src', 'scripts', 'tests', 'data/cases', 'data/uploads', 'data/compliance', 'data/agent-scenarios', 'data/world-intel', 'data/risk-intel', '.github/workflows', 'package.json', 'package-lock.json', 'eslint.config.js']) await digest(target);
+for (const target of ['src', 'scripts', 'tests', 'data/cases', 'data/uploads', 'data/compliance', 'data/agent-scenarios', 'data/world-intel', 'data/risk-intel', 'data/real-data', '.github/workflows', 'package.json', 'package-lock.json', 'eslint.config.js']) await digest(target);
 evaluation.source = { commit: await git(['rev-parse', 'HEAD']), dirty: Boolean(await git(['status', '--porcelain'])),
   sha256: crypto.createHash('sha256').update(JSON.stringify(fileHashes)).digest('hex'), files: fileHashes };
 if (args.includes('--live-llm')) {

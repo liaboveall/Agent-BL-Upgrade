@@ -9,9 +9,9 @@
 ```bash
 npm run dev
 # 另一终端；只读 SDK 示例，不提交事件，不购买报告
-npm run interop:demo -- --url http://127.0.0.1:3000 --case CASE-EBL-2026-CU-SG-SHA
+npm run interop:demo -- --url http://127.0.0.1:3000 --case CASE-EBL-CU-SIN-SHA
 # 已交付且未过期的报告可按 id 附加；不会再次收费
-npm run interop:demo -- --url http://127.0.0.1:3000 --case CASE-EBL-2026-CU-SG-SHA --report-id rpt_<64位十六进制>
+npm run interop:demo -- --url http://127.0.0.1:3000 --case CASE-EBL-CU-SIN-SHA --report-id rpt_<64位十六进制>
 ```
 
 外部 MCP 主机的示例配置（按本机仓库位置修改 `args`）：
@@ -71,7 +71,7 @@ A2A-Version: 1.0
       "messageId": "external-message-1",
       "role": "ROLE_USER",
       "parts": [{ "mediaType": "application/json", "data": {
-        "case_id": "CASE-EBL-2026-CU-SG-SHA", "payout_speed": "FAST"
+        "case_id": "CASE-EBL-CU-SIN-SHA", "payout_speed": "FAST"
       } }]
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "balanced-payout",
-  "description": "Exporter chooses BALANCED payout on the clean copper case: ~0.987, a lower annual rate than FAST.",
+  "description": "Exporter chooses BALANCED payout on the clean copper case: ~0.993, a lower annual rate than FAST.",
   "base_case": "data/cases/copper-sg-shanghai.case.json",
   "overrides": {
     "financing": {
@@ -11,8 +11,8 @@
     "payout_speed": "BALANCED",
     "pricing_action": "OPEN_OFFERING",
     "binding_constraint": "TENOR_RATE",
-    "risk_level": "MEDIUM",
-    "min_issue_price": 0.984,
-    "max_issue_price": 0.99
+    "risk_level": "LOW",
+    "min_issue_price": 0.989,
+    "max_issue_price": 0.996
   }
 }

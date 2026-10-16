@@ -12,8 +12,9 @@ import { CopilotService } from '../src/copilot/service.js';
 import { assessWorldRisk } from '../src/agent/worldRiskAgent.js';
 import { EventBus } from '../src/agent/runtime/eventBus.js';
 import { normalizeEvent } from '../src/agent/runtime/events.js';
+import { cargoIdentityHash } from '../src/chain/cargoIdentity.js';
 
-const copper = JSON.parse(await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8'));
+const copper = JSON.parse(await fs.readFile(new URL('../data/cases/archive/copper-sg-shanghai-2026-06.case.json', import.meta.url), 'utf8'));
 const TX = `0x${'ac'.repeat(32)}`; // fake provider receipt only
 const timeout = () => Object.assign(new Error('injected RPC outage'), { code: 'TIMEOUT' });
 const storm = [{ type: 'severe_weather', severity: 'critical', region: 'East China Sea', description: 'storm', date: '2026-10-13' },
@@ -44,7 +45,9 @@ function fakeChain() {
       getTransactionReceipt: async () => { calls.lookups++; if (faults.lookup) throw timeout(); return receipt(); } },
     oracle: { target: oracle, updatePricing, isDecisionProcessed: async () => false, interface: parser },
     pool: { target: pool, interface: parser, emergencyStopped: async () => false, stateOf: async () => 2,
-      offerings: async () => ({ exists: true, eblId: 2, issuePrice: 800000, targetRedemptionValue: 1000000, subscribed: 0 }) }
+      offerings: async () => ({ exists: true, eblId: 2, issuePrice: 800000, targetRedemptionValue: 1000000, subscribed: 0 }) },
+    // Live bootstrap links pool #2 only after its eBL shows the registered cargo identity.
+    registry: { cargoHashOf: async () => cargoIdentityHash(copper) }
   } };
 }
 

@@ -3,13 +3,13 @@ import fs from 'node:fs/promises';
 import test from 'node:test';
 import { simulateOffering } from '../src/core/offeringSimulator.js';
 import { RWA_OFFERING_STATES } from '../src/core/pricingSchema.js';
+import { loadCuratedCase } from '../src/core/curatedCases.js';
 
 const copperCase = JSON.parse(
   await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8')
 );
-const warCase = JSON.parse(
-  await fs.readFile(new URL('../data/cases/copper-sg-shanghai-warcrisis.case.json', import.meta.url), 'utf8')
-);
+// The Hormuz-transit aluminium case with the offline real-data snapshot attached: CRITICAL, paused.
+const warCase = await loadCuratedCase(new URL('../data/cases/alu-dxb-rtm.case.json', import.meta.url));
 
 const states = (o) => o.steps.map((s) => s.state);
 

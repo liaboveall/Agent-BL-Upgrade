@@ -124,6 +124,14 @@ export class AgentService {
     this.bus.onSettled = (entry) => this.#onEventSettled(entry);
   }
 
+  /**
+   * Live chain safety is unknown until the watcher has confirmed a caught-up chain, and again once
+   * that confirmation is older than the watcher's staleness bound. Watcher failures set the flag.
+   */
+  get chainSafetyUnknown() { return this.chainSafetyFlag || Boolean(this.chainWatcher?.confirmationStale?.()); }
+
+  set chainSafetyUnknown(value) { this.chainSafetyFlag = Boolean(value); }
+
   get emergencyStopped() {
     return this.localEmergencyStopped || this.getMode() === 'live' && (this.chainEmergencyStopped || this.chainSafetyUnknown);
   }

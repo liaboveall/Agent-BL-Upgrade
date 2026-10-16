@@ -6,11 +6,13 @@ import { quoteFromCase } from '../src/core/pricingEngine.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
 import { createAgentService } from '../src/agent/runtime/factory.js';
 import { ScenarioError } from '../src/agent/runtime/sources/scenarioPlayer.js';
+import { loadCuratedCase } from '../src/core/curatedCases.js';
 
 const readCase = async (file) => JSON.parse(await fs.readFile(new URL(`../data/${file}`, import.meta.url), 'utf8'));
 const copper = await readCase('cases/copper-sg-shanghai.case.json');
-const warcrisis = await readCase('cases/copper-sg-shanghai-warcrisis.case.json');
-const crude = await readCase('cases/crude-sg-ulsan.case.json');
+// The Hormuz-transit aluminium case as the market shows it (offline real-data snapshot): seeded Paused.
+const warcrisis = await loadCuratedCase(new URL('../data/cases/alu-dxb-rtm.case.json', import.meta.url));
+const crude = await readCase('cases/crude-fuj-sin.case.json');
 const demoCase = await readCase('demo-case.json');
 
 async function runtime({ mode = 'demo', env = {} } = {}) {
@@ -203,7 +205,7 @@ test('warcrisis-hormuz: a crude cargo is repriced down as war risk rises, paused
 
 test('scenarios: a case whose pool is already paused ignores a pause, with the reason on record', async () => {
   const { service } = await runtime();
-  assert.equal(storeState.pools.get(warcrisis.case_id).status, 'Paused', 'the curated war-crisis case is seeded paused');
+  assert.equal(storeState.pools.get(warcrisis.case_id).status, 'Paused', 'the Hormuz-transit case is seeded paused');
   const accepted = await service.submitEvent({
     type: 'WORLD_RISK_UPDATED', case_id: warcrisis.case_id, source: 'admin', event_id: 'already-paused',
     data: { events: [{ type: 'war_risk', region: 'Strait of Hormuz', severity: 'critical', description: 'closure', date: '2026-06-21' }] }

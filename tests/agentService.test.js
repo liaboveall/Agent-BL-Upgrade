@@ -13,7 +13,8 @@ import { LIVE_ADMIN_EVENT_TYPES } from '../src/agent/runtime/agentService.js';
 
 const readCase = async (name) => JSON.parse(await fs.readFile(new URL(`../data/cases/${name}.case.json`, import.meta.url), 'utf8'));
 const iron = await readCase('ironore-au-tj');
-const copper = await readCase('copper-sg-shanghai');
+// The historical copper case is the one testnet pool #2 was opened from.
+const copper = await readCase('archive/copper-sg-shanghai-2026-06');
 
 const typhoon = [{ type: 'severe_weather', region: 'East China Sea', severity: 'warning', description: 'typhoon', date: '2026-10-12' }];
 const warCrisis = [

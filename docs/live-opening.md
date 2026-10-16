@@ -1,6 +1,6 @@
 # WP2.4：Live 开盘提案与 owner CLI
 
-单证接入在 Live 下生成待审批的开盘方案。新货物包含 `mintEBLV2 → pledge → createOffering` 三步；已登记货物只提出关联已有 eBL 和融资池。服务器不签开盘交易，也不读取 owner 密钥。本地实现与隔离验收使用内存链桩和真实部署 ABI；真实链上三笔交易尚未运行。
+单证接入在 Live 下生成待审批的开盘方案。新货物包含 `mintEBLV2 → pledge → createOffering` 三步；已登记货物只提出关联已有 eBL 和融资池。服务器不签开盘交易，也不读取 owner 密钥。本地实现与隔离验收使用内存链桩和真实部署 ABI。2026-10-16 在测试网上为新铜案例真实运行了一次，开出 eBL #3 / pool #3，证据见 `docs/evidence/live-opening-pool3.json`。
 
 ## 身份与执行计划
 

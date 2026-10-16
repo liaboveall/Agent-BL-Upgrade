@@ -140,7 +140,7 @@ test('ingest pipeline: three clean documents become an opened Demo pool, step by
   assert.equal(pool.status, 'Open');
   assert.equal(pool.caseData.case_id, 'CASE-UP-CU-1');
   assert.equal(pool.caseData.bill_of_lading.quantity_mt, 500);
-  assert.equal(pool.caseData.insurance.expires_at, '2026-07-05');
+  assert.equal(pool.caseData.insurance.expires_at, '2026-11-25');
   assert.equal(pool.quote.case_id, 'CASE-UP-CU-1');
   assert.equal(pool.quote.quote_hash, decision.quote_hash);
 
@@ -188,7 +188,7 @@ test('ingest pipeline: a document set without a case id gets a stable one and st
 
 test('ingest pipeline: the crude case opens too, priced in its own terms', async () => {
   const { service } = await runtime();
-  const docs = await copperDocs((name, text) => text, 'crude-sg-ulsan');
+  const docs = await copperDocs((name, text) => text, 'crude-fuj-sin');
   await upload(service, { case_id: 'CASE-UP-OIL-1', documents: docs });
   const [decision] = await decisionsOf(service);
   assert.equal(decision.action, 'OPEN');
@@ -197,11 +197,27 @@ test('ingest pipeline: the crude case opens too, priced in its own terms', async
   const pool = storeState.pools.get('CASE-UP-OIL-1');
   assert.equal(pool.quote.case_id, 'CASE-UP-OIL-1');
   // barrels in, tonnes priced: the figures the document states, not a conversion made up here
-  assert.equal(pool.caseData.bill_of_lading.quantity_bbl, 600000);
-  assert.equal(pool.caseData.bill_of_lading.quantity_mt, 78221);
-  assert.equal(pool.caseData.commercial_invoice.unit_price_usd_per_bbl, 96.5);
-  assert.equal(pool.caseData.commercial_invoice.total_amount_usd, 57_900_000);
-  assert.equal(pool.caseData.insurance.insured_value_usd, 63_690_000);
+  assert.equal(pool.caseData.bill_of_lading.quantity_bbl, 700000);
+  assert.equal(pool.caseData.bill_of_lading.quantity_mt, 92105);
+  assert.equal(pool.caseData.commercial_invoice.unit_price_usd_per_bbl, 107.1);
+  assert.equal(pool.caseData.commercial_invoice.total_amount_usd, 74_970_000);
+  assert.equal(pool.caseData.insurance.insured_value_usd, 82_467_000);
+});
+
+test('ingest pipeline: a failed job runs again when the same documents are uploaded again', async () => {
+  const { service } = await runtime();
+  const first = await upload(service, { case_id: 'CASE-UP-RETRY-1', documents: await copperDocs() });
+  const [decision] = await decisionsOf(service);
+  await service.ingest.updateJob(first.job.job_id, { status: 'FAILED', error: { code: 'test', message: 'operator marked it failed' } });
+  const retry = await upload(service, { case_id: 'CASE-UP-RETRY-1', documents: await copperDocs() });
+  assert.equal(retry.created, true);
+  assert.equal(retry.job.job_id, first.job.job_id);
+  const job = service.ingest.getJob(first.job.job_id);
+  assert.equal(job.status, 'DONE', 'the retry was processed, not dropped as a duplicate event');
+  assert.equal(job.attempt, 2);
+  assert.deepEqual(job.previous_decision_ids, [decision.decision_id]);
+  assert.notEqual(job.decision_ids[0], decision.decision_id);
+  assert.equal((await decisionsOf(service)).length, 2);
 });
 
 // ---------------------------------------------------------------- documents that must not open a pool

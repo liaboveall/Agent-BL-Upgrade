@@ -133,16 +133,17 @@ test('AI-6: quotes carry investor and exporter explanations', () => {
 test('quoteFromCase derives the copper headline deterministically', () => {
   const fast = quoteFromCase(copperCase, { payout_speed: 'FAST' });
   assert.equal(fast.case_id, copperCase.case_id);
-  assert.equal(fast.ai_verified_collateral_value_usd, 6_531_250);
-  assert.equal(fast.max_safe_redemption_exposure_usd, 5_878_125);
-  assert.equal(fast.risk_level, 'MEDIUM');
-  assert.equal(fast.exporter_gross_profit_usd, 1_375_000);
-  // 12-day voyage + 7 days for an L/C at sight is under the 30-day floor; FAST at 350 bps costs 19% a year.
+  // min(invoice 7,267,500, 500 MT x landed 14,617, insured 7,994,250) with no war/volatility haircut.
+  assert.equal(fast.ai_verified_collateral_value_usd, 7_267_500);
+  assert.equal(fast.max_safe_redemption_exposure_usd, 6_540_750);
+  assert.equal(fast.risk_level, 'LOW');
+  assert.equal(fast.exporter_gross_profit_usd, 237_500);
+  // 7-day voyage + 7 days for an L/C at sight is under the 30-day floor; FAST at 0 bps costs 12% a year.
   assert.equal(fast.tenor_days, 30);
   assert.equal(fast.binding_constraint, 'TENOR_RATE');
-  assert.equal(fast.annual_rate_cap_bps, 1900);
-  assert.equal(fast.final_issue_price_usd, 0.9846);
-  assert.ok(Math.abs(fast.annualized_yield_bps - 1900) <= 10, 'the investor earns the capped rate');
+  assert.equal(fast.annual_rate_cap_bps, 1200);
+  assert.equal(fast.final_issue_price_usd, 0.9902);
+  assert.ok(Math.abs(fast.annualized_yield_bps - 1200) <= 10, 'the investor earns the capped rate');
 });
 
 test('the annual-rate cap prices short tenors: no more 100% upside on a 3-day voyage', () => {
@@ -185,7 +186,11 @@ test('compareSpeeds returns all three speeds plus a recommendation', () => {
 });
 
 test('scoreRisk reads macro + shipment events into bps and a level', () => {
-  const risk = scoreRisk(copperCase);
+  assert.equal(scoreRisk(copperCase).risk_score_bps, 0, 'the curated case carries no world events on disk');
+  const risk = scoreRisk({ ...copperCase, macro_risk_events: [
+    { type: 'war_risk', region: 'Middle East / Strait of Hormuz', severity: 'warning' },
+    { type: 'commodity_volatility', region: 'Global', severity: 'warning' }
+  ] });
   assert.equal(risk.risk_score_bps, 350); // war(200) + volatility(150), both warning
   assert.equal(risk.risk_level, 'MEDIUM');
   assert.ok(risk.risk_factors.length >= 2);

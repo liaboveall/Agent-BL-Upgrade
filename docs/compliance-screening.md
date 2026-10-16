@@ -4,7 +4,7 @@ WP2.3 使用带版本的内置演示名单替换了名字关键词规则。CLEAR
 
 ## 数据与来源
 
-`data/compliance/screening-list.json` 为 `demo-screening-v2.0`，资料日期 2026-10-14。实体、别名和船名均为虚构，IMO 为合成测试值，不表示任何真实船舶被制裁；地区和军品/两用物项 HS 前缀都是演示规则。`data/compliance/ports.json` 为 `demo-ports-v1.0`，覆盖全部现有案例的海港和佛山仓库地点。仓库别名只用于判断国家，不把仓库当海港。
+`data/compliance/screening-list.json` 为 `demo-screening-v2.0`，资料日期 2026-10-14。实体、别名和船名均为虚构，IMO 为合成测试值，不表示任何真实船舶被制裁；地区和军品/两用物项 HS 前缀都是演示规则。`data/compliance/ports.json` 为 `demo-ports-v1.1`（2026-10-16 补充了 Fujairah、Santos、Dalian、Laem Chabang、Hamburg），覆盖全部现有案例的海港和佛山仓库地点。仓库别名只用于判断国家，不把仓库当海港。
 
 加载时校验演示标记、字段、重复 ID、国家代码与 IMO 校验位。报告保存名单版本、地点版本、资料日期和数据 SHA256；无效数据会使加载失败，不回退到全通过。
 

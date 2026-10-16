@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import { cargoIdentityHash } from '../../chain/cargoIdentity.js';
 import { hashSnapshot } from '../decisionLogger.js';
 import { ACTIVE_STATES, chainStateName } from './poolRules.js';
-import { KNOWN_LIVE_POOLS } from './poolRegistry.js';
+import { knownLivePool } from './poolRegistry.js';
 
 export const OPENING_ACTIONS = Object.freeze(['OPEN', 'OPEN_WITH_WARNING']);
 export const OPENING_SCHEMA = 'agentbl-owner-opening-v1';
@@ -21,10 +21,17 @@ const requireThat = (condition, code, message) => { if (!condition) throw new Op
 const tokens = (value) => String(value ?? '').normalize('NFKC').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 const contains = (source, identity) => tokens(identity).every((token) => tokens(source).includes(token));
 
-/** The standing copper pool used short catalog labels in its deployed Wave B commitment. */
+/**
+ * A case with a known Live pool keeps the cargo identity it was registered with: documents that
+ * describe the same cargo with other labels resolve to that identity (and so to a link), never to a
+ * second mint. Pool #2 was committed with short catalog labels; pool #3 with the parsed documents.
+ */
 async function identityFor(caseData) {
-  if (!KNOWN_LIVE_POOLS.some((item) => item.case_id === caseData.case_id)) return caseData;
-  const canonical = JSON.parse(await fs.readFile(new URL('../../../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8'));
+  const pool = knownLivePool(caseData.case_id);
+  if (!pool) return caseData;
+  const canonical = JSON.parse(await fs.readFile(new URL(`../../../${pool.identity_file}`, import.meta.url), 'utf8'));
+  requireThat(canonical.case_id === pool.case_id && same(cargoIdentityHash(canonical), pool.cargo_hash),
+    'known_identity_corrupt', 'The recorded identity of the registered eBL no longer reproduces its cargo hash');
   const bill = caseData.bill_of_lading, known = canonical.bill_of_lading;
   requireThat([known.bl_id, known.ebl_title_ref].includes(bill?.bl_id) && Number(bill.quantity_mt) === known.quantity_mt
     && same(bill.vessel, known.vessel) && contains(bill.carrier, known.carrier) && contains(bill.cargo, known.cargo)
@@ -32,7 +39,8 @@ async function identityFor(caseData) {
     && contains(bill.port_of_discharge, known.port_of_discharge)
     && String(caseData.cargo?.hs_code) === String(canonical.cargo.hs_code),
   'known_cargo_identity_mismatch', 'The documents do not match the standing registered eBL; review them instead of minting another cargo identity');
-  return canonical;
+  // Documents that already carry the registered identity (pool #3's own) are used as they are.
+  return same(cargoIdentityHash(caseData), pool.cargo_hash) ? caseData : canonical;
 }
 
 export function positiveChainId(value) {
@@ -108,7 +116,7 @@ export async function buildOpeningPlan({ params, chainConfig, context }) {
     const existing = await readRegisteredOpening({ cargoHash, context, chainConfig });
     return { ...base, kind: 'link', existing, bindings: { ebl_id: String(existing.ebl_id), pool_id: String(existing.pool_id) } };
   }
-  requireThat(identityCase === caseData, 'known_cargo_not_registered', 'The standing eBL could not be found under its original cargo identity; reconcile the registry instead of reminting it');
+  requireThat(!knownLivePool(caseData.case_id), 'known_cargo_not_registered', 'The standing eBL could not be found under its original cargo identity; reconcile the registry instead of reminting it');
   requireThat(!await context.pool.emergencyStopped(), 'emergency_stopped', 'The offering protocol is stopped; no opening is planned');
   const holder = await context.registry.owner();
   requireThat(isAddress(holder) && !same(holder, ZeroAddress) && same(holder, await context.pool.owner()), 'owner_mismatch', 'Mint and offering require the same contract owner');

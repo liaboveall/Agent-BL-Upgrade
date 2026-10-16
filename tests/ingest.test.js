@@ -132,6 +132,13 @@ test('ingest: uploads, jobs and built cases survive a restart; an unfinished job
     // an interrupted job can be retried by uploading again
     const retry = await second.accept({ case_id: 'CASE-UP-0005', documents: [md('a.md', 'persist me')] });
     assert.equal(retry.created, true);
+    // ...as a new event: the bus would drop the first attempt's event id as a duplicate
+    assert.equal(retry.job.job_id, job.job_id);
+    assert.equal(retry.job.attempt, 2);
+    assert.equal(retry.job.event_id, `${job.event_id}:attempt-2`);
+    // a finished job is not re-run by uploading the same bytes again
+    await second.updateJob(job.job_id, { status: 'DONE' });
+    assert.equal((await second.accept({ case_id: 'CASE-UP-0005', documents: [md('a.md', 'persist me')] })).created, false);
 
     await second.clear();
     assert.deepEqual(await second.listCases(), []);
@@ -168,7 +175,7 @@ test('screen: the shipped trade documents are clean', async () => {
       screened += 1;
     }
   }
-  assert.ok(screened >= 20, `expected to screen the whole upload corpus, screened ${screened}`);
+  assert.ok(screened >= 15, `expected to screen the whole upload corpus, screened ${screened}`);
 });
 
 test('screen: instructions aimed at an automated reader are flagged, in English and Chinese', () => {

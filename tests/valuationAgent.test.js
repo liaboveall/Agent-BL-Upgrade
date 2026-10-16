@@ -25,7 +25,13 @@ test('computeCargoValuation takes the conservative minimum and applies the hairc
 });
 
 test('suggestHaircut sums war + volatility macro risk into 5% for the copper case', () => {
-  assert.equal(suggestHaircut(copperCase), 0.05);
+  // The curated case carries no world events on disk (they come from src/realdata at load time).
+  assert.equal(suggestHaircut(copperCase), 0);
+  const stressed = { ...copperCase, macro_risk_events: [
+    { type: 'war_risk', region: 'Middle East / Strait of Hormuz', severity: 'warning' },
+    { type: 'commodity_volatility', region: 'Global', severity: 'warning' }
+  ] };
+  assert.equal(suggestHaircut(stressed), 0.05);
 });
 
 test('runValuationAgent (deterministic) returns market valuation + historical comparables', async () => {

@@ -7,6 +7,7 @@ import { checkCompliance } from '../complianceChecker.js';
 import { AgentOrchestrator } from '../orchestrator.js';
 import { hashSnapshot, stableStringify } from '../decisionLogger.js';
 import { quoteFromCase } from '../../core/pricingEngine.js';
+import { demoToday, rebaseCaseDates } from '../../core/caseDates.js';
 import { assertPricingQuote } from '../../core/pricingSchema.js';
 import { CopilotService } from '../../copilot/service.js';
 import { createPool, resetStore, storeState } from '../../app/store.js';
@@ -74,11 +75,12 @@ export async function evaluateScenario({ name }) {
   let service;
   try {
     resetStore(); storeState.agentActivities = [];
-    for (const file of ['cases/copper-sg-shanghai.case.json', 'cases/crude-sg-ulsan.case.json', 'demo-case.json']) {
-      const data = JSON.parse(await fs.readFile(new URL(`../../../data/${file}`, import.meta.url), 'utf8'));
-      createPool(data.case_id, data, quoteFromCase(data, { payout_speed: data.financing.payout_speed === 'FAST' ? 'FAST' : 'BALANCED' }), { createdAt: '2026-06-01T00:00:00Z' });
+    // Same date shift as the scenarios (both are written around the demo anchor).
+    for (const file of ['cases/copper-sg-shanghai.case.json', 'cases/crude-fuj-sin.case.json', 'demo-case.json']) {
+      const data = rebaseCaseDates(JSON.parse(await fs.readFile(new URL(`../../../data/${file}`, import.meta.url), 'utf8')));
+      createPool(data.case_id, data, quoteFromCase(data, { payout_speed: data.financing.payout_speed === 'FAST' ? 'FAST' : 'BALANCED' }), { createdAt: `${demoToday()}T00:00:00Z` });
     }
-    let clock = Date.parse('2026-06-01T00:00:00Z');
+    let clock = Date.parse(`${demoToday()}T00:00:00Z`);
     service = createAgentService({ env: {}, chainConfig: null, getChainContext: async () => null, monitors: false,
       config: loadAgentConfig({ AGENT_COOLDOWN_SEC: '0' }), now: () => new Date(clock++), sleep: async () => {} });
     await service.start();

@@ -20,6 +20,7 @@
     "agent:value": "node scripts/agent-valuation.mjs",
     "price": "node scripts/price.mjs",
     "intel": "node scripts/world-intel.mjs",
+    "realdata:snapshot": "node scripts/real-data-snapshot.mjs",
     "mcp": "node scripts/mcp.mjs",
     "mcp:stdio": "node src/mcp/standalone-server.js",
     "smoke:x402": "node scripts/smoke-x402.mjs",

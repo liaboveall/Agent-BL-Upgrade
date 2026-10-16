@@ -93,7 +93,7 @@ test('WP0.2: risk_max=CRITICAL keeps every market pool, including the WARNING on
   }
   const pools = [...storeState.pools.values()].filter((pool) => ['Open', 'Repriced'].includes(pool.status));
   const cases = pools.map(poolToAdvisorCase);
-  assert.ok(cases.length >= 20, `expected the full catalogue, got ${cases.length}`);
+  assert.ok(cases.length >= 10, `expected the full catalogue, got ${cases.length}`);
   assert.ok(cases.some((c) => c.riskLevel === 'WARNING'), 'the catalogue contains WARNING pools');
 
   // `matched` is the number of cases that survive the filters (recommendations is only the top 3).

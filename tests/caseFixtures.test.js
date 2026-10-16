@@ -27,7 +27,7 @@ const fixtures = [
 delete process.env.XAPI_KEY; // deterministic offline intel fixtures
 
 test('there are curated cases to check', () => {
-  assert.ok(fixtures.length >= 15, `expected the full catalog, found ${fixtures.length}`);
+  assert.ok(fixtures.length >= 11, `expected the full catalog, found ${fixtures.length}`);
 });
 
 for (const [label, file] of fixtures) {

@@ -47,7 +47,7 @@ async function upload(service, documents, caseId = 'CASE-WP22-TEST') {
 test('PDF: real two-page text PDF preserves values and page-local line provenance', async () => {
   const buffer = pdfFixture(['Commercial Invoice\nFixture cover page', invoice]);
   const parsed = await parseDocument({ buffer, name: 'invoice.pdf', mime_type: 'application/pdf' });
-  assert.equal(parsed.fields.total_amount_usd, 6_875_000);
+  assert.equal(parsed.fields.total_amount_usd, 7_267_500);
   assert.equal(parsed.fields.quantity_mt, 500);
   assert.equal(parsed.source.extractor, 'pdf-text');
   assert.equal(parsed.source.total_pages, 2);
@@ -65,7 +65,7 @@ test('PDF: positioned table cells and plain labels parse without Markdown syntax
   assert.equal(parsed.fields.total_amount_usd, 6_875_000);
   assert.equal(parsed.fields.quantity_mt, 500);
   const table = await parseDocument({ buffer: pdfFixture([invoice], { columns: true }), name: 'invoice.pdf', mime_type: 'application/pdf' });
-  assert.equal(table.fields.invoice_no, 'SRT-INV-2026-04417');
+  assert.equal(table.fields.invoice_no, 'SRT-INV-0517');
   assert.equal(table.fields.quantity_mt, 500);
 });
 
@@ -82,7 +82,7 @@ test('PDF: scans, broken PDFs, page limits, text limits and a hard worker timeou
 
 test('PDF: worker core releases resources, and table geometry retains cells in reading order', async () => {
   const extracted = await readPdf({ bytes: pdfFixture([invoice]), maxPages: 10, maxTextChars: 100_000 });
-  assert.ok(extracted.text.includes('SRT-INV-2026-04417'));
+  assert.ok(extracted.text.includes('SRT-INV-0517'));
   const item = (str, x, y, width = 20) => ({ str, transform: [1, 0, 0, 1, x, y], width, height: 10 });
   assert.deepEqual(textRows([item('Label', 10, 100), item('Value', 200, 100), item('new', 10, 80), item('line', 40, 80), item('', 1, 1)]), ['| Label | Value |', 'new line']);
   await assert.rejects(readPdf({ bytes: pdfFixture(['x', 'y']), maxPages: 1, maxTextChars: 1000 }), { code: 'PDF_PAGE_LIMIT' });
@@ -143,7 +143,7 @@ test('vision: the actual runtime sends a tool-free image request with strict sch
   assert.match(request.messages[0].content, /untrusted DATA/u);
   assert.match(request.messages[1].content[1].image_url.url, /^data:image\/png;base64,/u);
   const parsed = job.extraction.find((document) => document.source.extractor === 'llm-vision');
-  assert.equal(parsed.fields.total_amount_usd, 6_875_000);
+  assert.equal(parsed.fields.total_amount_usd, 7_267_500);
   assert.ok(parsed.confidence <= 0.75);
   assert.ok(Object.values(parsed.provenance).every((field) => field.method === 'llm-vision' && field.confidence <= 0.75));
   assert.equal(job.result_action, 'HOLD_FOR_REVIEW');
@@ -189,14 +189,14 @@ test('model transport: the shared compatible client preserves schema and never s
 });
 
 test('text model: typed, grounded completion retains deterministic values and records conflicts', async () => {
-  const text = invoice.replace('| **Invoice Date** | 2026-06-03 |', '| **Issue Date** | 2026-06-03 |');
+  const text = invoice.replace('| **Invoice Date** | 2026-10-13 |', '| **Issue Date** | 2026-10-13 |');
   const parsed = await parseDocument({ text, name: 'invoice.md' }, { aiExtractor: async () => ({ fields: [
-    { name: 'invoice_date', value: '2026-06-03', evidence: '2026-06-03' },
+    { name: 'invoice_date', value: '2026-10-13', evidence: '2026-10-13' },
     { name: 'invoice_no', value: 'Cu-CATH-1', evidence: 'Cu-CATH-1' },
     { name: 'provider', value: 'Invented insurer', evidence: 'Invented insurer' }
   ] }) });
-  assert.equal(parsed.fields.invoice_no, 'SRT-INV-2026-04417');
-  assert.equal(parsed.fields.invoice_date, '2026-06-03');
+  assert.equal(parsed.fields.invoice_no, 'SRT-INV-0517');
+  assert.equal(parsed.fields.invoice_date, '2026-10-13');
   assert.equal(parsed.provenance.invoice_date.method, 'ai-extractor');
   assert.equal(parsed.fields.provider, undefined);
   assert.ok(parsed.findings.some((finding) => finding.kind === 'EXTRACTION_CONFLICT'));
@@ -208,7 +208,7 @@ test('text model: only incomplete text calls it; prompts delimit and sanitize do
   const calls = [];
   const service = await runtime(t, { env: { ...env, AGENT_DOCUMENT_LLM: 'true' }, completion: async (body) => {
     calls.push(body);
-    return { content: JSON.stringify({ document_type: 'COMMERCIAL_INVOICE', text: '', fields: [{ name: 'invoice_date', value: '2026-06-03', evidence: '2026-06-03' }] }) };
+    return { content: JSON.stringify({ document_type: 'COMMERCIAL_INVOICE', text: '', fields: [{ name: 'invoice_date', value: '2026-10-13', evidence: '2026-10-13' }] }) };
   } });
   const docs = textDocs(); docs[1].text = invoice.replace('**Invoice Date**', '**Issue Date**');
   const job = await upload(service, docs);

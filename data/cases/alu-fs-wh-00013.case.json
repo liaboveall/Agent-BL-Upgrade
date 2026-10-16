@@ -1,7 +1,8 @@
 {
   "case_id": "CASE-EBL-2026-ALU-FS-WH-00013",
   "model": "ai-dynamic-pricing-rwa-v0.2",
-  "note": "拟真样例数据（虚构）：南方有色佛山 × 上海锦源 铝锭现货采购合同 2026-FS-AL0-CG-00013。金额单位已按~7.25汇率折算USD。",
+  "date_anchor": "2026-10-16",
+  "note": "拟真样例数据（虚构）：南方有色佛山 × 上海锦源 铝锭现货采购合同 2026-FS-AL0-CG-00013。金额单位已按~7.25汇率折算USD。 日期写在 date_anchor 前后，加载时随今天平移；价格为注明日期的参考价，不是实时行情。",
   "uploaded_documents": {
     "warehouse_receipt_file": "data/uploads/alu-fs-wh-00013/warehouse-receipt.md",
     "commercial_invoice_file": "data/uploads/alu-fs-wh-00013/commercial-invoice.md"
@@ -20,19 +21,19 @@
     "voyage_no": "N/A",
     "port_of_loading": "佛山南海指定仓库（入库单号 WH-FS-2026-05003）",
     "port_of_discharge": "佛山南海指定仓库（出库单号 WH-FS-2026-05003）",
-    "incoterms": "EXW 佛山仓库（现货库内交货）",
+    "incoterms": "EXW 佛山指定仓库（现货库内交货）",
     "cargo": "铝锭 AL99.70（P1020 级别，国产重熔用铝锭）",
     "quantity_mt": 724.065,
     "containers": "N/A（散货仓库堆存）",
     "declared_value_usd": 2442759,
-    "issue_date": "2026-05-20",
-    "shipped_on_board": "2026-05-20",
-    "eta": "2026-05-22",
+    "issue_date": "2026-10-12",
+    "shipped_on_board": "2026-10-12",
+    "eta": "2026-10-14",
     "document_hash": "0x1e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7"
   },
   "commercial_invoice": {
     "invoice_no": "SH-AL0-INV-2026-00013",
-    "invoice_date": "2026-05-20",
+    "invoice_date": "2026-10-12",
     "sales_contract": "2026-FS-AL0-CG-00013",
     "incoterms": "EXW 佛山指定仓库（现货库内交货）",
     "payment_terms": "现汇（T/T 电汇结算）",
@@ -61,10 +62,10 @@
   "insurance": {
     "provider": "中国人保财险佛山分公司（PICC Foshan）",
     "policy_type": "国内货运险 + 仓至仓条款",
-    "coverage_ratio": 1.0,
+    "coverage_ratio": 1,
     "insured_value_cny": 17710000,
     "insured_value_usd": 2442759,
-    "expires_at": "2026-06-30",
+    "expires_at": "2026-11-22",
     "policy_hash": "0x3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5e7f9a1b3c5d7e9f1a3b5c7d9e1b3f5a"
   },
   "trade_economics": {
@@ -98,24 +99,25 @@
     "landed_price_usd_per_mt": 3373,
     "lme_aluminium_cash_usd_per_mt": 2405,
     "shfe_aluminium_cny_per_mt": 24220,
-    "as_of": "2026-05-20",
-    "source": "SMM / LME / SHFE 2026年5月行情"
+    "source": "SMM / LME / SHFE 2026年5月行情（参考价，采于 2026-05-20；2026-10 中旬 LME 铝约 3,050 美元/吨，同一量级）",
+    "price_reference_date": "2026-05-20",
+    "data_status": "reference"
   },
   "shipment_events": [
     {
-      "date": "2026-05-20",
+      "date": "2026-10-12",
       "type": "warehouse_receipt_issued",
       "description": "724.065吨铝锭入库完毕，佛山南海指定仓库签发电子仓单 EWR-2026-FS-AL0-00013。",
       "severity": "info"
     },
     {
-      "date": "2026-05-21",
+      "date": "2026-10-13",
       "type": "ownership_transfer",
       "description": "买卖双方完成现汇结算，仓单所有权由上海锦源转移至南方有色佛山。",
       "severity": "info"
     },
     {
-      "date": "2026-05-22",
+      "date": "2026-10-14",
       "type": "delivery_complete",
       "description": "南方有色佛山完成提货确认，724.065吨铝锭交割完毕。",
       "severity": "info"
@@ -123,18 +125,20 @@
   ],
   "macro_risk_events": [
     {
-      "date": "2026-05-20",
+      "date": "2026-10-12",
       "type": "domestic_aluminum_market",
       "region": "中国 / 华南",
       "severity": "medium",
-      "description": "佛山铝锭社会库存约18万吨，处于年内中等偏低水平。云南电解铝复产速度不及预期，华南现货市场供给偏紧，升水稳定。"
+      "description": "情景假设（演示用，非实时数据）：佛山铝锭社会库存约18万吨，处于年内中等偏低水平。云南电解铝复产速度不及预期，华南现货市场供给偏紧，升水稳定。",
+      "scenario_assumption": true
     },
     {
-      "date": "2026-05-20",
+      "date": "2026-10-12",
       "type": "trade_war_risk",
       "region": "全球 / 中国",
       "severity": "medium",
-      "description": "美国对华铝制品关税维持在25%（232条款），中国铝材出口受限。但国内铝锭以内循环为主，直接冲击有限。关注后续出口退税政策变化。"
+      "description": "情景假设（演示用，非实时数据）：美国对华铝制品关税维持在25%（232条款），中国铝材出口受限。但国内铝锭以内循环为主，直接冲击有限。关注后续出口退税政策变化。",
+      "scenario_assumption": true
     }
   ]
 }

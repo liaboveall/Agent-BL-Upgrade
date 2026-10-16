@@ -83,23 +83,22 @@ try {
   // ═══════════════════════════════════════════════════════
   console.log('┌─ 第 4 幕 ─────────────────────────────────────────────┐');
   console.log('│ 🌪 航运途中的突发事件                                  │');
-  console.log('│    ① 台风在东海形成 → AI 打 150bps 天气风险          │');
-  console.log('│    ② 霍尔木兹冲突升级 → AI 识别战争溢价双刃剑         │');
-  console.log('│    ③ AI 反向操作：haircut 21% + 暂停发行              │');
-  console.log('│    "价格预言机以为铜价涨了更安全——完全看反"          │');
+  console.log('│    ① 实时数据：霍尔木兹通行量跌到去年同期的零头      │');
+  console.log('│    ② 预测市场：海峡近期恢复正常的概率很低            │');
+  console.log('│    ③ 必须经过海峡的货 → AI 暂停发行                  │');
   console.log('└──────────────────────────────────────────────────────┘\n');
 
   // 战争危机案例
   const warRes = await fetch(`${API}/api/pricing/quote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ case_id: 'CASE-EBL-2026-CU-SG-SHA-WARCRISIS', payout_speed: 'FAST' })
+    body: JSON.stringify({ case_id: 'CASE-EBL-ALU-JEA-RTM', payout_speed: 'FAST' })
   });
 
   if (warRes.ok) {
     const war = await warRes.json();
-    console.log(`  ⚔ 战争危机: 发行价 $${war.final_issue_price_usd?.toFixed(3)}  |  风险 ${war.risk_score_bps}bps  |  动作: ${war.pricing_action}`);
-    console.log(`  ✓ AI 看穿了战争溢价的欺骗性信号\n`);
+    console.log(`  ⚔ 经霍尔木兹的铝锭: 发行价 $${war.final_issue_price_usd?.toFixed(3)}  |  风险 ${war.risk_score_bps}bps  |  动作: ${war.pricing_action}`);
+    console.log(`  ✓ 风险来自实时数据（离线时为注明日期的快照）\n`);
   }
 
   // ═══════════════════════════════════════════════════════

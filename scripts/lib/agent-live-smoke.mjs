@@ -20,7 +20,7 @@ export async function runLiveSmoke({ base, token, confirm = false, runId, lifecy
     status: confirm ? 'RUNNING' : 'DRY_RUN', live_acceptance: false, real_transactions: 0, pool_id: 2, before, steps: [],
     actions: [...SMOKE_ACTIONS] };
   if (lifecycle) return { ...report, status: 'OWNER_ACTION_REQUIRED', pool_id: null, actions: [],
-    lifecycle: { case_id: 'CASE-EBL-2026-OIL-SG-ULS', next: 'Upload the oil fixture bundle through /api/agent/ingest; approve the opening plan, then authorize each owner CLI step separately.',
+    lifecycle: { case_id: 'CASE-EBL-CU-SIN-SHA', next: 'Upload the copper fixture bundle (data/uploads/copper-sg-shanghai) through /api/agent/ingest; approve the opening plan, then authorize each owner CLI step separately.',
       sequence: ['OPEN (mintEBLV2, pledge, createOffering)', 'SUBSCRIBE (wallet confirmation)', 'MARK_IN_TRANSIT (owner CLI)',
         'RECORD_PAYMENT (verified USDC receipt + owner CLI)', 'RECORD_ARRIVAL (owner CLI)', 'SETTLE (separate approval + owner CLI)'],
       automatic_owner_transactions: 0, terminal_pool: true } };

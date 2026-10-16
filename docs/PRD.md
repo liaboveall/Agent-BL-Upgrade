@@ -78,7 +78,7 @@ target_redemption_exposure <= AI_verified_collateral_value * redemption_coverage
 gross_profit P = invoice_value - cost_of_goods      # 发票货值 - 拿货成本
 ```
 
-例：铜案例出口商在霍尔木兹战争溢价之前以 ~USD 11,000/MT 拿货（COGS 5,500,000），现在 CIF 上海发票价 USD 13,750/MT（货值 6,875,000），所以 **P = 1,375,000（毛利 20%）**。战争溢价就是这批货的嵌入式利润。
+例（2026-10 案例集）：铜案例出口商以约 USD 14,060/MT 拿货（COGS 7,030,000），CIF 上海发票价 USD 14,535/MT（货值 7,267,500），所以 **P = 237,500（毛利约 3.3%）**。实物铜贸易的毛利本来就薄；航程短、期限短，这点利润已经足够覆盖融资成本（见第五步的期限上限）。
 
 **第二步：到账速度决定“让出多少比例盈利”（base share）**
 

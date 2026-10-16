@@ -9,14 +9,17 @@
 ## 1. 怎么跑
 
 ```bash
-# 离线（无任何 key）：deterministic fallback，用校准到 2026-06 的 mock 数据
+# 无 LLM key：deterministic fallback；实时价来自免费公开行情（REAL_DATA=off 时用离线快照）
 npm run agent:value
 
 # 指定另一组数据（原油）
-node scripts/agent-valuation.mjs data/cases/crude-sg-ulsan.case.json
+node scripts/agent-valuation.mjs data/cases/crude-fuj-sin.case.json
 ```
 
-把 key 填进 `.env`（见仓库根 `.env.example`），就会切换成"真 LLM 驱动 + 真实数据源"。无 key 时全程用 mock，保证 demo 永远能跑。
+把 key 填进 `.env`（见仓库根 `.env.example`），就会切换成"真 LLM 驱动"。实时价不需要 key：
+
+- 默认用 Yahoo Finance 的期货行情（非官方接口），拿不到时用注明日期的离线快照（见 `docs/real-data.md`）；
+- 其余没有免费源的数据（区域升水、历史成交价）用 mock，保证 demo 永远能跑。
 
 ## 2. 架构
 
@@ -37,9 +40,9 @@ data/cases/*.case.json
 
 | 工具 | 作用 | 数据源（有 key） | 无 key 时 |
 |---|---|---|---|
-| `get_live_commodity_price` | 实时 LME 铜价 (USD/MT) | metalpriceapi.com 或 Alpha Vantage | mock：13,680（2026-06 校准） |
+| `get_live_commodity_price` | 实时铜价 (USD/MT)；原油、铝、大豆同理 | metalpriceapi.com 或 Alpha Vantage | 免费公开期货行情（COMEX HG=F 等）或其离线快照；都没有时用 mock 14,450（2026-10-16 校准） |
 | `get_regional_physical_premium` | CIF 上海/洋山 区域升水 (USD/MT) | `REGION_PREMIUM_USD_PER_MT`（手填） | mock：70 |
-| `get_historical_comparable_trades` | 历史同类成交价（按 HS 编码的进出口单价） | UN Comtrade | mock：China HS740311 进口单价 9,850→13,250 |
+| `get_historical_comparable_trades` | 历史同类成交价（按 HS 编码的进出口单价） | UN Comtrade | mock：China HS740311 进口单价 9,850→14,100（2025-Q3 至 2026-Q3） |
 | `compute_cargo_valuation` | 本地确定性估值（取最小 + haircut） | 纯本地，无 API | 纯本地 |
 
 `compute_cargo_valuation` 是定价的"硬约束"工具（PRD 要求"final price 由 deterministic policy 校验，LLM 只解释"）：
@@ -52,7 +55,13 @@ ai_verified_collateral = raw_verified × (1 − volatility_haircut)      # 高�
 max_safe_redemption = ai_verified_collateral × redemption_coverage_limit   # 默认 0.9
 ```
 
-铜组实跑结果（offline）：market $6,875,000 → 5% 战争溢价 haircut → AI 核定抵押 **$6,531,250** → 安全兑付上限 **$5,878,125**（> 请求融资 $5,500,000，可发行）。
+铜组实跑结果（`REAL_DATA=off` 离线快照，确定性路径）：
+
+- 发票 $7,267,500 是三者中的最小值（市场价值约 $7.33M，保险 $7.99M）；
+- 航线没有战争或波动事件，所以 haircut 为 0，AI 核定抵押 **$7,267,500**；
+- 安全兑付上限 **$6,540,750**，大于请求融资 $5,000,000，可以发行。
+
+接上 LLM 后，模型可能自行加一点 haircut（例如铜价接近历史高位时加 3%）。最终数字仍由确定性工具算出。
 
 ## 4. ⭐ 需要你补充的 API（这是你问的"需要什么 api"）
 
@@ -68,7 +77,7 @@ max_safe_redemption = ai_verified_collateral × redemption_coverage_limit   # �
 
 > 2026-10-15 全项目 API 默认模型为 `x-test-2`，由 `LLM_MODEL` 共用控制；上表仅列兼容入口。实际端点是否提供该模型、工具/视觉能力、费用和额度尚未验证，优先沿用已配置的兼容端点。
 
-### 4.2 实时铜价（任选其一；不填用 mock）
+### 4.2 实时铜价（可选；不填用免费公开行情）
 
 | 提供方 | 用途 | env 变量 | 费用 | 申请地址 | 备注 |
 |---|---|---|---|---|---|
@@ -89,8 +98,8 @@ UN Comtrade 是"历史同类成交价"的最佳免费来源：查 **HS 740311（
 ### 4.4 之后可扩展（暂用 mock / 未接）
 
 - 船舶/到港（AIS）：MarineTraffic、Datalastic、Spire —— 验证运输事件、ETA。
-- 天气/海况：OpenWeather、Stormglass —— severe_weather 风险。
-- 战争/制裁/地缘：GDELT（免费）、新闻 API、OFAC/制裁名单 —— war_risk / sanction_risk。
+- 天气/海况：已接 Open-Meteo Marine（免费，见 `docs/real-data.md`）；OpenWeather、Stormglass 可作为备选。
+- 战争/地缘：已接 IMF PortWatch 咽喉通行量、Polymarket 赔率、Google News 标题；制裁名单仍是演示数据。
 - 港口拥堵：港务/AIS 衍生数据。
 
 这些接进来后，就能把 `risk_discount` 也做成工具调用驱动，而不只是估值。
@@ -99,16 +108,16 @@ UN Comtrade 是"历史同类成交价"的最佳免费来源：查 **HS 740311（
 
 ```
 system: 你是 AgentBL 估值分析师，用工具给货物估值...
-user:   case CASE-EBL-2026-CU-SG-SHA：铜 500MT，HS740311，发票$6.875M，保险$7.5625M，宏观：war_risk/commodity_volatility
+user:   case CASE-EBL-CU-SIN-SHA：铜 500MT，HS740311，发票$7.2675M，保险$7.99425M，宏观：无
   → assistant.tool_calls: get_live_commodity_price(copper)
-  ← tool: {price_usd_per_mt:13680, source:...}
+  ← tool: {price_usd_per_mt:14582.48, source:"Yahoo Finance · COMEX copper futures (HG=F) (live)"}
   → assistant.tool_calls: get_regional_physical_premium(Shanghai)
   ← tool: {premium_usd_per_mt:70}
   → assistant.tool_calls: get_historical_comparable_trades(740311, 156)
-  ← tool: {comparables:[...9850→13250...]}
-  → assistant.tool_calls: compute_cargo_valuation(qty,price,premium,declared,insured,haircut=0.05)
-  ← tool: {ai_verified_collateral_value_usd:6531250, max_safe_redemption_exposure_usd:5878125}
-  → assistant: "Verified collateral USD 6,531,250... 5% war-premium haircut..."（投资者可读解释）
+  ← tool: {comparables:[...9850→14100...]}
+  → assistant.tool_calls: compute_cargo_valuation(qty,price,premium,declared,insured,haircut=0.03)
+  ← tool: {ai_verified_collateral_value_usd:7049475, max_safe_redemption_exposure_usd:6344527.5}
+  → assistant: "Verified collateral USD 7,049,475... 3% haircut with copper near record highs..."（投资者可读解释）
 ```
 
 代码在 `src/agent/valuationAgent.js` 的 `runWithLlm()`：循环执行 `tool_calls` → 回填 `role:"tool"` 结果 → 直到模型不再调用工具，输出解释。
@@ -119,16 +128,16 @@ user:   case CASE-EBL-2026-CU-SG-SHA：铜 500MT，HS740311，发票$6.875M，�
 
 ```jsonc
 {
-  "case_id": "CASE-EBL-2026-CU-SG-SHA",
+  "case_id": "CASE-EBL-CU-SIN-SHA",
   "commodity": "Copper Cathode", "hs_code": "740311", "quantity_mt": 500,
   "live_market": {
-    "price_usd_per_mt": 13680, "regional_premium_usd_per_mt": 70,
-    "landed_price_usd_per_mt": 13750, "as_of": "2026-06-04", "sources": [...]
+    "price_usd_per_mt": 14582.48, "regional_premium_usd_per_mt": 70,
+    "landed_price_usd_per_mt": 14652.48, "as_of": "2026-10-16T02:42:19.000Z", "sources": [...]
   },
-  "historical_comparables": [ {"period":"2026-05","unit_value_usd_per_mt":13250,...} ],
+  "historical_comparables": [ {"period":"2026-Q3","unit_value_usd_per_mt":14100,...} ],
   "valuation": {
-    "market_value_usd": 6875000, "ai_verified_collateral_value_usd": 6531250,
-    "max_safe_redemption_exposure_usd": 5878125, "valuation_basis": "..."
+    "market_value_usd": 7326240, "ai_verified_collateral_value_usd": 7049475,
+    "max_safe_redemption_exposure_usd": 6344527.5, "valuation_basis": "..."
   },
   "ai_explanation": "...", "provider": "deepseek|qwen|deterministic-fallback", "tool_trace": [...]
 }

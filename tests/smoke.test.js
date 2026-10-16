@@ -4,13 +4,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { createServer } from '../src/app/server.js';
 import { PRICING_ACTIONS } from '../src/core/pricingSchema.js';
+import { loadCuratedCase } from '../src/core/curatedCases.js';
 
 const copperCase = JSON.parse(
   await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8')
 );
-const warCase = JSON.parse(
-  await fs.readFile(new URL('../data/cases/copper-sg-shanghai-warcrisis.case.json', import.meta.url), 'utf8')
-);
+// The Hormuz-transit aluminium case with the offline real-data snapshot attached: CRITICAL, paused.
+const warCase = await loadCuratedCase(new URL('../data/cases/alu-dxb-rtm.case.json', import.meta.url));
 
 test('smoke: mock API supports the main demo flow', async () => {
   const server = createServer();

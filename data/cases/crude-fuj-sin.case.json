@@ -1,0 +1,155 @@
+{
+  "case_id": "CASE-EBL-OIL-FUJ-SIN",
+  "model": "ai-dynamic-pricing-rwa-v0.3",
+  "date_anchor": "2026-10-16",
+  "note": "Murban crude loaded at Fujairah (outside the Strait of Hormuz, fed by the Habshan-Fujairah pipeline) for Singapore. The route never transits Hormuz but loads next to it. All companies, banks, vessels, people and document numbers are fictional. Dates are written around date_anchor and move with today when loaded; prices are calibrated to public quotes on the anchor day and marked to market live when real data is on.",
+  "uploaded_documents": {
+    "bill_of_lading_file": "data/uploads/crude-fuj-sin/bill-of-lading.md",
+    "commercial_invoice_file": "data/uploads/crude-fuj-sin/commercial-invoice.md",
+    "insurance_policy_file": "data/uploads/crude-fuj-sin/insurance-policy.md"
+  },
+  "bill_of_lading": {
+    "bl_id": "TT-EBL-CRUDE-0233-B19E",
+    "bl_no": "EET-CRUDE-0233",
+    "bl_type": "negotiable_to_order",
+    "ebl_platform": "TradeTrust (MLETR)",
+    "ebl_title_ref": "TT-EBL-CRUDE-0233-B19E",
+    "shipper": "Equator Energy Trading Pte. Ltd.",
+    "consignee": "TO ORDER OF KEPPEL ISLAND BANK LTD., SINGAPORE",
+    "notify_party": "Jurong Petrochem Refining Pte. Ltd., Singapore",
+    "carrier": "Meridian Tankers Ltd.",
+    "vessel": "MT Coral Meridian",
+    "voyage_no": "V.41",
+    "port_of_loading": "Fujairah Oil Terminal, Fujairah, UAE",
+    "port_of_discharge": "Jurong Island, Singapore",
+    "incoterms": "CIF Singapore",
+    "cargo": "Crude Oil (Murban grade, light sweet)",
+    "quantity_bbl": 700000,
+    "quantity_mt": 92105,
+    "declared_value_usd": 74970000,
+    "issue_date": "2026-10-12",
+    "shipped_on_board": "2026-10-12",
+    "eta": "2026-10-23",
+    "document_hash": "0x40ecaf19095a3ac4d69236e2035943cf128325554bb77fef87b9ed0497e2a246"
+  },
+  "commercial_invoice": {
+    "invoice_no": "EET-INV-0233",
+    "invoice_date": "2026-10-12",
+    "sales_contract": "EET-JPR-CRUDE-0233",
+    "incoterms": "CIF Singapore",
+    "payment_terms": "Irrevocable L/C at sight",
+    "pricing_basis": "ICE Brent (QP mean over 5 quotations from B/L date) + Murban grade differential",
+    "qp_reference_price_usd_per_bbl": 105,
+    "grade_differential_usd_per_bbl": 2.1,
+    "unit_price_usd_per_bbl": 107.1,
+    "quantity_bbl": 700000,
+    "total_amount_usd": 74970000,
+    "currency": "USD",
+    "is_provisional": true
+  },
+  "cargo": {
+    "commodity": "Crude Oil",
+    "grade": "Murban (light sweet), API 40.2, S 0.79%",
+    "hs_code": "270900",
+    "quantity": 700000,
+    "unit": "BBL",
+    "quantity_mt": 92105,
+    "bbl_per_mt": 7.6
+  },
+  "insurance": {
+    "provider": "Marina Bay Energy Marine Insurance (demo)",
+    "policy_type": "Marine cargo all risks + war risk (Gulf of Oman additional premium)",
+    "coverage_ratio": 1.1,
+    "insured_value_usd": 82467000,
+    "expires_at": "2026-11-30",
+    "policy_hash": "0xb9e771c6d7085ca6d77f86f1f18d505a28f5ebe273b903213ed5031ffcce68eb"
+  },
+  "trade_economics": {
+    "cost_basis_usd_per_bbl": 103.4,
+    "cost_of_goods_usd": 72380000,
+    "expected_gross_profit_usd": 2590000,
+    "gross_margin_pct": 0.0345,
+    "note": "Bought FOB Fujairah at USD 103.4/bbl; sold CIF Singapore at USD 107.1/bbl. The margin pays freight risk and the Hormuz-adjacent war-risk premium."
+  },
+  "financing": {
+    "requested_cash_usd": 50000000,
+    "payout_speed": "BALANCED",
+    "target_redemption_value_usd": 1,
+    "redemption_coverage_limit": 0.9,
+    "max_ltv": 0.9,
+    "currency": "USDC"
+  },
+  "market": {
+    "commodity": "Crude Oil",
+    "benchmark": "ICE Brent crude futures (BZ=F)",
+    "benchmark_key": "brent",
+    "price_unit": "USD/bbl",
+    "reference_price_usd_per_bbl": 105.26,
+    "grade_differential_usd_per_bbl": 2.1,
+    "landed_price_usd_per_bbl": 107.36,
+    "initial_price_usd_per_bbl": 105,
+    "current_price_usd_per_bbl": 105.26,
+    "bbl_per_mt": 7.6,
+    "as_of": "2026-10-16",
+    "source": "Yahoo Finance · ICE Brent crude futures (BZ=F) on the anchor day"
+  },
+  "route_profile": {
+    "chokepoints": [
+      "Malacca Strait"
+    ],
+    "nearby_chokepoints": [
+      "Strait of Hormuz"
+    ],
+    "disruption_markets": [
+      {
+        "query": "hormuz",
+        "match": "returns to normal by",
+        "bad_outcome": "no",
+        "region": "Strait of Hormuz",
+        "adjacent": true
+      }
+    ],
+    "waypoints": [
+      {
+        "name": "Gulf of Oman",
+        "lat": 24.5,
+        "lon": 58.5
+      },
+      {
+        "name": "Arabian Sea",
+        "lat": 15,
+        "lon": 65
+      },
+      {
+        "name": "Andaman Sea",
+        "lat": 6.5,
+        "lon": 95
+      }
+    ],
+    "news_queries": [
+      "Fujairah OR \"Gulf of Oman\" tanker",
+      "Brent crude price"
+    ],
+    "news_terms": [
+      "Fujairah",
+      "Gulf of Oman",
+      "Arabian Sea",
+      "Malacca"
+    ]
+  },
+  "shipment_events": [
+    {
+      "date": "2026-10-12",
+      "type": "loaded_on_board",
+      "description": "700,000 bbl Murban loaded on MT Coral Meridian at Fujairah Oil Terminal.",
+      "severity": "info"
+    },
+    {
+      "date": "2026-10-14",
+      "type": "no_damage_reported",
+      "description": "Vessel clear of the Gulf of Oman and crossing the Arabian Sea; cargo intact.",
+      "severity": "info"
+    }
+  ],
+  "macro_risk_events": []
+}

@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { createServer } from '../src/app/server.js';
 import { PRICING_ACTIONS } from '../src/core/pricingSchema.js';
+import { loadCuratedCase } from '../src/core/curatedCases.js';
 
-const warCase = JSON.parse(await fs.readFile('data/cases/copper-sg-shanghai-warcrisis.case.json', 'utf8'));
+// The Hormuz-transit aluminium case as the app shows it, with the offline real-data snapshot (deterministic).
+const warCase = await loadCuratedCase('data/cases/alu-dxb-rtm.case.json', { env: { ...process.env, REAL_DATA: 'off' } });
 const copperCase = JSON.parse(await fs.readFile('data/cases/copper-sg-shanghai.case.json', 'utf8'));
 
 const server = createServer();
@@ -48,7 +50,7 @@ try {
   assert.equal(comparison.quotes.length, 3);
   assert.ok(comparison.recommended_payout_speed);
 
-  // A war-crisis case posted as the body is priced directly and pauses.
+  // A case that must transit the (now closed) Strait of Hormuz is priced directly and pauses.
   const paused = await fetch(`${baseUrl}/api/pricing/quote`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

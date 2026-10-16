@@ -8,8 +8,8 @@ import { createPool } from '../../src/app/store.js';
 import { quoteFromCase } from '../../src/core/pricingEngine.js';
 import { readJsonl } from '../../src/lib/jsonStore.js';
 
-export const copper = JSON.parse(await fs.readFile(new URL('../../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8'));
-export const oil = JSON.parse(await fs.readFile(new URL('../../data/cases/crude-sg-ulsan.case.json', import.meta.url), 'utf8'));
+export const copper = JSON.parse(await fs.readFile(new URL('../../data/cases/archive/copper-sg-shanghai-2026-06.case.json', import.meta.url), 'utf8'));
+export const oil = JSON.parse(await fs.readFile(new URL('../../data/cases/crude-fuj-sin.case.json', import.meta.url), 'utf8'));
 export const hash = (n) => `0x${BigInt(n).toString(16).padStart(64, '0')}`;
 export const ZERO = hash(0);
 

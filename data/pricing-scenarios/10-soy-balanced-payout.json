@@ -1,7 +1,7 @@
 {
   "name": "soy-balanced-payout",
   "description": "大豆 eBL 海运 - BALANCED 均衡放款：标准 80% LTV，HSBC 作为 eBL 控制方，信用证回款保障。",
-  "base_case": "data/cases/soybean-sh-sg.case.json",
+  "base_case": "data/cases/soybean-ssz-dlc.case.json",
   "overrides": {
     "financing": {
       "payout_speed": "BALANCED"
@@ -11,8 +11,8 @@
     "payout_speed": "BALANCED",
     "pricing_action": "OPEN_OFFERING",
     "binding_constraint": "TENOR_RATE",
-    "risk_level": "MEDIUM",
-    "min_issue_price": 0.986,
-    "max_issue_price": 0.992
+    "risk_level": "LOW",
+    "min_issue_price": 0.984,
+    "max_issue_price": 0.991
   }
 }

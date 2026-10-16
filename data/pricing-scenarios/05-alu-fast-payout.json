@@ -11,8 +11,8 @@
     "payout_speed": "FAST",
     "pricing_action": "OPEN_OFFERING",
     "binding_constraint": "TENOR_RATE",
-    "risk_level": "MEDIUM",
-    "min_issue_price": 0.982,
-    "max_issue_price": 0.988
+    "risk_level": "LOW",
+    "min_issue_price": 0.986,
+    "max_issue_price": 0.993
   }
 }

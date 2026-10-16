@@ -217,7 +217,7 @@ test('stateless image extraction honors its vision switch and preserves review b
     assert.equal(calls, 1);
     const document = result.extraction.documents[0];
     assert.equal(document.source.extractor, 'llm-vision');
-    assert.equal(document.fields.total_amount_usd, 6_875_000);
+    assert.equal(document.fields.total_amount_usd, 7_267_500);
     assert.equal(document.fields.quantity_mt, 500);
     assert.equal(document.requires_human_review, true);
     assert.ok(document.confidence <= 0.75);

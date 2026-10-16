@@ -194,6 +194,9 @@ export class IngestService {
     }
 
     const at = this.now().toISOString();
+    // A retry of a failed or interrupted job is a new event: reusing the first event id would be
+    // dropped by the bus as a duplicate and the retry would never run.
+    const attempt = existing ? (existing.attempt ?? 1) + 1 : 1;
     const job = {
       job_id: jobId,
       case_id: caseId,
@@ -201,7 +204,8 @@ export class IngestService {
       document_ids: unique.map((record) => record.document_id),
       steps: [],
       decision_ids: [],
-      event_id: `ingest:${jobId}`,
+      ...(attempt > 1 ? { attempt, previous_decision_ids: [...(existing.previous_decision_ids ?? []), ...(existing.decision_ids ?? [])] } : {}),
+      event_id: attempt > 1 ? `ingest:${jobId}:attempt-${attempt}` : `ingest:${jobId}`,
       created_at: at,
       updated_at: at
     };

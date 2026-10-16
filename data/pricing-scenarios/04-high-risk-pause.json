@@ -1,11 +1,29 @@
 {
   "name": "high-risk-pause",
-  "description": "AI-10: Hormuz war escalates to critical + copper volatility critical + insurance gap. AI marks risk CRITICAL and PAUSES the offering at open.",
-  "base_case": "data/cases/copper-sg-shanghai-warcrisis.case.json",
+  "description": "AI-10: aluminium loaded inside the Gulf must transit the Strait of Hormuz. With the 2026-10-16 public-data readings frozen into the fixture (PortWatch transits -94% vs a year earlier, Polymarket 96% that the disruption persists) plus the owner holding the vessel, risk is CRITICAL and the offering PAUSES at open.",
+  "base_case": "data/cases/alu-dxb-rtm.case.json",
   "overrides": {
     "financing": {
       "payout_speed": "FAST"
-    }
+    },
+    "macro_risk_events": [
+      {
+        "date": "2026-10-11",
+        "type": "chokepoint_disruption",
+        "region": "Strait of Hormuz",
+        "severity": "critical",
+        "description": "IMF PortWatch: 4.1 ship transits/day over 7 days vs 70.6 a year earlier (-94%), snapshot 2026-10-16.",
+        "source": "IMF PortWatch"
+      },
+      {
+        "date": "2026-10-16",
+        "type": "war_risk",
+        "region": "Strait of Hormuz",
+        "severity": "critical",
+        "description": "Polymarket: 96% that Hormuz traffic is not back to normal by Nov 30, snapshot 2026-10-16.",
+        "source": "Polymarket"
+      }
+    ]
   },
   "pricing_expectations": {
     "payout_speed": "FAST",

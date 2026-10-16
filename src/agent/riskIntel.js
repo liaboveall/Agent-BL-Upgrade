@@ -164,7 +164,7 @@ export function evaluateRetrieval(corpus = CORPUS) {
           { type: 'commodity_volatility', region: 'Global' }
         ]
       },
-      relevant: ['MRI-HORMUZ-WAR-2026-06', 'MRI-COPPER-VOL-2026-06']
+      relevant: ['MRI-HORMUZ-CLOSURE-2026-10', 'MRI-COPPER-2026-10']
     },
     {
       name: 'crude-hormuz',
@@ -173,10 +173,10 @@ export function evaluateRetrieval(corpus = CORPUS) {
         macro_risk_events: [
           { type: 'war_risk', region: 'Middle East / Strait of Hormuz' },
           { type: 'commodity_volatility', region: 'Global' },
-          { type: 'fx_volatility', region: 'South Korea (KRW)' }
+          { type: 'fx_volatility', region: 'Asia (KRW, IDR, INR)' }
         ]
       },
-      relevant: ['MRI-HORMUZ-WAR-2026-06', 'MRI-BRENT-2026-06', 'MRI-KRW-FX-2026-06']
+      relevant: ['MRI-HORMUZ-CLOSURE-2026-10', 'MRI-BRENT-2026-10', 'MRI-ASIA-FX-2026-10']
     }
   ];
 

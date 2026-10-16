@@ -78,7 +78,7 @@ test('compliance v2: unknown, malformed and conflicting ports require review wit
 
 test('compliance v2: bundled lookup covers every shipped transport and warehouse location', async () => {
   const dir = new URL('../data/cases/', import.meta.url);
-  for (const name of await fs.readdir(dir)) {
+  for (const name of (await fs.readdir(dir)).filter((file) => file.endsWith('.case.json'))) {
     const input = JSON.parse(await fs.readFile(new URL(name, dir), 'utf8'));
     for (const field of ['port_of_loading', 'port_of_discharge']) {
       const ports = resolvePort(input.bill_of_lading[field]);

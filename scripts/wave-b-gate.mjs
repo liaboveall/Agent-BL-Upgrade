@@ -61,7 +61,7 @@ export async function run({ argv = process.argv.slice(2), env = process.env, log
   if (options.confirm) await loadEnv();
   const chain = chainConfigLib.resolveNetworkConfig(await readJson('public/chain-config.json'), 'injective-testnet');
   const report = await readJson('docs/evidence/x402-live-smoke.json');
-  const caseData = await readJson('data/cases/copper-sg-shanghai.case.json');
+  const caseData = await readJson('data/cases/archive/copper-sg-shanghai-2026-06.case.json');
   const provider = providerFactory(env.INJECTIVE_RPC_URL?.trim() || chain.rpcUrls[0]);
   let attempt = null, output = null;
   const persist = async () => { if (output) await writeJsonAtomic(output, safeJson(attempt)); };

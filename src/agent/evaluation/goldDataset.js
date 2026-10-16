@@ -1,15 +1,15 @@
 // Hand-labelled fictional fixtures. Never pass these records to a subject component.
-export const DATASET_VERSION = 'agent-gold-v3-generated-redteam';
+export const DATASET_VERSION = 'agent-gold-v4-cases-2026-10';
 export const DOCUMENT_GOLD = [
-  ['copper-bl', 'copper-sg-shanghai/bill-of-lading.md', 'EBL', { bl_no: 'BSCL/SIN/SHA/2026/04417', bl_id: 'WAVE-EBL-7F3A91C4', quantity_mt: 500, hs_code: '740311', declared_value_usd: 6875000, eta: '2026-06-15' }],
-  ['copper-invoice', 'copper-sg-shanghai/commercial-invoice.md', 'COMMERCIAL_INVOICE', { invoice_no: 'SRT-INV-2026-04417', invoice_date: '2026-06-03', quantity_mt: 500, unit_price_usd_per_mt: 13750, total_amount_usd: 6875000, incoterms: 'CIF Shanghai' }],
-  ['copper-policy', 'copper-sg-shanghai/insurance-policy.md', 'INSURANCE_POLICY', { policy_no: 'LCM-2026-CU-04417', insured_value_usd: 7562500, coverage_ratio: 1.1, expires_at: '2026-07-05' }],
-  ['soy-bl', 'soybean-sh-sg/e-bill-of-lading.md', 'EBL', { quantity_mt: 5000, declared_value_usd: 2600000, hs_code: '120190' }],
-  ['soy-invoice', 'soybean-sh-sg/commercial-invoice.md', 'COMMERCIAL_INVOICE', { invoice_no: 'INV-2026-001', total_amount_usd: 2600000, quantity_mt: 5000, unit_price_usd_per_mt: 520, invoice_date: '2026-05-15' }],
-  ['soy-policy', 'soybean-sh-sg/insurance-policy.md', 'INSURANCE_POLICY', { policy_no: 'MCI-2026-001', insured_value_usd: 2860000, coverage_ratio: 1.1 }],
-  ['crude-bl', 'crude-sg-ulsan/bill-of-lading.md', 'EBL', { quantity_mt: 78221, quantity_bbl: 600000, declared_value_usd: 57900000, hs_code: '270900' }],
-  ['crude-invoice', 'crude-sg-ulsan/commercial-invoice.md', 'COMMERCIAL_INVOICE', { invoice_no: 'EET-INV-2026-0091', quantity_mt: 78221, quantity_bbl: 600000, unit_price_usd_per_bbl: 96.5, total_amount_usd: 57900000 }],
-  ['crude-policy', 'crude-sg-ulsan/insurance-policy.md', 'INSURANCE_POLICY', { policy_no: 'MBE-2026-OIL-0091', insured_value_usd: 63690000, expires_at: '2026-07-02' }]
+  ['copper-bl', 'copper-sg-shanghai/bill-of-lading.md', 'EBL', { bl_no: 'BSCL/SIN/SHA/0517', bl_id: 'WAVE-EBL-3C81D2A9', quantity_mt: 500, hs_code: '740311', declared_value_usd: 7267500, eta: '2026-10-20' }],
+  ['copper-invoice', 'copper-sg-shanghai/commercial-invoice.md', 'COMMERCIAL_INVOICE', { invoice_no: 'SRT-INV-0517', invoice_date: '2026-10-13', quantity_mt: 500, unit_price_usd_per_mt: 14535, total_amount_usd: 7267500, incoterms: 'CIF Shanghai' }],
+  ['copper-policy', 'copper-sg-shanghai/insurance-policy.md', 'INSURANCE_POLICY', { policy_no: 'LCM-CU-0517', insured_value_usd: 7994250, coverage_ratio: 1.1, expires_at: '2026-11-25' }],
+  ['soy-bl', 'soybean-ssz-dlc/bill-of-lading.md', 'EBL', { quantity_mt: 66000, declared_value_usd: 37092000, hs_code: '120190' }],
+  ['soy-invoice', 'soybean-ssz-dlc/commercial-invoice.md', 'COMMERCIAL_INVOICE', { invoice_no: 'CGE-INV-2208', total_amount_usd: 37092000, quantity_mt: 66000, unit_price_usd_per_mt: 562, invoice_date: '2026-10-04' }],
+  ['soy-policy', 'soybean-ssz-dlc/insurance-policy.md', 'INSURANCE_POLICY', { policy_no: 'AMS-SOY-2208', insured_value_usd: 40801200, coverage_ratio: 1.1 }],
+  ['crude-bl', 'crude-fuj-sin/bill-of-lading.md', 'EBL', { quantity_mt: 92105, quantity_bbl: 700000, declared_value_usd: 74970000, hs_code: '270900' }],
+  ['crude-invoice', 'crude-fuj-sin/commercial-invoice.md', 'COMMERCIAL_INVOICE', { invoice_no: 'EET-INV-0233', quantity_mt: 92105, quantity_bbl: 700000, unit_price_usd_per_bbl: 107.1, total_amount_usd: 74970000 }],
+  ['crude-policy', 'crude-fuj-sin/insurance-policy.md', 'INSURANCE_POLICY', { policy_no: 'MBE-OIL-0233', insured_value_usd: 82467000, expires_at: '2026-11-30' }]
 ];
 const c = (values = {}) => ({ commodities_include: [], commodities_exclude: [], regions_include: [], regions_exclude: [], chokepoints_avoid: [], ...values });
 const t = (zh, en, intent, constraints, extra = {}) => ({ zh, en, gold: { intent, constraints: c(constraints), ...extra } });
@@ -56,11 +56,11 @@ export const CONSISTENCY_GOLD = [
   { id: 'amount', patch: { commercial_invoice: { total_amount_usd: 8000000 } }, issues: ['declared_vs_invoice', 'insurance_coverage'] },
   { id: 'incoterm', patch: { commercial_invoice: { incoterms: 'FOB Singapore' } }, issues: ['incoterms_match'] },
   { id: 'underinsured', patch: { insurance: { insured_value_usd: 6000000 } }, issues: ['insurance_coverage'] },
-  { id: 'expired', patch: { insurance: { expires_at: '2026-06-01' } }, issues: ['insurance_expiry'] },
-  { id: 'short-cover', patch: { insurance: { expires_at: '2026-06-18' } }, issues: ['insurance_expiry'] },
+  { id: 'expired', patch: { insurance: { expires_at: '2026-10-10' } }, issues: ['insurance_expiry'] },
+  { id: 'short-cover', patch: { insurance: { expires_at: '2026-10-23' } }, issues: ['insurance_expiry'] },
   { id: 'unit-price', patch: { commercial_invoice: { unit_price_usd_per_mt: 17000 } }, issues: ['invoice_vs_market'] },
   { id: 'rounding', patch: { commercial_invoice: { quantity_mt: 500.1 } }, issues: [] },
-  { id: 'combined', patch: { insurance: { insured_value_usd: 1, expires_at: '2026-05-01' }, commercial_invoice: { quantity_mt: 700, incoterms: 'FOB Singapore' } }, issues: ['quantity_match', 'incoterms_match', 'insurance_coverage', 'insurance_expiry'] }
+  { id: 'combined', patch: { insurance: { insured_value_usd: 1, expires_at: '2026-09-01' }, commercial_invoice: { quantity_mt: 700, incoterms: 'FOB Singapore' } }, issues: ['quantity_match', 'incoterms_match', 'insurance_coverage', 'insurance_expiry'] }
 ];
 export const COMPLIANCE_GOLD = [
   ['normal', 'Example Trading', 'Copper Cathodes', false], ['small', 'Example SME', 'Rubber', false],

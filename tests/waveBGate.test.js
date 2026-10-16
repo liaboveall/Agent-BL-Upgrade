@@ -12,7 +12,7 @@ import { run, optionsFor } from '../scripts/wave-b-gate.mjs';
 const raw = JSON.parse(await fs.readFile(new URL('../public/chain-config.json', import.meta.url)));
 const chain = chainConfigLib.resolveNetworkConfig(raw, 'injective-testnet');
 const report = JSON.parse(await fs.readFile(new URL('../docs/evidence/x402-live-smoke.json', import.meta.url)));
-const copper = JSON.parse(await fs.readFile(new URL('../data/cases/copper-sg-shanghai.case.json', import.meta.url)));
+const copper = JSON.parse(await fs.readFile(new URL('../data/cases/archive/copper-sg-shanghai-2026-06.case.json', import.meta.url)));
 const owner = '0x3333333333333333333333333333333333333333';
 
 const log = (abi, name, args, address) => ({ address, ...new Interface(abi).encodeEventLog(name, args) });

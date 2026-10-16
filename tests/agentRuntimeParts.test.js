@@ -10,6 +10,7 @@ import { normalizeEvent } from '../src/agent/runtime/events.js';
 import { KNOWN_LIVE_POOLS, PoolRegistry, RegistryError, createChainReader } from '../src/agent/runtime/poolRegistry.js';
 import { Scheduler } from '../src/agent/runtime/scheduler.js';
 import { Tracer, hashText } from '../src/agent/runtime/trace.js';
+import { cargoIdentityHash } from '../src/chain/cargoIdentity.js';
 
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-parts-'));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -198,8 +199,9 @@ test('trace: bindDecision attaches the id once it is known', async () => {
 
 // ---------------------------------------------------------------- PoolRegistry
 
+const knownHash = (id) => KNOWN_LIVE_POOLS.find((pool) => pool.chain_pool_id === id)?.cargo_hash ?? null;
 const reader = (overrides = {}) => ({
-  readPool: async (id) => ({ exists: true, eblId: id, state: 'Open', ...overrides })
+  readPool: async (id) => ({ exists: true, eblId: id, state: 'Open', cargoHash: knownHash(id), ...overrides })
 });
 
 test('registry: offchain registration is idempotent; Demo reset keeps chain links', async () => {
@@ -220,6 +222,8 @@ test('registry: linking verifies the chain first', async () => {
   const attempt = (input, r) => registry.linkChain(input, r);
   await assert.rejects(attempt({ case_id: 'C', chain_pool_id: 7 }, { readPool: async () => ({ exists: false }) }), (e) => e instanceof RegistryError && e.code === 'chain_pool_missing' && e.status === 404);
   await assert.rejects(attempt({ case_id: 'C', chain_pool_id: 7, ebl_id: 9 }, reader({ eblId: 8 })), { code: 'ebl_mismatch' });
+  await assert.rejects(attempt({ case_id: 'C', chain_pool_id: 7, cargo_hash: `0x${'aa'.repeat(32)}` }, reader({ cargoHash: `0x${'bb'.repeat(32)}` })), { code: 'cargo_mismatch' });
+  await assert.rejects(attempt({ case_id: 'C', chain_pool_id: 7, cargo_hash: `0x${'aa'.repeat(32)}` }, reader({ cargoHash: null })), { code: 'cargo_mismatch' });
   await assert.rejects(attempt({ case_id: 'C', chain_pool_id: 7 }, reader({ state: 'Repaid' })), { code: 'pool_not_active' });
   await assert.rejects(attempt({ case_id: 'C', chain_pool_id: 1 }, reader()), { code: 'history_pool' });
   await assert.rejects(attempt({ chain_pool_id: 7 }, reader()), TypeError);
@@ -238,19 +242,38 @@ test('registry: protection comes from the flag and from AGENT_PROTECTED_CHAIN_PO
   assert.deepEqual(['A', 'B', 'C', 'D', 'unknown'].map((c) => registry.isProtected(c)), [true, true, false, false, false]);
 });
 
-test('registry: the known Live pool is linked from the chain, not trusted blindly', async () => {
-  const registry = new PoolRegistry({ protectedChainPools: [2] });
-  assert.equal(KNOWN_LIVE_POOLS[0].chain_pool_id, 2);
-  const ok = await registry.bootstrapLive(reader({ eblId: 2 }));
-  assert.deepEqual(ok, [{ case_id: 'CASE-EBL-2026-CU-SG-SHA', chain_pool_id: 2, linked: true }]);
+test('registry: known Live pools carry their own identity file, cargo hash and protection', async () => {
+  assert.deepEqual(KNOWN_LIVE_POOLS.map((pool) => [pool.case_id, pool.chain_pool_id, pool.ebl_id, pool.protected, pool.historical]), [
+    ['CASE-EBL-2026-CU-SG-SHA', 2, 2, true, true],
+    ['CASE-EBL-CU-SIN-SHA', 3, 3, false, false]
+  ]);
+  for (const pool of KNOWN_LIVE_POOLS) {
+    const identity = JSON.parse(await fs.readFile(new URL(`../${pool.identity_file}`, import.meta.url), 'utf8'));
+    assert.equal(identity.case_id, pool.case_id, pool.identity_file);
+    assert.equal(cargoIdentityHash(identity), pool.cargo_hash, `${pool.identity_file} reproduces the registered cargo hash`);
+  }
+});
+
+test('registry: a fresh registry links every known Live pool from the chain, not trusted blindly', async () => {
+  // No saved PoolRegistry file: this is a fresh AGENTBL_RUNTIME_DIR (e.g. a server deployment).
+  const registry = new PoolRegistry();
+  const ok = await registry.bootstrapLive(reader());
+  assert.deepEqual(ok, [{ case_id: 'CASE-EBL-2026-CU-SG-SHA', chain_pool_id: 2, linked: true },
+    { case_id: 'CASE-EBL-CU-SIN-SHA', chain_pool_id: 3, linked: true }]);
   assert.equal(registry.isProtected('CASE-EBL-2026-CU-SG-SHA'), true);
-  assert.equal(registry.get('CASE-EBL-2026-CU-SG-SHA').chain.ebl_id, 2);
+  assert.equal(registry.isProtected('CASE-EBL-CU-SIN-SHA'), false);
+  assert.deepEqual(registry.get('CASE-EBL-CU-SIN-SHA').chain, { pool_id: 3, ebl_id: 3, contract: 'RWAOfferingPool' });
+  assert.equal(registry.getByChainPoolId(3).case_id, 'CASE-EBL-CU-SIN-SHA');
 
   const wrong = new PoolRegistry();
-  assert.deepEqual(await wrong.bootstrapLive(reader({ eblId: 9 })), [{ case_id: 'CASE-EBL-2026-CU-SG-SHA', chain_pool_id: 2, linked: false, reason: 'ebl_mismatch' }]);
+  assert.deepEqual((await wrong.bootstrapLive(reader({ eblId: 9 }))).map((r) => r.reason), ['ebl_mismatch', 'ebl_mismatch']);
   assert.equal(wrong.list().length, 0);
+  // Pool #3 must not link to collateral registered with another cargo identity (e.g. pool #2's).
+  const swapped = new PoolRegistry();
+  const results = await swapped.bootstrapLive({ readPool: async (id) => ({ exists: true, eblId: id, state: 'Open', cargoHash: knownHash(2) }) });
+  assert.deepEqual(results.map((r) => [r.chain_pool_id, r.linked, r.reason ?? null]), [[2, true, null], [3, false, 'cargo_mismatch']]);
   const terminal = new PoolRegistry();
-  assert.equal((await terminal.bootstrapLive(reader({ eblId: 2, state: 'Repaid' })))[0].reason, 'pool_not_active');
+  assert.deepEqual((await terminal.bootstrapLive(reader({ state: 'Repaid' }))).map((r) => r.reason), ['pool_not_active', 'pool_not_active']);
 });
 
 test('registry: state persists across a restart', async () => {
@@ -268,11 +291,13 @@ test('registry: createChainReader turns contract reads into a pool description',
     pool: {
       offerings: async (id) => (id === 2 ? { exists: true, eblId: 2n, subscribed: 5n } : { exists: false }),
       stateOf: async () => 7
-    }
+    },
+    registry: { cargoHashOf: async (id) => (Number(id) === 2 ? knownHash(2) : null) }
   };
   const chain = createChainReader(context);
-  assert.deepEqual(await chain.readPool(2), { exists: true, eblId: 2, state: 'Paused', subscribed: 5 });
+  assert.deepEqual(await chain.readPool(2), { exists: true, eblId: 2, state: 'Paused', subscribed: 5, cargoHash: knownHash(2) });
   assert.deepEqual(await chain.readPool(9), { exists: false });
+  assert.equal((await createChainReader({ pool: context.pool }).readPool(2)).cargoHash, null);
 });
 
 // ---------------------------------------------------------------- Scheduler

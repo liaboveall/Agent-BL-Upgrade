@@ -40,8 +40,11 @@ export class WatcherError extends Error {
 
 export class ChainWatcher {
   constructor({ file = null, chainConfig, getContext, confirmations = 1, pollSec = 15,
-    startBlock = null, batchBlocks = 5000, timeoutMs = 20_000, now = () => new Date(), write = writeJsonAtomic } = {}) {
+    startBlock = null, batchBlocks = 5000, timeoutMs = 20_000, maxStaleMs = null, now = () => new Date(), write = writeJsonAtomic } = {}) {
     Object.assign(this, { file, chainConfig, getContext, startBlock, now, timeoutMs, write });
+    // A healthy watcher re-confirms within one (jittered) interval plus one bounded poll. Older than
+    // this, the last confirmation no longer describes the chain (stopped scheduler, stuck poll).
+    this.maxStaleMs = maxStaleMs ?? 2 * pollSec * 1000 + timeoutMs;
     this.confirmations = integer(confirmations, 'confirmations', 1);
     this.batchBlocks = Math.min(5000, integer(batchBlocks, 'batch size', 1));
     this.pollSec = pollSec;
@@ -54,6 +57,7 @@ export class ChainWatcher {
     this.state = 'idle';
     this.error = null;
     this.lastPollAt = null;
+    this.healthyAt = null;
     this.latestBlock = null;
     this.confirmedBlock = null;
     this.context = null;
@@ -71,6 +75,15 @@ export class ChainWatcher {
   async stop() { this.scheduler.stop(); await this.scheduler.drain(); await this.inFlight; }
   forgetDemoBackups() { this.backups.clear(); }
 
+  /**
+   * True while Live has no recent caught-up confirmation. A routine poll in flight does not by
+   * itself make a healthy watcher unknown; failures, catch-up and reorgs set the service flag.
+   */
+  confirmationStale() {
+    if (this.state === 'inactive') return false;
+    return this.healthyAt === null || this.now().getTime() - this.healthyAt > this.maxStaleMs;
+  }
+
   status(mode = 'live') {
     return { enabled: true, state: mode === 'demo' ? 'inactive' : this.state,
       poll_sec: this.pollSec, confirmations: this.confirmations, batch_blocks: this.batchBlocks,
@@ -78,7 +91,8 @@ export class ChainWatcher {
       last_block: this.saved?.last_block ?? null, last_block_hash: this.saved?.last_block_hash ?? null,
       latest_block: this.latestBlock, confirmed_block: this.confirmedBlock,
       lag_blocks: this.confirmedBlock === null || !this.saved ? null : Math.max(0, this.confirmedBlock - this.saved.next_block + 1),
-      last_poll_at: this.lastPollAt, retry_at: this.nextRetryAt ? new Date(this.nextRetryAt).toISOString() : null,
+      last_poll_at: this.lastPollAt, confirmed_at: this.healthyAt === null ? null : new Date(this.healthyAt).toISOString(),
+      max_stale_sec: this.maxStaleMs / 1000, stale: this.confirmationStale(), retry_at: this.nextRetryAt ? new Date(this.nextRetryAt).toISOString() : null,
       failures: this.failures, reconciliation_required: Boolean(this.saved?.reconciliation_required),
       pools: Object.values(this.saved?.snapshots ?? {}).map((s) => ({ case_id: s.case_id, pool_id: s.pool_id,
         state: s.state, block_number: s.block_number, monitoring: s.chain_only ? 'chain-only' : 'risk-and-chain' })),
@@ -94,6 +108,7 @@ export class ChainWatcher {
     this.backups.clear();
     service.chainEmergencyStopped = false;
     service.chainSafetyUnknown = false;
+    this.healthyAt = null;
     this.state = 'inactive';
   }
 
@@ -172,10 +187,14 @@ export class ChainWatcher {
       ])); assertCurrent();
       if (typeof headStop !== 'boolean' || typeof confirmedStop !== 'boolean') throw new WatcherError('invalid_rpc_data', 'Invalid emergency stop state');
       const stopped = headStop || confirmedStop;
-      if (service.chainEmergencyStopped !== stopped) this.#notice(service, 'CHAIN_EMERGENCY_STOP_CHANGED', { stopped, block_number: this.confirmedBlock });
-      service.chainEmergencyStopped = stopped;
-      // Unknown remains fail-closed until the whole poll (including canonicality) succeeds.
-      service.chainSafetyUnknown = true;
+      // Engage a stop at once; a release waits until the whole poll (including canonicality) succeeds.
+      if (stopped && !service.chainEmergencyStopped) {
+        this.#notice(service, 'CHAIN_EMERGENCY_STOP_CHANGED', { stopped, block_number: this.confirmedBlock });
+        service.chainEmergencyStopped = true;
+      }
+      // A routine poll keeps the last confirmed state: until this poll commits, the previous caught-up
+      // confirmation is as current as it was between polls, and confirmationStale() bounds its age.
+      // Unknown stays set after startup, a mode switch or a failure; catch-up and errors set it below.
       if (!this.saved) {
         const starts = await this.#rpc(() => Promise.all(descriptors.map(async ({ name, address }) => {
           const deployment = this.chainConfig.deployments?.[name];
@@ -211,10 +230,11 @@ export class ChainWatcher {
       await service.ensurePools(); assertCurrent();
       const from = this.saved.next_block;
       const to = Math.min(this.confirmedBlock, from + this.batchBlocks - 1);
+      if (to < this.confirmedBlock) service.chainSafetyUnknown = true;
       if (to < from) {
         // Restore saved mirrors after restart, even when there are no new blocks.
         for (const snapshot of Object.values(this.saved.snapshots)) this.#mirror(service, snapshot);
-        service.chainSafetyUnknown = false; this.#healthy(service); return this.status();
+        service.chainSafetyUnknown = false; this.#healthy(service, stopped); return this.status();
       }
       const endBlock = await this.#rpc(() => provider.getBlock(to));
       if (!HASH.test(endBlock?.hash ?? '')) throw new WatcherError('invalid_rpc_data', 'Confirmed block is unavailable');
@@ -292,7 +312,7 @@ export class ChainWatcher {
         snapshots: { ...this.saved.snapshots, ...snapshots }, emergency_stopped: stopped };
       if (this.file) await this.write(this.file, next);
       assertCurrent(); this.saved = next;
-      service.chainSafetyUnknown = next.next_block <= this.confirmedBlock; this.#healthy(service);
+      service.chainSafetyUnknown = next.next_block <= this.confirmedBlock; this.#healthy(service, stopped);
     } catch (error) {
       if (error.code === 'mode_changed') {
         if (service.getMode() === 'demo') this.suspend(service);
@@ -317,9 +337,14 @@ export class ChainWatcher {
     return this.status();
   }
 
-  #healthy(service) {
+  #healthy(service, stopped) {
     if (this.state === 'degraded') this.#notice(service, 'CHAIN_WATCHER_RECOVERED');
+    if (!stopped && service.chainEmergencyStopped) {
+      this.#notice(service, 'CHAIN_EMERGENCY_STOP_CHANGED', { stopped: false, block_number: this.confirmedBlock });
+      service.chainEmergencyStopped = false;
+    }
     this.state = this.saved.next_block <= this.confirmedBlock ? 'catching-up' : 'healthy';
+    this.healthyAt = this.state === 'healthy' ? this.now().getTime() : null;
     this.failures = 0; this.error = null; this.nextRetryAt = 0; this.lastPollAt = this.now().toISOString();
   }
 

@@ -96,6 +96,7 @@ export function tenorFromCase(caseData) {
 // --- risk scoring (basis points of "risk pressure") ---
 const MACRO_RISK_BPS = {
   war_risk: { info: 60, warning: 200, critical: 450 },
+  chokepoint_disruption: { info: 40, warning: 200, critical: 450 }, // transits far below last year (src/realdata)
   sanction_risk: { info: 60, warning: 200, critical: 400 },
   commodity_volatility: { info: 50, warning: 150, critical: 300 },
   fx_volatility: { info: 20, warning: 80, critical: 160 },
@@ -107,6 +108,10 @@ const MACRO_RISK_BPS = {
 const SHIPMENT_RISK_BPS = {
   loaded_on_board: 0,
   no_damage_reported: 0,
+  // Routine warehouse-receipt milestones are not risks (they used to fall through to the 60 bps default).
+  warehouse_receipt_issued: 0,
+  ownership_transfer: 0,
+  delivery_complete: 0,
   bad_weather: 80,
   delay: 60,
   route_deviation: 120,

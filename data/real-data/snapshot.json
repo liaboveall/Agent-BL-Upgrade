@@ -1,0 +1,1746 @@
+{
+  "captured_at": "2026-10-16T02:52:18.717Z",
+  "note": "Offline snapshot of free public sources (IMF PortWatch, Polymarket, Open-Meteo Marine, Yahoo Finance, Google News headlines). Real values with their own dates, captured by `npm run realdata:snapshot`; shown as offline data whenever live fetching is off or fails.",
+  "prices": {
+    "copper": {
+      "symbol": "HG=F",
+      "price": 6.6145,
+      "currency": "USD",
+      "as_of": "2026-10-16T02:42:19.000Z",
+      "change_1m": 0.03862758236868369
+    },
+    "aluminium": {
+      "symbol": "ALI=F",
+      "price": 3097.25,
+      "currency": "USD",
+      "as_of": "2026-10-16T02:33:38.000Z",
+      "change_1m": -0.08209231681114326
+    },
+    "brent": {
+      "symbol": "BZ=F",
+      "price": 105.41,
+      "currency": "USD",
+      "as_of": "2026-10-16T02:42:17.000Z",
+      "change_1m": -0.030712643678160956
+    },
+    "gasoil": {
+      "symbol": "HO=F",
+      "price": 4.5777,
+      "currency": "USD",
+      "as_of": "2026-10-16T02:41:50.000Z",
+      "change_1m": -0.1300456239090606
+    },
+    "soybeans": {
+      "symbol": "ZS=F",
+      "price": 1262.75,
+      "currency": "USX",
+      "as_of": "2026-10-16T02:41:57.000Z",
+      "change_1m": -0.042464454976303356
+    }
+  },
+  "chokepoints": {
+    "Malacca Strait": {
+      "latest_date": "2026-10-11",
+      "avg7": 233,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 217
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 251
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 239
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 232
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 237
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 232
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 223
+        }
+      ],
+      "baseline7": 245.42857142857142,
+      "ratio": 0.9493597206053551
+    },
+    "Cape of Good Hope": {
+      "latest_date": "2026-10-11",
+      "avg7": 84,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 92
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 75
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 84
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 82
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 99
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 66
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 90
+        }
+      ],
+      "baseline7": 100.71428571428571,
+      "ratio": 0.8340425531914895
+    },
+    "Dover Strait": {
+      "latest_date": "2026-10-11",
+      "avg7": 164,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 160
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 150
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 177
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 163
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 154
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 159
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 185
+        }
+      ],
+      "baseline7": 176.28571428571428,
+      "ratio": 0.9303079416531604
+    },
+    "Strait of Hormuz": {
+      "latest_date": "2026-10-11",
+      "avg7": 4.142857142857143,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 8
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 2
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 6
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 4
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 3
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 4
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 2
+        }
+      ],
+      "baseline7": 70.57142857142857,
+      "ratio": 0.05870445344129555
+    },
+    "Bab el-Mandeb Strait": {
+      "latest_date": "2026-10-11",
+      "avg7": 28.285714285714285,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 28
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 33
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 35
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 25
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 24
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 22
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 31
+        }
+      ],
+      "baseline7": 34,
+      "ratio": 0.8319327731092436
+    },
+    "Suez Canal": {
+      "latest_date": "2026-10-11",
+      "avg7": 41.714285714285715,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 36
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 48
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 32
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 37
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 55
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 41
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 43
+        }
+      ],
+      "baseline7": 39,
+      "ratio": 1.0695970695970696
+    },
+    "Gibraltar Strait": {
+      "latest_date": "2026-10-11",
+      "avg7": 133.42857142857142,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 123
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 137
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 132
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 154
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 128
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 130
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 130
+        }
+      ],
+      "baseline7": 130.57142857142858,
+      "ratio": 1.0218818380743981
+    },
+    "Taiwan Strait": {
+      "latest_date": "2026-10-11",
+      "avg7": 229.85714285714286,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 211
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 233
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 222
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 231
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 242
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 224
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 246
+        }
+      ],
+      "baseline7": 236.28571428571428,
+      "ratio": 0.9727932285368803
+    },
+    "Makassar Strait": {
+      "latest_date": "2026-10-11",
+      "avg7": 54,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 55
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 44
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 53
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 57
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 60
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 54
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 55
+        }
+      ],
+      "baseline7": 47.285714285714285,
+      "ratio": 1.1419939577039275
+    },
+    "Bohai Strait": {
+      "latest_date": "2026-10-11",
+      "avg7": 162.42857142857142,
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "n_total": 173
+        },
+        {
+          "date": "2026-10-06",
+          "n_total": 168
+        },
+        {
+          "date": "2026-10-07",
+          "n_total": 148
+        },
+        {
+          "date": "2026-10-08",
+          "n_total": 159
+        },
+        {
+          "date": "2026-10-09",
+          "n_total": 174
+        },
+        {
+          "date": "2026-10-10",
+          "n_total": 166
+        },
+        {
+          "date": "2026-10-11",
+          "n_total": 149
+        }
+      ],
+      "baseline7": 151,
+      "ratio": 1.0756859035004729
+    }
+  },
+  "sea_state": {
+    "-12,75": {
+      "max_wave_height_m": 3.16,
+      "on": "2026-10-18"
+    },
+    "-36,22": {
+      "max_wave_height_m": 3.66,
+      "on": "2026-10-16"
+    },
+    "46,-6": {
+      "max_wave_height_m": 3.26,
+      "on": "2026-10-16"
+    },
+    "26,53.5": {
+      "max_wave_height_m": 0.66,
+      "on": "2026-10-16"
+    },
+    "20,38.5": {
+      "max_wave_height_m": 0.86,
+      "on": "2026-10-18"
+    },
+    "14.5,113.5": {
+      "max_wave_height_m": 1.3,
+      "on": "2026-10-16"
+    },
+    "29,123.5": {
+      "max_wave_height_m": 1.38,
+      "on": "2026-10-18"
+    },
+    "24.5,58.5": {
+      "max_wave_height_m": 0.5,
+      "on": "2026-10-18"
+    },
+    "15,65": {
+      "max_wave_height_m": 1.1,
+      "on": "2026-10-17"
+    },
+    "6.5,95": {
+      "max_wave_height_m": 1.26,
+      "on": "2026-10-16"
+    },
+    "-22,-75": {
+      "max_wave_height_m": 2.6,
+      "on": "2026-10-17"
+    },
+    "25,160": {
+      "max_wave_height_m": 2.4,
+      "on": "2026-10-16"
+    },
+    "33,124": {
+      "max_wave_height_m": 2.38,
+      "on": "2026-10-17"
+    },
+    "3,122": {
+      "max_wave_height_m": 0.48,
+      "on": "2026-10-16"
+    },
+    "18,127": {
+      "max_wave_height_m": 1.9,
+      "on": "2026-10-18"
+    },
+    "36,123": {
+      "max_wave_height_m": 3.06,
+      "on": "2026-10-17"
+    },
+    "-5,107.5": {
+      "max_wave_height_m": 0.98,
+      "on": "2026-10-16"
+    },
+    "10,102": {
+      "max_wave_height_m": 0.26,
+      "on": "2026-10-16"
+    },
+    "31.5,123.5": {
+      "max_wave_height_m": 1.96,
+      "on": "2026-10-17"
+    },
+    "-30,-20": {
+      "max_wave_height_m": 3.3,
+      "on": "2026-10-16"
+    }
+  },
+  "prediction_markets": {
+    "hormuz": [
+      {
+        "question": "Strait of Hormuz traffic returns to normal by October 31?",
+        "implied_prob": 0.0045,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 2688671.6000340004,
+        "url": "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-october-31-20260810151043583",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Strait of Hormuz traffic returns to normal by December 31?",
+        "implied_prob": 0.115,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 14902823.069993002,
+        "url": "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Strait of Hormuz traffic returns to normal by November 30?",
+        "implied_prob": 0.045,
+        "end_date": "2026-12-01T04:59:00Z",
+        "volume_usd": 836013.271046,
+        "url": "https://polymarket.com/event/strait-of-hormuz-traffic-returns-to-normal-by-november-30-20260810151158765",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will fewer than 20 ships transit the Strait of Hormuz between October 12-October 18?",
+        "implied_prob": 0.215,
+        "end_date": "2026-10-19T03:59:00Z",
+        "volume_usd": 2310.9480980000003,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-12-20261006t135036615z",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 20-24 ships transit the Strait of Hormuz between October 12-October 18?",
+        "implied_prob": 0.23,
+        "end_date": "2026-10-19T03:59:00Z",
+        "volume_usd": 1417.809043,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-12-20261006t135036615z",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 25-29 ships transit the Strait of Hormuz between October 12-October 18?",
+        "implied_prob": 0.26,
+        "end_date": "2026-10-19T03:59:00Z",
+        "volume_usd": 1987.2475100000001,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-12-20261006t135036615z",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 30-34 ships transit the Strait of Hormuz between October 12-October 18?",
+        "implied_prob": 0.19,
+        "end_date": "2026-10-19T03:59:00Z",
+        "volume_usd": 2174.56037,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-12-20261006t135036615z",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 35-39 ships transit the Strait of Hormuz between October 12-October 18?",
+        "implied_prob": 0.1,
+        "end_date": "2026-10-19T03:59:00Z",
+        "volume_usd": 1184.7760680000001,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-12-20261006t135036615z",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 40 or more ships transit the Strait of Hormuz between October 12-October 18?",
+        "implied_prob": 0.0145,
+        "end_date": "2026-10-19T03:59:00Z",
+        "volume_usd": 4292.746507000001,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-12-20261006t135036615z",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will there be between 0 and 5 average daily transits of the Strait of Hormuz on October 31?",
+        "implied_prob": 0.915,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 7949.048261000001,
+        "url": "https://polymarket.com/event/avgpt-of-ships-transiting-strait-of-hormuz-end-of-october",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will there be between 5 and 10 average daily transits of the Strait of Hormuz on October 31?",
+        "implied_prob": 0.0275,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 8330.666838000001,
+        "url": "https://polymarket.com/event/avgpt-of-ships-transiting-strait-of-hormuz-end-of-october",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will there be between 10 and 15 average daily transits of the Strait of Hormuz on October 31?",
+        "implied_prob": 0.0385,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 1676.765822,
+        "url": "https://polymarket.com/event/avgpt-of-ships-transiting-strait-of-hormuz-end-of-october",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will there be between 15 and 20 average daily transits of the Strait of Hormuz on October 31?",
+        "implied_prob": 0.0065,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 1739.312575,
+        "url": "https://polymarket.com/event/avgpt-of-ships-transiting-strait-of-hormuz-end-of-october",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will there be between 20 and 25 average daily transits of the Strait of Hormuz on October 31?",
+        "implied_prob": 0.0035,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 2045.841449,
+        "url": "https://polymarket.com/event/avgpt-of-ships-transiting-strait-of-hormuz-end-of-october",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will there be between 25 and 30 average daily transits of the Strait of Hormuz on October 31?",
+        "implied_prob": 0.009,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 1487.1284600000004,
+        "url": "https://polymarket.com/event/avgpt-of-ships-transiting-strait-of-hormuz-end-of-october",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will there be 30 or more average daily transits of the Strait of Hormuz on October 31?",
+        "implied_prob": 0.0285,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 1697.62206,
+        "url": "https://polymarket.com/event/avgpt-of-ships-transiting-strait-of-hormuz-end-of-october",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will fewer than 20 ships transit the Strait of Hormuz between October 19-October 25?",
+        "implied_prob": 0.435,
+        "end_date": "2026-10-26T03:59:00Z",
+        "volume_usd": 357.79,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-19",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 20-24 ships transit the Strait of Hormuz between October 19-October 25?",
+        "implied_prob": 0.135,
+        "end_date": "2026-10-26T03:59:00Z",
+        "volume_usd": 43.125,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-19",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 25-29 ships transit the Strait of Hormuz between October 19-October 25?",
+        "implied_prob": 0.14,
+        "end_date": "2026-10-26T03:59:00Z",
+        "volume_usd": 40,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-19",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 30-34 ships transit the Strait of Hormuz between October 19-October 25?",
+        "implied_prob": 0.2,
+        "end_date": "2026-10-26T03:59:00Z",
+        "volume_usd": 889.99,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-19",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 35-39 ships transit the Strait of Hormuz between October 19-October 25?",
+        "implied_prob": 0.11,
+        "end_date": "2026-10-26T03:59:00Z",
+        "volume_usd": 40,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-19",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will 40 or more ships transit the Strait of Hormuz between October 19-October 25?",
+        "implied_prob": 0.0225,
+        "end_date": "2026-10-26T03:59:00Z",
+        "volume_usd": 864.9625530000001,
+        "url": "https://polymarket.com/event/how-many-ships-transit-the-strait-of-hormuz-week-of-october-19",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 2, 2026?",
+        "implied_prob": 0.926,
+        "end_date": "2026-10-03T03:59:00Z",
+        "volume_usd": 1245.57987,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 4, 2026?",
+        "implied_prob": 0.96,
+        "end_date": "2026-10-05T03:59:00Z",
+        "volume_usd": 1209.0099679999998,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 5, 2026?",
+        "implied_prob": 0.95,
+        "end_date": "2026-10-06T03:59:00Z",
+        "volume_usd": 978.537871,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 11, 2026?",
+        "implied_prob": 0.9455,
+        "end_date": "2026-10-12T03:59:00Z",
+        "volume_usd": 865.6029860000002,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 14, 2026?",
+        "implied_prob": 0.33,
+        "end_date": "2026-10-15T03:59:00Z",
+        "volume_usd": 807.5544130000001,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 15, 2026?",
+        "implied_prob": 0.505,
+        "end_date": "2026-10-16T03:59:00Z",
+        "volume_usd": 1175.8336640000002,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 16, 2026?",
+        "implied_prob": 0.645,
+        "end_date": "2026-10-17T03:59:00Z",
+        "volume_usd": 905.861476,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 17, 2026?",
+        "implied_prob": 0.625,
+        "end_date": "2026-10-18T03:59:00Z",
+        "volume_usd": 26.646922,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 18, 2026?",
+        "implied_prob": 0.56,
+        "end_date": "2026-10-19T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 19, 2026?",
+        "implied_prob": 0.565,
+        "end_date": "2026-10-20T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 20, 2026?",
+        "implied_prob": 0.465,
+        "end_date": "2026-10-21T03:59:00Z",
+        "volume_usd": 19,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 21, 2026?",
+        "implied_prob": 0.565,
+        "end_date": "2026-10-22T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 22, 2026?",
+        "implied_prob": 0.5,
+        "end_date": "2026-10-23T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 23, 2026?",
+        "implied_prob": 0.505,
+        "end_date": "2026-10-24T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 24, 2026?",
+        "implied_prob": 0.49,
+        "end_date": "2026-10-25T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 25, 2026?",
+        "implied_prob": 0.49,
+        "end_date": "2026-10-26T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 26, 2026?",
+        "implied_prob": 0.5,
+        "end_date": "2026-10-27T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 27, 2026?",
+        "implied_prob": 0.505,
+        "end_date": "2026-10-28T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 28, 2026?",
+        "implied_prob": 0.505,
+        "end_date": "2026-10-29T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 29, 2026?",
+        "implied_prob": 0.505,
+        "end_date": "2026-10-30T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 30, 2026?",
+        "implied_prob": 0.505,
+        "end_date": "2026-10-31T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on October 31, 2026?",
+        "implied_prob": 0.51,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 46411.09271,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-on-october-2026",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will at least 10 ships transit the Strait of Hormuz on any day by October 31, 2026?",
+        "implied_prob": 0.21,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 1160.484081,
+        "url": "https://polymarket.com/event/will-ships-transit-the-strait-of-hormuz-on-any-day-by-october-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will at least 20 ships transit the Strait of Hormuz on any day by October 31, 2026?",
+        "implied_prob": 0.075,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 1541.787223,
+        "url": "https://polymarket.com/event/will-ships-transit-the-strait-of-hormuz-on-any-day-by-october-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will at least 30 ships transit the Strait of Hormuz on any day by October 31, 2026?",
+        "implied_prob": 0.16,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 670,
+        "url": "https://polymarket.com/event/will-ships-transit-the-strait-of-hormuz-on-any-day-by-october-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will at least 40 ships transit the Strait of Hormuz on any day by October 31, 2026?",
+        "implied_prob": 0.0275,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 1084.888889,
+        "url": "https://polymarket.com/event/will-ships-transit-the-strait-of-hormuz-on-any-day-by-october-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will at least 50 ships transit the Strait of Hormuz on any day by October 31, 2026?",
+        "implied_prob": 0.057,
+        "end_date": "2026-11-01T03:59:00Z",
+        "volume_usd": 504,
+        "url": "https://polymarket.com/event/will-ships-transit-the-strait-of-hormuz-on-any-day-by-october-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 20, 2026?",
+        "implied_prob": 0.085,
+        "end_date": "2026-09-20T19:59:00Z",
+        "volume_usd": 43051.687905000006,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 21, 2026?",
+        "implied_prob": 0.9305,
+        "end_date": "2026-09-21T19:59:00Z",
+        "volume_usd": 2754.3497620000003,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 22, 2026?",
+        "implied_prob": 0.05,
+        "end_date": "2026-09-22T19:59:00Z",
+        "volume_usd": 2508.8491209999997,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 24, 2026?",
+        "implied_prob": 0.075,
+        "end_date": "2026-09-24T19:59:00Z",
+        "volume_usd": 962.641157,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 26, 2026?",
+        "implied_prob": 0.0685,
+        "end_date": "2026-09-26T19:59:00Z",
+        "volume_usd": 15916.261100000003,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 27, 2026?",
+        "implied_prob": 0.065,
+        "end_date": "2026-09-27T19:59:00Z",
+        "volume_usd": 356.848572,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 28, 2026?",
+        "implied_prob": 0.56,
+        "end_date": "2026-09-28T19:59:00Z",
+        "volume_usd": 25533.575947000005,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 29, 2026?",
+        "implied_prob": 0.9285,
+        "end_date": "2026-09-29T19:59:00Z",
+        "volume_usd": 11250.99011,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Shipping targeted in Hormuz on September 30, 2026?",
+        "implied_prob": 0.46,
+        "end_date": "2026-09-30T19:59:00Z",
+        "volume_usd": 18308.578466,
+        "url": "https://polymarket.com/event/shipping-successfully-targeted-in-hormuz-onptptpt",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will the United Kingdom send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.16,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 219.55408700000004,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will France send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.1,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 14214.889363000002,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will the United States send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.28,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 20160.774803,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will the Netherlands send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.045,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 16457.375199,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will Greece send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.109,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 64.66762299999999,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will Italy send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.14,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 86.383184,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will Germany send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.09,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 38.68416,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      },
+      {
+        "question": "Will Australia send warships through the Strait of Hormuz by December 31, 2026?",
+        "implied_prob": 0.165,
+        "end_date": "2027-01-01T04:59:00Z",
+        "volume_usd": 24.23285,
+        "url": "https://polymarket.com/event/which-countries-will-send-warships-through-the-strait-of-hormuz-by-december-31",
+        "platform": "Polymarket"
+      }
+    ]
+  },
+  "news": {
+    "\"Cape of Good Hope\" OR Agulhas shipping": [
+      {
+        "title": "The world needs a global coalition against Houthi attacks",
+        "source": "BLiTZ - Fears None But God",
+        "date": "2026-10-15T18:11:25.000Z",
+        "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxPM2tfU010WkJ0NWxiOXhMRlYxcjBCLVVnNU9aSERDeVU0MjB6OUpabXRDbXpDakR6Y2lDbW51aGkyWFpkRTRWcjIwMklWdl91S2tIbGRfcmYtT0ZoR1dpV2g4TU9EZ3BmLURNQ1JjeVRFVTM2SFF5ZXoxOGFmVHNBOHBRR1h0QlNnWnpXYWhueFNUcFRTN3l4Mw?oc=5"
+      },
+      {
+        "title": "Red Sea Crisis: Impact on Shipping Costs and Freight Rates",
+        "source": "Grand View Research",
+        "date": "2026-10-15T11:19:38.000Z",
+        "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxORUc4ZnBZRzdSeWpVWndHVlhxYWE4QXRaN3F1UHN5UGEtNHZHRUNRLWlCSkdGMjFkVW1FRWhDdE1ySTBqMmtfY25EUTZyU0ZOSGlweWpyUFd5WTJYd2x4enp1dFF4UTJ1NFVJanVmNnpSSHF5WTlzcXg5OEhfeHdwQzFBdVBLS1BfV1ZVSmdHX3lTNHAwemQ2YTBzNA?oc=5"
+      },
+      {
+        "title": "Red Sea: What Three Years of Shipping Detours Meant for Africa",
+        "source": "Ecofin Agency",
+        "date": "2026-10-15T11:18:13.000Z",
+        "url": "https://news.google.com/rss/articles/CBMivwFBVV95cUxQalJxZXhjdWpzT0YyV1BhN29LVHAzQ1BiX3lFekE3ZXBTSHhwRlFJY1FxMndHYnN1NU1HbTNIVE02bjhWZ0lraHBuRk41MFVXOWhWQVRyVnlYQVhQUGc1bFk2Z0hEWVlQVmZ6YjhwUEpRUnNycnoyUmVJZVdXYXJBWHg0Qm5SU1NmY1d6UTB6aVZ1N2JtMC0wY1lWZlVmc18xcGJQcjZKVUFvdXVsX09vOXAtcktvRDcyd2ViNkpfWQ?oc=5"
+      },
+      {
+        "title": "Suez Canal container ship transits exceed half of pre-crisis levels",
+        "source": "Container News",
+        "date": "2026-10-15T01:00:05.000Z",
+        "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxOTkZyYllabDktVF9qNnJ5QWxOUThWb0pzQW45eEhsZVQydzZJVDg5NlBRSjZrNENWU3BWZko0ZXBOSDlMQXlhLVJ1VUdHaXZFZEplUkt0ZFN2dmhBODhyQlRQSWtBcC1hM281TkYwSkVsRm5GcDJyTU9EaExQdHBDLWtiZ2ZZU1JiOVBZRGdnbWpPNTlpWDVQMFdmOA?oc=5"
+      },
+      {
+        "title": "The capacity of the container ships that transit through Suez exceeds 50% of the levels prior to the Red Sea crisis",
+        "source": "El Estrecho Digital",
+        "date": "2026-10-14T15:58:47.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi9AFBVV95cUxQN184Yk9hN28xLVFQcDgtdU1pR3ZtcDZSS185S20zZWY3OWhTUV9DTExrbFZZeXU2VFl3NS1YdUpJcmUtd2NfcHFfUjdZbTRRQWRiWFNiZUp0YVFQZDFheXlka0Rxbi1zOEdJR05pS0R4RjZSY2hmNE9qOVBDMVBRSHhCV2ZONExQN1BqdXBqekpIWXhDSi1JOS0xYTlUWXVGN1dUMC1mZXVITmhPLUY0SUtSRUIzanpZcDJkaGRWVkdEQTFEb2VRQnhQM1JLbi01RHdHQVFMVnlUbzRxR1dNS3hjT1BLdEFKb01BUFp1NnRxWkxk?oc=5"
+      },
+      {
+        "title": "Egypt citrus exports rise to 2.4 million tons in 2025/26 season",
+        "source": "Food Business Middle East & Africa",
+        "date": "2026-10-14T13:41:42.000Z",
+        "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxQZEtyU2E0YTFwX0ZTMXNabnlpZExxNXZod0ZzdDVTdFVkZ3RKcTUzcUxMUldtTVIwdW5DbllYQ1VOam4zSWpCY2t0RnhLZ3Z1a2FMQUYweVpHOF9heEd0azdaTVg4OWVqZWZXaUNnR1psak5QX2dsY3FUQU1jTV9hTU5ZczdoMFg2c2psWTVsaFd6MFlZQ2l1VWwwZUE?oc=5"
+      },
+      {
+        "title": "Suez Canal container capacity tops half of pre-crisis level for first time since Houthi attacks",
+        "source": "Container Management",
+        "date": "2026-10-14T10:16:29.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxQZHZ4Q29pX1Y4T1ZLX2hmcnpzSk5uSWRPMUk4cHB0UXlUb3FDaVJmemFJYnQ1SS1VTHZtQWFwVWdKWUtUYThrdVY5b05lWXVXdEk3SzhDUW42d1ZPR2M0SjBjZWxWUFYydHhKekFyZHFBdE1TUjlxNXpIZVRIMFJHdVNJd1ZSQ1ZyVWJxTWM5RW1NYWZjNGlIRU5EdkZEaWxublNoUg?oc=5"
+      },
+      {
+        "title": "Suez Canal Container Ship Transits Rebound",
+        "source": "Marine Link",
+        "date": "2026-10-14T08:23:38.000Z",
+        "url": "https://news.google.com/rss/articles/CBMifkFVX3lxTFBnVTQxVGxwdnRPdGRFQ0RwSGx0dGUwTmU3bF9xUEFKc2VxWUhnaXBzc3VLQVF2ZVpVMGtFTVJsSDVLLTVGQXYzXzdZc2trWkNPYXdnb2JSZFhSTWs4ZGpWR0YwRHVEQklMVXlhY0swanBOWXhlM1E3Y3psbTgtZw?oc=5"
+      }
+    ],
+    "copper price": [
+      {
+        "title": "Copper price hits near two-week low on profit-taking",
+        "source": "Mining.com.au",
+        "date": "2026-10-15T21:30:05.000Z",
+        "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxPVDVTUy0wYk43Z3dOS0xKckpVaXRxWlU2R2JRZ1hDbVB0NXRKaTNtUl9Td2VYMHNQY0JZMzRhYXQ4V19DRU9FQXk2MkZIcFZnYVpWYlMwX2Jtc0JBMFJKYUFtbUJoNjRNZEc4TzVFSkVDMG8wNnBQX3JJQ2I3ZnIzOUVqMDIwUUJwem9LYXZmOA?oc=5"
+      },
+      {
+        "title": "Collect Monthly Income From The AI Copper Trade (NYSEARCA:IYM)",
+        "source": "Seeking Alpha",
+        "date": "2026-10-15T19:09:07.000Z",
+        "url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxPMTFSR2ExbXNkZjZxZ3RIQjhXSy1RT2ozQ3hWcWVHNGdUOEhoY1M3X1JqMmhJSHBsamcydjZNa01YOU1FRVJ5Rm5QUjVlVFk5d0JFU01oeml4THZBNWtZNDROSHdKYWVHOElYaVNfYWM0VldMX2xEM0wxZmxBM0JyQXdqYWZGYjgtYUVrMQ?oc=5"
+      },
+      {
+        "title": "Copper price falls for third day as US inflation shock, easing Chile strike risk spur selloff",
+        "source": "Mining.com",
+        "date": "2026-10-15T16:15:42.000Z",
+        "url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxNZllTRFB3Wk9fMjQ2Q0RPeTB5SGpsNHFOeGZBMTZOTDZzWTlXQTBXTjg3NmRhejdMU1lKemNsdlRiTVNTODB1QlRMa0FRNFFLMTI0M0ZYejhQeXd0Q2J3djYzZHhIQmZveGdJcnpMSUd1dnp0NTZFVmxFdkNLT3p1UjJSN28xN1hyQU4tVDhfVVRVc1ZxTEdHQ2M0NmJOT3VkcHZPU0xoa2wtelN1NUFBcEZzQVdrc2s?oc=5"
+      },
+      {
+        "title": "Analyst Insights: Contextualising high copper prices",
+        "source": "Benchmark Mineral Intelligence",
+        "date": "2026-10-15T15:43:04.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxOUXJ2ek4tcVh3UUYxNU1fQkJIVng3RW1Qdy14REpVZDlrbjZ5VC1NV0hvbU0tTk9DWWl6VWRnd2lmNFFXOGlzNmJrUXlpaUdoXzZtWGF4NjA2ZElub1VVc0t6QXJNVkxmMGFuTUFEMEJPMzZBNm5JaVBINHZQbzZWb0IwdGVHSmtaTGJoeWtrRnNCVl9NM1FUS0FTcVRqSkhublE?oc=5"
+      },
+      {
+        "title": "Copper And Aluminum Prices Cool As Rate Fears Return",
+        "source": "Finimize",
+        "date": "2026-10-15T12:30:36.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxQSjVSU1BKX3lrVlBiNURPMUIwbWlXaUhlbjhOcWdiVjNNYTZmcDN5cTZMVGtBaHFoZFJHRnVONlVBTVdndGp6cy1Rd2NCeGlEeHFoalhnaUVSUjcwMjlBcjdnMmR5cmR2T0t1eVJhaUs5VExwWGwzaE8wcUxaSDdrZll2ZUlmdFRr?oc=5"
+      },
+      {
+        "title": "[Price spread between futures contracts stays high, demand weak; spot price shifts from premium to discount [SMM Shandong copper cathode spot weekly review]]",
+        "source": "Shanghai Metals Market",
+        "date": "2026-10-15T11:04:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipgJBVV95cUxOa2UwYkFJV244aUhnR24zMVBUSzlITncyV0RYcUhPWUVPU2VqZXQ2ZDFiUGVJRzhoZkd4RFk5TnNnZTZ6MEV6ejc1SE1VdFd6cTJ6SUE4WEU3RkN0dExuR0RtNDZBTnIxazZUV3NORFRNeGZMVDVBTlB5TVBHbDNQT2RSQ1NtcGlkQU5LRUZCOFJULXZiRl9nSmZyNlBEd3dSeUE5akhqOGVIZFpHMy1WdlZjZzh0N3RCUVNJcldBU0hZdkZ6UXJhUkVObEg2bmVJa2wwVFktODRmeS1nZEY0c2xhVmszZ3p6SG83QkpYMVV4ZkEyaTVWbzFpd0ZCZ08xVFpmWWdOVUJ2VUs3ckxpX0xTT3IwNEJsMlIzTWNXS1dLRUZKeVE?oc=5"
+      },
+      {
+        "title": "Tariff Arbitrage Collapse Strands US Copper, Lifting Ex-US Pricing",
+        "source": "Crux Investor",
+        "date": "2026-10-15T10:49:20.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxQUEtHZ1JCNjBrVGE2cTFFdWxVTzVZU1lxZmxia3RMWU16OUZnZ3dRNDlONEpjU3Z0M2JxbVBIRjB6S3p1QW5Nck1Lb2g3cGtnb3hHMjg2c2JBc0g0SmEyYno3dElqanV1R3hvQ0d3dlJvOG00RTRtTXdFcXkxbndlenZMMTg4b3hpQ3ZtbVpnVTZBY2p6NTFXWGV0cDNSa0s2cmc?oc=5"
+      },
+      {
+        "title": "Spot premiums decline as delivery approaches amid widening price spread between futures contracts; spot premiums expected to rebound next week [SMM South China Copper Cathode Spot Weekly Review]",
+        "source": "Shanghai Metals Market",
+        "date": "2026-10-15T10:11:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi1wJBVV95cUxNalFqMF9sREg1TE5uRVVvVGZBVkcycjFpNldyMS1MaEZKaVdCNkZuZmdyN2FJSGwycXIyaW5xTktDdU8tLWY3WUV3ZWtNdlZjMjk4UnQyU1BKUEpoUVZ1bHdNLXZxbXc4NmhPRE0zdjU4dklJNjJOWkFlUkRhaDRLY0lOSGlaQkFub1JVOERBWlIzUkp1V282LTVxWUJEUW5BRVc4cHZLODljUXMzLWFtejVKNTRrN2Rwb3hMbGw4ckcxWF9HTUpCeVlqZDkwWkNaV05nN3hWWWpySFBzODJfYWduUF9fdWYyNTcwR1dnOHUta0FfWnZjd2xDV0ZyaVFPb1FZN1l0dDVIWHdYdnJWRFVwYzN6Q09KaV9EYjV5UmF1VTdlM2ZBaGFCUTRramhVS3lvYXlXZFpvZk93dFhNekl2OHRRb0szc0kwOGhZM2NOVHdWSkIw?oc=5"
+      }
+    ],
+    "\"Strait of Hormuz\" shipping": [
+      {
+        "title": "Iran Escalates Attacks, Sinking Two Cargo Ships Near Strait of Hormuz: 5 outlets compared",
+        "source": "NewsCord",
+        "date": "2026-10-15T23:26:12.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxOMm9SLUxnM0lCOHBFM0VDUzkzVzFQMmIwcEl6ajhYTTFHWmtnMW13QnV1OGZlTWNBMDNwNE1LcTJxY1hjQjZPQXRySG9mbVZKUVVoaTdZNEtmTm5vcy1zTUNva05BYVFyZjFRalUtTjJGSXl4NHJ5eXBOc1lxMm1VNlRMY3d4c3pUb0RTRFNpQTdVUUpCUTNpdXY3MEc2Z0FFeFVpZmk2YUN3R0xBT3MtOXdYXzkyek1oWnp2YWJNc00?oc=5"
+      },
+      {
+        "title": "Gulf Oil Is Still Flowing Despite a Surge in Attacks on Ships",
+        "source": "The New York Times",
+        "date": "2026-10-15T20:32:46.000Z",
+        "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE5FN08tZVdYdzRGSTkwbFNVTjdlRmd2RmxpVEdTS05JblktRVpZeElnOGFMajhWNDhmSlVBbGlPdmNEU2FPaG5KWjlPbTRxVmFFLWxWSzg0Q3ZVMUFEYlg0aklhYk1VNHFjSDU0YjlubXQxcXZaOFdJcXZPNXFGNjQ?oc=5"
+      },
+      {
+        "title": "Oil Prices End Mixed as Traders Weigh Demand Outlook, Hormuz Shipping Risks",
+        "source": "WSJ",
+        "date": "2026-10-15T19:37:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxNNW1MMHhCS1RGcmU1N242QUVfclBfWW56RTVPeWhhUFowX2owYlRJWlBFa1BEMFZaM2daaFVtbG1aVlBBOFJhbnVhR19jMEhmZ0FpYXFZcTllS25ETExYdUtWRTVIVkI3MVdGMDBDOTZDOVhJQm9CUkVDaDNvcWFQeFQxZ1NmdkpHZGZTdmFEUWNJS2R6QVNyZXNrWTNOazZOTUlvVWNwaVV5NENQbTNkTEJ2MVFyYmR6?oc=5"
+      },
+      {
+        "title": "Footage shows small boats gathered around floating shipping containers after a Singapore-flagged cargo ship sank near the Strait of Hormuz on Wednesday. The vessel was struck by an unknown projectile, according to Singapore’s maritime authority. Read",
+        "source": "Facebook",
+        "date": "2026-10-15T19:23:35.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi0wFBVV95cUxPMGZYdXRrMHRmMXlBcmlHcjVFblBYWFhGcmhxQklkQVpET2ZuZVhjQ1RFWDRaR1hTUVNic0szc3pYUGlwZlp0dzhHRTFLUWF6QnEyMjAyRTNoLV96LV9GRWZZNlc0OUFsQXNLVDVVQ3RWUE80eDNReS13NndCbW10RU5BZlNmMGhRTDI2dXFvbzJHMWduUTFkLWFodkRBR3hnTy1BSExINjRtLWhkS3FGMUh5dGNQbXdFWmhyaEh4cWlaVmUwaXBhRFFtQ3JVQUozR01R?oc=5"
+      },
+      {
+        "title": "Viral footage shows iPhones floating in Strait of Hormuz after Iran sinks Singaporean cargo ship",
+        "source": "Ynetnews",
+        "date": "2026-10-15T19:20:05.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFBaRWtja3pid0YxQ05JMHB0NnVVRFYyRHNKc0YyNkd3akRJTTBvWkVEdFhSMzAyemJHSXNPZzkybEZ3NS1Hck1PV0JER3hidTBoZDkxVEd3?oc=5"
+      },
+      {
+        "title": "Iran ramps up attacks on shipping in Strait of Hormuz",
+        "source": "Fox Business",
+        "date": "2026-10-15T19:18:02.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE5GckpqcnQtelppQ09yamphUEVaVWZRM1dET3dna3dkaW5LNEFVT2pDbFIwWTBpOTFERzJsSzNoMUt4N3N2eVNUYmM2TG9TYm1sVEVTYXA0Qml2eEE?oc=5"
+      },
+      {
+        "title": "U.S. Claims Control of Hormuz as Ship Attacks Hit New High",
+        "source": "gCaptain",
+        "date": "2026-10-15T18:33:29.000Z",
+        "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxQWFViRmdjaC1aRTdKaTFOM2FhOEY4Vy1zNnhTTV9EMV9jYUlCY01NQWJtVWx4dWRtUVphOW52VG84TmRmeVQ1Y0NtTktFMEdocHhPMzRpOEhDRkdPaDdJajhJeTc5M2ktN1ZsZjlyVjNFNEFEOW1XanlvU0l0UkY5Y01fa2pNbjJXOVpsRW5QWEVYMjFwOE1vc2h3?oc=5"
+      },
+      {
+        "title": "Oil flow through Strait of Hormuz hits 12M barrels a day — defying increasing attacks from Iran",
+        "source": "New York Post",
+        "date": "2026-10-15T17:48:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiwgFBVV95cUxQQ2VVSXprZWZkSjNMV1dVZVRGTzhPU01UUlptMkFKS2VxWXlfWHdfVnVocTJpQzYxZ1d2Nm9IWWF2c0ZsQVBBMTV1bFJUeTBENjRRQzdMUzlWSnFhcWJtS09HWlhyb01sWTl0N0U5SUt5dmhUT3o4WUZQTU8tVi1ORnhVRE9sOXlXeDhoZDAzRWtDSGNyMlVFYUh4X2tqbVZ4WF9zWVM5QmkycFhWOTlPVDlBUElDVWVQdUR2SnFEZmF5UQ?oc=5"
+      }
+    ],
+    "aluminium price premium Europe": [
+      {
+        "title": "How Did Orora (ASX:ORA) Get Here Before Its Pay Vote?",
+        "source": "Kalkine Media",
+        "date": "2026-10-15T00:52:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPM0VmbDVuTlQ3SU5oZHVkUE8wTU1CLTBYYnI1NFNNTFktdHJ0OVlycUZ1Y1VDYlI3NXJUNVNKZHVXa3doV2ZoLUFMckZwb2xEeWN0RmpFTEZzUGVrRWRRTnFsR01CeTRGTE9XTFR3SnlNNFlhdmJUemh3c3ZrYU45aWI5TnVsd2I3Y0lCVVNnVjg1VVdndVE?oc=5"
+      },
+      {
+        "title": "Copper price forecasts lifted for 2026 but tariff “collapse” still on the table",
+        "source": "Mining.com",
+        "date": "2026-10-14T16:31:40.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxPUXdLa1dPTUMwTjlJYWRvaWhwQkV4Z0tXVUV0MDRTR0YxTHp0SnBFMjIwWDZBZXBWS0N1azNLeGFOdVA2T0tER2V1N05ZTXN1bW1veWJhU2JUeEVGSEItZFh5d3BxYnNtMGxJbXhQeEtac2RBZTFMTjJCS211bXVZQlptdG9QVF9NN2JXck9zemt2Q29CS2FzaGRpQTZDY3d3WjZ3?oc=5"
+      },
+      {
+        "title": "Top 10 Apple Watches in India 2026 for Premium Users",
+        "source": "Analytics Insight",
+        "date": "2026-10-14T10:46:59.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxQVWVSLWt6bVF4MnBhbExudEl2Rk9mTVhKc2dUdWUzV0dRaV82RHBMUlphR085MTRKbV9VRF9CU0dnaTdkSTdHNlNpMFp1dlJJbUNmNk5POUdhQVdNNmZ1cWdVM3JXUmI4Wk8xTkt5a2RtVXNPdXRmQ01LZU10emM5V003NzRwYTNlcVlWRU1qRkhETkw2OGNNVEh0dlU5UDEtWHVsNnhn0gGmAUFVX3lxTFBVZVIta3ptUXgycGFsTG50SXZGT2ZNWEpzZ1R1ZTNXR1FpXzZEcExSWmFHTzkxNEptX1VEX0JTR2dpN2RJN0c2U2kwWnV2UkltQ2Y2Tk85R2FBV002ZnVxZ1UzcldSYjhaTzFOS3lrZG1Vc091dGZDTUtlTXR6YzlXTTc3NHBhM2VxWVZFTWpGSEROTDY4Y01USHR2VTlQMS1YdWw2eGc?oc=5"
+      },
+      {
+        "title": "Japan’s Aluminium Premiums Fall Sharply For Q4 Deliveries",
+        "source": "Finimize",
+        "date": "2026-10-14T09:34:22.000Z",
+        "url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxNLXVlUFIyakhmd21VZjZORmJGdE5sY1RieGc0bTJ4Rjh6dlpabDY1LW5qejNLazlPbFY4S2R2WU94Tm1zNjdqSVJDY0l5V3BEWGFOaDMybjdJZWtEQXlnQUNBX3pDSjczbW04T2RfUlNCY1pTRExyLWFobk9OT21jemNlMVItUWVZRGhjSjlB?oc=5"
+      },
+      {
+        "title": "Base metals head to LME Week 2026 with record-low TCs, war-hit supply chains",
+        "source": "Fastmarkets",
+        "date": "2026-10-14T09:21:30.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQdms4ZHpVSGFORE1Oa2F5V2dvNzlwLTNlM08zN3NVcHVrdUJ2TVFvNXhoQmVrXy1mMzBBdTFVT2Ztb0tzNE8yM1RRQzI0THg4bjhGamxqdnFvTEVNYUNKLTlucUZnYzFDUFd1X0hSTVNaaGJFaWs3UzY4OS1RMS03R1FCWGpPZWU5QXBWeEFjb0ZrVmtpb2VKZlhIX1NnWmgzN1FZWmdTM2ZmRWlOYnRiZWVNRQ?oc=5"
+      },
+      {
+        "title": "Dollar strength weighs on base metals valuations, SHFE aluminium consolidates at lows with moving average resistance",
+        "source": "AL Circle",
+        "date": "2026-10-14T08:59:46.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi5wFBVV95cUxNYkNDbUxWNUZHa0R4bW9pX2dFcDJTWlg1bFVad2NURFJtVGtRWFdEUmpoZkg4S1pyUDk1elNzVmtuVmpRcWkzdEVpRFA2TGwwdjdVSFF1TDV4WU5vY3pXbVBJUDZGUURsNklwZG4tbi02ODVNUFpfR0FYQlJOcjVSV19zb3lVVkpreWttQWt6MXBMY0ViRXhiTVpUbkRfeVhqWnViVy05MmtLWHgweUp6LXctSU5zWHU2V0RGdzF4cEZCWUVxZWZGWV9McXM3V1ZKcUNSUHp6YmJRdXRLeTVCWHJCVFVUN1k?oc=5"
+      },
+      {
+        "title": "Aluminum Prices Erase War Premium as LME Stocks Hit Century Low",
+        "source": "Crux Investor",
+        "date": "2026-10-14T08:48:16.000Z",
+        "url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxQLVJhNS1ZRUNwb2Nfc19fckJTdXFHY1ZWTjFPNENwWVFrdVRDNGhLSGZnSDhCSzZpNlM2X1NLWVhJcTZNcHFMSWs0V2QyelYtZmdmbTRFdHZELW9WSjVteC1SSmk2N2IwWElTR1NOaVZydWh2Q0dsWEhUaE1UZDBrTTN2OTV3OTg0bE9qM2hoUEo1VFVzaHUyazdQUDIxTXM?oc=5"
+      },
+      {
+        "title": "Japan's aluminium premium for Oct-Dec delivers set at USD 255/t, -35% Q/Q, according to sources",
+        "source": "Newsquawk",
+        "date": "2026-10-14T08:07:54.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxPQi04Vzl6QmNzcGVfSEpYb01hSFMzcGc5VTI0S19JcDlrME4wd1JEUlJPalBETGFCZTk2LWY1enBUS2ZfREtfLU5wMVAwTmZ3MWZjdUMxLXdhN3FZU0FrY0k4UW5aZkRkU2xQd2dvamd3Zm1vM25fVFJDd0hqbFl0ZXV4Rlh1TmtLV0RPdUNCeGFXTF9RYXo3MDcyZU1SSHl6aFdzbmUwbVZoUHBpdUc4d2ZsZ0dRV3RXZ3hMQmpFamtRS1U?oc=5"
+      }
+    ],
+    "\"South China Sea\" shipping": [
+      {
+        "title": "China’s Rare Earth Strategy and the Future of the South China Sea",
+        "source": "The Diplomat – Asia-Pacific Current Affairs Magazine",
+        "date": "2026-10-15T19:18:46.000Z",
+        "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxQRlR2TnI4SlNuSGtRTnU0WVBqRzZ3cTYxYTBJYlUzU1FaSmh4b2RqWHBfRTE3NEtwblgwZDBrbDF0aEExQmk4dktHQS1pZTN6UlBkaHpvOWlRSEtnQ0lMeVZvNktzNFk4d1RvUFhxb1RuZ1p3eWZlZ3VXbERteXdCSDU1MWFYaFBwRVNRbkZOU3pWN0pmeUk1aFZxcjFBZw?oc=5"
+      },
+      {
+        "title": "Malaysia bars ULCVs from a new protected zone on the South China Sea approach to the Singapore Strait",
+        "source": "Container Management",
+        "date": "2026-10-15T13:57:30.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxPUWZvaFJZcjZyRllUcmxPbmlHN2hZRDkwTlN6bnM0ZDNkX19yc3JDUDczdE1KOXByVG1EU2VBTkdJYlBWMEdBU0R0ODJVTlVwaVJFamMzYWtuWk51cE1Jamc1RkgwUmo4ak1obnBiUmphd2RRZzJxSXZpN0V1azdtaWg4UGxxTGFoRDVtdDdtYlRtaDZ1WnN3cXdNbDFpMm1CbFF6RTF3?oc=5"
+      },
+      {
+        "title": "How India-Philippines Cooperation Reinforces America’s Interests in the South China Sea",
+        "source": "The Heritage Foundation",
+        "date": "2026-10-14T19:17:56.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiuwFBVV95cUxQUGdEOWJKVUVvVUk1dmhER2NBeHBqZldJdG9XOG05RThpQnE0TUpqcTZIS0hYNzRHYWRYelJYc1dqdThycjdpV19IbjBsaExZakhPcWljeVlLaWx5dElqSEpPZDc1UkJ5aTZ6VW95OV9lOGFnTFM5Umc3Q2RsRHNvNkpubEwtTzF5aFRPaWVrVEtVSEw3QlI5MlBacFRhU3JqN2pfUFd3eHRTUUhaTTBTZmllczV3NlREZms4?oc=5"
+      },
+      {
+        "title": "The Mother of All Cutters",
+        "source": "Center for International Maritime Security",
+        "date": "2026-10-14T10:00:26.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiWEFVX3lxTFBwQThMT280c1VrbXhENkY4SVh0bUpaUUd5elpweGJsZzBwTHlDc3E1WGt4RFd4Rkp3d29KNmhqU3E5em1TOV9hX1FYTFBGMm5aLTBZdTJxUWI?oc=5"
+      },
+      {
+        "title": "Philippines Rejects China's Nine-Dash Line, Defense Chief Calls It Fiction",
+        "source": "Daily Tribune",
+        "date": "2026-10-14T09:26:28.000Z",
+        "url": "https://news.google.com/rss/articles/CBMihgFBVV95cUxPTDFKMWZIYXhQWDNLMDdrdmxxemhzWS1PRl9MX1BNeGoxSVZlZWZOSTA2UHNVMHJYSGpGaGlNb25SOHh2bHN6OC1rczZZTjc4eDljeGpHaFY3Z3d4SWZUcFU2TDY2MlVLd25PTEo0bE9nb1AtcHpmUURMYTg0RU9VS2tjeWhvUQ?oc=5"
+      },
+      {
+        "title": "OPINION | The US needs its own grey-zone tactics in the South China Sea",
+        "source": "Baird Maritime",
+        "date": "2026-10-14T07:53:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxNRVI3dUF3YzZmNlJNc3F2bFQybEd1dnpYMHFDLVBxSmV1aGh3X1c5NHB4elNvU241NlVEVmc0YU5VRG1HRVN6bW56cHlhWFViLXhTWVBMUjRoVFExZ21Gd0tUaXI3X1lSRDV5MmE2OTFYMTVZb1J1YWV3V0NROXpyYWw2aXZFZlNiMU1fSTBQcXRqMkJ3QTF0WVdySzVmQW9rRnBWdF8xbUItRnkw0gG6AUFVX3lxTFAySEc2Y0hWcjZXYUtDUUROWXZnT1dtMDVWNGt5X0l1WFN0VnRyak81NUdJVlpkSDhCNTlVSzFkaHh0WGhEZWtqQUhRNnVKdlJiMWo0cW5hcnVuaTNaSW9vSWNtQWp4bDZieGZqU2VfVjU1NlVJUUhqcjRZU3VOSE5zMm9kek5hQXBod2VlcU5vRlFZSGxZMmNRZG84OGh6VW1SMTRCa0N3eFRTUjA0dDdWOE8zM3ZiQlpvdw?oc=5"
+      },
+      {
+        "title": "Will South China Sea’s code of conduct remain elusive as deadline looms?",
+        "source": "South China Morning Post",
+        "date": "2026-10-14T07:35:11.000Z",
+        "url": "https://news.google.com/rss/articles/CBMivAFBVV95cUxQRXFnMVlXSE5FeElZY1NnMWFIQXRSRW9ybF9pcmxFTkU4Zy1laU13bDh1QmdyaDY3aGtyV0lQNjNWUnpJYXcwOEU0VDJNOW1tQ2tQZV9BMUp1WFByN0VWUWNJZjg5YkgzaEtqYWhNWk1wRGI5cXVucFhRMkVyMW40NEllQlZBdGpscUd3ODlzbFJ1aU8wb19yYnc5ZHZSLVMyR1U1b25XNW5oNmJxNkx4eWhKdnpGZzRTbmJrVtIBvAFBVV95cUxQb1Z6RnRaLVB3RUhtTmxlNEc0eldySUxBaFlhOVp6V25HcEZqV2V2ZTMyek1GbFNwMnBPZ29KNEpya2lWLVpqQ01sODVveEtyS0U3Z0d2NEQwOUFxTHZmc2tEUm9KVUJveHlBai1RUlRSdjl3elhhLXVNcXBQeWRFQXFHN0J6X2FreEpaVk9tblNaY0FZc1N5Q2g1TXJrTU1HWVlrcXY3a09ETmZqQkpXSXM2MGNUb1k5MXhfQQ?oc=5"
+      },
+      {
+        "title": "Philippines backs global pledge against maritime tolls",
+        "source": "Philstar.com",
+        "date": "2026-10-14T06:05:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxPN0RYb2hyUjUwdHJBcHY0ekJSWnZUN29FLV9tMFlUWlNHd1hITEt2djVTSnQ4dUszVmxMX1EwYTI5YVVrVG1UX2NmMjQ2cjM2Y25QeGt6NzduRDMyVktSZXczUm9DQVltTkZmUmdVVzNIdDZmZ0ZfUkNKSXYtNk1IcHduaTJBMk5RRVEzdXI0dWY3Z3h0Y2FwT1dOaXBnTzh4RWtzcVlidVZmT0Yx0gGzAUFVX3lxTE9LejhMb0lJZDlBaDZoeTNhV24zSkQ0LURoa1RGbTQtMUMzNXVNTXVILTBULWFKUzd1MUtIODZkdTdNQWc3c3ZYc3NJT3J1Ni1SVlJBZTEtOS1UanUtTVRpNmQzWjZZalNGZEFDRnZES1JNa1dmT1ZSeksxV2tZM2R6WUVlM29pdkpaSHlvbG5TYjByVm5RbU5maWF4cTBtTFNXRUJOc3c3QzF1VzdNcm90WmJB?oc=5"
+      }
+    ],
+    "Fujairah OR \"Gulf of Oman\" tanker": [
+      {
+        "title": "Iran Reports Tanker Fire as Two Ships Sink Near Hormuz",
+        "source": "SuaraGarut.ID",
+        "date": "2026-10-16T01:13:15.000Z",
+        "url": "https://news.google.com/rss/articles/CBMib0FVX3lxTFBrS2hYejNFZmpCVllNaVZHMVU0ei1zRzJLbGxoVTFIcDhrR2JBb2Z3Q2lXR01fVXZFSUU0ODR2OF9JbEowZnZVX3FybEpSX2tfNk9RVC14NEdPY29wUm9DVUpEd1FyQkpwR21neXRYZw?oc=5"
+      },
+      {
+        "title": "Another tanker catches fire near Hormuz after two cargo ships sunk in attacks",
+        "source": "AOL.co.uk",
+        "date": "2026-10-15T16:00:57.000Z",
+        "url": "https://news.google.com/rss/articles/CBMihAFBVV95cUxNY05UMVh6Qi1BT1hpNkJDa0hOSjhnQkRUY20tUy1VSkV3Y0M1UW1EZ3NRRlVTZ1RjeElXRk9BdWVuZXE0SXFRdi1tbVB6ZFcxSElrTVJuMVVxOVRCQkY3X1pkS3UtQXhBb25kdl9OWVgyY09Mbk1uU0p5T2MxOWtuR3F5TUM?oc=5"
+      },
+      {
+        "title": "Iran reports fire on oil tanker in Gulf of Oman — Anadolu Agency",
+        "source": "UA.NEWS",
+        "date": "2026-10-15T15:48:24.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxPUXo1SHZVUzhVYjZUY3RDeXRpcUdNWVpac1JJNy1XeDVyWEw1dUV3dWM3YzBPWFNVajVmSUlaX0ZaVG9LRGpkcjJWNlhoWjB6QTlGaW5JR1hQY3ZRajNHZkFGd1lZdGszUmNQUlRHV2E0cG5zcGtnUUF5SmFVRnFyMTdWYXdPVmNVY0dtc1hLU2dZWG83MHJMbWRnOThkODBCNmpkd21OT3M?oc=5"
+      },
+      {
+        "title": "Iran reports another oil tanker fire in restricted area east of Strait of Hormuz",
+        "source": "Anadolu Ajansı",
+        "date": "2026-10-15T15:40:46.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxORWFDcUNOWExCQTFIeXh0WWpRelJtcTViSC1MT0U0czVPcHY0QzlKTUtVN05EMzVJQ2UyN2JtX2t0bmkwUkdhcC1DTFNQTWpvTTVXb3QxMUU3blNzUzYwaTRBNEYyMzhOX0o2MmFMa1FHRkR0UHoxSmt1SXlkQmVfTUVIWGlrbkhOcXVtcHRnMFBPOUJ6ZjRiVnY3bzE4RG5CNWRDR1hXVkpFNFA4Y0RPYzVQOE8tZ2NLaTFVTDZwaVNiS0k?oc=5"
+      },
+      {
+        "title": "Oil tanker ‘on fire’ in Strait of Hormuz just hours after container ship sinks, claim Iran’s army",
+        "source": "Yahoo News New Zealand",
+        "date": "2026-10-15T14:05:59.000Z",
+        "url": "https://news.google.com/rss/articles/CBMihAFBVV95cUxONVZXT3FfcEQ2MUo0NDd4ZFZVMmUzRGJPWkN6c2hlajRvYmo5ZzdYby00eDc2X25oX2pZMmEyZG5YaTRnTVZMSTZRN2dqZ3NpVDQxRm9felhhM3RFc2NGcTdkTXI5Y01YdDFqdHNXRjZTaDFGMFhIX3l1NldUNlhVTnJWcEM?oc=5"
+      },
+      {
+        "title": "Iranian Ship Attacks Threaten Middle East Oil Exports as Tanker Traffic Slows",
+        "source": "Crude Oil Prices Today | OilPrice.com",
+        "date": "2026-10-15T14:00:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiyAFBVV95cUxQbVlrOXZUN2VCTWlFeDhhYlVBT0JIMmE2MTV0NHdWLW14RzdMM003VFFCdTZieTFEUHF6ZElBVXV1RzA5RjVTUnFpRWhIT0xUSjdqdTNObENqLTlZb2c5dWczWFpzTU5pdlNUTzlTdlpvamtjVkZkc2FnRi14VHFTUlBldUtoSHRkV0ZNWkNyMm1ZVVpvbVA2TXBKLTlBSjd0N05FTnRwN1F4cUlyQUdqS19vOXVSZy03NlVTdXF3T2VpMXQ1UUxCRtIByAFBVV95cUxQbVlrOXZUN2VCTWlFeDhhYlVBT0JIMmE2MTV0NHdWLW14RzdMM003VFFCdTZieTFEUHF6ZElBVXV1RzA5RjVTUnFpRWhIT0xUSjdqdTNObENqLTlZb2c5dWczWFpzTU5pdlNUTzlTdlpvamtjVkZkc2FnRi14VHFTUlBldUtoSHRkV0ZNWkNyMm1ZVVpvbVA2TXBKLTlBSjd0N05FTnRwN1F4cUlyQUdqS19vOXVSZy03NlVTdXF3T2VpMXQ1UUxCRg?oc=5"
+      },
+      {
+        "title": "Iran Says Oil Tanker Caught Fire in Gulf of Oman",
+        "source": "Kurdistan24",
+        "date": "2026-10-15T13:59:25.000Z",
+        "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxPQ3doVzkyT1A2LV9NTzgyMEpwSk1xeURrYVphM1NQcHFKMzhHRXU4ZHdBSVJKa0QwODhHS1VPNHVOVzJJR2g4WkpqdzFUV2lLMGRJUlhEN0JqaEpuOUc1cU1VRkJlbmNLZVB0VVprUmZXVGV1dDM2eUV1ZVF5TlJSUzJXcHJqN0ZnR0pQZzhaX19OZzFpWERN?oc=5"
+      },
+      {
+        "title": "Iran’s military says oil tanker on fire in Gulf of Oman",
+        "source": "Arab News",
+        "date": "2026-10-15T13:58:02.000Z",
+        "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxNZnFpMVJheEZzSDM5SVFNQUh6RnpkV01qTGtxZ1ptVnJNc2hOUFB3azF1WlEyWElDTERZRDlvNU5pZFdKMUxlM1BNWl9QNG85OHlWcmZaVGRGS2V5T0VkeDZxYl9MUFBnU0lMRGFDdE0wSHdlNHpzUGZGcWxEUFhkM3YtMm9FSFd6Vm9pYjZPQ3VPTUp2aHBqc2h0Sm84djQz?oc=5"
+      }
+    ],
+    "Brent crude price": [
+      {
+        "title": "Oil Prices Diverge as Supply Risks Mount",
+        "source": "Rigzone",
+        "date": "2026-10-15T21:22:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxObEVFTUtzN0x6ampfSE54T3NLTUI5ZU1vS3laWW5GZ1dIZURkYWJfbHRLU1F4X0QwN29HWVliRlVHNjh2eHFOVFNXYzNmUzZnTkdqM0phdFV3N3FYTEk1ZnNXUXRRSEp6Vy1UTFhMeWdkOGFzWVhSZmxNazB4U2hXMGNDWjZQaDhTbXlUSXZLUXlQY1F4QWZfUDk2WElTbW1tWHhHaA?oc=5"
+      },
+      {
+        "title": "Oil futures: Brent steadies as US weighs easing tanker sanctions",
+        "source": "Quantum Commodity Intelligence",
+        "date": "2026-10-15T19:39:31.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxQaG9yZjZpT1pwbHJmNWdCS2hENmJXeDljcjJLR1I4NHNYa3I5Nm05OEZvdTk2bmVfU3h6WGtkZ05DLXVWWTYwTHFVODNsYThSTW5BbHdkVVZVN3VWV0U2Q2QwYk84WEE4TkRmMzRPV3pnRU4xOG5UaGw0QThhMDNScXFKTFdiSGJ3OVQxOW5QWFVIZFFvZWNlYlk3OEZscXVoRTFPWjd1SXJiZw?oc=5"
+      },
+      {
+        "title": "Oil Prices End Mixed as Traders Weigh Demand Outlook, Hormuz Shipping Risks",
+        "source": "WSJ",
+        "date": "2026-10-15T19:37:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxNNW1MMHhCS1RGcmU1N242QUVfclBfWW56RTVPeWhhUFowX2owYlRJWlBFa1BEMFZaM2daaFVtbG1aVlBBOFJhbnVhR19jMEhmZ0FpYXFZcTllS25ETExYdUtWRTVIVkI3MVdGMDBDOTZDOVhJQm9CUkVDaDNvcWFQeFQxZ1NmdkpHZGZTdmFEUWNJS2R6QVNyZXNrWTNOazZOTUlvVWNwaVV5NENQbTNkTEJ2MVFyYmR6?oc=5"
+      },
+      {
+        "title": "Oil News: WTI Rallies on U.S. Draw as Brent Stalls on Shadow Fleet Talk",
+        "source": "FXEmpire",
+        "date": "2026-10-15T19:21:02.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi1AFBVV95cUxNaXZSMnhXSzNQZ3VpTTJ2dUtFOTg3V2hxeVY3cUtkQVpZVWNPY05VSXVXd1BDbjdKVnBUYThUUXVLcXlPdVREZTBhN3ZVUnd6RFBvOVZ4UExLSGVDTWtnY3BZQTVHanBxR1V2TzA0RGZadmRIcVd0NV9JcVpmclYxN1FhNTV5d1FPMkhtZ0x3cFJnWHJRZzE1cGhOTXRMSlJWX0JVVkZqaWJiU016THVVaVdhTXBUQS1BOE1MekVhWGlIUkNHb0t2UTZ4eUM2cUI3YTlBcg?oc=5"
+      },
+      {
+        "title": "Venezuela's Oil Recovery Gains Momentum as New Drilling Rigs Arrive",
+        "source": "Crude Oil Prices Today | OilPrice.com",
+        "date": "2026-10-15T17:00:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxQaGQ5REtwdFhWSWhZcWJsUDA4cU10aXoyTEpPN2xzV2ZqS0UtcC1XRV80WG5GNnVUZFRUMmRvcXJsbTNoYVhzWUdINkVfU1k5R1VLejV2SjItbkp4NVJLdnZ4VktPMUxkTUR3YjVOU2VZcWp5S1BmUmJ0czdVZllOS2oxTktxdGpBNE0ydGFrOElSOE5qWUJYYmI5eVlBd1Y3UGdRSGNibC0tVGNYa2fSAbMBQVVfeXFMTm9zN2JmT2VLb3E2S1Y4ZGczeU52aTJESFlFaTh6dUF3QUFxX3U4YU9xenZjVUphejNjWTFpTU9QWXhybHA2UEpCZjhhSzhPd0hmbVd3dUFFTVlMRzFMM205RnpVcUdoZkN6cTgtV09Ob25BOE1BMHEyWmxHTndVRGhPeVFhcDNncGNUNnNGX3Z0M3IzUjhweWx1Y2NUU2EyQ1lqM3RQS3Y3TU9VY01uTHZ6eUk?oc=5"
+      },
+      {
+        "title": "Brent steady as US weighs easing sanctions on global 'shadow fleet'",
+        "source": "Yahoo Finance",
+        "date": "2026-10-15T16:39:53.000Z",
+        "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxOMkpLaFMwM0tpZVl5NWh2RUdZeUxWeXJaeWhQcFVncW5LVHRGNGVyMW5ZbGxHZTRBZjl5Z1NmeXdZaFBaU3RjR1lFdnVfZzdzU0hHRU9JNzdLa3pHZHV5UTduYkVoNzRXMDA3MC1RaUh4SFhVSnpMck5PdHVobWN4dVA3S00tZVJadlZyTDBLQWxBZw?oc=5"
+      },
+      {
+        "title": "Current price of oil as of Oct. 15, 2026",
+        "source": "Fortune",
+        "date": "2026-10-15T15:31:21.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiYkFVX3lxTE0zYm55eXNiaDB1X2R6VHZPYmxySWV1TUVSUi1uNU1vNlA4Y0tTekhFYl9rNkNBcmpLaUFTUmtOMUREVm9nLUUyVTRuUTdCX05iV1VHaHJ3cFY0ZTl4QjJqcHhR?oc=5"
+      },
+      {
+        "title": "Oil futures: Crude eases as US weighs easing tanker sanctions",
+        "source": "Quantum Commodity Intelligence",
+        "date": "2026-10-15T14:29:31.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxOTW9Zd1NsRklTaUFWcHNQUWdMdXlZNTBUUUs1SjJnbTE0cDhTdXgtbHVwM2RKb29CcW42UDU5aXJZcWJXQ2lRclcwZGpxYkJicEluOW91amN5QzNldkNrWFRLcUVEUHYyVWJ0VVVaN2plYXoxandfYkVnYlpRWTJRczZsOHQtemN4dFBjSDdWbWZoSUNfbld0ZXhkd1dDdVJhbGF1aEZn?oc=5"
+      }
+    ],
+    "Antofagasta OR Lianyungang port": [
+      {
+        "title": "China’s foreign trade maintains sound momentum as new drivers power exports",
+        "source": "The Independent Uganda",
+        "date": "2026-10-15T10:34:12.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxPNWRxRVJRaXF5cWpKenFhcXNnbXpoM2F2azZsVUcxM3pHZzdfU1ZWNmZKYUFEZ3ByZ19DaV9lNUUtWEJpVnBxQ0V1T1N6RkNLNV8xTGttdTVuSFZXU20xc1NuTzE2RmhqbXhJN0EyVWNlYzcwa243UnZKQldnWi1tLVU2a1ZxSEtJSElOYzZlbE5Md3lmSkgxaTNmbVVob1JraXBkQmRyM2g?oc=5"
+      },
+      {
+        "title": "Drone view shows a cargo ship approaching a container terminal at Lianyungang port",
+        "source": "The Daily News | Texas' Oldest Newspaper",
+        "date": "2026-10-14T14:02:40.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiiAJBVV95cUxQZ1AyTVc5WU9yNVgtRTNLOGRFcUFrWmtmcldDWE1rUTM4MnQ2U0hkOW5zeHR3Xy1rbXJQZTRYQnBCUEJWQzduZDh3eTZjVVEzaHNMUzB3enRCZFoyeHVFVnNxMzY0YmJYVVo5dHQ3b29mVlNXemtBbFR3Y1dCT2Vvdi1jRUlvNGViaGhsZklGYVRxTVlMLXlPR3NZNWR1YS1mSFFtdW1meHZvc0pzRGtkZjA4Vm5MRnBpM09wZFlodmhMWUJWakFoOWJNN29kSXJPR3VjcDRNNXNfaHFRX0ZxRWdFbTB5a3psZzZyTTVlQkpXNDJSU3BNTkhYZGRXQ0xDTWZNM09rMGQ?oc=5"
+      },
+      {
+        "title": "China's foreign trade growth in first three quarters hits five-year high",
+        "source": "Global Times",
+        "date": "2026-10-14T13:37:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiYkFVX3lxTE84dkNnb2lNcjEweTUtMjdCWWRETHV5RDhFS095TkRtM2tPeE4tNzU0cW9LYlQxSU5MaFRjcGR1WTFhV09WYUVQRk1wMW9sdXhWbzg3SEVQUWpweUxwSHlUa213?oc=5"
+      },
+      {
+        "title": "China's September exports soar, putting $1.2t trade surplus in sight, Money News",
+        "source": "AsiaOne",
+        "date": "2026-10-14T10:28:31.000Z",
+        "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxQcFBHZTA4MmJuLVZFZTYwamFDVEthWVNvdmRBVWtCbEZXdTFjMDRrdWxveXhZTDRSejhxbU1hUlFldGd1NWVZN0prTkVuTmtmekxNSHFrRl9RdVBoRUxxVnRtdXpBRzVhNWgyeFFMbFBxY3ZwR2I4Q1lVZC0wdFRqNG1qbnQxaHRDWldWa3RZWEpnUzJRcVE?oc=5"
+      },
+      {
+        "title": "China Breaks 5 Trillion Yuan in Monthly Trade as US Trade Grows Just 4%",
+        "source": "The Eastern Herald",
+        "date": "2026-10-14T08:39:31.000Z",
+        "url": "https://news.google.com/rss/articles/CBMihwFBVV95cUxPYms3a09lSXpDdy1MSzZhcU1UYUxNaG9UcUlsc3FoaEIxXzFGdGlmVmtVbXJNT092NnVURS0zUVRQVDd6c21oZHFzYnBHVHVmMlhCTkZqbU1CRTBkRkxxT19YbnFDSTEzdkM2dGVKVjFuSnVBXzFQSnlieXpPTW81MEZuSTBDeVU?oc=5"
+      },
+      {
+        "title": "China's September exports soar, putting $1 trillion trade surplus in sight",
+        "source": "Reuters",
+        "date": "2026-10-14T05:21:08.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOVXg0RnM4TVlLaHEwQjBYdU16ZGhJaXpFeVVXYk9FLVg1RFp4cVlvWWNWa2xlRlhacndGbHpYeF9QMWs5Zy0ydnV6Ni1kV2dIUS1Ca0NEYVNpdHlQMk1EdFBOc2hxTVlJLXZXX2RKbVplTG5NY1B2NEl2UXRFaFROckZjUGdVZW1vcWpYUmdJR21JOTJrQkhIT3E5Y25CM1VCMDNwOWcxbVdsZw?oc=5"
+      },
+      {
+        "title": "Chinese NEV industry needs to adapt to the new normal",
+        "source": "China Daily",
+        "date": "2026-10-13T12:46:33.000Z",
+        "url": "https://news.google.com/rss/articles/CBMifkFVX3lxTE1sMVlnWDFRbjJHVGJwb1VFLTJVWV9mYkNlZVRqR044NXNSbU44NDhaTW9qaWh0ZGZNUmRfY01UOE5EWGczbHpLNXJPUTJ4b0JNUFNmZERGMHZ5ZHBuVXhNd3FKYi1TZGotSjU2ZC1PY0hsdFpjN1lTZi04M25XQQ?oc=5"
+      },
+      {
+        "title": "China's foreign trade grows by double digits, topping 5 trillion yuan in Sept",
+        "source": "chinadailyhk",
+        "date": "2026-10-13T07:00:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiWEFVX3lxTFBQTW9GaFltcDFOV1NfZm1uTEdzSXRJY2laZFo4aThNSnNDaVI5OU1Ta2VGcTFCa2gxYzA4T3FLdHY0MENQSzB1Zk94ZnZLRlVlSjFRX0VfY2s?oc=5"
+      }
+    ],
+    "copper concentrate treatment charges": [
+      {
+        "title": "Erdene Announces Preliminary Economic Assessment Results for Zuun Mod Molybdenum-Copper Project",
+        "source": "The Manila Times",
+        "date": "2026-10-14T21:49:46.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi_gFBVV95cUxPanNEMWdsS1pjNkhsYmJGRHlVbGpYQWd6MUkzSWNiQlpPRUVyNlpxZGxmY3FTRDdFRnlqUHdxVW1Ydk9INTUyZXlnaXFXai14YlJfTkFyWnBoZUFHOXRBbHVCLXRXd3luTVNRcjNlTmt3VkFRUGFSX0hpZ285OTI3eVk1UUI0WXU2VlZfeDhWQW9Xc2I3T3g5dHFxOThTaktJMHFDSlRXckh4bmZfeEttRjREVGdKYzZNa3JoWlJ4dlN5Njl4V0RoYUJPUW16Uk9nTE5IUzVzUy1qQ2xpUUxvTC1pRU9uM21mYW0zWjJnY3hDdHR5QVotU08yT3JHZ9IBgwJBVV95cUxQX0N3UkxzblpmVzNCa1FuSlBQU0V1OEI0NDBKQWViaXZ5TFBiZHRDbVJGQ0wwX1RNMXk0WGIwb05CNFNGSHpDYk0wc1BCS3dtcGI0UEJ3YVhqYmlzVmUyS0hYR2pPOEFFSXRSeFZyX3VyVGxDZVZGODlFbTVkdllKOHBaRXJUOVRPQW1Vd3BGRUJOa09qQ1hQYTEzbjJfOS0weWxDWVJUb0J5TGNKd0tfUmtJajNFQTJLWTRTT0hteFNDenhYSmh4MXBOV3dTdWhySFpsTlgzMmhOcEpKdUtfbmZMdUdsZ201QV9yTHlKWnMta2VPUVk0R3ZfRW4xZXNiSzlN?oc=5"
+      },
+      {
+        "title": "Aurubis raises 2027 European copper premium to record $347 a ton, sources say",
+        "source": "Kitco",
+        "date": "2026-10-14T20:11:04.000Z",
+        "url": "https://news.google.com/rss/articles/CBMivgFBVV95cUxNcG1IWmdyc2c5S0JtWl9BLVFnWTNJWUNKZFJsUWhHX2Zjd1FQQU9DeDVNWnFFRFVKX29Kd3dobDNTNUxsM2FsNjVSMFNPX0l3NGJpRmhrYmZiRU92SEhpUVAxTmVzeFhlVWIwZFhmb1pScHV0VDRrR0ppZUk4Qi1DbFp5LTJpNGdJX2JzUkFwUTVFd3hXVjdoeG44SEhFT3RDMkE3LUdIQlVqNDBCUUUxemR0WHRfVkUtTWdZT3Fn?oc=5"
+      },
+      {
+        "title": "Base metals head to LME Week 2026 with record-low TCs, war-hit supply chains",
+        "source": "Fastmarkets",
+        "date": "2026-10-14T09:21:30.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQdms4ZHpVSGFORE1Oa2F5V2dvNzlwLTNlM08zN3NVcHVrdUJ2TVFvNXhoQmVrXy1mMzBBdTFVT2Ztb0tzNE8yM1RRQzI0THg4bjhGamxqdnFvTEVNYUNKLTlucUZnYzFDUFd1X0hSTVNaaGJFaWs3UzY4OS1RMS03R1FCWGpPZWU5QXBWeEFjb0ZrVmtpb2VKZlhIX1NnWmgzN1FZWmdTM2ZmRWlOYnRiZWVNRQ?oc=5"
+      },
+      {
+        "title": "MMG (1208 HK) reports Q3 Copper Production 111.8k, flat Y/Y",
+        "source": "Newsquawk",
+        "date": "2026-10-14T09:13:10.000Z",
+        "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxNUlNYUFAwRmF0aFk0YXFORHdsYk5lM05naWRoUVNwWTNQb21OXzdHZHIzU0lmNTloZnJNLWs5a19IazhhRUZmM1NnU3ZtVjRqSzl1OUNPTUUzWlFnSDBrOWN4TElSRmNwYWJMMWdReXhRSXQ3VHdycnJndlh4REZYeEFKU0IxdTdCcnpXN0V4aHJHaFpyUFE?oc=5"
+      },
+      {
+        "title": "BHP (BHP AT) Escondida supervisory union is to strike on Wednesday after mediation collapses",
+        "source": "Newsquawk",
+        "date": "2026-10-14T03:35:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMixAFBVV95cUxPNUdWUXBaLVFLUTdPV0hqTU10c3drWlBVanc2MFhEQklXaEp5OXc3dWhySDctWWpTUzgtSWx0T0xpOXU0R2pUNkJWelo2M2J3SjFTWEdjT2N3N2V6ZDFQcFpuN0l1d19nU1dhVVBWN0ZLYVByVHQxN2JYX01sNmtpNjZKQW9tcW9JU2s3YkpFdnhxdjZiUnRnLVNaMHBCTGJJbVFkY3dHOVJEbnJSRFdiWXJ3cnhTeFpWckJsQ1diWkNGMEsx?oc=5"
+      },
+      {
+        "title": "Amerigo Reports Q3-2026 Production of 17.0 Million Pounds and Cash Cost1 of $1.55/lb",
+        "source": "TradingView",
+        "date": "2026-10-13T11:30:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi3wFBVV95cUxQMGpLeXVTblBUVTBES0c0U1kxeGdtdHlNZGVqcjlJOVhDTXBJQ0NfbE9MbGIxWDhzOUhrX1o4R2dVM2lGSDBrMWs3SmxUaXVpeGNlalB6XzJxZWk2S3VpVWJSRjhhTDJZNnFhRUJBanN0a3NyN2x1bXlSV2RtblZIRFpJNXkxTUtCQlpNVnBMdF92Uzk3ZGgyUEtFOHduNlhYek00ZmZzNnphX0otR2NBT0dldVd2NnNpMGZ0UHp5TkxTc3M5Tlh4b29nRXBtVHZMSUpzRjk0N2tWSkx5cGFr?oc=5"
+      },
+      {
+        "title": "Zambia’s 10% Copper Concentrate Export Duty Returns as 271,742-Tonne Waiver Expires",
+        "source": "Wansom AI",
+        "date": "2026-10-12T07:42:52.000Z",
+        "url": "https://news.google.com/rss/articles/CBMixwFBVV95cUxOQWUyZGk5cEF5U0NUTWZPNHM2ZGVPY0FnM2c5YkNhSGRoRkpwcmlmTzhOQTZGa1pGZkRDWVhUXzdyT193elJveDhrWG1KN2U3VHVNUjNrUEZZenZoYzFaaXcyLXFmUVNoNDB3OEdaY0xhT2p3cE5idVlZbHNiVllxTmlWVlpUcGZjTVhFRjl3MzBWaVZBLS1NdnE3Y2tLdXV6M2JDQ3lWV2FtUHBEQXVMakd2N29DZDBGNXVIeWlUWmtOSVB3N25F?oc=5"
+      }
+    ],
+    "\"Philippine Sea\" OR \"Yellow Sea\" typhoon shipping": [],
+    "iron ore price": [
+      {
+        "title": "Iron Ore Prices Find Their Footing After A Two-Year Low",
+        "source": "Finimize",
+        "date": "2026-10-16T02:02:34.000Z",
+        "url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxQdWIxNGt5N3U2TFZkSXVuVEtGSmUyS2JJUU1RQlI4NUNBS0p0Ti1Pa1JYZHJVbjNRSWtqVUtQZmxTRFdXWmExdU51OXBsTGhpVG1FNkRjcXJ5YjFWZk91QnpVYTdHX1BQemd1TDNlV0U5VWlpTWw2d0NvcVNxVG5MOGdXSTY2d1hacDlJcw?oc=5"
+      },
+      {
+        "title": "Iron ore slips to two-year low on concerns over weak demand, hiking supply",
+        "source": "Business Recorder",
+        "date": "2026-10-16T00:31:35.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNM0ZsTTJfQzRnOUQ4WmFKeEhLMmpraFFuSW96MVQxSmJHWFJwUmtvdmpHMVVIRDkzZkFPWk1uVzJjaVlZbEd0Znl1dkluN3pvM2p3b2l5anJVc1hQMjh2MEJGNmJfQTdLbWxKVmlJdm1WUk5XTUVUWVdiNmoyTFYzYWYwcURKYUsxWHUzYThSWjhWM0pxc1YxQ01CaWFsX1E5c3FMV2xaWWtNM2UwUXJ3TWhsQdIBVkFVX3lxTE9VbjFLRTRDaHI0YWp4Q2xrM3dxQ3FPeGRDZWhJYUdYSUQwU202aTVQSVE3bFJHLWVvY2FKem5laHA5TTBBclNmakJFY0NPZ0NLLWlubUVB?oc=5"
+      },
+      {
+        "title": "Iron Ore Prices Hit Two-Year Low Amid China Demand Concerns; BHP (BHP) Dividend Sustainability in Focus",
+        "source": "GuruFocus",
+        "date": "2026-10-16T00:06:06.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi1AFBVV95cUxQbkp0WW12enp3Mmp2bGJfeThzWG5wUkc3cGdZN1A4R2FOT213VjhmVlpGQzVrQWgxWlFYUXItRTB2eHlwbklRLWZRYzN1UnhqMEtXenlBSDczNmlaYXppRnUxa1NEOFA4bWRqeDNvREltbnNPQkF0NFRoUjE3WFpkWGV3aDJVQkh4OElNU2tnN011cHgtMmxTTzQ1MjJNQVVSMGpiLXBOQ0I4a2QyZVdUczdhX3IwcGEwSG5jYk1WbmoxMDZtNllCUGhOeWI5X29IZ2trbQ?oc=5"
+      },
+      {
+        "title": "India: Low-grade iron ore fines prices in Karnataka edge down w-o-w amid subdued buying interest",
+        "source": "BigMint",
+        "date": "2026-10-15T21:16:59.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi2AFBVV95cUxNeDFRbWVYOGxOYmJzOUItZHJTR1pCeDVSS2pJUkhwUERIeGVwbUJpWGthMkk0VW1vR1MtdFJGcjlxN0hNb0c0OVN5a2JTUWtDb2s3bl9tZlRLUkRjUUh2ZTNNWEhYY0dVekdJTGVIMmFHbDhjMW1KaFdjSGZRQ01jSWFOM1I3d3BULVE5SGQtTFc1YWx2UWpHSWh4bVlPVGhDaGFhVXI2VzNZcU9OcmM4b1hWS0NPaVlfMjlITERXbU9Dc3p5blFxQ204WlFPZ0ZNNS05Yk9mT0Q?oc=5"
+      },
+      {
+        "title": "Champion Iron Shares Hit Lowest Level In Years: The Latest",
+        "source": "TheBull.com.au",
+        "date": "2026-10-15T19:24:54.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiwwFBVV95cUxNLVNDZlVQdUVDWUVZNUlTZjduRjlXUVAwSmpwcVQzTmJWcUpRVW1yYjZsZGRseU9Hd0R6SGZnc2hTSklvWktHXzlxM1V4OG91N0NQbXdNQUh1ZEU4U2VJZ2lXQi1UdUhoajUzX08xR25jRmVYTklkZEdoMWlfeEFJQzU5VUwzemNvMFZPLXIxWG5NZ0NXYUZ2VGx1MW9WbEJaMVNVTmNnQkdYMnRQTDZsWF9nMDlrdHZaMDlkZTdTZVRXWmM?oc=5"
+      },
+      {
+        "title": "Fortescue Shares Hit New Low: What Is Driving the Gap With BHP and RIO?",
+        "source": "TheBull.com.au",
+        "date": "2026-10-15T19:24:54.000Z",
+        "url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxQNjY4MnItYVdjeU5xcFQySHBhWGJjV3FPTjk1VkdCcTdlSzE2V1dpTXdwS3BZQkZNRkgzb2VGVmxyN1labVlhMmJpM3MxbVRhUU5XbU0tbF9xY0FqUHVUVERzbDBPYjVXVFFucUFIblFXc040SU1uOC1EV2diS2VaSWNxQVFLejQzUUc4QXJORWkxQ0FmcExrc3NrTWtaVUk?oc=5"
+      },
+      {
+        "title": "Taiwan scrap prices remain stable amid slow buying",
+        "source": "Kallanish Commodities",
+        "date": "2026-10-15T15:18:48.000Z",
+        "url": "https://news.google.com/rss/articles/CBMixgFBVV95cUxNa01jR1JvR3JQcnVIcEpHSnJVT05XXzRIYlJ1THBHN2JJeTdDdWNGbVdBMWkwRXV2LWFuMExNNW96emlrSE5GX2pGYXdhMklBLWtITTlLZk1DbWJXcnVMeDRVMkJzam14c2RfOThDLVRwb0F5MG5XcmJSTmY4aW1XOFJfZ3dTOHFNNGt4S25MYVM3VVB6bEdxUEtxMDBhdHF5Y25zWHhhZlFiSkJpd0U3QW1ZbGVqRnJud1dJYXh0OHBKaElTR3c?oc=5"
+      },
+      {
+        "title": "Iron ore price slips to two-year low on concerns over weak demand, rising supply",
+        "source": "Mining.com",
+        "date": "2026-10-15T15:13:24.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxNS0tYcDNMYWlhWldxVTAxYnNtclVveUxSWjd0emF3SVFqNEZRMF9PWmJiX0hhSkp1S0NtT3RRbUR6SUx3YjlaTENGZ0Z2ZTkzWk9iMlpOYkozVExKbjJJSWVfSjBCajNyN3ZMWGw0a2NORzJRbTZhUlNZOWIyYnI5UVZNOEsxRXFYcDBvTHp6MHFGNUNhQmxfTnlvdlBWd09aVkZZ?oc=5"
+      }
+    ],
+    "\"Tanjung Priok\" OR \"Jakarta port\"": [
+      {
+        "title": "9 Suspects of KM Maulana 23 Enter the Category of Human Trafficking Mafia",
+        "source": "VOI.ID",
+        "date": "2026-10-15T14:42:32.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiQ0FVX3lxTE9mTmZJY2xhdEtuOFhZa0NpX1I5Q1I0STNIVHRZeHc2TWFPYUVuY3BFUnNyc3VYSHp5MWZMYjdLVFREVTDSAUJBVV95cUxNVEQ3dWJtZlJRMzkzS2R2cENpZUJyWnAydWpSV2xWV0NQSTVYRzYxa2EzRnBUbi10UGJTaHdlNkRqeXc?oc=5"
+      },
+      {
+        "title": "9 ABK TPPO perpetrators of the KM Maulana 23 ship in Muara Baru have 3 clusters with different roles",
+        "source": "VOI.ID",
+        "date": "2026-10-15T07:01:23.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiQkFVX3lxTE5PNzdpanZXeUpTeVdhUGpxTVNaRTk4S3o3MEhtT3IxeHZfQzlVT1E0SnZtNFQxd0poUm5WRHhPaVdZZ9IBQkFVX3lxTE5PNzdpanZXeUpTeVdhUGpxTVNaRTk4S3o3MEhtT3IxeHZfQzlVT1E0SnZtNFQxd0poUm5WRHhPaVdZZw?oc=5"
+      },
+      {
+        "title": "TPPO Syndicate Recruiting ABK Arrested by Tanjung Priok Port Police, 9 Suspects",
+        "source": "VOI.ID",
+        "date": "2026-10-15T06:16:21.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiQkFVX3lxTFBxYTdjMmRvY3o2U3BaOFQtQUtOYURzTmJJbDdQV2hDNHNPNUxaSHlSaWZ0Mi1MemNsX2FTR2t6SGNRUdIBQkFVX3lxTFBxYTdjMmRvY3o2U3BaOFQtQUtOYURzTmJJbDdQV2hDNHNPNUxaSHlSaWZ0Mi1MemNsX2FTR2t6SGNRUQ?oc=5"
+      },
+      {
+        "title": "Russian Warship Visit to Jakarta Shows Naval Diplomacy as Bridge-Building",
+        "source": "The Southeast Asia Desk",
+        "date": "2026-10-13T14:01:49.000Z",
+        "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxObVIzR2R0ZWJFcjJRZkZHT3VWSEV5Umd1Ynk2TVRHTktvaG12MThydWMzeHhULVVPODVHQjMtQkxqdVRYR3duTUdRWVFYSzJxWmVEYlJTMzFtdjVKYVVRb0tYWFpkUWlVdmtlNHExT2Nqby1Nc1dLVmlKeTdpU1IxMnRkSGJTZ3YzNlh1QWlpZw?oc=5"
+      },
+      {
+        "title": "Port of Sekupang daily activity",
+        "source": "El Estrecho Digital",
+        "date": "2026-10-13T07:00:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMidEFVX3lxTE9kSjkxaFo1aXVKYzZUd2NmM2pzQ2ZEUTNWTndUaDBYbTFBLWFwTGU4dnlTQi1XU1FDSnhHc19oejhvNFN3aVFkMUs4bU9TalF3dVVtR29JdTFXUXFaUHg0b2FZS3F3ZDNEek1IVTFRUmxxZ1Vy?oc=5"
+      }
+    ],
+    "diesel gasoil price Asia": [
+      {
+        "title": "Why is the global diesel shortage expected to last into 2027?",
+        "source": "Financial Express",
+        "date": "2026-10-15T23:30:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxQWTdhb0tfSnRGcDVXXzRtVkNsREtQU1I0VGJHaDV0Z1c2ckJkM25sTjJKSW9sbTR1RVBvMEUxZVplYzVuQUdCWmJFRlY2UkJmUE9zY0dlcEdMNU5pMWE3OHFwVWFmV25LWHgtdWszSHlqTjU1RExaaVdKaHJlNC1ZeDl6ZHZOY3NXM051R1gyOTBaQzR6WUdfU2NVamZrTmlvWkNDNEV6MjdPMHJNLXg5STRBUDJEaGc?oc=5"
+      },
+      {
+        "title": "China Imports the Most Energy, But is Best Placed on Iran: Russell",
+        "source": "EnergyNow.com",
+        "date": "2026-10-15T23:09:02.000Z",
+        "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxPS3VnUEVxZTVaX3ZOS1ZlcG5lbjQ4cjRhMWVjSDF1cmFabnNQS0lxWms4OVBhZVlpai05YUM3Wkk3RTVqc2pFbXh6RTlGTTlMd1BZMUFKVkN4UF9ZUzhjR3liY1RINS1VYlJkU3Q2V3kxTnFyTmI3dUxKSEZaNWpxVEltWnBtSXRwbnducm9vM1MzSnN1QlZZWU91Yw?oc=5"
+      },
+      {
+        "title": "Oil futures: Brent steadies as US weighs easing tanker sanctions",
+        "source": "Quantum Commodity Intelligence",
+        "date": "2026-10-15T19:39:31.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxQaG9yZjZpT1pwbHJmNWdCS2hENmJXeDljcjJLR1I4NHNYa3I5Nm05OEZvdTk2bmVfU3h6WGtkZ05DLXVWWTYwTHFVODNsYThSTW5BbHdkVVZVN3VWV0U2Q2QwYk84WEE4TkRmMzRPV3pnRU4xOG5UaGw0QThhMDNScXFKTFdiSGJ3OVQxOW5QWFVIZFFvZWNlYlk3OEZscXVoRTFPWjd1SXJiZw?oc=5"
+      },
+      {
+        "title": "Asia Has Plenty of Crude Oil, But Refined Fuels Remain Tight: Russell",
+        "source": "EnergyNow",
+        "date": "2026-10-15T17:58:24.000Z",
+        "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxOM3JURVZFV0c3LTE5TkVPMy1BQVZzRktQNERJUWxwRE9GenNxUXRIOEp5YTNuX0lKb3dtTWRKTFlOS3AxTnNhM2xuQV9NWWNrUThobi1lUXVBQnV0al8yYUdqd3FKNVlZUUpNUEhxeTBMaDlhdEFqci1tQzR6QjhVZTFocFdmUnM1dnFET25hcnF2TGkycXZpVEtNeWEtUQ?oc=5"
+      },
+      {
+        "title": "COMMENTARY: Crude Oil and LNG Supply are at Risk of the Worst-Possible Scenario: Russell",
+        "source": "EnergyNow.com",
+        "date": "2026-10-15T15:42:49.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxQSTZMTDJBdmk0LWZfaGdUV0NMUHl5YXEwb2xPaGMtNUthTmtfVnEtYW1zMFA2V1ZjUjR5UWk1VjVMREZIV25meHlXS2dEWkxFS1M2MzRZOHRfZVk1VUJyV0dLcjBLNExPTmc5Q0QtcjBnSlNySGFLUzRCQktFR1FSUC1FVTVXY2NnQ3FMQ0FNQm14ZlZCYTRsR2x6dUJFcGxmQW13TU5NUU1DUQ?oc=5"
+      },
+      {
+        "title": "China’s LNG Imports Plunge, Helping Asia Adjust to Iran War Losses: Russell",
+        "source": "EnergyNow.com",
+        "date": "2026-10-15T15:42:18.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxNSzNfb01hMFZSazEzZ0pubFo2cHNGdEI4bEh6eElIRGkzUzE5aGpMS3l4aUhlaGhnNU5lZjlxekY3Zkd4WmJYX21rOGFRcUd2OGp2ZXI2bDNmYTRSRUZkeXA3ZFV3Q1ZjWHZsNV9xbzN2TGxNajREQV85elZweUYybHNXcGZSMGYxVE11SkVpbUltY2FCanN0eWVFa3otNmJKaDBURUl3?oc=5"
+      },
+      {
+        "title": "THINNING SUPPLIES: Oil, Fuel Supply Buffers are Thinning as Middle East Conflict Continues, Chevron CEO Says",
+        "source": "EnergyNow.com",
+        "date": "2026-10-15T14:45:25.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxNVWNQLVFnWk9XUV9ieW1pdEUyRmRqbF9oemFOUE1XSy0yS3RZMVB3SU9xUUJ3SlhRTll5RlhKT1FMczRKLWt6XzFMd2RUM3B3c3JDa2l1bjREeGJfNl9EVU5BV1BnMXVBQUVFN04tUE90Rnd2OWxUV3lUeDZxdDhjczZLRmNZNXlQeGRqLUd0UXJsLXNCNldySU1Xcmh5QmxkcS03amV5a2hyQ2ZEUnNKSVFNTHo2SjlTb1lJN2JSN1M4c3lwRWYteTZIUnMzS3Z2NWc?oc=5"
+      },
+      {
+        "title": "Asia gasoline cracks hit 5-wk low as Nov supply fears ease",
+        "source": "Quantum Commodity Intelligence",
+        "date": "2026-10-15T13:02:37.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxNRGJESjZmcWZvNzhNRTUyaVRSRVhsN3lEZHdxdWdCZ2Y2Zk5GMVBJRVJSSG1xMFdKQnFYRzZQbDdJalQyOE9rWVJPTjNzenROcFNLTG9keGEwVWZwd3cyekhWdFhHSUpzUVR0TzBiUk9JWGcwV0V2RU9XWlNqNjVuVDI5anZpblg3d0hwMUpiWGs5blkwa3RBcWEwZFJoVGtueVFF?oc=5"
+      }
+    ],
+    "\"South China Sea\" typhoon OR shipping": [
+      {
+        "title": "Speech | CIS Concilium | 16 October 2026",
+        "source": "Senator James Paterson",
+        "date": "2026-10-15T22:54:21.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxOQ1pmRWVTeDNUckV0cmpSd3c4S1pkMWVkQllJam1rRlBHcHFTM0xVZFJJNERoTFc0bWNGWW9GRFEzUDNKLWR2bktRVmZFQXZfQkVIOXZqOVJMaWZ2d3JtZ19NSlhRVTFCbDZZcl9hR0R0dzlTaldfTUstLTlhR1ZoOXVn?oc=5"
+      },
+      {
+        "title": "China’s Rare Earth Strategy and the Future of the South China Sea",
+        "source": "The Diplomat – Asia-Pacific Current Affairs Magazine",
+        "date": "2026-10-15T19:18:46.000Z",
+        "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxQRlR2TnI4SlNuSGtRTnU0WVBqRzZ3cTYxYTBJYlUzU1FaSmh4b2RqWHBfRTE3NEtwblgwZDBrbDF0aEExQmk4dktHQS1pZTN6UlBkaHpvOWlRSEtnQ0lMeVZvNktzNFk4d1RvUFhxb1RuZ1p3eWZlZ3VXbERteXdCSDU1MWFYaFBwRVNRbkZOU3pWN0pmeUk1aFZxcjFBZw?oc=5"
+      },
+      {
+        "title": "Malaysia bars ULCVs from a new protected zone on the South China Sea approach to the Singapore Strait",
+        "source": "Container Management",
+        "date": "2026-10-15T13:57:30.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxPUWZvaFJZcjZyRllUcmxPbmlHN2hZRDkwTlN6bnM0ZDNkX19yc3JDUDczdE1KOXByVG1EU2VBTkdJYlBWMEdBU0R0ODJVTlVwaVJFamMzYWtuWk51cE1Jamc1RkgwUmo4ak1obnBiUmphd2RRZzJxSXZpN0V1azdtaWg4UGxxTGFoRDVtdDdtYlRtaDZ1WnN3cXdNbDFpMm1CbFF6RTF3?oc=5"
+      },
+      {
+        "title": "Aboard an icebreaker, a writer got a closer look at the Arctic's 'Sea Change'",
+        "source": "NPR",
+        "date": "2026-10-14T19:42:03.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxPSlZqWWhYZ2Q3OFJjYXlpQWVyczg2cHZYNktZNkxGRl9OY2lIaks5Yk5DSW1PWF9sc0p2Q2RyTjFsMHJQcElGS2xjUEZtR3RWbHlxS005ZTM3Um93MGZscVN5TmhBbko0ZVJHajI1WnBBdXU4SUtJcTJQT0hEeWJtRzdB?oc=5"
+      },
+      {
+        "title": "Will South China Sea’s code of conduct remain elusive as deadline looms?",
+        "source": "South China Morning Post",
+        "date": "2026-10-14T07:35:11.000Z",
+        "url": "https://news.google.com/rss/articles/CBMivAFBVV95cUxQb1Z6RnRaLVB3RUhtTmxlNEc0eldySUxBaFlhOVp6V25HcEZqV2V2ZTMyek1GbFNwMnBPZ29KNEpya2lWLVpqQ01sODVveEtyS0U3Z0d2NEQwOUFxTHZmc2tEUm9KVUJveHlBai1RUlRSdjl3elhhLXVNcXBQeWRFQXFHN0J6X2FreEpaVk9tblNaY0FZc1N5Q2g1TXJrTU1HWVlrcXY3a09ETmZqQkpXSXM2MGNUb1k5MXhfQdIBvAFBVV95cUxQb1Z6RnRaLVB3RUhtTmxlNEc0eldySUxBaFlhOVp6V25HcEZqV2V2ZTMyek1GbFNwMnBPZ29KNEpya2lWLVpqQ01sODVveEtyS0U3Z0d2NEQwOUFxTHZmc2tEUm9KVUJveHlBai1RUlRSdjl3elhhLXVNcXBQeWRFQXFHN0J6X2FreEpaVk9tblNaY0FZc1N5Q2g1TXJrTU1HWVlrcXY3a09ETmZqQkpXSXM2MGNUb1k5MXhfQQ?oc=5"
+      },
+      {
+        "title": "Philippines backs global pledge against maritime tolls",
+        "source": "Philstar.com",
+        "date": "2026-10-14T06:05:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxPN0RYb2hyUjUwdHJBcHY0ekJSWnZUN29FLV9tMFlUWlNHd1hITEt2djVTSnQ4dUszVmxMX1EwYTI5YVVrVG1UX2NmMjQ2cjM2Y25QeGt6NzduRDMyVktSZXczUm9DQVltTkZmUmdVVzNIdDZmZ0ZfUkNKSXYtNk1IcHduaTJBMk5RRVEzdXI0dWY3Z3h0Y2FwT1dOaXBnTzh4RWtzcVlidVZmT0Yx0gGzAUFVX3lxTE9LejhMb0lJZDlBaDZoeTNhV24zSkQ0LURoa1RGbTQtMUMzNXVNTXVILTBULWFKUzd1MUtIODZkdTdNQWc3c3ZYc3NJT3J1Ni1SVlJBZTEtOS1UanUtTVRpNmQzWjZZalNGZEFDRnZES1JNa1dmT1ZSeksxV2tZM2R6WUVlM29pdkpaSHlvbG5TYjByVm5RbU5maWF4cTBtTFNXRUJOc3c3QzF1VzdNcm90WmJB?oc=5"
+      },
+      {
+        "title": "China’s New Laos Air Base Could Complicate US Military Operations in Andaman Sea, Malacca Strait: Report",
+        "source": "The Wave Andaman",
+        "date": "2026-10-14T04:22:17.000Z",
+        "url": "https://news.google.com/rss/articles/CBMif0FVX3lxTE5PWVJZX0Y5NjJfOFNZX01wRmNkRFh4bm5fNlZza2djd1VNZ2tpYXU5T0RFR3ByV21KLXZuR0tVNHowanRfSk55UWtTT2I5a0lZOEVJUkc3NlJUa01GZzRxNE8wR0d2N28zZkUyWGd0M3lneXdtNjAzMGZxYmREd1k?oc=5"
+      },
+      {
+        "title": "South Korea Renews Commitment to Arctic Service as Boxship Ends NSR Trip",
+        "source": "The Maritime Executive",
+        "date": "2026-10-14T00:34:19.000Z",
+        "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxOM0NnMGppcmdjNFdjUUEtSHloSmRkNU5iUlhiU2k1N25Pa3BydlpNS05YTEZoNF9Jc0dWVmFSakx5UXU5Zlc5X01LcW9XUkIteU1fMWk1MlNIVFJ0aG5yWVg3MzBKNjFHWlpkRUk1QXgwOVYyandfU0p0bFFmcDBpRC12N2FZSlVkNTFDVHNhZThuTWVYdzlZQXNqcFNySy1Qa2xrdTJn?oc=5"
+      }
+    ],
+    "natural rubber price": [
+      {
+        "title": "Japanese rubber futures slip",
+        "source": "Business Recorder",
+        "date": "2026-10-16T00:31:35.000Z",
+        "url": "https://news.google.com/rss/articles/CBMid0FVX3lxTE1Od0E4Y2x2TDdJYXF4UkFBZzFsYUZOVkhpODYtVEVRTnlnWHhEdENRTTZTY2hwdnB1QmlwcllSY01qcmVHeG1WNWx6RGZJWXlqZTlBMWg3RWk1dm44MnRrbTdqQ08xYm54ZUFyWEs1VWxPajl6cTZF0gFWQVVfeXFMUDBDQ19vT0ZhdnJuelBXZF9DaDVkVXVBNXdtcDdQTi1NYkptM2NkNnVULWhvNENGOWJpSHlQemxEYzZJWlRpQ0tlVmktdVg3YzRVT0hKR0E?oc=5"
+      },
+      {
+        "title": "Rubber Market Ends Mixed Amid Conflicting Price Factors",
+        "source": "Bernama",
+        "date": "2026-10-15T23:51:25.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1lVEIzMjUxQmRTNV9lYkZlN0gxd2F6WTdRX0FXb0ZuaDFHb1NCQUdBQ0lZSG5CZHlFSTlObXNhdHlsZExWNGc4MGVLZ0ZKMng1VlVRaFR2QnNEaW5MX0hMU1RUdw?oc=5"
+      },
+      {
+        "title": "Meet Rosie the Roo, the mould-safe baby teether from Jeanie Baby",
+        "source": "KIDDO Mag",
+        "date": "2026-10-15T22:14:40.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxPaDFTWTItNXlWdjJ6cjlDTTZPSVltRUJ6WnkzVno2M3hONXJScThQZDRaN3h5NlVNMV9WX0dDenZpNmhiS1FCa3hSd2xXNjZMbkllUUEwVDRNbk5kbTg2M1FFWnEzWFJGVmIyQ1kxLVdZY1RvWDl6b0hYNDY1T3FYQ1lR?oc=5"
+      },
+      {
+        "title": "CEAT Q2 FY27 Results: Profit Down 40%, Revenue Up 26%",
+        "source": "Kalkine India",
+        "date": "2026-10-15T13:30:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQWDBFZ3BXSGcydVBDQTY5dnJ6V2tnSEJKN19zZVFjeHI3TmdvY21fNktQMDBFVGJsSmF4OWlfNmc3Wm81X1BlZG94QlBDVXMzcTRoa2lINjhJRy1IeDVIcHhCZTlCcEEyaDg1SThHOGhJOUxkRmo0eU4xSjNIYk5GM0FlZU1JWEhybDdzZ2ZaLXFxcGVZQm0xMmNWTi1nVDk2cFE2SktBb01JZU50a1lFTXprUQ?oc=5"
+      },
+      {
+        "title": "Tyre makers ready for BS-VII abrasion norms, seek clarity on testing rules",
+        "source": "Business Standard",
+        "date": "2026-10-15T13:16:07.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi3gFBVV95cUxPekRQUWQ5ZmtHTmhiZFg5ZS1WcWxkRmdSZTdROXJlTXlWZ1JTWmNnMGxqbldKTjJZdFVEaWQxQ2lzWGxkczJqRlVUeVotR3JuMzcyVGFOaHY1a0xwNm1fNzlhZm14LW1keVJIT2wwVHJqQXFOVWVxZkV1MURyQ2tpTEZwSmNOQ0k2MXNtN2drNzdxdU03NEF2WWxpQVQ3Q0VobjRzclBJMTlDMkR5bnlJTlc0TVc2ZUZ0QzZGczZMMmFVMTQ0TFZ5VGxvOXVUUzVRVkJsTHFocjFiMjZpYXfSAd4BQVVfeXFMT3pEUFFkOWZrR05oYmRYOWUtVnFsZEZnUmU3UTlyZU15VmdSU1pjZzBsam5XSk4yWXRVRGlkMUNpc1hsZHMyakZVVHlaLUdybjM3MlRhTmh2NWtMcDZtXzc5YWZteC1tZHlSSE9sMFRyakFxTlVlcWZFdTFEckNraUxGcEpjTkNJNjFzbTdnazc3cXVNNzRBdllsaUFUN0NFaG40c3JQSTE5QzJEeW55SU5XNE1XNmVGdEM2RnM2TDJhVTE0NExWeVRsbzl1VFM1UVZCbExxaHIxYjI2aWF3?oc=5"
+      },
+      {
+        "title": "Earnings call transcript: CEAT beats Q2 2026 estimates but shares fall 4.5%",
+        "source": "Investing.com",
+        "date": "2026-10-15T11:54:06.000Z",
+        "url": "https://news.google.com/rss/articles/CBMixwFBVV95cUxQT2JBV3pac3l3eWthWnZySG41N0NHSjlQbVNhbkR1T0MyV1Y2M04xQ2VvSzJzaTZaWlNxQkZlN3R3ZjNSbG1DN2hYUlJIWTQ3QklPakpvM0JyNXc4UlJ2RDBMMm01enJsZjJoZlBOb1lOWnAyLV9nSl9hLU1nbjd1QWg3Zm95WFNTYm5XcFBFX2tIaTg4Y3ZaRl9naXdjTmRBLS1MZXZWSHZIYmZXYVFVM0E5UGtmbU00cHJxdXdxaUJOVXEzYmhB?oc=5"
+      },
+      {
+        "title": "CEAT Shares Drop 5% as Q2 Profit Falls 40% Despite 26% Revenue Growth",
+        "source": "Trade Brains",
+        "date": "2026-10-15T07:21:48.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQekk2YjNoTDFPVFVoZ0gtZlY1S2o0eWVoUW55bGJLZi04RjUtelVNVHRnM1V3NnZLXy01eTd1VkVfc3pxT3YzTnRWenUtT1pSMk5MRUJNcTU4NmpPbWlYYTRfcmhnSC0xR3htajhFZTNmS1I5WUYyaHJHTHpoOWhvVzBVRFo0aVpreEF2ZDdUREJhcHhXQ3U5UnF4Nmp3WUtwYXJyZTE5Z1pSY0d2VzV1RTZxTQ?oc=5"
+      },
+      {
+        "title": "Behind the windfall profits of Vietnam’s rubber companies",
+        "source": "Theinvestor",
+        "date": "2026-10-15T02:32:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxOMlpFRkR2ZlRIZnBGanNsRUpjMDRGeEpMS2d4LWtsa0RETUt6a2N6b2hEMC1vX2NpWkpyNnV2SmFjc2QySEx5c2VOSHpidnZhbDF0M2Z6UWpIZnhlcldibWlKZkxNVHB0d2x4Z0dFam1uMnpuTHFvTHNCWlo3bU9OUERLX0RYWU9zblVIZ0wxX1NmY1FRZXc?oc=5"
+      }
+    ],
+    "soybean price China Brazil": [
+      {
+        "title": "Corn, Soybeans Close Below Support on Harvest, NOPA Crush: Cattle Rebound",
+        "source": "AgWeb",
+        "date": "2026-10-15T22:02:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiswFBVV95cUxOYndvMjNnVnh5WXV2Ml9NUDlXblRxRzRkeVI5aWxLbkdmcW8wdnlLNW4xckRuam5uXzgwUVo0SVhoTFJ1dU1kc29tZUNfRmdsT0xodzl3V2VvVVJsS3NZSDBwa2VnNHo2M1hUbWduV0RuX3hMVndqMVJPTDFRbUFMNEVVQTd1eWVyNi1NU3FaX1VKaGs0Q3QwZEVPRDJsNFdaME9YdkdDU3hWYkVDUmUwNm1Lbw?oc=5"
+      },
+      {
+        "title": "China bought half of Brazil’s oil exports as Iran war drove sales to record",
+        "source": "South China Morning Post",
+        "date": "2026-10-15T18:23:44.000Z",
+        "url": "https://news.google.com/rss/articles/CBMixgFBVV95cUxPd3hwOHpTSFlQd1ZxVmdzTXQ0OEJRRmNiSk5YODNrYzM4Wi1OU3UweXROZlIwbmVSdDRUanhNbVlaTEx4YTQ1dDhQX09yT0ZrZWU5eFd6emQ0ai1qYmdFRUcyVTBqQ2V1MjQ3OHZacnJqektXR0I3OGxkMW45MnZvUG1oVXM1YlVpSnVxMGNtQWFHNmdEWHdMMjNIZUx0Z0p2VTU0dnpVeGNFTS1BczFGN0tpWGVlRG52Q2tNOGtsb29tZE5Rc1HSAcYBQVVfeXFMTkI2eEtfV25haFU1UlB6dXFKd1FuVF9YWkowQkZxLWphQVBFWkc4VjlpZUNNQ1NrbzZVRUdSZnJQRXR4ZFU3SVVxbVA4ZDBRTGFsNVU4YTVpZW5JQVJhbHJJVUhuSVJZbzYtdkVqVjJ5RVZZOURVLW1JaU5EMEhob19valAwTnBUU1E3MXk4YUhudEZfQVRDTzFCMXZQRTQtRjhIdjNDdzQ5YmFKWGFVeUJubi1tQXN3QThNOTlNR3FPMDRudXl3?oc=5"
+      },
+      {
+        "title": "Soybeans Fading Another Round of Chinese Purchases, as Crush Falls in September",
+        "source": "TradingView",
+        "date": "2026-10-15T17:09:40.000Z",
+        "url": "https://news.google.com/rss/articles/CBMi0wFBVV95cUxNNll2Sm1WLVFkMVlwcldpYkUyU2g1eS1zTVAwdUtxakJpR2Zxa3F4TVlkYy1wSUlpVU5HWXpnNTZ1US04V25FdW5yaFl6U3NFcDdjVHVaSXZHQVZVMWFGWmFFdGFKVjJCeHVBOF90Z2tGaDRmN2dtTmRaN3dKZk94WFJLaXlXd3Y3cVBXZHZwbnloSG83V3ZQcE1XNTBuVFBUSHFBdWNidFFEQjdtSS15bnMydjN0eXJJemRick5VM25CM2FMSnJpdzJKWVlxTUtnbEFR?oc=5"
+      },
+      {
+        "title": "Corn, Soybeans See More Fund Selling and Harvest Pressure: Livestock Try to Bounce",
+        "source": "AgWeb",
+        "date": "2026-10-15T16:01:00.000Z",
+        "url": "https://news.google.com/rss/articles/CBMiuwFBVV95cUxQWG0tMEFBOEdQVmhPclNyQzcxTkxtd0Q0aDEydk9LamtNbzc1ZWxpQmRRd3BLTlJzY24xZEMzR2pwWUVZeks2OXhKaXhzc1BsaGkwbnUwRllvMU9qUVdvME9oUG41NGN3aHh4UW5pNm5DeFMtdDE3Sk9qQVh1N0FCNE5CZC1vS0dXN1BOanU0RlhIQ3ZLMmhBX2c3bDhXa055bGlLZ2JzcEV0Ylo4U2VaNk9CVFJhNXhjVDVz?oc=5"
+      },
+      {
+        "title": "Brazil Soy Acreage Growth Slows to 20-Year Low, Conab Says",
+        "source": "The AgriBiz",
+        "date": "2026-10-15T15:39:42.000Z",
+        "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxNb2d2aXBmeTR0YXlrYVZTUDItWk9tUlR2ald1WmxQQlFhNE4xdjlZQW9uNjBiUjlJeFgycUZyLVpmTE9VM2owb1Zub3ZJVFJFUDdISnczWUI4TmhEV3ZFVUp4cUJxZWJQZHZOdlpRN0pFdTYtZ1pvbjdRMVlSTUk3bjkwUi1uSjY2ellsOWowR1Z2d2xaMUNIeExpT0pDRzVY?oc=5"
+      },
+      {
+        "title": "U.S. Soybean Prices Hit Seven-Week Low Despite China's Renewed Grain Purchases",
+        "source": "AgroLatam",
+        "date": "2026-10-15T15:08:12.000Z",
+        "url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxNdW1NVnpmWElNd3BYSDZPNmVDX2daV1lNWFFZQ1BJU3o1ZHdTMERaamdrUHVKRXF1cm1NVnBqUmN1cTdQRGtuTjBpazRhb0xIV2h4elVlcWhEbXZOSzdiOGpqejl0OXlmZS1SenM5Ni16ajkxY2ZKTjVkb0txR1NKTEpGUXRUN3kyZ0pDcg?oc=5"
+      },
+      {
+        "title": "Global Grain Freight Costs Surge as Shipping Disruptions Threaten U.S. Export Competitiveness",
+        "source": "AgroLatam",
+        "date": "2026-10-15T12:47:43.000Z",
+        "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxQM2NLRkdJb0pYM05EU3AzY0FfaEVvSkM3OGo2aUg4NF9ESzJ1NTBmeXpROWRjU1d1eDJwZnd3Q185eHFqdjNpVG05b3U0SUNFVnlTYll5LXJDRklEWS0xdHFXMmszR3A3OS1KcElRUlJJZzVUNXJYZVo1b3RPNU1yUDVjOUpIUVVhd2lpQzVNcmlaa05VbVV5WUMzQU5oelhr?oc=5"
+      },
+      {
+        "title": "Soybean Weakness Continuing on Thursday",
+        "source": "TradingView",
+        "date": "2026-10-15T12:39:08.000Z",
+        "url": "https://news.google.com/rss/articles/CBMinwFBVV95cUxOdnJtRzVGckZHUnVJSzUwNWlmbS1jSUREZ0gyT2NMUkl1RWtNSzBvNEM5Vk1zcENsdDRIdU9Vd2xTWFRHRmlPM1BrR1puMGxCRGlCNEhvR2lZZW9BYi1ZZlhjS0ZpZTgzWG5jekVlWWM3UFdIQmFUV1E2azJNeXhNWEMxZGZhZDVseG9NWXlKQ2Y0eUZrdFNRb1JaUjkxWFE?oc=5"
+      }
+    ]
+  }
+}

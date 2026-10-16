@@ -5,8 +5,8 @@ import { cargoIdentityHash } from '../../src/chain/cargoIdentity.js';
 
 export const OWNER = '0x1111111111111111111111111111111111111111';
 export const chainConfig = loadChainConfig();
-export const copper = JSON.parse(await fs.readFile(new URL('../../data/cases/copper-sg-shanghai.case.json', import.meta.url), 'utf8'));
-export const oil = JSON.parse(await fs.readFile(new URL('../../data/cases/crude-sg-ulsan.case.json', import.meta.url), 'utf8'));
+export const copper = JSON.parse(await fs.readFile(new URL('../../data/cases/archive/copper-sg-shanghai-2026-06.case.json', import.meta.url), 'utf8'));
+export const oil = JSON.parse(await fs.readFile(new URL('../../data/cases/crude-fuj-sin.case.json', import.meta.url), 'utf8'));
 
 /** In-memory chain fixture with real deployed ABI encoding. No key, RPC or signing code. */
 export function openingChain() {
@@ -65,7 +65,7 @@ export function openingChain() {
   return { context: { registry, pool, provider, signers: {} }, state, bills, pools, transactions, receipts, interfaces, seed, send, emit };
 }
 
-export async function uploadedDocuments(folder = 'crude-sg-ulsan', edit = (name, text) => text) {
+export async function uploadedDocuments(folder = 'crude-fuj-sin', edit = (name, text) => text) {
   return Promise.all(['bill-of-lading.md', 'commercial-invoice.md', 'insurance-policy.md'].map(async (name) => ({ name, mime_type: 'text/markdown',
     text: edit(name, await fs.readFile(new URL(`../../data/uploads/${folder}/${name}`, import.meta.url), 'utf8')) })));
 }
