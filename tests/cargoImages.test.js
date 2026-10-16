@@ -4,32 +4,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { CARGO_TYPES, cargoImage, cargoType } from '../web/src/lib/market.js';
 
-const publicDir = path.join(import.meta.dirname, '..', 'public');
-const imageDir = path.join(publicDir, 'img', 'cargo');
-const read = (name) => fs.readFileSync(path.join(publicDir, name), 'utf8');
+const root = path.join(import.meta.dirname, '..');
+const imageDir = path.join(root, 'public', 'img', 'cargo');
 
 test('every cargo picture the frontend can request exists as WebP', () => {
-  const requested = new Set();
-
-  // mystery.js returns literal paths.
-  for (const match of read('mystery.js').matchAll(/\/img\/cargo\/([a-z]+)\.([a-z]+)/gu)) {
-    assert.equal(match[2], 'webp', `mystery.js must reference .webp (found .${match[2]})`);
-    requested.add(match[1]);
-  }
-
-  // app.js builds the name from `cargoType = '<name>'` assignments.
-  const app = read('app.js');
-  assert.match(app, /\/img\/cargo\/\$\{cargoType\}\.webp/u);
-  for (const match of app.matchAll(/cargoType = '([a-z]+)'/gu)) requested.add(match[1]);
-
-  assert.ok(requested.size >= 6, `expected the six cargo types, found ${[...requested].join(', ')}`);
-  for (const name of requested) {
+  assert.equal(CARGO_TYPES.length, 6);
+  for (const name of CARGO_TYPES) {
+    assert.equal(cargoImage(name), `/img/cargo/${name}.webp`);
     const file = path.join(imageDir, `${name}.webp`);
     assert.ok(fs.existsSync(file), `public/img/cargo/${name}.webp is referenced but missing`);
     const header = fs.readFileSync(file).subarray(0, 12);
     assert.equal(header.subarray(0, 4).toString('latin1'), 'RIFF');
     assert.equal(header.subarray(8, 12).toString('latin1'), 'WEBP');
+  }
+});
+
+test('each catalog case maps to the picture of its own cargo', () => {
+  const expected = { copper: /copper|cuconc|铜/iu, oil: /crude|oil|gasoil|diesel|原油|柴油/iu, ore: /iron ore|ironore|铁矿/iu, rubber: /rubber|橡胶/iu, soybean: /soy|大豆/iu, alu: /alu|铝/iu };
+  const dir = path.join(root, 'data', 'cases');
+  const files = fs.readdirSync(dir).filter((name) => name.endsWith('.case.json'));
+  assert.ok(files.length >= 5);
+  for (const file of files) {
+    const data = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+    const cargo = data.bill_of_lading?.cargo ?? '';
+    const type = cargoType(`${data.case_id ?? file} ${cargo}`);
+    assert.ok(CARGO_TYPES.includes(type), `${file}: ${type}`);
+    assert.match(`${data.case_id ?? file} ${cargo}`, expected[type], `${file} (${cargo}) got the ${type} picture`);
   }
 });
 

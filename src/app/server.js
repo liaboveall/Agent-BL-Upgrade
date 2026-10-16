@@ -73,6 +73,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
 const publicDir = path.join(rootDir, 'public');
+// The React dashboard is built into dist/ (npm run build); public/ keeps the static assets it uses.
+const distDir = path.join(rootDir, 'dist');
 const dataPath = path.join(rootDir, 'data/demo-case.json');
 const casesDir = path.join(rootDir, 'data/cases');
 const archivedCasesDir = path.join(casesDir, 'archive');
@@ -140,7 +142,7 @@ function getStaticHandler() {
       // Without a registry the CSP still allows the built-in RPC hosts.
     }
     staticHandler = createStaticHandler({
-      rootDir: publicDir,
+      rootDirs: [distDir, publicDir],
       csp: buildContentSecurityPolicy({ connectSrc: connectOriginsFromChainConfig(registry) })
     });
   }

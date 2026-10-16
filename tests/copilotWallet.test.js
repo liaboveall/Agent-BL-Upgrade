@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { subscribeOffering } from '../public/web3.js';
+import { subscribeOffering } from '../web/src/lib/web3.js';
 
 function walletFixture() {
   const address = '0x2222222222222222222222222222222222222222';

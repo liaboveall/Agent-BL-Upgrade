@@ -6,7 +6,7 @@ import { CopilotService } from '../src/copilot/service.js';
 import { sendError } from '../src/app/http.js';
 import { listen, requestJson, clearLlmEnv } from './helpers/http.js';
 import { pool } from './helpers/copilot.js';
-import { readCopilotStream, copilotQuery, resetCopilotSession } from '../public/copilot/api.js';
+import { readCopilotStream, copilotQuery, resetCopilotSession } from '../web/src/lib/copilot-api.js';
 
 async function setup(t) {
   const service = new CopilotService({ getPools: async () => [pool('C')], now: () => 0, env: {}, llmConfigured: () => false });

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { fileDocument, MAX_FILE_BYTES } from '../public/agent/documents.js';
+import { fileDocument, MAX_FILE_BYTES } from '../web/src/lib/documents.js';
 
 test('document upload reads actual bytes as base64 and rejects files beyond the intake limit', async () => {
   class Reader {
@@ -16,14 +16,17 @@ test('document upload reads actual bytes as base64 and rejects files beyond the 
 });
 
 test('Copilot surfaces share the server, contain no client ranking, and never inject dynamic HTML', async () => {
-  const root = new URL('../public/', import.meta.url);
-  const popup = await fs.readFile(new URL('popup-assistant.js', root), 'utf8');
-  const app = await fs.readFile(new URL('app.js', root), 'utf8');
-  const ui = await fs.readFile(new URL('copilot/ui.js', root), 'utf8');
-  const docs = await fs.readFile(new URL('agent/documents.js', root), 'utf8');
-  for (const text of [popup, ui, docs]) assert.doesNotMatch(text, /innerHTML|insertAdjacentHTML|\bhtml:/u);
-  assert.doesNotMatch(popup, /_scoreAllCases|streamChat|mintRWA|subscribeToPool/u);
-  assert.doesNotMatch(app, /filter_eBLs|getLlmClient|caseList\.map/u);
-  assert.match(popup, /copilotQuery/u); assert.match(app, /copilotQuery/u);
-  assert.match(app, /modeGeneration !== state\.modeGeneration/u);
+  const root = new URL('../web/src/', import.meta.url);
+  const read = (name) => fs.readFile(new URL(name, root), 'utf8');
+  const [launcher, recommendations, documents, controller] = await Promise.all([
+    read('features/copilot/CopilotLauncher.jsx'), read('features/copilot/Recommendations.jsx'), read('pages/mint/Documents.jsx'), read('state/controller.js')
+  ]);
+  for (const text of [launcher, recommendations, documents, controller]) assert.doesNotMatch(text, /innerHTML|insertAdjacentHTML|dangerouslySetInnerHTML/u);
+  for (const text of [launcher, recommendations, controller]) {
+    assert.doesNotMatch(text, /_scoreAllCases|streamChat|mintRWA|subscribeToPool|filter_eBLs|getLlmClient|\.sort\([^)]*score/u);
+  }
+  assert.match(launcher, /copilotQuery/u);
+  assert.match(controller, /copilotQuery/u);
+  // A search result is applied only while the runtime generation it started in is still current.
+  assert.match(controller, /modeGeneration === get\(\)\.modeGeneration/u);
 });

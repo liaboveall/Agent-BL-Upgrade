@@ -8,7 +8,7 @@ AgentBL 是一个以电子提单（eBL）为底层资产的贸易融资原型：
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+npm run dev        # 先构建前端，再启动：http://localhost:3000
 ```
 
 默认是 Demo 模式，不需要钱包或 API Key：
@@ -44,7 +44,9 @@ npm run dev        # http://localhost:3000
 ## 常用命令
 
 ```bash
-npm run dev               # 启动服务
+npm run dev               # 构建前端并启动服务
+npm run dev:web           # 前端热更新开发（:5173，/api 转发到 :3000 的服务）
+npm run build             # 只构建前端（Vite → dist/）
 npm test                  # 应用测试
 npm run test:coverage     # 带覆盖率门槛的测试
 npm run lint              # ESLint
@@ -117,7 +119,8 @@ npm run deploy:protocol   # 部署协议合约，需要 DEPLOYER_PRIVATE_KEY 和
 
 ```text
 src/          服务端：app（HTTP）、core（定价/风险）、agent（运行时、流水线、监控）、copilot、x402、mcp、rag
-public/       前端（无构建步骤，依赖自托管在 public/vendor）
+web/          前端：Vite + React 源码（web/src），构建到 dist/ 由服务器托管
+public/       原样发布的静态文件：chain-config.json、自托管依赖 public/vendor、货物图片
 hardhat/      合约源码、测试与部署脚本
 data/         演示案例、上传样例、场景、情报与合规数据
 scripts/      CLI 工具、preflight、x402/链上冒烟与 owner 审批 CLI

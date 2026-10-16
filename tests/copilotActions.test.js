@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { CopilotService } from '../src/copilot/service.js';
 import { usdMicros } from '../src/copilot/actions.js';
-import { executeAction } from '../public/copilot/actions.js';
+import { executeAction } from '../web/src/lib/copilot-actions.js';
 import { createPool, resetStore, storeState, subscribeToPool } from '../src/app/store.js';
 import { listen, requestJson, clearLlmEnv } from './helpers/http.js';
 import { pool } from './helpers/copilot.js';

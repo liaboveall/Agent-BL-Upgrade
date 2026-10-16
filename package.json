@@ -6,7 +6,10 @@
   "description": "Hackathon harness for an AI dynamic pricing eBL-backed RWA trade finance protocol.",
   "scripts": {
     "postinstall": "node scripts/install.mjs || echo 'Skipping postinstall'",
+    "build": "vite build --config web/vite.config.js",
+    "predev": "npm run build",
     "dev": "node src/app/server.js",
+    "dev:web": "vite --config web/vite.config.js",
     "start": "node src/app/server.js",
     "test": "node --test --test-concurrency=4 tests/*.test.js",
     "test:coverage": "node --test --test-concurrency=4 --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-lines=88 --test-coverage-branches=72 --test-coverage-functions=86 tests/*.test.js",
@@ -73,7 +76,12 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@vitejs/plugin-react": "6.1.1",
     "eslint": "^10.12.0",
-    "globals": "^17.13.0"
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "^17.13.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "vite": "8.3.2"
   }
 }

@@ -10,10 +10,11 @@
 !.env.example
 data/runtime
 coverage
+dist
 *.log
 npm-debug.log*
 
-# Not needed by the running app (the Dockerfile copies only src, public, data and scripts/lib).
+# Not needed by the running app (the Dockerfile copies only src, web, public, data and scripts/lib).
 hardhat
 tests
 docs

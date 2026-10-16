@@ -7,6 +7,13 @@ import { createServer } from '../src/app/server.js';
 import { decodeBody, getRaw, listen, rawRequest, requestJson } from './helpers/http.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
+const distDir = path.resolve(publicDir, '../dist');
+
+/** The JS/CSS files of the built frontend (empty before `npm run build`). */
+function builtAssets() {
+  const dir = path.join(distDir, 'assets');
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((name) => /\.(?:js|css)$/u.test(name)).map((name) => `/assets/${name}`) : [];
+}
 
 test('HTTP hardening', async (t) => {
   const app = await listen(createServer());
@@ -54,7 +61,7 @@ test('HTTP hardening', async (t) => {
     assert.equal(unknown.status, 404);
     assert.equal(unknown.data.code, 'not_found');
 
-    const post = await requestJson(app.base, 'POST', '/index.html', {});
+    const post = await requestJson(app.base, 'POST', '/chain-config.json', {});
     assert.equal(post.status, 405);
     assert.equal(post.headers.get('allow'), 'GET, HEAD');
   });
@@ -74,8 +81,9 @@ test('HTTP hardening', async (t) => {
     assert.equal(api.headers['cache-control'], 'no-store');
     assert.match(api.headers['x-request-id'], /^[0-9a-f]{12}$/u);
 
+    // 200 once the React frontend is built (dist/), 503 with the "not built" page before; both carry the CSP.
     const page = await getRaw(app.base, '/');
-    assert.equal(page.status, 200);
+    assert.ok([200, 503].includes(page.status), `/ -> ${page.status}`);
     const csp = page.headers['content-security-policy'];
     assert.ok(csp, 'HTML must carry a Content-Security-Policy');
     assert.match(csp, /default-src 'self'/u);
@@ -86,7 +94,8 @@ test('HTTP hardening', async (t) => {
     assert.match(csp, /connect-src 'self'[^;]*https:\/\/k8s\.testnet\.json-rpc\.injective\.network/u);
     assert.equal(page.headers['x-content-type-options'], 'nosniff');
 
-    const script = await getRaw(app.base, '/app.js');
+    const script = await getRaw(app.base, '/vendor/ethers-6.17.0.min.js');
+    assert.equal(script.status, 200);
     assert.equal(script.headers['content-security-policy'], undefined, 'CSP is only needed on HTML documents');
   });
 
@@ -95,9 +104,9 @@ test('HTTP hardening', async (t) => {
     const secrets = { DEEPSEEK_API_KEY: 'sk-unit-test-deepseek-SECRET', LLM_API_KEY: 'sk-unit-test-llm-SECRET', DASHSCOPE_API_KEY: 'sk-unit-test-qwen-SECRET' };
     Object.assign(process.env, secrets);
     try {
-      for (const asset of ['/', '/index.html', '/app.js', '/llm-client.js', '/popup-assistant.js', '/web3.js']) {
+      for (const asset of ['/', '/chain-config.json', ...builtAssets()]) {
         const res = await getRaw(app.base, asset, { headers: { 'accept-encoding': 'identity' } });
-        assert.equal(res.status, 200, asset);
+        assert.ok(res.status === 200 || (asset === '/' && res.status === 503), `${asset} -> ${res.status}`);
         const text = decodeBody(res).toString('utf8');
         for (const secret of Object.values(secrets)) assert.ok(!text.includes(secret), `${asset} leaked ${secret}`);
       }
@@ -107,17 +116,17 @@ test('HTTP hardening', async (t) => {
   });
 
   await t.test('static files: ETag revalidation, per-type caching and HEAD', async () => {
-    const first = await getRaw(app.base, '/app.js');
+    const first = await getRaw(app.base, '/chain-config.json');
     assert.equal(first.status, 200);
-    assert.match(first.headers['content-type'], /^text\/javascript/u);
+    assert.match(first.headers['content-type'], /^application\/json/u);
     assert.equal(first.headers['cache-control'], 'no-cache');
     assert.ok(first.headers.etag);
 
-    const revalidated = await getRaw(app.base, '/app.js', { headers: { 'if-none-match': first.headers.etag } });
+    const revalidated = await getRaw(app.base, '/chain-config.json', { headers: { 'if-none-match': first.headers.etag } });
     assert.equal(revalidated.status, 304);
     assert.equal(revalidated.body.length, 0);
 
-    const head = await getRaw(app.base, '/index.html', { method: 'HEAD' });
+    const head = await getRaw(app.base, '/favicon.svg', { method: 'HEAD' });
     assert.equal(head.status, 200);
     assert.equal(head.body.length, 0);
     assert.ok(Number(head.headers['content-length']) > 0);
@@ -127,18 +136,24 @@ test('HTTP hardening', async (t) => {
     assert.equal(img.status, 200);
     assert.equal(img.headers['cache-control'], 'public, max-age=86400');
     assert.equal(img.headers['content-encoding'], undefined, 'images are already compressed');
+
+    // Vite output has content-hashed names, so it can be cached forever.
+    for (const asset of builtAssets().slice(0, 1)) {
+      const built = await getRaw(app.base, asset);
+      assert.equal(built.headers['cache-control'], 'public, max-age=31536000, immutable');
+    }
   });
 
   await t.test('static text assets are served br/gzip-compressed and decode to the exact file bytes', async () => {
-    const original = fs.readFileSync(path.join(publicDir, 'styles.css'));
+    const original = fs.readFileSync(path.join(publicDir, 'chain-config.json'));
     for (const encoding of ['br', 'gzip']) {
-      const res = await getRaw(app.base, '/styles.css', { headers: { 'accept-encoding': encoding } });
+      const res = await getRaw(app.base, '/chain-config.json', { headers: { 'accept-encoding': encoding } });
       assert.equal(res.headers['content-encoding'], encoding);
       assert.equal(res.headers.vary, 'Accept-Encoding');
-      assert.ok(res.body.length < original.length / 2, `${encoding} should shrink the stylesheet`);
+      assert.ok(res.body.length < original.length / 2, `${encoding} should shrink the chain config`);
       assert.deepEqual(decodeBody(res), original);
     }
-    const identity = await getRaw(app.base, '/styles.css', { headers: { 'accept-encoding': 'identity' } });
+    const identity = await getRaw(app.base, '/chain-config.json', { headers: { 'accept-encoding': 'identity' } });
     assert.equal(identity.headers['content-encoding'], undefined);
     assert.deepEqual(identity.body, original);
   });

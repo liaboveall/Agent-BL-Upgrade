@@ -1,0 +1,33 @@
+/* Feedback motion: a repriced figure flashes, a risk rise pulses once, a payment in flight flows. */
+.live-price.flash-down { animation: flashDown 1.2s ease-out; }
+.live-price.flash-up { animation: flashUp 1.2s ease-out; }
+@keyframes flashDown { 0% { color: var(--crit); transform: scale(1.04); } 100% { color: var(--text); transform: none; } }
+@keyframes flashUp { 0% { color: var(--ok); transform: scale(1.04); } 100% { color: var(--text); transform: none; } }
+
+.price-flash { animation: priceFlash 1.4s ease-out; }
+@keyframes priceFlash { 0% { color: var(--accent); background: var(--accent-soft); } 100% { color: inherit; background: transparent; } }
+
+.risk-pulse { animation: riskPulse 1.4s ease-in-out 3; }
+@keyframes riskPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(180, 35, 35, 0); } 50% { box-shadow: 0 0 0 5px rgba(180, 35, 35, 0.16); } }
+
+.x402-impact-pop { animation: x402ImpactPop 0.45s ease-out; }
+@keyframes x402ImpactPop { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+@keyframes particleFlow { from { background-position: -30% 0; } to { background-position: 130% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .app-header, .page, .page-foot, .cp-launcher { display: none !important; }
+  .passport-share-modal { position: static; display: block; width: 100%; max-height: none; box-shadow: none; }
+  .passport-share-modal .dialog-head, .passport-share-modal .button-row, .passport-share-modal .passport-advanced,
+  .passport-share-modal #passport-json-preview, .passport-share-modal .field-label, .passport-share-modal #passport-share-nickname { display: none !important; }
+  .share-preview { border: 0; font-size: 16px; }
+}

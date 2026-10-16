@@ -22,7 +22,7 @@ import {
   randomNonce,
   readTokenName,
   toWalletTypedDataJson
-} from '../public/x402-v2.js';
+} from '../web/src/lib/x402-v2.js';
 
 const ASSET = '0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d';
 const PAY_TO = '0x2222222222222222222222222222222222222222';

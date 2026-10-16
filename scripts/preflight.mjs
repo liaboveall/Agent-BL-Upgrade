@@ -133,8 +133,8 @@ try {
 }
 for (const [file, label] of [
   ['public/chain-config.json', 'Chain deployment config'],
-  ['public/index.html', 'Dashboard HTML'],
-  ['public/styles.css', 'Dashboard CSS'],
+  ['web/index.html', 'Dashboard HTML (Vite entry)'],
+  ['web/src/styles/index.css', 'Dashboard CSS'],
   ['docs/x402-integration.md', 'x402 integration documentation']
 ]) check('Files and schemas', label, await exists(file), file);
 
@@ -316,12 +316,14 @@ await command('Agent release gates', 'Anchor chain reconciliation, shared signer
 
 // 52-56: UI acceptance hooks
 console.log('\n[UI acceptance]');
-const html = await text('public/index.html');
-const app = await text('public/app.js');
-const css = await text('public/styles.css');
-check('UI acceptance', 'Persistent DEMO MODE banner', html.includes('id="demo-banner"'));
-check('UI acceptance', 'Explicit Live toggle and demo reset', html.includes('mode-toggle-btn') && html.includes('demo-reset-btn'));
-check('UI acceptance', 'Paid report market tab and pipeline', html.includes('view-intel') && html.includes('x402-flow'));
+// The React dashboard: the hooks live in its components and stylesheets under web/src.
+const modeStrip = await text('web/src/shell/ModeStrip.jsx');
+const reportsTab = (await Promise.all(['DealDialog.jsx', 'ReportsTab.jsx'].map((name) => text(`web/src/pages/deal/${name}`)))).join('\n');
+const app = await text('web/src/state/controller.js');
+const css = (await Promise.all(['motion.css', 'deal.css', 'index.css'].map((name) => text(`web/src/styles/${name}`)))).join('\n');
+check('UI acceptance', 'Persistent DEMO MODE banner', modeStrip.includes('id="demo-banner"'));
+check('UI acceptance', 'Explicit Live toggle and demo reset', modeStrip.includes('mode-toggle-btn') && modeStrip.includes('demo-reset-btn'));
+check('UI acceptance', 'Paid report market tab and pipeline', reportsTab.includes('view-intel') && reportsTab.includes('x402-flow'));
 check('UI acceptance', 'priceFlash/riskPulse/paymentFlow hooks', /priceFlash/u.test(css) && /riskPulse/u.test(css) && /particleFlow/u.test(css));
 check('UI acceptance', 'Reduced-motion safety rule', /prefers-reduced-motion:\s*reduce/u.test(css));
 

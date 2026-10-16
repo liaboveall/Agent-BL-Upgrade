@@ -1,0 +1,142 @@
+import { useEffect, useState } from 'react';
+import { useApp } from '../../state/hooks.js';
+import { t } from '../../lib/i18n.js';
+import * as f from '../../lib/format.js';
+import * as web3 from '../../lib/web3.js';
+import { PAUSED_ACTIONS, potentialYieldText } from '../../lib/market.js';
+import { mint, selectSpeed, setFinancing } from '../../state/controller.js';
+import { Badge, Button, Card, Field, KV, cx, useRovingKeys } from '../../components/ui.jsx';
+import { RichT } from '../../components/RichText.jsx';
+
+const SPEEDS = ['FAST', 'BALANCED', 'LOW_COST'];
+
+/** Pick a payout speed, enter the financing amount, mint. The one action this page is for. */
+export function MintPanel({ quote }) {
+  const comparison = useApp((s) => s.comparison);
+  const speed = useApp((s) => s.speed);
+  const financingUsd = useApp((s) => s.financingUsd);
+  const minting = useApp((s) => s.minting);
+  const result = useApp((s) => s.mint);
+  const quotes = comparison?.quotes ?? [];
+  const recommended = comparison?.recommended_payout_speed;
+  const available = SPEEDS.filter((name) => quotes.some((q) => q.payout_speed === name));
+  const { onKeyDown, choiceProps } = useRovingKeys(available, speed, selectSpeed);
+  const paused = PAUSED_ACTIONS.has(quote.pricing_action);
+  const act = f.actionMeta(quote.pricing_action);
+  const financing = financingUsd ?? Math.round(quote.requested_cash_usd || 0);
+  const tokens = web3.mintedTokensFor(quote, financing);
+
+  return (
+    <Card className="mint-panel" id="mint-panel" aria-labelledby="mint-panel-h">
+      <header className="mint-panel-head">
+        <h2 id="mint-panel-h" className="card-title">{t('p3_h')}</h2>
+        <div className="hero-price" id="hero-price">
+          <span className="stat-label">{t('hp_label')}</span>
+          <strong className="price-xxl">${f.price(quote.final_issue_price_usd)}</strong>
+          <div className="badge-row">
+            <Badge tone={act.tone}>{`${act.icon} ${act.label}`}</Badge>
+            <span className="small"><strong className="text-gain">{potentialYieldText(quote)}</strong> {t('hp_upside')}</span>
+          </div>
+          <p className="muted small"><RichT k="hp_redeem" vars={{ speed: f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed }} /></p>
+        </div>
+      </header>
+
+      <div className="speed-group">
+        <span className="field-label" id="speed-label">{t('payout_speed_label')}</span>
+        <div id="speed-select" className="speed-options" role="radiogroup" aria-labelledby="speed-label" onKeyDown={onKeyDown}>
+          {SPEEDS.map((name) => {
+            const q = quotes.find((item) => item.payout_speed === name);
+            if (!q) return null;
+            const index = available.indexOf(name);
+            return (
+              <button
+                key={name}
+                type="button"
+                role="radio"
+                aria-checked={speed === name}
+                className={cx('speed-option', speed === name && 'is-active')}
+                onClick={() => selectSpeed(name)}
+                {...choiceProps(name, index)}
+              >
+                <span className="speed-option-head">
+                  <strong>{f.SPEED_META[name].label}</strong>
+                  {name === recommended ? <Badge tone="accent">{t('ec_aipick')}</Badge> : null}
+                </span>
+                <span className="muted small">{t(`speed_${name}_sub`)}</span>
+                <span className="speed-option-price">${f.price(q.final_issue_price_usd)}<small>{t('unit_per_token')}</small></span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="kv-stack speed-economics" aria-live="polite">
+          <KV label={t('ec_cash')}>{f.usd(quote.expected_cash_to_exporter_usd)}</KV>
+          <KV label={t('ec_cost')} tone="cost">{f.usd(quote.financing_cost_usd)}</KV>
+          <KV label={t('ec_share')} tone={quote.exporter_profit_share_bps / 100 > 65 ? 'cost' : quote.exporter_profit_share_bps / 100 > 50 ? 'warn' : undefined}>{f.bpsToPct(quote.exporter_profit_share_bps)}</KV>
+          <KV label={t('ec_net')} tone="gain">{f.usd(quote.exporter_net_profit_usd)}</KV>
+        </div>
+      </div>
+
+      <Field label={t('financing_label')} htmlFor="mint-financing">
+        <div className="input-row">
+          <input id="mint-financing" className="input" type="number" min="0" step="100000" inputMode="numeric" value={String(financing)} disabled={paused}
+            onChange={(event) => setFinancing(event.target.value)} />
+          <Button id="mint-btn" variant="primary" disabled={paused || minting} onClick={mint}>{minting ? t('minting') : t('mint_btn')}</Button>
+        </div>
+      </Field>
+      {paused ? (
+        <p className="callout tone-crit">{t('mr_paused', { action: act.label })}</p>
+      ) : (
+        <div className="readout" id="mint-readout">
+          <p>{t('mr_receive_pre')} <strong>{f.int(tokens)}</strong> {t('mr_receive_post', { price: f.price(quote.final_issue_price_usd) })}</p>
+          <div className="readout-grid">
+            <KV label={t('mr_invest')}>{f.usd(tokens * quote.final_issue_price_usd)}</KV>
+            <KV label={t('mr_redeem')} tone="gain">{f.usd(tokens)}</KV>
+            <KV label={t('mr_upside')} tone="gain">{f.bpsToPct(quote.implied_gross_yield_bps)}</KV>
+          </div>
+          <p className="muted small">{t('mr_foot')}</p>
+        </div>
+      )}
+      <p className="compliance small" id="compliance-note"><RichT k="compliance" /></p>
+      <MintResult result={result} quote={quote} />
+    </Card>
+  );
+}
+
+function MintResult({ result, quote }) {
+  const networkName = useApp((s) => s.networkName);
+  const [balance, setBalance] = useState(null);
+  const chain = result && (result.mode === 'chain' || result.mode === 'chain_pending');
+  useEffect(() => {
+    setBalance(null);
+    if (!result || result.mode !== 'chain' || !result.poolId) return undefined;
+    let current = true;
+    web3.readBalance(result.poolId, result.address).then((value) => { if (current) setBalance(f.int(value)); }, () => { if (current) setBalance('—'); });
+    return () => { current = false; };
+  }, [result]);
+  if (!result) return <p className="muted small mint-hint" id="mint-result">{t('mint_hint')}</p>;
+  const pending = result.mode === 'chain_pending', failed = result.mode === 'chain_failed', timeout = result.mode === 'chain_timeout';
+  const tone = failed ? 'crit' : timeout ? 'warn' : chain ? 'ok' : 'warn';
+  const label = failed ? t('res_failed') : timeout ? t('res_timeout') : pending ? t('res_pending') : chain ? t('res_chain', { network: networkName || 'Testnet' }) : t('res_sim');
+  return (
+    <div className="mint-result" id="mint-result" aria-live="polite">
+      <div className="mint-result-head">
+        <Badge tone={tone}>{label}</Badge>
+        <span>{t('res_minted_pre')} <strong>{f.int(result.mintedAmount)}</strong> {t('res_unit_rwa')}</span>
+      </div>
+      <div className="kv-stack">
+        <KV label={t('res_price')}>{`$${f.price(quote.final_issue_price_usd)} ${t('unit_per_token')}`}</KV>
+        <KV label="tx_hash" mono>
+          {result.txHash ? (result.explorerUrl
+            ? <a href={result.explorerUrl} target="_blank" rel="noopener noreferrer">{`${f.shortHash(result.txHash, 12, 10)} ↗`}</a>
+            : f.shortHash(result.txHash, 12, 10)) : t('res_no_tx')}
+        </KV>
+        {result.poolId ? <KV label="poolId" mono>{String(result.poolId)}</KV> : null}
+        {result.blockNumber ? <KV label="block">{`#${f.int(result.blockNumber)}`}</KV> : pending ? <KV label="block">{t('res_confirming')}</KV> : null}
+        {result.mode === 'chain' && result.poolId ? <KV label={t('res_balance')}>{balance ?? t('res_reading')}</KV> : null}
+      </div>
+      <p className={cx('small', failed ? 'text-crit' : timeout || pending ? 'text-warn' : 'muted')}>
+        {failed ? t('res_execution_failed') : timeout ? t('res_timeout_detail') : pending ? t('res_pending_detail') : chain ? '' : t('res_sim_foot')}
+      </p>
+    </div>
+  );
+}

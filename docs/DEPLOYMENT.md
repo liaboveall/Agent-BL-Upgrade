@@ -1,6 +1,6 @@
 # 🚀 AgentBL 部署指南
 
-AgentBL 的后端是一个**常驻的 Node.js HTTP 服务**（[`src/app/server.js`](../src/app/server.js)），同一个进程既提供 `/api/*` 接口，也托管 [`public/`](../public/) 下的前端页面。因此它需要部署在能**长期运行进程**的环境里（本机、Docker、VPS、Railway 等）。
+AgentBL 的后端是一个**常驻的 Node.js HTTP 服务**（[`src/app/server.js`](../src/app/server.js)），同一个进程既提供 `/api/*` 接口，也托管前端页面：React 前端（[`web/`](../web/)）用 `npm run build` 构建到 `dist/`，[`public/`](../public/) 下的静态文件原样发布。没有构建时访问 `/` 会返回 503 提示页。因此它需要部署在能**长期运行进程**的环境里（本机、Docker、VPS、Railway 等）。
 
 > ⚠️ **不支持 Vercel / Netlify 这类纯静态 + Serverless 平台。** 项目没有拆成 serverless 函数，池子状态也保存在进程内存里，部署到这些平台后前端能打开，但 `/api/*` 会全部失效。
 
@@ -9,7 +9,7 @@ AgentBL 的后端是一个**常驻的 Node.js HTTP 服务**（[`src/app/server.j
 ## 📋 部署前检查
 
 - [ ] Node.js ≥ 20.11（`node -v`；仓库的 `.nvmrc` 是 22，CI 测试 22 和 24）
-- [ ] 本地可以正常运行：`npm run dev`，打开 http://localhost:3000
+- [ ] 本地可以正常运行：`npm run dev`（会先构建前端），打开 http://localhost:3000
 - [ ] 检查通过：`npm run lint`、`npm run check`、`npm test`
 - [ ] 赛前自检通过：`npm run preflight`
 - [ ] `.env` 已准备好，且**没有**提交到 Git
@@ -79,8 +79,8 @@ docker run -d -p 127.0.0.1:3000:3000 --env-file .env \
 
 镜像的要点：
 
-- 基于 `node:22-alpine`，多阶段构建，只装生产依赖，**以非 root 用户（`node`）运行**；
-- 只包含 `src/`、`public/`、`data/` 和 `scripts/lib/`，不含合约、测试和文档；
+- 基于 `node:22-alpine`，多阶段构建：一个阶段用 Vite 构建前端，运行镜像只装生产依赖，**以非 root 用户（`node`）运行**；
+- 只包含 `src/`、`public/`、构建好的 `dist/`、`data/` 和 `scripts/lib/`，不含前端源码、合约、测试和文档；
 - 唯一需要写入的位置是 `/app/data/runtime`（挂成卷），所以可以用只读根文件系统；
 - `docker-compose.yml` 默认只把端口发布到 `127.0.0.1`。要对公网提供服务，请在前面放一个带 TLS 的反向代理（见方案 3），不要直接发布端口；
 - 镜像自带健康检查（`GET /api/health`）。
@@ -88,7 +88,7 @@ docker run -d -p 127.0.0.1:3000:3000 --env-file .env \
 ## 方案 3：VPS / 云服务器（PM2 + Nginx）
 
 ```bash
-npm ci --omit=dev
+npm ci && npm run build && npm prune --omit=dev   # 构建前端需要开发依赖，构建后再去掉
 npm install -g pm2
 pm2 start src/app/server.js --name agentbl
 pm2 save && pm2 startup

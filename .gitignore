@@ -10,6 +10,9 @@ data/runtime/
 # Dependencies
 node_modules/
 
+# Built dashboard (npm run build)
+dist/
+
 # Hardhat build artifacts
 hardhat/node_modules/
 hardhat/cache/

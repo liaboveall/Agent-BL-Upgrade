@@ -1,5 +1,5 @@
-// Static file server for /public: traversal-safe, ETag/304 revalidation, per-type
-// Cache-Control, and cached br/gzip variants for text assets.
+// Static file server for the built dashboard (dist/) and public/: traversal-safe, ETag/304
+// revalidation, per-type Cache-Control, and cached br/gzip variants for text assets.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -35,6 +35,7 @@ const MAX_CACHED_BYTES = 4 * 1024 * 1024; // covers the 2.4 MB cosmjs vendor bun
 
 function cacheControlFor(urlPath, ext) {
   if (urlPath.startsWith('/vendor/')) return 'public, max-age=31536000, immutable'; // filenames carry the version
+  if (urlPath.startsWith('/assets/')) return 'public, max-age=31536000, immutable'; // Vite build output: content-hashed names
   if (ext === '.html') return 'no-cache';
   if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.ico', '.woff2', '.svg'].includes(ext)) {
     return 'public, max-age=86400';
@@ -49,9 +50,24 @@ function pickEncoding(request) {
   return null;
 }
 
-export function createStaticHandler({ rootDir, csp = null, maxEntries = 128 } = {}) {
-  const root = path.resolve(rootDir);
-  const rootWithSep = root.endsWith(path.sep) ? root : root + path.sep;
+// Served for "/" when the React frontend has not been built yet (dist/index.html is missing).
+const NOT_BUILT_PAGE = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>AgentBL · frontend not built</title></head>
+<body style="font-family:system-ui,sans-serif;max-width:640px;margin:64px auto;padding:0 24px;line-height:1.6">
+<h1>The dashboard has not been built yet</h1>
+<p>The API is running. Build the React frontend once with <code>npm run build</code> (or start with <code>npm run dev</code>, which builds first), then reload this page.</p>
+<p>前端尚未构建：运行 <code>npm run build</code>（或用 <code>npm run dev</code> 启动，它会先构建），然后刷新本页。</p>
+</body></html>`;
+
+/**
+ * @param {{rootDir?: string, rootDirs?: string[], csp?: string|null, maxEntries?: number}} options
+ *   rootDirs are searched in order (the built dist/ first, then public/); rootDir is a single root.
+ */
+export function createStaticHandler({ rootDir, rootDirs, csp = null, maxEntries = 128 } = {}) {
+  const roots = (rootDirs ?? [rootDir]).map((dir) => {
+    const root = path.resolve(dir);
+    return { root, rootWithSep: root.endsWith(path.sep) ? root : root + path.sep };
+  });
   const cache = new Map(); // absolute path -> { mtimeMs, size, etag, body, encoded: {br?, gzip?} }
 
   async function load(filePath, stat) {
@@ -85,20 +101,26 @@ export function createStaticHandler({ rootDir, csp = null, maxEntries = 128 } = 
     if (decoded.includes('\0')) throw new HttpError(400, 'malformed_url', 'Malformed request path');
 
     const urlPath = decoded === '/' ? '/index.html' : decoded;
-    const filePath = path.normalize(path.join(root, urlPath));
-    if (filePath !== root && !filePath.startsWith(rootWithSep)) {
-      sendText(response, 403, 'Forbidden');
-      return;
+    let filePath = null, stat = null;
+    for (const { root, rootWithSep } of roots) {
+      const candidate = path.normalize(path.join(root, urlPath));
+      if (candidate !== root && !candidate.startsWith(rootWithSep)) {
+        sendText(response, 403, 'Forbidden');
+        return;
+      }
+      try {
+        const found = await fs.stat(candidate);
+        if (found.isFile()) { filePath = candidate; stat = found; break; }
+      } catch { /* not in this root */ }
     }
-
-    let stat;
-    try {
-      stat = await fs.stat(filePath);
-    } catch {
-      sendText(response, 404, 'Not found');
-      return;
-    }
-    if (!stat.isFile()) {
+    if (!filePath) {
+      if (urlPath === '/index.html') {
+        const headers = { 'content-type': TYPES['.html'], 'cache-control': 'no-store' };
+        if (csp) headers['content-security-policy'] = csp;
+        response.writeHead(503, headers);
+        response.end(request.method === 'HEAD' ? undefined : NOT_BUILT_PAGE);
+        return;
+      }
       sendText(response, 404, 'Not found');
       return;
     }

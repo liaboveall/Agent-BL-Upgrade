@@ -3,6 +3,22 @@
 // the existing code base does not follow uniformly.
 import js from '@eslint/js';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+
+// JSX references a component by name; core no-unused-vars cannot see that, so mark them used.
+const jsxUsesVars = {
+  meta: { type: 'problem', schema: [] },
+  create(context) {
+    const markUsed = (node, name) => context.sourceCode.markVariableAsUsed(name, node);
+    return {
+      JSXOpeningElement(node) {
+        let name = node.name;
+        while (name.type === 'JSXMemberExpression') name = name.object;
+        if (name.type === 'JSXIdentifier' && /^[A-Z]/u.test(name.name)) markUsed(node, name.name);
+      }
+    };
+  }
+};
 
 const sharedRules = {
   // Unused values are worth a look, but an underscore prefix marks them as intentional.
@@ -26,6 +42,7 @@ export default [
     ignores: [
       '**/node_modules/**',
       'public/vendor/**',
+      'dist/**',
       'hardhat/artifacts/**',
       'hardhat/cache/**',
       'data/runtime/**',
@@ -45,10 +62,26 @@ export default [
     rules: sharedRules
   },
   {
-    // The browser app.
-    files: ['public/**/*.js'],
-    languageOptions: { globals: { ...globals.browser } },
-    rules: sharedRules
+    // The React dashboard (web/, built by Vite into dist/).
+    files: ['web/**/*.{js,jsx}'],
+    languageOptions: {
+      ecmaVersion: 2025,
+      sourceType: 'module',
+      globals: { ...globals.browser },
+      parserOptions: { ecmaFeatures: { jsx: true } }
+    },
+    plugins: { 'react-hooks': reactHooks, local: { rules: { 'jsx-uses-vars': jsxUsesVars } } },
+    rules: {
+      ...sharedRules,
+      'local/jsx-uses-vars': 'error',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn'
+    }
+  },
+  {
+    // Vite config runs in Node.
+    files: ['web/vite.config.js'],
+    languageOptions: { globals: { ...globals.node } }
   },
   {
     // CommonJS helpers (shared by CJS and ESM scripts).

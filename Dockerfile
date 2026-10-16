@@ -7,6 +7,15 @@ COPY package.json package-lock.json ./
 # Lifecycle scripts are not needed at runtime (postinstall only prints a banner).
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
+# The React dashboard (web/) is built with Vite into dist/; only the output reaches the runtime image.
+FROM node:22-alpine AS web
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY web ./web
+COPY public ./public
+RUN npm run build
+
 FROM node:22-alpine
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -18,6 +27,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY src ./src
 COPY public ./public
+COPY --from=web /app/dist ./dist
 COPY data ./data
 # The server reads the chain registry helper at runtime.
 COPY scripts/lib ./scripts/lib

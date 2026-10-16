@@ -2,29 +2,29 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import test from 'node:test';
 
-import { applyStaticI18n, hasTranslation, setLang, t, tData, tTradeText } from '../public/i18n.js';
+import { hasTranslation, setLang, t, tData, tTradeText } from '../web/src/lib/i18n.js';
 
-const html = await fs.readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-// Scan the whole application surface, including voyage, wallet and shared helpers.
+// Scan the whole dashboard: pages, features, components, state and shared helpers.
 async function frontendSources(directory) {
   const sources = [];
   for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
-    if (entry.name === 'vendor' || entry.name === 'i18n.js') continue;
+    if (entry.name.startsWith('i18n')) continue;
     const path = new URL(entry.name + (entry.isDirectory() ? '/' : ''), directory);
     if (entry.isDirectory()) sources.push(...await frontendSources(path));
-    else if (entry.name.endsWith('.js')) sources.push(await fs.readFile(path, 'utf8'));
+    else if (/\.jsx?$/u.test(entry.name)) sources.push(await fs.readFile(path, 'utf8'));
   }
   return sources;
 }
-const sources = await frontendSources(new URL('../public/', import.meta.url));
+const sources = await frontendSources(new URL('../web/src/', import.meta.url));
 
 function referencedTranslationKeys() {
   const keys = new Set();
-  for (const match of html.matchAll(/data-i18n(?:-html|-ph|-title|-aria)?="([^"]+)"/gu)) keys.add(match[1]);
-  // Agent console modules: t('key') calls, plus every quoted ac_* key (toast and label keys are passed as strings).
+  // t('key') calls and <RichT k="key"/>, plus every quoted ac_* key (toast and label keys are passed as strings).
   for (const source of sources) {
     for (const match of source.matchAll(/\bt\('([^']+)'(?=\s*(?:,|\)))/gu)) keys.add(match[1]);
-    for (const match of source.matchAll(/'(ac_[a-z_]+)'/gu)) keys.add(match[1]);
+    for (const match of source.matchAll(/<RichT k="([^"]+)"/gu)) keys.add(match[1]);
+    for (const match of source.matchAll(/(?:labelKey|titleKey|hintKey):\s*'([a-z0-9_]+)'/gu)) keys.add(match[1]);
+    for (const match of source.matchAll(/'(ac_[a-z_]+)'/gu)) if (!match[1].endsWith('_')) keys.add(match[1]);
     for (const match of source.matchAll(/'((?:cp|ebld)_[a-z_]+)'/gu)) if (!match[1].endsWith('_')) keys.add(match[1]);
   }
   for (const key of ['risk_max', 'yield_min_bps', 'tenor_days_max', 'commodities_include', 'commodities_exclude', 'regions_include', 'regions_exclude', 'chokepoints_avoid', 'ticket_usd', 'financing_max_usd', 'insurance_coverage_min', 'payout_speed']) keys.add(`cp_filter_${key}`);
@@ -61,19 +61,16 @@ test('frontend translation keys have both Chinese and English copy', () => {
   assert.deepEqual(missing, []);
 });
 
-test('accessible labels and the document language follow the language switch', () => {
+test('the document language follows the language switch', () => {
   const savedDocument = globalThis.document;
-  const attributes = new Map([['data-i18n-aria', 'a11y_network']]);
-  const label = { getAttribute: (key) => attributes.get(key), setAttribute: (key, value) => attributes.set(key, value) };
-  const root = { querySelectorAll: (selector) => selector === '[data-i18n-aria]' ? [label] : [] };
   globalThis.document = { title: '', documentElement: { lang: '' } };
   try {
-    setLang('en'); applyStaticI18n(root);
-    assert.equal(attributes.get('aria-label'), 'Protocol network');
+    setLang('en');
     assert.equal(globalThis.document.documentElement.lang, 'en');
-    setLang('zh'); applyStaticI18n(root);
-    assert.equal(attributes.get('aria-label'), '协议网络');
+    assert.equal(t('a11y_network'), 'Protocol network');
+    setLang('zh');
     assert.equal(globalThis.document.documentElement.lang, 'zh-CN');
+    assert.equal(t('a11y_network'), '协议网络');
   } finally { globalThis.document = savedDocument; }
 });
 

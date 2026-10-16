@@ -17,7 +17,7 @@ import {
 } from '@injectivelabs/x402/client';
 import { listen, requestJson } from './helpers/http.js';
 import { createPaidFetch, fetchPaidIntel } from '../src/x402/client.js';
-import { payV2WithWallet } from '../public/x402-v2.js';
+import { payV2WithWallet } from '../web/src/lib/x402-v2.js';
 
 const TESTNET_USDC = '0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d';
 const PAY_TO = '0x2222222222222222222222222222222222222222';

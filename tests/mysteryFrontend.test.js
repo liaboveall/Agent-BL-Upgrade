@@ -8,13 +8,13 @@ globalThis._mockEthers = await import('ethers');
 const {
   isIndependentSubscriptionAuthorized,
   verifyMysteryProof
-} = await import('../public/mystery-proof.js');
+} = await import('../web/src/lib/mystery-proof.js');
 const {
   assertSafePassportShareCard,
   buildPassportShareCard,
   buildPassportShareText
-} = await import('../public/passport.js');
-const { riskFactorSegments } = await import('../public/mystery.js');
+} = await import('../web/src/lib/passport.js');
+const { riskFactorSegments } = await import('../web/src/pages/discover/mystery.js');
 
 test('MBOX-FE: quoted document evidence retains exact source text and marks only the original fields', () => {
   const original = 'doc: Incoterms agreement (eBL/invoice): eBL "EXW 佛山仓库（现货库内交货）" vs invoice "EXW 佛山指定仓库 <img src=x onerror=alert(1)>"';
@@ -162,38 +162,25 @@ test('MBOX-FE-7: public transaction disclosure requires both advanced confirmati
   assert.equal(disclosed.explorer_url, options.explorerUrl);
 });
 
-test('MBOX-FE-1~6: DOM contract includes tiers, five steps, reveal, verifier and guarded subscribe', async () => {
-  const [html, css, ui] = await Promise.all([
-    fs.readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
-    fs.readFile(new URL('../public/styles.css', import.meta.url), 'utf8'),
-    fs.readFile(new URL('../public/mystery.js', import.meta.url), 'utf8')
+test('MBOX-FE-1~6: signing order, subscription binding and reveal motion are kept (the DOM contract is in webDom.test.js)', async () => {
+  const [ui, dialog, discoverCss, motionCss] = await Promise.all([
+    fs.readFile(new URL('../web/src/pages/discover/mystery.js', import.meta.url), 'utf8'),
+    fs.readFile(new URL('../web/src/pages/discover/DiscoverPage.jsx', import.meta.url), 'utf8'),
+    fs.readFile(new URL('../web/src/styles/discover.css', import.meta.url), 'utf8'),
+    fs.readFile(new URL('../web/src/styles/motion.css', import.meta.url), 'utf8')
   ]);
-  assert.equal((html.match(/name="mystery-tier"/gu) ?? []).length, 3);
-  for (const id of ['mystery-step-commit', 'mystery-step-challenge', 'mystery-step-settlement', 'mystery-step-reveal', 'mystery-step-verify']) {
-    assert.match(html, new RegExp(`id="${id}"`, 'u'));
-  }
-  for (const id of ['mystery-cargo-image', 'mystery-proof-json', 'mystery-view-report-btn', 'mystery-subscribe-btn', 'mystery-risk-ack']) {
-    assert.match(html, new RegExp(`id="${id}"`, 'u'));
-  }
-  for (const visual of ['mystery-entry-box', 'mystery-box-stage', 'mystery-blind-box', 'mystery-reveal-burst']) {
-    assert.match(html, new RegExp(`class="[^"]*${visual}`, 'u'));
-  }
-  for (const id of ['passport-collection', 'passport-collection-grid', 'mystery-claim-discovery-btn', 'mystery-claim-journey-btn', 'passport-share-modal', 'passport-advanced-share', 'passport-advanced-confirm', 'passport-export-json', 'passport-export-png', 'passport-print']) {
-    assert.match(html, new RegExp(`id="${id}"`, 'u'));
-  }
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/u);
-  assert.match(css, /@media \(max-width: 420px\)/u);
+  assert.match(motionCss, /@media \(prefers-reduced-motion: reduce\)/u);
   for (const animation of ['mysteryBoxRattle', 'mysteryLidLaunch', 'mysterySparkBurst', 'mysteryRevealSpark']) {
-    assert.match(css, new RegExp(`@keyframes ${animation}`, 'u'));
+    assert.match(discoverCss, new RegExp(`@keyframes ${animation}`, 'u'));
   }
   const secondSignature = ui.indexOf('subscriptionSignature = await mysteryState.signer.signMessage');
   const subscribeCall = ui.indexOf("fetchJson('/api/pool/subscribe'");
   assert.ok(secondSignature >= 0 && subscribeCall > secondSignature, 'pool subscribe must follow the second signature');
   const claimSignature = ui.indexOf('const signature = await wallet.signMessage(message)');
-  const claimCall = ui.indexOf("/passport/claim`");
+  const claimCall = ui.indexOf('/passport/claim`');
   assert.ok(claimSignature >= 0 && claimCall > claimSignature, 'Passport claim API must follow the wallet signature');
   assert.match(ui, /mystery_source:\s*\{[^]*reveal_id:\s*report\.reveal_id[^]*selected_pool_id:\s*report\.selected_pool_id[^]*reveal_proof_hash:\s*report\.reveal_proof_hash/u);
-  assert.match(ui, /onclick:\s*\(\)\s*=>\s*openPassportShare/u);
+  assert.match(dialog, /onClick=\{\(\) => openPassportShare\(credential\)\}/u);
   assert.match(ui, /payment\.live === true[^]*payment\.explorerUrl/u);
   assert.match(ui, /setMysteryBoxMotion\('unlocking'\)[^]*setMysteryBoxMotion\('bursting'\)/u);
 });

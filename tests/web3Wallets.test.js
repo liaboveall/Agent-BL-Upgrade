@@ -10,7 +10,7 @@ import {
   resolveBrowserChainConfig,
   restoreWalletSession,
   walletAvailability
-} from '../public/web3.js';
+} from '../web/src/lib/web3.js';
 
 test('WEB3-20: event reads stay within the Injective eth_getLogs block limit', async () => {
   const calls = [];

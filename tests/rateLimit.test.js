@@ -25,7 +25,7 @@ test('per-IP rate limiting', async (t) => {
     assert.ok(Number(limited.headers.get('retry-after')) >= 1);
 
     assert.equal((await requestJson(app.base, 'GET', '/api/health')).status, 200, 'health checks are never throttled');
-    assert.equal((await fetch(`${app.base}/index.html`)).status, 200, 'static assets are not API traffic');
+    assert.equal((await fetch(`${app.base}/chain-config.json`)).status, 200, 'static assets are not API traffic');
   });
 
   await t.test('writes have a tighter budget than reads', async () => {

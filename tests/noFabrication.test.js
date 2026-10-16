@@ -21,14 +21,14 @@ async function sourceFiles(dir) {
     if (entry.isDirectory()) {
       if (entry.name === 'vendor' || entry.name === 'node_modules') continue;
       out.push(...await sourceFiles(full));
-    } else if (/\.(?:js|mjs)$/u.test(entry.name)) {
+    } else if (/\.(?:js|mjs|jsx)$/u.test(entry.name)) {
       out.push(full);
     }
   }
   return out;
 }
 
-const files = [...await sourceFiles(path.join(root, 'src')), ...await sourceFiles(path.join(root, 'public'))];
+const files = [...await sourceFiles(path.join(root, 'src')), ...await sourceFiles(path.join(root, 'web', 'src')), ...await sourceFiles(path.join(root, 'public'))];
 const sources = new Map();
 for (const file of files) sources.set(path.relative(root, file).replaceAll('\\', '/'), await fs.readFile(file, 'utf8'));
 
@@ -80,18 +80,18 @@ test('WP0.1: the browser never builds an explorer link by itself', () => {
   // simulated hash cannot be turned into one by string concatenation in the page.
   const offenders = [];
   for (const [file, text] of sources) {
-    if (!file.startsWith('public/')) continue;
+    if (!file.startsWith('public/') && !file.startsWith('web/')) continue;
     if (/blockscout[^\n]*\/tx\/\$\{/u.test(text)) offenders.push(file);
   }
   assert.deepEqual(offenders, []);
 });
 
 test('WP0.1: the Demo wallet x402 flow no longer shows a link or a "your wallet" claim', () => {
-  const app = sources.get('public/app.js');
-  const start = app.indexOf('async function purchaseWithWallet(');
-  const end = app.indexOf('function wireX402Handlers');
+  const x402 = sources.get('web/src/pages/deal/x402.js');
+  const start = x402.indexOf('async function purchaseWithWalletDemo(');
+  const end = x402.indexOf('async function purchaseWithWalletLive(');
   assert.ok(start > 0 && end > start);
-  const demoFlow = app.slice(start, end);
+  const demoFlow = x402.slice(start, end);
   assert.doesNotMatch(demoFlow, /View on Injective Explorer/u);
   assert.doesNotMatch(demoFlow, /tx from YOUR wallet/iu);
   assert.doesNotMatch(demoFlow, /explorerUrl/u);
@@ -99,7 +99,7 @@ test('WP0.1: the Demo wallet x402 flow no longer shows a link or a "your wallet"
 });
 
 test('WP0.1: a simulated mint has no hash-shaped placeholder', () => {
-  const web3 = sources.get('public/web3.js');
+  const web3 = sources.get('web/src/lib/web3.js');
   const start = web3.indexOf('export async function simulatedMint');
   const body = web3.slice(start, web3.indexOf('\n}', start));
   assert.doesNotMatch(body, /0x['"` ]*\+/u);
@@ -150,7 +150,7 @@ test('WP0.1: /api/x402/smoke labels every step as a Demo simulation', async () =
 
 // ---- the floating assistant reads the server instead of inventing records ----
 
-const { toolExecutors } = await import('../public/popup-assistant.js');
+const { toolExecutors } = await import('../web/src/lib/assistant-tools.js');
 
 function stubFetch(routes) {
   const original = globalThis.fetch;
