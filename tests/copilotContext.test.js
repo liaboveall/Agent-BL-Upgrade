@@ -107,3 +107,16 @@ test('Copilot: history is bounded, immutable, and contains structured deltas onl
   assert.equal(context.history.at(-1).turn, 40);
   assert.ok(!JSON.stringify(context).includes('低风险'));
 });
+
+test('softer risk wording reweights the ranking without excluding assets, and a bare 投 sets the ticket', () => {
+  const turn = parseIntent('我想投10万美元，风险低一点，收益8%以上，推荐哪几个项目？');
+  assert.equal(turn.constraints_delta.ticket_usd, 100000);
+  assert.equal(turn.constraints_delta.yield_min_bps, 800);
+  assert.equal(turn.constraints_delta.risk_max, undefined, '"a bit lower" is not a hard LOW limit');
+  assert.equal(turn.soft_delta.prefer_low_volatility, true);
+  for (const text of ['风险小一些的铜', '给我稳一点的', 'something less risky', 'safer options please']) {
+    assert.equal(parseIntent(text).soft_delta.prefer_low_volatility, true, text);
+  }
+  assert.equal(parseIntent('低风险的铜').constraints_delta.risk_max, 'LOW', 'explicit 低风险 stays a hard limit');
+  assert.equal(parseIntent('unsafe is fine').soft_delta.prefer_low_volatility, undefined);
+});

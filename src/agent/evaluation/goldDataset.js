@@ -107,5 +107,5 @@ export const INJECTION_GOLD = [
 export const SCENARIO_GOLD = [
   { name: 'copper-typhoon', actions: ['MARK_IN_TRANSIT', 'REPRICE', 'PAUSE', 'RESUME', 'RECORD_ARRIVAL', 'RECORD_PAYMENT', 'SETTLE'], final_state: 'Repaid' },
   { name: 'insurance-gap', actions: ['WARNING', 'PAUSE'], final_state: 'Paused' },
-  { name: 'warcrisis-hormuz', actions: ['WARNING', 'PAUSE'], final_state: 'Paused' }
+  { name: 'warcrisis-hormuz', actions: ['REPRICE', 'PAUSE'], final_state: 'Paused' } // tenor pricing leaves room to reprice before the pause
 ];

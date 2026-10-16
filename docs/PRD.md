@@ -98,7 +98,20 @@ financing_cost = share × P
 issue_price    = cash / (cash + financing_cost)          # = cash / (cash + share × P)
 ```
 
-**第五步：两道护栏（综合考虑）**
+**第五步：按期限封顶的年化利率（2026-10-15 加入）**
+
+利润分成只说明出口商"付得起"多少，不反映资金占用多久。单独使用时，3 天航程也会给投资者上千个百分点的年化收益。因此融资成本同时受年化利率上限约束，两者取较低者：
+
+```text
+tenor_days     = max(30, 由付款条款和航程推出的天数)     # "90 days from B/L" → 90；"at sight" → 航程 + 7
+annual_rate    = 基准年化(speed) + 风险溢价               # FAST 12% / BALANCED 9% / LOW_COST 7%，每 100bps 风险 +2 个百分点
+rate_cost      = cash × annual_rate × tenor_days / 365
+financing_cost = min(share × P, rate_cost)
+```
+
+报价同时给出 `tenor_days`、`annual_rate_cap_bps` 和 `annualized_yield_bps`，投资者界面和 Copilot 按年化收益比较。
+
+**第六步：两道护栏（综合考虑）**
 
 ```text
 抵押覆盖护栏(AI-5): redemption_exposure ≤ AI_verified_collateral × coverage_limit
@@ -106,15 +119,15 @@ issue_price    = cash / (cash + financing_cost)          # = cash / (cash + shar
 盈利护栏           : share 一旦 > 85%，融资几乎吃光利润 → AI 暂停发行(PAUSE_OFFERING)
 ```
 
-**铜参考案例实跑（cash = 3,300,000，P = 1,375,000，风险 MEDIUM 350bps → risk share 10%）：**
+**铜参考案例实跑（cash = 3,300,000，P = 1,375,000，风险 MEDIUM 350bps，L/C 即期、航程 12 天 → 期限取下限 30 天）：**
 
-| 速度 | 让出盈利 share | 发行价 | 出口商到账 | 融资成本 | 占盈利 | 投资者潜在收益 | 动作 |
-|---|---:|---:|---:|---:|---:|---:|---|
-| FAST | 60% | **0.80** | 3,300,000 | 825,000 | 60% | 25.0% | OPEN |
-| BALANCED | 43% | **0.85** | 3,300,000 | 591,250 | 43% | 17.9% | OPEN |
-| LOW_COST | 30% | **0.89** | 3,300,000 | 412,500 | 30% | 12.5% | OPEN |
+| 速度 | 年化上限 | 发行价 | 出口商到账 | 融资成本 | 占盈利 | 期限内毛收益 | 年化收益 | 动作 |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| FAST | 19% | **0.9846** | 3,300,000 | 51,615 | 3.8% | 1.56% | 19.0% | OPEN |
+| BALANCED | 16% | **0.9870** | 3,300,000 | 43,465 | 3.2% | 1.32% | 16.0% | OPEN |
+| LOW_COST | 14% | **0.9886** | 3,300,000 | 38,054 | 2.8% | 1.15% | 14.0% | OPEN |
 
-一句话：**“很快到账”让出约 60% 盈利（投资者 25% 上行），“正常到账”只让出约 30% 盈利（投资者 12.5% 上行）。** 风险升高会进一步压低发行价，抵押覆盖不足会抬高价格地板或暂停发行。1.00 是目标兑付价，不是保本。
+这三档都由年化上限定价（利润分成的成本更高）。期限越长、风险越高，折价越深；在很长的期限下利润分成会成为较低者，此时 FAST 回到约 0.80（让出约 60% 盈利）。风险升高会压低发行价，抵押覆盖不足会抬高价格地板或暂停发行。1.00 是目标兑付价，不是保本。
 
 > 实现见 `src/core/pricingEngine.js`（`priceRwaOffering` / `quoteFromCase` / `compareSpeeds`），命令 `npm run price`。
 

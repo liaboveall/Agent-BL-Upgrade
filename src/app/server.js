@@ -86,7 +86,7 @@ const CASE_META = {
   'CASE-EBL-2026-0001': { label: '铜矿 · Shanghai → Hamburg (保险缺口)', risk_hint: 'WARNING', order: 4 },
   'CASE-EBL-2026-OIL-SG-ULS': { label: '原油 · Singapore → Ulsan', risk_hint: 'MEDIUM', order: 5 },
   'CASE-EBL-2026-IRONORE-AU-TJ': { label: '铁矿石 · Port Hedland → Tianjin', risk_hint: 'LOW', order: 6 },
-  'CASE-EBL-2026-ALU-DXB-RTM': { label: '铝 · Dubai → Rotterdam (Hormuz)', risk_hint: 'HIGH', order: 7 },
+  'CASE-EBL-2026-ALU-DXB-RTM': { label: '铝 · Dubai → Rotterdam (Hormuz)', risk_hint: 'WARNING', order: 7 },
   'CASE-EBL-2026-CUCONC-ANF-LYG': { label: '铜精矿 · Antofagasta → Lianyungang', risk_hint: 'MEDIUM', order: 8 },
   'CASE-EBL-2026-CU-SG-SHA-WARCRISIS': { label: '铜矿 · Hormuz 战争危机 · Singapore → Shanghai', risk_hint: 'CRITICAL', order: 9 }
 };
@@ -323,6 +323,25 @@ function authorizeModeChange(request, requested) {
   if (!admin.authorized) {
     throw new HttpError(401, 'admin_token_required', 'A valid admin token is required to switch runtime mode');
   }
+}
+
+/**
+ * Same rule as the agent routes: a Demo server without an admin token stays open (zero setup), but once a
+ * token is configured it protects shared state, and in Live the token is mandatory.
+ */
+function authorizeAdmin(request) {
+  const admin = checkAdminToken(request);
+  if (demoModeController.snapshot().demoMode && !admin.configured) return;
+  if (!admin.configured) {
+    throw new HttpError(403, 'admin_token_not_configured',
+      `This action requires AGENTBL_ADMIN_TOKEN (at least ${MIN_ADMIN_TOKEN_LENGTH} characters) to be set on the server`);
+  }
+  if (!admin.authorized) throw new HttpError(401, 'admin_token_required', 'A valid admin token is required');
+}
+
+/** Document intake is open in Demo and an admin operation in Live (it feeds the Live agent pipeline). */
+function authorizeIntake(request) {
+  if (!demoModeController.snapshot().demoMode) authorizeAdmin(request);
 }
 
 // ---------------------------------------------------------------------------
@@ -710,6 +729,8 @@ async function routeRequest(request, response, url) {
   }
 
   if (method === 'POST' && pathname === '/api/demo/reset') {
+    // A reset wipes everyone's Demo state, so a configured admin token protects it.
+    authorizeAdmin(request);
     let snapshot;
     try {
       snapshot = demoModeController.reset();
@@ -963,6 +984,11 @@ async function routeRequest(request, response, url) {
       const { session_id, action_id } = body.copilot_action;
       const result = await copilotService.confirmAction(session_id, action_id, { confirm: body.confirm, wallet_address: body.wallet_address });
       sendJson(response, 200, { ok: true, ...result }); return;
+    }
+    // This path records a simulated subscription in the offchain Demo ledger; Live subscriptions go
+    // through the investor's wallet (Copilot action), never through a server-side mock.
+    if (!demoModeController.snapshot().demoMode) {
+      throw new HttpError(409, 'demo_only', 'Simulated subscriptions are only available in Demo mode');
     }
     await ensureMockPools();
     if (typeof body.pool_id !== 'string' || body.pool_id === '') {
@@ -1398,6 +1424,8 @@ async function routeRequest(request, response, url) {
 
   // BE-14: eBL Document Upload with ENI Adapter
   if (method === 'POST' && pathname === '/api/ebl/upload') {
+    // Same boundary as POST /api/agent/ingest: an upload with content runs the agent pipeline.
+    authorizeIntake(request);
     const body = await readJsonBody(request);
     const { eniAdapter } = await import('./eniAdapter.js');
 

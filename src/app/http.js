@@ -34,14 +34,17 @@ function tooLarge(limit) {
  * The stream is NOT destroyed on rejection so the 413 can still be delivered.
  */
 export async function readBody(request, { limit = configuredBodyLimit() } = {}) {
+  // A refused body is drained and discarded (never buffered): if the 413 went out while the client was still
+  // uploading, the connection could be reset before the client reads the answer.
+  const refuse = () => { request.resume?.(); return tooLarge(limit); };
   const declared = Number(request.headers?.['content-length']);
-  if (Number.isFinite(declared) && declared > limit) throw tooLarge(limit);
+  if (Number.isFinite(declared) && declared > limit) throw refuse();
 
   const chunks = [];
   let received = 0;
   for await (const chunk of request.iterator({ destroyOnReturn: false })) {
     received += chunk.length;
-    if (received > limit) throw tooLarge(limit);
+    if (received > limit) throw refuse();
     chunks.push(chunk);
   }
   return Buffer.concat(chunks, received);
@@ -132,15 +135,31 @@ export function sendError(response, error, { requestId, logger = console } = {})
     if (!response.writableEnded) response.end();
     return;
   }
-  if (mapped.status === 413) response.setHeader('connection', 'close');
-  sendJson(response, mapped.status, {
-    ok: false,
-    error: mapped.message,
-    ...(mapped.code ? { code: mapped.code } : {}),
-    ...(mapped.details !== undefined ? { details: mapped.details } : {}),
-    ...(mapped.status >= 500 && requestId ? { request_id: requestId } : {})
-  });
+  const write = () => {
+    if (response.headersSent) return;
+    if (mapped.status === 413) response.setHeader('connection', 'close');
+    sendJson(response, mapped.status, {
+      ok: false,
+      error: mapped.message,
+      ...(mapped.code ? { code: mapped.code } : {}),
+      ...(mapped.details !== undefined ? { details: mapped.details } : {}),
+      ...(mapped.status >= 500 && requestId ? { request_id: requestId } : {})
+    });
+  };
+  // Closing the socket while a refused upload is still arriving makes the OS reset the connection, and the
+  // client never reads the 413. Let the discarded body finish first, for a bounded time.
+  const request = response.req;
+  if (mapped.status === 413 && request && !request.complete && typeof request.once === 'function') {
+    const timer = setTimeout(write, BODY_DRAIN_MS);
+    timer.unref?.();
+    request.once('end', () => { clearTimeout(timer); write(); });
+    request.resume();
+    return;
+  }
+  write();
 }
+
+const BODY_DRAIN_MS = 2000;
 
 function trustedHops(value) {
   if (value === undefined || value === null || value === '' || value === 'false' || value === '0') return 0;

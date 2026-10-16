@@ -1,9 +1,9 @@
 # AgentBL Agent 评测报告
 
-生成时间：2026-10-15T07:44:22.046Z（UTC）。模式：deterministic。
-代码基线：9cefb50519aefdd2b1774036fd048cbfb27859ad；工作区有改动：true。
-代码摘要：3605d9730019415c410588a9dd7be221f2f1cafa8ecbf94579e151d4ac732bd4。
-金标版本：agent-gold-v3-generated-redteam；金标与输入摘要：0x74b0e573ed46794f571c9d69614dc5ed97d52cd7e04989ed035ec613b5d1ee80。
+生成时间：2026-10-16T02:09:05.507Z（UTC）。模式：deterministic。
+代码基线：367c631c978067077467c66fbac3d098de71a5b9；工作区有改动：true。
+代码摘要：56957bd2d6b5f063e92512d3dc76d9863bb9baf18f09b15243e13bdcd18ac214。
+金标版本：agent-gold-v3-generated-redteam；金标与输入摘要：0x54df50c2d6fdde266466e1fb09f0ff3db133f6527bab4093c9d3d1f97e31046b。
 
 这是对真实本地组件的测量。确定性闸门：**PASS**。
 闸门通过与逐样例全对是两种结果；失败样例照实列出。金标不传入被测组件。

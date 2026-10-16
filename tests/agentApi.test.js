@@ -175,7 +175,7 @@ test('agent API (Demo)', async (t) => {
   });
 
   await t.test('approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx', async () => {
-    const service = await freshService({ AGENT_MAX_PRICE_MOVE_BPS: '100' });
+    const service = await freshService({ AGENT_MAX_PRICE_MOVE_BPS: '10' });
     await api('POST', '/api/agent/events?wait=1', event('WORLD_RISK_UPDATED', { event_id: 'ap1', occurred_at: '2026-10-12T09:00:00Z', data: { events: typhoon } }));
     const list = await api('GET', '/api/agent/approvals?status=PENDING');
     assert.equal(list.status, 200);

@@ -129,6 +129,9 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         pools: [...service.store.pools.values()]
           .filter((pool) => service.getMode() === 'demo' || service.registry.get(pool.caseData?.case_id ?? pool.poolId)?.chain)
           .map((pool) => ({ case_id: pool.caseData?.case_id ?? pool.poolId, status: pool.status, quote: pool.quote,
+            // The recorded subscription totals; the market shows these, never an estimate.
+            subscribed_usd: Number.isFinite(pool.subscribedUsd) ? pool.subscribedUsd : null,
+            target_usd: Number.isFinite(pool.targetUsd) ? pool.targetUsd : null,
             source_mode: service.getMode() === 'demo' ? 'demo' : 'chain-mirror' })) });
       return true;
     }

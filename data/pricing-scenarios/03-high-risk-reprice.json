@@ -1,18 +1,24 @@
 {
   "name": "high-risk-reprice",
-  "description": "FAST copper offering opens at ~0.80, then a severe-weather + route-deviation event raises risk to WARNING in transit and the RiskPricingOracle reprices the pool DOWN.",
+  "description": "FAST copper offering opens at ~0.985, then a severe-weather + route-deviation event raises risk to WARNING in transit and the RiskPricingOracle reprices the pool DOWN.",
   "base_case": "data/cases/copper-sg-shanghai.case.json",
-  "overrides": { "financing": { "payout_speed": "FAST" } },
+  "overrides": {
+    "financing": {
+      "payout_speed": "FAST"
+    }
+  },
   "pricing_expectations": {
     "payout_speed": "FAST",
     "pricing_action": "OPEN_OFFERING",
     "risk_level": "MEDIUM",
-    "min_issue_price": 0.79,
-    "max_issue_price": 0.81
+    "min_issue_price": 0.982,
+    "max_issue_price": 0.988
   },
   "offering_expectations": {
     "final_state": "Redeemed",
-    "includes_states": ["Repriced"],
+    "includes_states": [
+      "Repriced"
+    ],
     "events": [
       {
         "category": "macro",

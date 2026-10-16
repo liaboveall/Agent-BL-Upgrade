@@ -48,9 +48,50 @@ const MAX_PROFIT_SHARE = 0.85;
 const RISK_BPS_PER_PROFIT_SHARE = 3500;
 const MAX_RISK_PROFIT_SHARE = 0.3;
 
-// Absolute price clamps (target redemption value = 1.00 USD/token).
+// Absolute price clamps (target redemption value = 1.00 USD/token). The ceiling sits just under par so a
+// short, low-risk financing can still carry a small, realistic discount.
 const MIN_PRICE = 0.5;
-const MAX_PRICE = 0.97;
+const MAX_PRICE = 0.995;
+
+// --- tenor-aware rate cap ---------------------------------------------------
+// The profit share says what the exporter can afford to give up; it says nothing about how long the money is
+// out. On its own it paid investors more than 10,000% a year on a 3-day voyage. So the financing cost is also
+// capped by an annual rate over the financing tenor: faster payout costs a higher base rate, and risk adds a
+// premium on top. Whichever of the two is lower prices the offering.
+export const BASE_ANNUAL_RATE = { FAST: 0.12, BALANCED: 0.09, LOW_COST: 0.07 };
+const RISK_RATE_PER_BPS = 2 / 10000; // 100 bps of risk pressure adds 2 percentage points a year
+const MAX_ANNUAL_RATE = 0.6;
+export const MIN_TENOR_DAYS = 30; // operational floor: presentation, checks and settlement take time
+const DEFAULT_TENOR_DAYS = 60;    // when the documents do not let us derive one
+const SIGHT_PRESENTATION_DAYS = 7;
+const DAY_MS = 86_400_000;
+
+/** Annual rate ceiling for a payout speed at a given risk pressure. */
+export function annualRateCap(speed, riskScoreBps = 0) {
+  return Math.min(MAX_ANNUAL_RATE, BASE_ANNUAL_RATE[speed] + Math.max(0, Number(riskScoreBps) || 0) * RISK_RATE_PER_BPS);
+}
+
+/**
+ * Financing tenor in days: how long investors' money is out before the importer pays. "N days from B/L date"
+ * runs from shipment; "at sight" pays on presentation after arrival; "N (working) days after acceptance" pays
+ * N days after arrival. Never below MIN_TENOR_DAYS.
+ */
+export function tenorFromCase(caseData) {
+  const bl = caseData?.bill_of_lading ?? {};
+  const terms = String(caseData?.commercial_invoice?.payment_terms ?? caseData?.financing?.payment_terms ?? '');
+  const departed = Date.parse(bl.shipped_on_board || bl.issue_date);
+  const eta = Date.parse(bl.eta);
+  const voyage = Number.isFinite(departed) && Number.isFinite(eta) && eta >= departed ? Math.round((eta - departed) / DAY_MS) : null;
+  const fromBl = /(\d+)\s*days?\s+(?:from|after)\s+(?:the\s+)?(?:b\/l|bill of lading|shipment)/iu.exec(terms);
+  const afterArrival = /(\d+)\s*(?:个)?(?:工作日|天|日|days?)/iu.exec(terms);
+  let tenor;
+  if (fromBl) tenor = Math.max(Number(fromBl[1]), voyage ?? 0);
+  else if (voyage === null) tenor = DEFAULT_TENOR_DAYS;
+  else if (/sight|即期/iu.test(terms)) tenor = voyage + SIGHT_PRESENTATION_DAYS;
+  else if (afterArrival) tenor = voyage + Number(afterArrival[1]);
+  else tenor = voyage;
+  return Math.max(MIN_TENOR_DAYS, tenor);
+}
 
 // --- risk scoring (basis points of "risk pressure") ---
 const MACRO_RISK_BPS = {
@@ -157,8 +198,8 @@ export function scoreRisk(caseData) {
   };
 }
 
-function priceFromShare(cash, share, profit) {
-  return cash / (cash + share * profit);
+function priceFromCost(cash, cost) {
+  return cash / (cash + cost);
 }
 
 function pickPricingAction({ riskLevel, paused, profitShare, payoutSpeed, binding }) {
@@ -188,13 +229,18 @@ function buildInvestorExplanation(q) {
     q.binding_constraint === 'COLLATERAL'
       ? ` The price is floored by AI-verified collateral: safe redemption exposure is capped at USD ${usd(q.max_safe_redemption_exposure_usd)}, so the discount cannot go deeper without exceeding coverage.`
       : '';
+  const riskNote = `current ${q.risk_level} trade risk (${q.risk_factors.join('; ') || 'no flagged factors'})`;
+  const compensation = q.binding_constraint === 'TENOR_RATE'
+    ? `Investor compensation is capped at ${(q.annual_rate_cap_bps / 100).toFixed(1)}% a year for ${q.payout_speed} payout at ` +
+      `${riskNote}, which is below the ${pct(BASE_PROFIT_SHARE[q.payout_speed])}% share of the exporter's verified margin ` +
+      'that this speed would otherwise cost.'
+    : `The exporter chose ${q.payout_speed} payout, which sets a ${pct(BASE_PROFIT_SHARE[q.payout_speed])}% base share ` +
+      `of their verified trade margin as investor compensation; ${riskNote} adds ${q.risk_discount_bps}bps of discount.`;
   return (
-    `This eBL-backed RWA is offered at USD ${q.final_issue_price_usd.toFixed(2)} per token versus a USD 1.00 ` +
-    `target redemption value — an implied ${yieldPct}% gross upside. The exporter chose ${q.payout_speed} ` +
-    `payout, which sets a ${pct(BASE_PROFIT_SHARE[q.payout_speed])}% base share of their verified trade margin as ` +
-    `investor compensation; current ${q.risk_level} trade risk (${q.risk_factors.join('; ')}) adds ` +
-    `${q.risk_discount_bps}bps of discount.${floorNote} Target redemption is not guaranteed: it depends on ` +
-    `importer payment, cargo settlement and insurance coverage.`
+    `This eBL-backed RWA is offered at USD ${q.final_issue_price_usd.toFixed(4)} per token versus a USD 1.00 ` +
+    `target redemption value — an implied ${yieldPct}% gross upside over about ${q.tenor_days} days ` +
+    `(${(q.annualized_yield_bps / 100).toFixed(1)}% a year). ${compensation}${floorNote} Target redemption is not ` +
+    `guaranteed: it depends on importer payment, cargo settlement and insurance coverage.`
   );
 }
 
@@ -246,6 +292,13 @@ export function buildEvidenceGraph(core, collateralFloor, evidence) {
       evidence: [...core.risk_factors, ...intelCites, ...docIssues.map((d) => `doc: ${d}`)]
     },
     {
+      component: 'tenor_rate_cap',
+      discount_bps: null,
+      basis: `Investor cost capped at ${(core.annual_rate_cap_bps / 100).toFixed(1)}% a year over a ${core.tenor_days}-day tenor`,
+      evidence: [`tenor ${core.tenor_days} days (payment terms and voyage dates)`, `${core.payout_speed} base rate ${pct(BASE_ANNUAL_RATE[core.payout_speed])}% + ${core.risk_level} risk premium`],
+      binding: core.binding_constraint === 'TENOR_RATE'
+    },
+    {
       component: 'collateral_floor',
       price_usd: floorPrice,
       basis: `Safe redemption coverage caps exposure (collateral x ${core.redemption_coverage_limit})`,
@@ -288,17 +341,23 @@ export function priceRwaOffering(input) {
   const paused = totalShare > MAX_PROFIT_SHARE;
   const effectiveShare = Math.min(totalShare, MAX_PROFIT_SHARE);
 
+  // Tenor-aware cap: each cost is the lower of the profit share and the annual rate over the tenor.
+  const tenorDays = Math.max(MIN_TENOR_DAYS, Number(input.tenor_days) || DEFAULT_TENOR_DAYS);
+  const rateCost = (speedKey, risk) => cash * annualRateCap(speedKey, risk) * tenorDays / 365;
+  const costOf = (share, speedKey, risk) => Math.min(share * profit, rateCost(speedKey, risk));
+
   // Additive decomposition (pre-floor) for the AI Pricing Console waterfall.
-  const anchorPrice = priceFromShare(cash, BASE_PROFIT_SHARE.LOW_COST, profit); // patient-money anchor
-  const speedPrice = priceFromShare(cash, baseShare, profit);
-  const indicativePrice = priceFromShare(cash, effectiveShare, profit);
+  const anchorPrice = priceFromCost(cash, costOf(BASE_PROFIT_SHARE.LOW_COST, 'LOW_COST', 0)); // patient-money anchor
+  const speedPrice = priceFromCost(cash, costOf(baseShare, speed, 0));
+  const indicativePrice = priceFromCost(cash, costOf(effectiveShare, speed, riskScoreBps));
   const urgencyDiscountBps = Math.max(0, bps(anchorPrice - speedPrice));
   const riskDiscountBps = Math.max(0, bps(speedPrice - indicativePrice));
+  const rateBound = rateCost(speed, riskScoreBps) < effectiveShare * profit;
 
   // Collateral coverage guardrail (AI-5): final price can only be lifted by it.
   const collateralFloor = maxSafeRedemption > 0 ? cash / maxSafeRedemption : Infinity;
   let finalPrice = Math.max(indicativePrice, collateralFloor);
-  let binding = finalPrice > indicativePrice + 1e-9 ? 'COLLATERAL' : 'EXPORTER_PROFIT';
+  let binding = finalPrice > indicativePrice + 1e-9 ? 'COLLATERAL' : rateBound ? 'TENOR_RATE' : 'EXPORTER_PROFIT';
   if (finalPrice > MAX_PRICE || finalPrice < MIN_PRICE) {
     finalPrice = clamp(finalPrice, MIN_PRICE, MAX_PRICE);
     binding = 'PRICE_CLAMP';
@@ -357,6 +416,10 @@ export function priceRwaOffering(input) {
     exporter_profit_share_bps: bps(profitShare),
     exporter_net_profit_usd: netProfit,
     implied_gross_yield_bps: impliedYieldBps,
+    tenor_days: tenorDays,
+    annual_rate_cap_bps: bps(annualRateCap(speed, riskScoreBps)),
+    // The gross yield spread over the tenor, so offerings of different lengths can be compared.
+    annualized_yield_bps: bps((target / finalPrice - 1) * 365 / tenorDays),
     risk_level: riskLevel,
     risk_score_bps: riskScoreBps,
     risk_factors: input.risk_factors ?? [],
@@ -497,6 +560,7 @@ export function quoteFromCase(caseData, options = {}) {
     risk_score_bps: risk.risk_score_bps,
     risk_level: risk.risk_level,
     risk_factors: risk.risk_factors,
+    tenor_days: tenorFromCase(caseData),
     evidence: { documents: risk.document_checks, intel }
   });
   const paidReports = options.paid_report_envelopes ?? options.paid_report_envelope;

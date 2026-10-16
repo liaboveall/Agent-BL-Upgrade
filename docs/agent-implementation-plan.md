@@ -425,7 +425,7 @@ SSE（活动流和 Copilot 流）每条消息带 `id: <seq>`，服务端支持 `
 | `AGENT_ALLOW_UNATTENDED_IRREVERSIBLE` | `false` | 只在 Demo 生效，不推荐开启 |
 | `AGENT_PROTECTED_CHAIN_POOLS` | `2` | 受保护的链上池编号（逗号分隔），见 D4 |
 | `AGENT_MONITOR_INTERVAL_SEC` | `300`（最小 30） | 监控周期 |
-| `AGENT_MAX_PRICE_MOVE_BPS` | `1500` | 单次改价超过该幅度需审批 |
+| `AGENT_MAX_PRICE_MOVE_BPS` | `200` | 单次改价超过该幅度需审批（2026-10-15 改为期限定价后由 1500 下调） |
 | `AGENT_COOLDOWN_SEC` | `600` | 同池同向动作的冷却期 |
 | `AGENT_MAX_ACTIONS_PER_POOL_PER_DAY` | `12` | 防抖 |
 | `AGENT_RISK_CLEAR_TICKS` | `2` | 风险解除的滞回次数 |

@@ -39,15 +39,19 @@ function tokenize(text) {
     .filter((t) => t.length > 2 && !STOPWORDS.has(t));
 }
 
+// Geography words too generic to identify a place on their own ("Strait of Malacca" is not "Strait of Hormuz").
+const GENERIC_REGION_WORDS = new Set(['strait', 'east', 'west', 'north', 'south', 'middle', 'central', 'port', 'gulf', 'asia', 'region', 'island', 'islands', 'terminal']);
+
 function regionTokens(region) {
-  return tokenize(region).filter((t) => t.length > 3);
+  return tokenize(region).filter((t) => t.length > 3 && !GENERIC_REGION_WORDS.has(t));
 }
 
 /** Build a retrieval query profile from a trade case. */
 function caseQuery(caseData = {}) {
   const macro = caseData.macro_risk_events ?? [];
   const types = new Set(macro.map((e) => e.type));
-  const regions = macro.flatMap((e) => regionTokens(e.region));
+  const bl = caseData.bill_of_lading ?? {};
+  const regions = [...macro.flatMap((e) => regionTokens(e.region)), ...regionTokens(bl.port_of_loading), ...regionTokens(bl.port_of_discharge)];
   const commodity = (caseData.cargo?.commodity ?? caseData.market?.commodity ?? caseData.bill_of_lading?.cargo ?? '').toLowerCase();
   const terms = new Set([
     ...tokenize(commodity),
@@ -76,9 +80,24 @@ function scoreDoc(doc, q) {
   for (const term of q.terms ?? []) {
     if (docTokens.has(term)) score += 0.25;
   }
-  // severity nudge so critical intel sorts above info on ties
-  score += { critical: 0.3, warning: 0.15, info: 0 }[doc.severity] ?? 0;
+  // severity nudge so critical intel sorts above info on ties -- only for documents that are relevant at
+  // all, otherwise every warning in the corpus would match every case.
+  if (score > 0) score += { critical: 0.3, warning: 0.15, info: 0 }[doc.severity] ?? 0;
   return score;
+}
+
+/**
+ * A document is about a case only if it shares a risk type, the specific commodity or a region with it.
+ * Shared words alone (tags, text) only order documents that pass this gate; otherwise a generic word like
+ * "delay" would attach Shanghai port congestion to a Jakarta fuel cargo.
+ */
+function structurallyRelevant(doc, q) {
+  const commodity = doc.commodity && doc.commodity !== 'all' ? doc.commodity : null;
+  if (commodity) return Boolean(q.commodity) && (q.commodity.includes(commodity) || commodity.includes(q.commodity.split(' ')[0]));
+  const docRegions = regionTokens(doc.region);
+  const regional = docRegions.length > 0 && !docRegions.includes('global');
+  if (regional) return (q.regions ?? []).some((region) => docRegions.includes(region));
+  return Boolean(q.types?.has?.(doc.type));
 }
 
 function pack(doc, score) {
@@ -103,6 +122,7 @@ export function retrieveRiskIntel(caseData, opts = {}) {
   const q = caseQuery(caseData);
   return corpus
     .filter((doc) => includePolicies || doc.type !== 'policy')
+    .filter((doc) => structurallyRelevant(doc, q))
     .map((doc) => ({ doc, score: scoreDoc(doc, q) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)

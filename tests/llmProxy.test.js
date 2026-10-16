@@ -42,6 +42,14 @@ async function startUpstream() {
           response.write('data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n');
           response.write('data: {"choices":[{"delta":{"content":"lo"}}]}\n\n');
           return response.end('data: [DONE]\n\n');
+        case 'reasoning':
+          return json(200, { choices: [{ message: { role: 'assistant', content: 'answer', reasoning: 'SYSTEM PROMPT ECHO', reasoning_content: 'SYSTEM PROMPT ECHO' }, finish_reason: 'stop' }] });
+        case 'reasoning-stream':
+          // One event split across two writes, to exercise the relay's line buffering.
+          response.writeHead(200, { 'content-type': 'text/event-stream' });
+          response.write('data: {"choices":[{"delta":{"reasoning_content":"SYSTEM PROM');
+          response.write('PT ECHO"}}]}\n\ndata: {"choices":[{"delta":{"content":"ok","reasoning":"SYSTEM PROMPT ECHO"}}]}\n\n');
+          return response.end('data: [DONE]\n\n');
         case 'hang-stream':
           response.writeHead(200, { 'content-type': 'text/event-stream' });
           return response.write('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'); // never ends
@@ -199,6 +207,22 @@ test('LLM relay', async (t) => {
     assert.ok(text.includes('"content":"Hel"') && text.includes('"content":"lo"') && text.includes('[DONE]'));
     assert.equal(upstream.state.received[0].body.stream, true);
     assert.ok(!text.includes(RELAY_KEY));
+  });
+
+  await t.test('never relays the hidden thinking of a reasoning model, streamed or not', async () => {
+    upstream.state.mode = 'reasoning';
+    const json = await chat(app.base, { messages: [userMessage()] });
+    assert.equal(json.status, 200);
+    assert.equal(json.data.choices[0].message.content, 'answer');
+    assert.ok(!json.text.includes('SYSTEM PROMPT ECHO'));
+
+    upstream.state.mode = 'reasoning-stream';
+    const response = await fetch(`${app.base}/api/llm/chat`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: [userMessage()], stream: true })
+    });
+    const text = await response.text();
+    assert.ok(text.includes('"content":"ok"') && text.includes('[DONE]'));
+    assert.ok(!text.includes('SYSTEM PROMPT ECHO'));
   });
 
   await t.test('rejects malformed requests before touching the provider', async () => {

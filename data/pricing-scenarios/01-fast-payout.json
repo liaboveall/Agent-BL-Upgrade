@@ -1,14 +1,18 @@
 {
   "name": "fast-payout",
-  "description": "Exporter chooses FAST payout on the clean copper case: profit-driven price ~0.80, opens cleanly.",
+  "description": "Exporter chooses FAST payout on the clean copper case: priced by the 30-day annual-rate cap (~0.985, about 19% a year), opens cleanly.",
   "base_case": "data/cases/copper-sg-shanghai.case.json",
-  "overrides": { "financing": { "payout_speed": "FAST" } },
+  "overrides": {
+    "financing": {
+      "payout_speed": "FAST"
+    }
+  },
   "pricing_expectations": {
     "payout_speed": "FAST",
     "pricing_action": "OPEN_OFFERING",
-    "binding_constraint": "EXPORTER_PROFIT",
+    "binding_constraint": "TENOR_RATE",
     "risk_level": "MEDIUM",
-    "min_issue_price": 0.79,
-    "max_issue_price": 0.81
+    "min_issue_price": 0.982,
+    "max_issue_price": 0.988
   }
 }

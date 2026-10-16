@@ -41,7 +41,7 @@ const BLOCKING_FINDINGS = new Set(['COMPLIANCE_BLOCK']);
 const REVIEW_FINDINGS = new Set(['PROMPT_INJECTION_SUSPECTED', 'COMPLIANCE_REVIEW']);
 
 const DEFAULT_THRESHOLDS = Object.freeze({
-  maxPriceMoveBps: 1500,
+  maxPriceMoveBps: 200,
   cooldownSec: 600,
   maxActionsPerPoolPerDay: 12,
   allowUnattendedIrreversible: false

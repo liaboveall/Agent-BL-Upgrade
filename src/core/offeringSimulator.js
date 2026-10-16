@@ -15,7 +15,9 @@ import { quoteFromCase } from './pricingEngine.js';
 import { STATE_BY_PRICING_ACTION } from './pricingSchema.js';
 
 const NON_OPENING_ACTIONS = new Set(['PAUSE_OFFERING', 'FREEZE_POOL', 'TRIGGER_LIQUIDATION']);
-const REPRICE_THRESHOLD = 0.005; // >0.5c price drop counts as a reprice event
+// >0.2c (20 bps) price drop counts as a reprice event. Tenor-capped prices sit near par, so a material risk
+// shock on a 30-day deal moves the price by tenths of a cent, not by several cents.
+const REPRICE_THRESHOLD = 0.002;
 
 // --- default / liquidation recovery model --------------------------------
 // When the importer (or exporter) defaults, the pool seizes the pledged eBL,

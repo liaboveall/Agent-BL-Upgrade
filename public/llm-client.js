@@ -120,10 +120,9 @@ export class LlmClient {
    * @param {object} callbacks
    * @param {function(string):void} callbacks.onChunk - 收到文本增量
    * @param {function({name:string, args:object}):void} callbacks.onToolCall - 收到工具调用
-   * @param {function(string):void} callbacks.onThinking - 收到思考内容（推理模型）
    * @returns {Promise<{content:string|null, tool_calls:Array|null}>} 完整响应
    */
-  async streamChat(messages, tools, { onChunk, onToolCall, onThinking } = {}) {
+  async streamChat(messages, tools, { onChunk, onToolCall } = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
 
@@ -166,11 +165,6 @@ export class LlmClient {
             if (delta.content) {
               content += delta.content;
               onChunk?.(delta.content);
-            }
-
-            // 思考内容（推理模型）
-            if (delta.reasoning_content) {
-              onThinking?.(delta.reasoning_content);
             }
 
             // 工具调用

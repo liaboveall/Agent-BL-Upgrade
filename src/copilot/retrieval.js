@@ -24,6 +24,9 @@ export function bm25(query, texts) {
   }, 0));
 }
 
+/** Investors state yield wishes per year; quotes from before the tenor model only carry the gross yield. */
+export const annualYieldBps = (quote) => quote.annualized_yield_bps ?? quote.implied_gross_yield_bps;
+
 export function poolCandidate(pool, decision, now = Date.now()) {
   const data = pool.caseData ?? {}, bl = data.bill_of_lading ?? {}, quote = pool.quote;
   const departure = Date.parse(bl.shipped_on_board ?? bl.issue_date), arrival = Date.parse(bl.eta);
@@ -37,7 +40,8 @@ export function poolCandidate(pool, decision, now = Date.now()) {
     pool_id: pool.poolId, case_id: data.case_id ?? pool.poolId,
     label: bl.cargo ?? data.cargo?.commodity ?? pool.poolId,
     commodity: commodityOf(`${data.cargo?.commodity ?? ''} ${bl.cargo ?? ''}`), route,
-    status: pool.status, quote, tenor_days: tenor,
+    // The pricing tenor (payment terms included) when the quote has one; the voyage length otherwise.
+    status: pool.status, quote, tenor_days: quote?.tenor_days ?? tenor,
     insurance_coverage: data.insurance?.coverage_ratio ?? null,
     collateral_coverage: quote.ai_verified_collateral_value_usd / Math.max(1, quote.target_redemption_exposure_usd),
     remaining_usd: Math.max(0, pool.targetUsd - pool.subscribedUsd),
@@ -56,7 +60,7 @@ export function exclusionReasons(candidate, constraints) {
   if (['HOLD_FOR_REVIEW', 'REJECT'].includes(c.document_verdict?.action ?? c.decision?.action)) reasons.push('agent_hold');
   if (riskLevelRank(q.risk_level) < 0) reasons.push('unknown_risk');
   if (constraints.risk_max && riskLevelRank(q.risk_level) > riskLevelRank(constraints.risk_max)) reasons.push('risk_max');
-  if (constraints.yield_min_bps !== undefined && q.implied_gross_yield_bps < constraints.yield_min_bps) reasons.push('yield_min_bps');
+  if (constraints.yield_min_bps !== undefined && annualYieldBps(q) < constraints.yield_min_bps) reasons.push('yield_min_bps');
   if (constraints.tenor_days_max !== undefined && (c.tenor_days === null || c.tenor_days > constraints.tenor_days_max)) reasons.push('tenor_days_max');
   if (constraints.commodities_include.length && !constraints.commodities_include.includes(c.commodity)) reasons.push('commodities_include');
   if (constraints.commodities_exclude.includes(c.commodity)) reasons.push('commodities_exclude');

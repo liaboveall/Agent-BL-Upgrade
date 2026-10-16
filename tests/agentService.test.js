@@ -155,7 +155,7 @@ test('invalid events are refused before they are queued', async () => {
 // ---------------------------------------------------------------- Demo: policy and approvals
 
 test('policy: a price move above the cap waits for approval; approving it executes, rejecting does not', async () => {
-  const { service, pool } = await demoService({ configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '100' } });
+  const { service, pool } = await demoService({ configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '10' } });
   const before = pool().quote.final_issue_price_usd;
   await settle(service, ev('WORLD_RISK_UPDATED', { event_id: 'big1', occurred_at: '2026-10-12T10:00:00Z', data: { events: typhoon } }));
   const pending = await lastDecision(service);
@@ -185,7 +185,7 @@ test('policy: a price move above the cap waits for approval; approving it execut
 });
 
 test('policy: rejecting a pending proposal records it and changes nothing', async () => {
-  const { service, pool } = await demoService({ configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '100' } });
+  const { service, pool } = await demoService({ configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '10' } });
   const before = pool().quote.final_issue_price_usd;
   await settle(service, ev('WORLD_RISK_UPDATED', { event_id: 'rej', data: { events: typhoon } }));
   const [approval] = service.approvals.list({ status: 'PENDING' });
@@ -331,7 +331,7 @@ test('Demo reset clears the agent state of Demo mode only', async () => {
 
 test('decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate', async () => {
   const dir = await tempDir();
-  const first = await demoService({ dir, configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '100' } });
+  const first = await demoService({ dir, configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '10' } });
   await first.service.activity.attachFile(path.join(dir, 'agent-activity.jsonl'));
   await settle(first.service, ev('WORLD_RISK_UPDATED', { event_id: 'p1', data: { events: typhoon } }));
   const [approval] = first.service.approvals.list({ status: 'PENDING' });
@@ -340,7 +340,7 @@ test('decisions, activity, approvals and event state survive a restart; a duplic
   await first.service.stop();
   await first.service.activity.flush();
 
-  const second = await demoService({ dir, configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '100' } });
+  const second = await demoService({ dir, configEnv: { AGENT_MAX_PRICE_MOVE_BPS: '10' } });
   await second.service.activity.attachFile(path.join(dir, 'agent-activity.jsonl'));
   const decisionAfter = await lastDecision(second.service);
   assert.equal(decisionAfter.decision_id, decisionBefore.decision_id);

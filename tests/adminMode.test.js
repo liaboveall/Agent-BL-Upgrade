@@ -86,9 +86,26 @@ test('runtime mode switching requires the admin token', async (t) => {
   });
 
   await t.test('demo reset is unavailable in Live mode', async () => {
-    const reset = await requestJson(app.base, 'POST', '/api/demo/reset');
+    const anonymous = await requestJson(app.base, 'POST', '/api/demo/reset');
+    assert.equal(anonymous.status, 401, 'the admin token is checked first');
+    const reset = await requestJson(app.base, 'POST', '/api/demo/reset', undefined, bearer(TOKEN));
     assert.equal(reset.status, 409);
     assert.equal(reset.data.code, 'demo_reset_live_forbidden');
+  });
+
+  await t.test('in Live the legacy upload needs the token, like POST /api/agent/ingest', async () => {
+    const file = { name: 'bl.png', type: 'image/png', size: 68, content: 'iVBORw0KGgo=' };
+    const anonymous = await requestJson(app.base, 'POST', '/api/ebl/upload', { case_id: 'CASE-LIVE-UPLOAD', file });
+    assert.equal(anonymous.status, 401);
+    assert.equal(anonymous.data.code, 'admin_token_required');
+    const metadataOnly = await requestJson(app.base, 'POST', '/api/ebl/upload', { file: { name: 'bl.pdf', type: 'application/pdf', size: 10 } });
+    assert.equal(metadataOnly.status, 401, 'metadata-only uploads are not an exception');
+  });
+
+  await t.test('in Live the simulated subscription ledger is closed', async () => {
+    const res = await requestJson(app.base, 'POST', '/api/pool/subscribe', { pool_id: 'CASE-EBL-2026-CU-SG-SHA', amount_usd: 100 });
+    assert.equal(res.status, 409);
+    assert.equal(res.data.code, 'demo_only');
   });
 
   await t.test('without a configured (or with a too-short) token, leaving Live is impossible at runtime', async () => {
@@ -123,4 +140,20 @@ test('a pure demo deployment (nothing Live configured) keeps the toggle open and
   assert.equal(toDemo.status, 200);
   const reset = await requestJson(app.base, 'POST', '/api/demo/reset');
   assert.equal(reset.status, 200);
+});
+
+test('a Demo server with a configured admin token protects the shared reset', async (t) => {
+  const app = await listen(createServer());
+  t.after(() => { app.close(); delete process.env.AGENTBL_ADMIN_TOKEN; });
+  for (const name of Object.keys(LIVE_ENV)) delete process.env[name];
+  demoModeController.setMode('demo');
+  process.env.AGENTBL_ADMIN_TOKEN = TOKEN;
+
+  const anonymous = await requestJson(app.base, 'POST', '/api/demo/reset');
+  assert.equal(anonymous.status, 401);
+  assert.equal(anonymous.data.code, 'admin_token_required');
+  const authorised = await requestJson(app.base, 'POST', '/api/demo/reset', undefined, bearer(TOKEN));
+  assert.equal(authorised.status, 200);
+  const upload = await requestJson(app.base, 'POST', '/api/ebl/upload', { file: { name: 'bl.pdf', type: 'application/pdf', size: 10 } });
+  assert.equal(upload.status, 200, 'Demo uploads stay open for zero-setup demos');
 });

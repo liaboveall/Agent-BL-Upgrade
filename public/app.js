@@ -29,10 +29,13 @@ import { payV2WithWallet } from './x402-v2.js';
 import { initMysteryExperience, renderMysteryExperience, resetMysteryExperience } from './mystery.js';
 
 const PAUSED_ACTIONS = new Set(['PAUSE_OFFERING', 'FREEZE_POOL', 'TRIGGER_LIQUIDATION']);
+// Pool states in which no new subscription is accepted (contract enum names plus the offchain 'Liquidated').
+const INACTIVE_POOL_STATES = new Set(['Paused', 'Frozen', 'Liquidation', 'Liquidated', 'Repaid', 'Redeemed', 'Cancelled']);
 // Decision verbs worth a toast when the agent emits them (docs/agent-implementation-plan.md §4.3).
 const NOTIFY_DECISION_ACTIONS = new Set(['REPRICE', 'PAUSE', 'RESUME', 'FREEZE', 'LIQUIDATE', 'SETTLE']);
-const MARKET_PLAY_MS = 90000;
-const marketClock = { timer: 0, startedAt: 0 };
+// Voyage progress follows the wall clock, so a once-a-minute refresh is enough.
+const MARKET_CLOCK_MS = 60000;
+const marketClock = { timer: 0 };
 const evidenceState = { latest: new Map(), pools: new Map(), selected: null, version: 0, selectionVersion: 0, caseVersion: 0 };
 
 function evidenceFor(caseId) {
@@ -85,6 +88,12 @@ async function selectLinkedDecision(decision) {
   if (state.caseId !== decision.case_id) await selectCase(decision.case_id);
   if (version !== evidenceState.selectionVersion) return false;
   return selectDecisionEvidence(decision);
+}
+
+/** Yield per year: what investors compare offerings of different lengths by. Older quotes fall back to gross. */
+function annualYieldText(quote, unavailable = '--') {
+  if (!quote || PAUSED_ACTIONS.has(quote.pricing_action)) return unavailable;
+  return f.bpsToPct(quote.annualized_yield_bps ?? quote.implied_gross_yield_bps);
 }
 
 function potentialYieldText(quote, unavailable = '--') {
@@ -250,24 +259,29 @@ function rememberAdminToken(token) {
   } catch { /* storage unavailable: the prompt simply reappears next time */ }
 }
 
-async function postRuntimeMode(target, token) {
+async function postAdmin(url, body, token) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const response = await fetch('/api/demo/mode', { method: 'POST', headers, body: JSON.stringify({ mode: target }) });
+  const response = await fetch(url, { method: 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
   return { response, data: await response.json() };
+}
+
+/** POST an admin operation; on 401 ask for the token once, retry, and remember it only if it worked. */
+async function postWithAdminToken(url, body) {
+  let { response, data } = await postAdmin(url, body, storedAdminToken());
+  if (response.status === 401) {
+    const entered = (window.prompt(t('admin_token_prompt')) || '').trim();
+    if (!entered) throw new Error(t('admin_token_cancelled'));
+    ({ response, data } = await postAdmin(url, body, entered));
+    rememberAdminToken(response.ok ? entered : '');
+  }
+  return { response, data };
 }
 
 async function onModeToggle() {
   const target = state.demoMode ? 'live' : 'demo';
   try {
-    let { response, data } = await postRuntimeMode(target, storedAdminToken());
-    if (response.status === 401) {
-      // No token yet (or a stale one): ask once, retry, and remember it only if it worked.
-      const entered = (window.prompt(t('admin_token_prompt')) || '').trim();
-      if (!entered) throw new Error(t('admin_token_cancelled'));
-      ({ response, data } = await postRuntimeMode(target, entered));
-      rememberAdminToken(response.ok ? entered : '');
-    }
+    const { response, data } = await postWithAdminToken('/api/demo/mode', { mode: target });
     if (!response.ok) throw new Error(data.error || `Could not switch to ${target}`);
     state.demoMode = data.demoMode;
     state.liveAvailable = data.liveAvailable;
@@ -284,8 +298,7 @@ async function onModeToggle() {
 
 async function onDemoReset() {
   try {
-    const response = await fetch('/api/demo/reset', { method: 'POST' });
-    const data = await response.json();
+    const { response, data } = await postWithAdminToken('/api/demo/reset');
     if (!response.ok) throw new Error(data.error || 'Demo reset failed');
     state.modeGeneration = data.generation;
     clearEvidenceSelection(); evidenceState.latest.clear(); evidenceState.pools.clear(); refreshEvidence();
@@ -549,23 +562,32 @@ function renderMarket() {
   renderMarketGrid(cases);
   renderMarketDetail();
   updateMarketProgressVisuals();
+  refreshCaseOptionLabels();
+}
+
+/**
+ * What the market shows for one case: the agent's pool (status, quote and recorded subscriptions) when it
+ * has one, otherwise the cached price comparison. Every card, sort and summary goes through this.
+ */
+function marketView(entry) {
+  const pool = evidenceState.pools.get(entry.case_id) ?? null;
+  const quote = pool?.quote ?? recommendedQuote(cachedComparison(entry.case_id));
+  const paused = pool ? INACTIVE_POOL_STATES.has(pool.status) : Boolean(quote && PAUSED_ACTIONS.has(quote.pricing_action));
+  return { pool, quote, paused };
 }
 
 function sortMarketCases(cases) {
-  const riskRank = { LOW: 0, MEDIUM: 1, HIGH: 2, WARNING: 2, CRITICAL: 3 };
+  const riskRank = { LOW: 0, MEDIUM: 1, WARNING: 2, CRITICAL: 3 };
   const etaOf = (c) => +(f.parseDate(c.case?.bill_of_lading?.eta) ?? 0) || Number.MAX_SAFE_INTEGER;
-  const quoteOf = (c) => recommendedQuote(cachedComparison(c.case_id));
-  const fundingOf = (c) => marketFunding(c, quoteOf(c)).fill;
-  const riskOf = (c) => riskRank[quoteOf(c)?.risk_level ?? c.risk_hint] ?? 9;
+  const fundingOf = (c) => marketFunding(marketView(c).pool)?.fill ?? -1;
+  const riskOf = (c) => riskRank[marketView(c).quote?.risk_level] ?? 9;
   const list = [...cases];
   list.sort((a, b) => {
     if (state._aiRanks) return (state._aiRanks.get(a.case_id) ?? 99) - (state._aiRanks.get(b.case_id) ?? 99);
     if (state.marketSort === 'yield_desc') {
       const yieldOf = (entry) => {
-        const quote = quoteOf(entry);
-        return quote && !PAUSED_ACTIONS.has(quote.pricing_action)
-          ? quote.implied_gross_yield_bps ?? -1
-          : -1;
+        const { quote, paused } = marketView(entry);
+        return quote && !paused ? quote.annualized_yield_bps ?? quote.implied_gross_yield_bps ?? -1 : -1;
       };
       return yieldOf(b) - yieldOf(a);
     }
@@ -581,11 +603,12 @@ function renderMarketStats(cases) {
   const box = $('#market-stats');
   if (!box) return;
   clear(box);
-  const quotes = cases.map((c) => recommendedQuote(cachedComparison(c.case_id))).filter(Boolean);
-  const openQuotes = quotes.filter((q) => !PAUSED_ACTIONS.has(q.pricing_action));
+  const views = cases.map(marketView).filter((view) => view.quote);
+  const quotes = views.map((view) => view.quote);
+  const openQuotes = views.filter((view) => !view.paused).map((view) => view.quote);
   const target = quotes.reduce((sum, q) => sum + Number(q.expected_cash_to_exporter_usd ?? q.requested_cash_usd ?? 0), 0);
   const avgYield = openQuotes.length
-    ? openQuotes.reduce((sum, q) => sum + Number(q.implied_gross_yield_bps ?? 0), 0) / openQuotes.length
+    ? openQuotes.reduce((sum, q) => sum + Number(q.annualized_yield_bps ?? q.implied_gross_yield_bps ?? 0), 0) / openQuotes.length
     : null;
   const open = openQuotes.length;
   box.append(
@@ -647,18 +670,19 @@ function renderMarketGrid(cases) {
   }
 }
 
-function renderMarketCard(entry, comparison) {
-  const currentPool = evidenceState.pools.get(entry.case_id);
-  const quote = currentPool?.quote ?? recommendedQuote(comparison);
+function renderMarketCard(entry) {
+  const { pool, quote, paused } = marketView(entry);
   const bl = entry.case?.bill_of_lading ?? {};
   const active = entry.case_id === state.caseId;
-  const risk = quote?.risk_level ?? entry.risk_hint ?? '—';
+  const risk = quote?.risk_level ?? '—';
   const tone = f.riskTone(risk);
-  const funding = marketFunding(entry, quote);
+  const funding = marketFunding(pool);
   const progress = marketVoyageProgress(entry.case);
   const qty = cargoQuantity(bl);
-  const act = quote ? f.actionMeta(quote.pricing_action) : null;
-  const paused = currentPool && ['Paused', 'Frozen', 'Liquidated', 'Repaid', 'Cancelled'].includes(currentPool.status) || quote && PAUSED_ACTIONS.has(quote.pricing_action);
+  // An inactive pool shows its state; an open one shows the pricing action of its current quote.
+  const act = pool && paused
+    ? { label: poolStateLabel(pool.status), tone: f.stateTone(pool.status) }
+    : quote ? f.actionMeta(quote.pricing_action) : null;
 
   let cargoType = 'alu'; // fallback
   const cId = (entry.case_id || '').toLowerCase();
@@ -695,8 +719,8 @@ function renderMarketCard(entry, comparison) {
         el('strong', { class: 'market-price', text: quote ? `$${f.price(quote.final_issue_price_usd)}` : '—' })
       ),
       el('div', { class: 'market-yield' },
-        el('strong', { text: potentialYieldText(quote) }),
-        el('span', { text: t('market_upside') })
+        el('strong', { text: paused ? '--' : annualYieldText(quote) }),
+        el('span', { text: quote?.tenor_days ? t('market_upside_annual', { days: quote.tenor_days }) : t('market_upside') })
       )
     ),
     el('div', { class: 'market-card-facts' },
@@ -723,27 +747,33 @@ function fact(label, value) {
 }
 
 function renderMarketVoyage(bl, progress) {
+  const shown = progress ?? 0;
   return el('div', { class: 'market-voyage' },
     el('div', { class: 'market-port-row' },
       el('span', { text: tData(bl.port_of_loading) || 'Departure' }),
       el('span', { text: tData(bl.port_of_discharge) || 'Arrival' })
     ),
     el('div', { class: 'market-voyage-track' },
-      el('div', { class: 'market-voyage-fill', style: `width:${Math.round(progress * 100)}%` }),
-      el('span', { class: 'market-ship', style: `left:${2 + progress * 96}%`, text: '🚢' })
+      el('div', { class: 'market-voyage-fill', style: `width:${Math.round(shown * 100)}%` }),
+      progress === null ? null : el('span', { class: 'market-ship', style: `left:${2 + shown * 96}%`, text: '🚢' })
     ),
     el('div', { class: 'market-voyage-note', text: marketVoyageNote(bl, progress) })
   );
+}
+
+function marketFundingText(funding, paused) {
+  if (!funding) return t('market_funding_none');
+  return `${f.usdCompact(funding.raised)} / ${f.usdCompact(funding.target)} · ${Math.round(funding.fill * 100)}%${paused ? t('fin_paused') : ''}`;
 }
 
 function renderMarketFunding(funding, paused) {
   return el('div', { class: 'market-funding' },
     el('div', { class: 'market-funding-head' },
       el('span', { text: t('market_funding') }),
-      el('strong', { text: `${f.usdCompact(funding.raised)} / ${f.usdCompact(funding.target)} · ${Math.round(funding.fill * 100)}%${paused ? t('fin_paused') : ''}` })
+      el('strong', { text: marketFundingText(funding, paused) })
     ),
     el('div', { class: 'market-funding-track' },
-      el('div', { class: `market-funding-fill${paused ? ' paused' : ''}`, style: `width:${Math.round(funding.fill * 100)}%` })
+      el('div', { class: `market-funding-fill${paused ? ' paused' : ''}`, style: `width:${Math.round((funding?.fill ?? 0) * 100)}%` })
     )
   );
 }
@@ -759,15 +789,15 @@ function renderMarketDetail() {
   if (!box) return;
   clear(box);
   const entry = state.cases.find((c) => c.case_id === state.caseId);
-  const currentPool = evidenceState.pools.get(state.caseId);
-  const quote = currentPool?.quote ?? selectedQuote();
+  const view = entry ? marketView(entry) : null;
+  const quote = view?.pool?.quote ?? selectedQuote();
   const bl = state.caseData?.bill_of_lading ?? {};
   if (!entry || !quote) {
     box.append(el('div', { class: 'market-detail-empty', text: t('market_detail_loading') }));
     return;
   }
 
-  const paused = ['Paused', 'Frozen', 'Liquidated', 'Repaid', 'Cancelled'].includes(currentPool?.status) || PAUSED_ACTIONS.has(quote.pricing_action);
+  const paused = view.pool ? view.paused : PAUSED_ACTIONS.has(quote.pricing_action);
   const act = f.actionMeta(quote.pricing_action);
   const amount = state.marketSubscriptionUsd ?? defaultMarketSubscription(quote);
   state.marketSubscriptionUsd = amount;
@@ -786,7 +816,7 @@ function renderMarketDetail() {
       el('span', { class: `badge tone-${act.tone}`, text: `${act.icon} ${act.label}` })
     ),
     el('div', { class: 'market-detail-kpis' },
-      miniKv(t('market_detail_upside'), potentialYieldText(quote), paused ? undefined : 'gain'),
+      miniKv(t('market_detail_upside'), paused ? '--' : `${potentialYieldText(quote)} · ${t('market_annual_short', { apr: annualYieldText(quote) })}`, paused ? undefined : 'gain'),
       miniKv(t('market_detail_risk'), `${f.riskLabel(quote.risk_level)} · ${f.int(quote.risk_score_bps)} bps`),
       miniKv(t('market_detail_collateral'), f.usdCompact(quote.ai_verified_collateral_value_usd)),
       miniKv(t('market_detail_eta'), f.fmtDate(bl.eta))
@@ -879,40 +909,28 @@ function cargoQuantity(bl) {
   return bl.containers || '';
 }
 
-function initialMarketProgress(caseData) {
+/** Share of the voyage done at `now`, from the bill of lading's departure and ETA; null when either is missing. */
+function marketVoyageProgress(caseData, now = Date.now()) {
   const bl = caseData?.bill_of_lading ?? {};
   const dep = f.parseDate(bl.shipped_on_board || bl.issue_date);
   const eta = f.parseDate(bl.eta);
-  if (!dep || !eta) return 0.15;
-  const dates = [...(caseData.shipment_events ?? []), ...(caseData.macro_risk_events ?? [])]
-    .map((e) => +f.parseDate(e.date)).filter(Number.isFinite);
-  const now = dates.length ? Math.max(...dates) : (+dep + (+eta - +dep) * 0.18);
-  return Math.max(0.06, Math.min(0.88, f.voyageProgress(dep, eta, now)));
-}
-
-function marketVoyageProgress(caseData) {
-  const started = marketClock.startedAt || performance.now();
-  const extra = Math.max(0, performance.now() - started) / MARKET_PLAY_MS;
-  return Math.max(0.04, Math.min(1, initialMarketProgress(caseData) + extra * 0.52));
+  if (!dep || !eta || +eta <= +dep) return null;
+  return f.voyageProgress(dep, eta, now);
 }
 
 function marketVoyageNote(bl, progress) {
-  const pct = Math.round(progress * 100);
   const disch = tData(bl.port_of_discharge) || 'destination';
-  const eta = f.fmtDate(bl.eta);
-  return progress >= 1 ? t('market_arrived', { disch }) : t('market_voyage_note', { pct, disch, eta });
+  if (progress === null) return t('market_voyage_unknown');
+  if (progress >= 1) return t('market_arrived', { disch });
+  return t('market_voyage_note', { pct: Math.round(progress * 100), disch, eta: f.fmtDate(bl.eta) });
 }
 
-function marketFunding(entry, quote) {
-  const target = Number(quote?.expected_cash_to_exporter_usd ?? quote?.requested_cash_usd ?? entry.case?.financing?.requested_cash_usd ?? 0);
-  const progress = marketVoyageProgress(entry.case);
-  const paused = quote && PAUSED_ACTIONS.has(quote.pricing_action);
-  const fill = Math.min(paused ? 0.72 : 0.97, 0.18 + progress * (paused ? 0.54 : 0.76));
-  return {
-    target,
-    fill,
-    raised: Math.round(target * fill)
-  };
+/** The pool's recorded subscriptions against its target; null when the pool has no record. */
+function marketFunding(pool) {
+  const raised = Number(pool?.subscribed_usd);
+  const target = Number(pool?.target_usd);
+  if (pool?.subscribed_usd == null || pool?.target_usd == null || !Number.isFinite(raised) || !Number.isFinite(target) || target <= 0) return null;
+  return { raised, target, fill: Math.max(0, Math.min(1, raised / target)) };
 }
 
 function updateMarketProgressVisuals() {
@@ -920,27 +938,18 @@ function updateMarketProgressVisuals() {
   for (const card of document.querySelectorAll('.market-card[data-case]')) {
     const entry = state.cases.find((c) => c.case_id === card.dataset.case);
     if (!entry) continue;
-    const quote = recommendedQuote(cachedComparison(entry.case_id));
-    const bl = entry.case?.bill_of_lading ?? {};
     const progress = marketVoyageProgress(entry.case);
-    const funding = marketFunding(entry, quote);
-    const paused = quote && PAUSED_ACTIONS.has(quote.pricing_action);
+    if (progress === null) continue;
     $('.market-voyage-fill', card)?.style.setProperty('width', `${Math.round(progress * 100)}%`);
     $('.market-ship', card)?.style.setProperty('left', `${2 + progress * 96}%`);
     const note = $('.market-voyage-note', card);
-    if (note) note.textContent = marketVoyageNote(bl, progress);
-    $('.market-funding-fill', card)?.style.setProperty('width', `${Math.round(funding.fill * 100)}%`);
-    const fundingHead = $('.market-funding-head strong', card);
-    if (fundingHead) {
-      fundingHead.textContent = `${f.usdCompact(funding.raised)} / ${f.usdCompact(funding.target)} · ${Math.round(funding.fill * 100)}%${paused ? t('fin_paused') : ''}`;
-    }
+    if (note) note.textContent = marketVoyageNote(entry.case?.bill_of_lading ?? {}, progress);
   }
 }
 
 function startMarketClock() {
   if (marketClock.timer) return;
-  marketClock.startedAt = performance.now();
-  marketClock.timer = setInterval(updateMarketProgressVisuals, 1000);
+  marketClock.timer = setInterval(updateMarketProgressVisuals, MARKET_CLOCK_MS);
 }
 
 function stopMarketClock() {
@@ -951,6 +960,20 @@ function stopMarketClock() {
 // ===========================================================================
 // Selectors (case + speed)
 // ===========================================================================
+/** Option text: label plus the current quote's risk (the catalog hint is only a fallback before quotes load). */
+function caseOptionLabel(c) {
+  const level = marketView(c).quote?.risk_level ?? c.risk_hint;
+  return shortLabel(c) + (level ? ` · ${f.riskLabel(level)}` : '');
+}
+
+/** Refresh option texts in place once quotes arrive; rebuilding the select would steal focus. */
+function refreshCaseOptionLabels() {
+  for (const option of document.querySelectorAll('#case-dropdown option')) {
+    const entry = state.cases.find((c) => c.case_id === option.value);
+    if (entry && option.text !== caseOptionLabel(entry)) option.text = caseOptionLabel(entry);
+  }
+}
+
 function renderCaseSelector() {
   const box = $('#case-select');
   clear(box);
@@ -967,8 +990,7 @@ function renderCaseSelector() {
     onchange: (event) => selectCase(event.target.value)
   });
   for (const c of cases) {
-    const risk = c.risk_hint ? ` · ${f.riskLabel(c.risk_hint)}` : '';
-    select.append(el('option', { value: c.case_id, text: shortLabel(c) + risk }));
+    select.append(el('option', { value: c.case_id, text: caseOptionLabel(c) }));
   }
   box.append(select);
   highlightCase();
@@ -1565,6 +1587,8 @@ function refreshWalletUi() {
     if (picker) picker.hidden = false;
     if (account) account.hidden = true;
   }
+  // The title names the network, which comes from chain-config, so it is filled in here rather than by static i18n.
+  networkName().then((network) => btn.setAttribute('title', t('wallet_title', { network }))).catch(() => {});
 }
 
 function refreshLangBtn() {

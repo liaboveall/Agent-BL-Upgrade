@@ -42,8 +42,8 @@ const TABLE = [
   ['RECORD_PAYMENT always needs approval', 'RECORD_PAYMENT', demoAuto, {}, 'NEEDS_APPROVAL', 'IRREVERSIBLE', null],
   ['RECORD_ARRIVAL is reversible enough to run', 'RECORD_ARRIVAL', demoAuto, {}, 'AUTO', 'AUTONOMY_LEVEL', null],
   ['MARK_IN_TRANSIT runs in demo auto', 'MARK_IN_TRANSIT', demoAuto, {}, 'AUTO', 'AUTONOMY_LEVEL', null],
-  ['a price move above the cap needs approval', 'REPRICE', demoAuto, { price_move_bps: 1501 }, 'NEEDS_APPROVAL', 'PRICE_GUARD', null],
-  ['a price move at the cap is fine', 'REPRICE', demoAuto, { price_move_bps: 1500 }, 'AUTO', 'AUTONOMY_LEVEL', null],
+  ['a price move above the cap needs approval', 'REPRICE', demoAuto, { price_move_bps: 201 }, 'NEEDS_APPROVAL', 'PRICE_GUARD', null],
+  ['a price move at the cap is fine', 'REPRICE', demoAuto, { price_move_bps: 200 }, 'AUTO', 'AUTONOMY_LEVEL', null],
   ['a price below the exporter floor needs approval', 'REPRICE', { ...demoAuto, exporterPreferences: { min_acceptable_issue_price: 0.85 } }, { new_issue_price_usd: 0.8 }, 'NEEDS_APPROVAL', 'PRICE_GUARD', null],
   ['a price at the exporter floor is fine', 'REPRICE', { ...demoAuto, exporterPreferences: { min_acceptable_issue_price: 0.85 } }, { new_issue_price_usd: 0.85 }, 'AUTO', 'AUTONOMY_LEVEL', null]
 ];
@@ -132,7 +132,7 @@ test('config: environment parsing, defaults and bounds', () => {
   assert.equal(defaults.enabled, true);
   assert.deepEqual(defaults.protectedChainPools, [2]);
   assert.equal(defaults.monitorIntervalSec, 300);
-  assert.equal(defaults.maxPriceMoveBps, 1500);
+  assert.equal(defaults.maxPriceMoveBps, 200);
   assert.equal(defaults.allowUnattendedIrreversible, false);
   assert.equal(defaults.maxDecisions, 5000);
 

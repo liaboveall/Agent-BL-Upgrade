@@ -3,11 +3,14 @@ import fs from 'node:fs/promises';
 import test from 'node:test';
 import {
   BASE_PROFIT_SHARE,
+  MIN_TENOR_DAYS,
   PAYOUT_SPEEDS,
+  annualRateCap,
   compareSpeeds,
   priceRwaOffering,
   quoteFromCase,
-  scoreRisk
+  scoreRisk,
+  tenorFromCase
 } from '../src/core/pricingEngine.js';
 import { assertPricingQuote } from '../src/core/pricingSchema.js';
 
@@ -34,12 +37,16 @@ function quoteForSpeed(speed, overrides = {}) {
   return priceRwaOffering({ ...baseInput, payout_speed: speed, ...overrides });
 }
 
-test('AI-2: base issue price is set by payout speed (FAST cheapest, LOW_COST dearest)', () => {
-  const fast = quoteForSpeed('FAST');
-  const balanced = quoteForSpeed('BALANCED');
-  const lowCost = quoteForSpeed('LOW_COST');
+// Over a two-year tenor the annual-rate cap is above the profit share, so the share alone prices the offering.
+const LONG_TENOR = { tenor_days: 720 };
 
-  // The profit-share model lands FAST at the PRD's ~0.80 headline for this case.
+test('AI-2: base issue price is set by payout speed (FAST cheapest, LOW_COST dearest)', () => {
+  const fast = quoteForSpeed('FAST', LONG_TENOR);
+  const balanced = quoteForSpeed('BALANCED', LONG_TENOR);
+  const lowCost = quoteForSpeed('LOW_COST', LONG_TENOR);
+
+  // When the profit share binds it lands FAST at the PRD's ~0.80 headline for this case.
+  assert.equal(fast.binding_constraint, 'EXPORTER_PROFIT');
   assert.equal(fast.final_issue_price_usd, 0.8);
   assert.ok(balanced.final_issue_price_usd > 0.83 && balanced.final_issue_price_usd < 0.86);
   assert.ok(lowCost.final_issue_price_usd > 0.88 && lowCost.final_issue_price_usd < 0.9);
@@ -65,8 +72,8 @@ test('AI-3: the more urgent the payout, the lower the price and the bigger the u
 });
 
 test('profit-grounded: FAST costs ~60% of margin, LOW_COST ~30% (the reasonable ratio)', () => {
-  const fast = quoteForSpeed('FAST');
-  const lowCost = quoteForSpeed('LOW_COST');
+  const fast = quoteForSpeed('FAST', LONG_TENOR);
+  const lowCost = quoteForSpeed('LOW_COST', LONG_TENOR);
 
   assert.ok(Math.abs(fast.exporter_profit_share_bps - 6000) <= 50); // ~60%
   assert.ok(Math.abs(lowCost.exporter_profit_share_bps - 3000) <= 50); // ~30%
@@ -92,13 +99,13 @@ test('AI-5: redemption exposure never exceeds safe collateral coverage', () => {
   }
 
   // When requested cash is large, the collateral floor must bind and cap supply.
-  const bound = quoteForSpeed('FAST', { requested_cash_usd: 5_600_000 });
+  const bound = quoteForSpeed('FAST', { requested_cash_usd: 5_600_000, ...LONG_TENOR });
   assert.equal(bound.binding_constraint, 'COLLATERAL');
   assert.ok(bound.target_redemption_exposure_usd <= bound.max_safe_redemption_exposure_usd);
   assert.ok(bound.final_issue_price_usd > 0.94); // lifted by the floor
 
   // Cash above the entire safe exposure: still invariant-safe, and paused.
-  const overdrawn = quoteForSpeed('FAST', { requested_cash_usd: 6_200_000 });
+  const overdrawn = quoteForSpeed('FAST', { requested_cash_usd: 6_200_000, ...LONG_TENOR });
   assert.ok(overdrawn.target_redemption_exposure_usd <= overdrawn.max_safe_redemption_exposure_usd);
   assert.ok(overdrawn.expected_cash_to_exporter_usd < overdrawn.requested_cash_usd);
   assert.equal(overdrawn.pricing_action, 'PAUSE_OFFERING');
@@ -128,9 +135,43 @@ test('quoteFromCase derives the copper headline deterministically', () => {
   assert.equal(fast.case_id, copperCase.case_id);
   assert.equal(fast.ai_verified_collateral_value_usd, 6_531_250);
   assert.equal(fast.max_safe_redemption_exposure_usd, 5_878_125);
-  assert.equal(fast.final_issue_price_usd, 0.8);
   assert.equal(fast.risk_level, 'MEDIUM');
   assert.equal(fast.exporter_gross_profit_usd, 1_375_000);
+  // 12-day voyage + 7 days for an L/C at sight is under the 30-day floor; FAST at 350 bps costs 19% a year.
+  assert.equal(fast.tenor_days, 30);
+  assert.equal(fast.binding_constraint, 'TENOR_RATE');
+  assert.equal(fast.annual_rate_cap_bps, 1900);
+  assert.equal(fast.final_issue_price_usd, 0.9846);
+  assert.ok(Math.abs(fast.annualized_yield_bps - 1900) <= 10, 'the investor earns the capped rate');
+});
+
+test('the annual-rate cap prices short tenors: no more 100% upside on a 3-day voyage', () => {
+  const short = quoteForSpeed('FAST', { tenor_days: 30 });
+  assert.equal(short.binding_constraint, 'TENOR_RATE');
+  assert.ok(short.annualized_yield_bps <= short.annual_rate_cap_bps + 10);
+  assert.ok(short.final_issue_price_usd > 0.95 && short.final_issue_price_usd < 0.995);
+  // A longer tenor costs more in total, so its price is lower, but the annual rate is the same.
+  const longer = quoteForSpeed('FAST', { tenor_days: 90 });
+  assert.ok(longer.final_issue_price_usd < short.final_issue_price_usd);
+  assert.ok(Math.abs(longer.annualized_yield_bps - short.annualized_yield_bps) <= 20);
+  // Faster payout and higher risk raise the annual rate.
+  assert.ok(annualRateCap('FAST', 0) > annualRateCap('BALANCED', 0) && annualRateCap('BALANCED', 0) > annualRateCap('LOW_COST', 0));
+  assert.ok(annualRateCap('FAST', 700) > annualRateCap('FAST', 0));
+  assert.ok(quoteForSpeed('FAST', { tenor_days: 30, risk_score_bps: 700, risk_level: 'WARNING' }).final_issue_price_usd < short.final_issue_price_usd);
+  // A tenor below the floor is lifted to it.
+  assert.equal(quoteForSpeed('FAST', { tenor_days: 3 }).tenor_days, MIN_TENOR_DAYS);
+});
+
+test('tenorFromCase reads payment terms and voyage dates', () => {
+  const at = (terms, shipped = '2026-06-01', eta = '2026-06-21') => tenorFromCase({
+    bill_of_lading: { shipped_on_board: shipped, eta }, commercial_invoice: { payment_terms: terms }
+  });
+  assert.equal(at('Irrevocable L/C 90 days from B/L date'), 90);
+  assert.equal(at('Irrevocable L/C at sight', '2026-06-01', '2026-07-20'), 49 + 7, 'voyage + presentation');
+  assert.equal(at('Irrevocable L/C at sight'), MIN_TENOR_DAYS, 'short voyages use the floor');
+  assert.equal(at('先货后款（验收后7个工作日内）', '2026-06-01', '2026-07-10'), 39 + 7);
+  assert.equal(at('Irrevocable L/C 30 days from B/L date', '2026-06-01', '2026-07-20'), 49, 'never shorter than the voyage');
+  assert.equal(tenorFromCase({}), 60, 'no dates: the default tenor');
 });
 
 test('compareSpeeds returns all three speeds plus a recommendation', () => {

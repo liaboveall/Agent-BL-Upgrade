@@ -72,6 +72,10 @@ test('Copilot narrative: numbers must be structured facts, never digits borrowed
   assert.equal(validNarrative('Profit 999', { ...result, context: { session_id: '999' } }), false);
   assert.equal(validNarrative('', result), false);
   assert.equal(validNarrative('<think>thinking</think>', result), false);
+  // Numbers from readable text the model was shown (a grade in the label) may be quoted; hashes may not.
+  const graded = { ...result, recommendations: [{ ...result.recommendations[0], label: 'Natural Rubber (TSR20, 1,200 MT)', quote_hash: '0x9876543210' }] };
+  assert.equal(validNarrative('TSR20 rubber, 1,200 MT, price 0.8', graded), true);
+  assert.equal(validNarrative('Quote 0x9876543210', graded), false);
   const safe = await narrate(result, 'en', { llmConfigured: true, chatFn: async () => ({ content: 'Price 0.8, gross yield 10%' }) });
   assert.equal(safe.narrative_mode, 'llm');
   for (const chatFn of [async () => ({ content: 'Yield 999%' }), async () => { throw new Error('down'); }]) {
@@ -83,4 +87,13 @@ test('Copilot narrative: numbers must be structured facts, never digits borrowed
   }
   assert.ok(templateNarrative({ ...result, recommendations: [] }, 'en').includes('No active'));
   assert.equal(templateNarrative({ ...result, clarifying_question: 'Which risk?' }, 'en'), 'Which risk?');
+});
+
+test('Copilot narrative: ranking ordinals and rounded real figures are allowed, invented ones are not', () => {
+  const rec = (rank, yieldBps, annual) => ({ rank, label: 'Copper', route: 'A → B', price_usd: 0.9846, yield_bps: yieldBps, annualized_yield_bps: annual, reasons: [], evidence: [] });
+  const result = { context: { constraints: {} }, recommendations: [rec(1, 156, 1903), rec(2, 262, 1061)] };
+  assert.equal(validNarrative('铜货排第一，毛收益1.6%，年化19.0%；铁矿排第二，年化10.6%。', result), true);
+  assert.equal(validNarrative('铜货排第三。', result), false, 'only as many ordinals as recommendations');
+  assert.equal(validNarrative('年化25.0%', result), false, 'a figure not in the data');
+  assert.equal(validNarrative('收益百分之二十', result), false);
 });

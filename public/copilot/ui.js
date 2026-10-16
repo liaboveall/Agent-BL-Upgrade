@@ -6,7 +6,7 @@ import { watchPool } from './api.js';
 import { renderActionCard } from './actions.js';
 
 export function poolStateLabel(status) {
-  const key = `cp_state_${status}`;
+  const key = `cp_state_${status === 'Liquidation' ? 'Liquidated' : status}`;
   return t(key) === key ? status : t(key);
 }
 
@@ -50,7 +50,7 @@ function renderCards(container, result, { onSelect = () => {}, scope = 'assistan
   for (const item of result.recommendations ?? []) {
     const card = el('article', { class: 'cp-card' },
       el('strong', {}, `${item.rank}. ${tData(item.label)}`), el('p', {}, tData(item.route)),
-      el('p', {}, t('cp_metrics', { price: item.price_usd.toFixed(4), yield: (item.yield_bps / 100).toFixed(2), risk: riskLabel(item.risk_level) })),
+      el('p', {}, t('cp_metrics', { price: item.price_usd.toFixed(4), yield: (item.yield_bps / 100).toFixed(2), apr: ((item.annualized_yield_bps ?? item.yield_bps) / 100).toFixed(1), risk: riskLabel(item.risk_level) })),
       el('p', { class: 'muted' }, t('cp_mirror_note')),
       el('button', { type: 'button', class: 'ghost', 'data-focus-key': `cp-open-${item.pool_id}`, onclick: () => onSelect(item.case_id) }, t('cp_open_asset')));
     if (result.context?.session_id) {

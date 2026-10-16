@@ -154,6 +154,33 @@ async function failUpstream(upstream, provider, logger) {
   throw new HttpError(502, 'llm_upstream_error', `LLM provider returned HTTP ${upstream.status}`);
 }
 
+// Reasoning models return their hidden thinking next to the answer. The page never shows it, and it can echo
+// the system prompt and tool definitions, so the relay drops it before anything reaches the browser.
+const HIDDEN_MESSAGE_FIELDS = ['reasoning', 'reasoning_content', 'reasoning_details', 'thinking'];
+
+export function stripHiddenReasoning(message) {
+  if (!message || typeof message !== 'object') return message;
+  const visible = { ...message };
+  for (const field of HIDDEN_MESSAGE_FIELDS) delete visible[field];
+  return visible;
+}
+
+/** Rewrite one SSE line so streamed deltas carry no hidden reasoning; anything that is not JSON passes through. */
+export function stripReasoningFromSseLine(line) {
+  const match = /^data:\s?(.*)$/u.exec(line);
+  if (!match || match[1].trim() === '[DONE]') return line;
+  let event;
+  try { event = JSON.parse(match[1]); } catch { return line; }
+  if (!Array.isArray(event?.choices)) return line;
+  let changed = false;
+  event.choices = event.choices.map((choice) => {
+    if (!choice?.delta || !HIDDEN_MESSAGE_FIELDS.some((field) => field in choice.delta)) return choice;
+    changed = true;
+    return { ...choice, delta: stripHiddenReasoning(choice.delta) };
+  });
+  return changed ? `data: ${JSON.stringify(event)}` : line;
+}
+
 /**
  * POST /api/llm/chat — relay one chat completion (optionally streamed) to the
  * provider configured on the server.
@@ -206,7 +233,7 @@ export async function relayChat(request, response, { env = process.env, fetchImp
         ok: true,
         provider: provider.provider,
         model: provider.model,
-        choices: [{ message, finish_reason: choice.finish_reason ?? null }],
+        choices: [{ message: stripHiddenReasoning(message), finish_reason: choice.finish_reason ?? null }],
         usage: json.usage ?? null
       });
       return;
@@ -218,9 +245,18 @@ export async function relayChat(request, response, { env = process.env, fetchImp
       connection: 'keep-alive',
       'x-accel-buffering': 'no'
     });
+    // Forward whole lines only, so each SSE event can be cleaned before it is sent.
+    const decoder = new TextDecoder();
+    let pending = '';
+    const forward = async (text) => { if (text && !response.write(text)) await once(response, 'drain'); };
     for await (const chunk of upstream.body) {
-      if (!response.write(chunk)) await once(response, 'drain');
+      pending += decoder.decode(chunk, { stream: true });
+      const lines = pending.split('\n');
+      pending = lines.pop();
+      await forward(lines.map((line) => `${stripReasoningFromSseLine(line.replace(/\r$/u, ''))}\n`).join(''));
     }
+    pending += decoder.decode();
+    await forward(pending ? stripReasoningFromSseLine(pending) : '');
     response.end();
   } catch (error) {
     if (controller.signal.aborted && response.headersSent) {

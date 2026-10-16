@@ -188,13 +188,14 @@ test('copper-typhoon: can be played one step at a time, and says when it is over
   await assert.rejects(service.scenarios.step(), (error) => error instanceof ScenarioError && error.code === 'no_scenario');
 });
 
-test('warcrisis-hormuz: a crude cargo is warned first (no price room left), paused when the strait closes, and stays paused', async () => {
+test('warcrisis-hormuz: a crude cargo is repriced down as war risk rises, paused when the strait closes, and stays paused', async () => {
   const { service } = await runtime();
   await service.scenarios.start('warcrisis-hormuz');
   const result = await service.scenarios.run();
   const decisions = await chronological(service);
-  assert.deepEqual(decisions.map((d) => [d.action, d.status]), [['WARNING', 'COMPLETED'], ['PAUSE', 'COMPLETED']]);
+  assert.deepEqual(decisions.map((d) => [d.action, d.status]), [['REPRICE', 'COMPLETED'], ['PAUSE', 'COMPLETED']]);
   assert.equal(decisions[0].findings[0].kind, 'WORLD_RISK');
+  assert.ok(decisions[0].proposal.new_issue_price_usd < 0.995, 'the reprice lowers the price below the ceiling');
   assert.equal(storeState.pools.get(crude.case_id).status, 'Paused');
   assert.equal(result.entries.at(-1).events[0].decisions[0].action, 'PAUSE');
   noChainTraces(service);

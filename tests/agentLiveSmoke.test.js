@@ -82,17 +82,17 @@ function receiptFixture(action) {
   const log = (iface, address, name, fields) => ({ address, ...iface.encodeEventLog(iface.getEvent(name), fields) });
   const logs = [log(oracleInterface, config.contracts.RiskPricingOracle, 'PricingUpdated', [...values, updater]),
     log(poolInterface, config.contracts.RWAOfferingPool, 'OfferingStateChanged', [2, beforeState, afterState, args.pricing_action])];
-  if (action === 'REPRICE') logs.push(log(poolInterface, config.contracts.RWAOfferingPool, 'OfferingRepriced', [2, 800000, 791000, args.evidence_hash, args.quote_hash]));
+  if (action === 'REPRICE') logs.push(log(poolInterface, config.contracts.RWAOfferingPool, 'OfferingRepriced', [2, 984600, 982700, args.evidence_hash, args.quote_hash]));
   else if (action === 'PAUSE') logs.push(log(poolInterface, config.contracts.RWAOfferingPool, 'OfferingPaused', [2, args.evidence_hash]));
   else logs.push(log(poolInterface, config.contracts.RWAOfferingPool, 'OfferingResumed', [2, 6, args.evidence_hash]));
-  const state = { after: afterState, price: '791000', current: afterState, canonical: blockHash };
+  const state = { after: afterState, price: '982700', current: afterState, canonical: blockHash };
   const tx = { to: config.contracts.RiskPricingOracle, from: updater, chainId: 1439, data: oracleInterface.encodeFunctionData('updatePricing', values) };
   const context = { provider: { send: async () => '0x59f', getBlockNumber: async () => 110,
     getTransaction: async () => tx, getTransactionReceipt: async () => ({ status: 1, blockNumber: 100, blockHash, logs }), getBlock: async () => ({ hash: state.canonical }) },
     oracle: { interface: oracleInterface, isDecisionProcessed: async () => true },
     pool: { interface: poolInterface, emergencyStopped: async () => false,
       stateOf: async (_, opts) => opts.blockTag === 99 ? beforeState : opts.blockTag === 100 ? state.after : state.current,
-      offerings: async (_, opts) => ({ exists: true, issuePrice: opts.blockTag === 99 && action === 'REPRICE' ? '800000' : state.price }) } };
+      offerings: async (_, opts) => ({ exists: true, issuePrice: opts.blockTag === 99 && action === 'REPRICE' ? '984600' : state.price }) } };
   const decision = { chain_pool_id: 2, proposed_action: action, proposal: { params: { quote } }, execution: { tx_hash: TX } };
   return { context, config, decision, state, tx };
 }
@@ -101,19 +101,19 @@ const { copper: copperCase } = await import('./helpers/phase5.js');
 test('read-only forecast separates oracle risk quotes from actual PAUSE/RESUME pool prices and states', async () => {
   const pool = { poolId: copperCase.case_id, caseData: copperCase, quote: quoteFromCase(copperCase), status: 'Open', subscribedUsd: 0 };
   const steps = await previewSmokePlan(pool, { now: new Date('2026-10-15') });
-  assert.deepEqual(steps.map((s) => s.proposal.params.quote.final_issue_price_usd), [0.791, 0.7836, 0.791]);
-  assert.deepEqual(steps.map((s) => s.effects.issue_price_after_usd), [0.791, 0.791, 0.791]);
+  assert.deepEqual(steps.map((s) => s.proposal.params.quote.final_issue_price_usd), [0.9827, 0.9811, 0.9827]);
+  assert.deepEqual(steps.map((s) => s.effects.issue_price_after_usd), [0.9827, 0.9827, 0.9827]);
   assert.deepEqual(steps.map((s) => s.effects.state_after), ['Repriced', 'Paused', 'Repriced']);
-  assert.equal(pool.status, 'Open'); assert.equal(pool.quote.final_issue_price_usd, 0.8);
+  assert.equal(pool.status, 'Open'); assert.equal(pool.quote.final_issue_price_usd, 0.9846);
   await assert.rejects(previewSmokePlan({ ...pool, status: 'Frozen' }), /cannot propose REPRICE/u);
 });
 
 test('PAUSE verifies a lower oracle quote while the actual offering price stays unchanged', async () => {
   const f = receiptFixture('PAUSE');
   const result = await readSmokeChain(f.context, f.config, f.decision);
-  assert.equal(result.verified, true); assert.equal(result.quote_issue_price_e6, '783600'); assert.equal(result.issue_price_e6, '791000');
+  assert.equal(result.verified, true); assert.equal(result.quote_issue_price_e6, '981100'); assert.equal(result.issue_price_e6, '982700');
   // Same oracle event cannot justify changing the pool price on a state-only action.
-  f.context.pool.offerings = async (_, opts) => ({ exists: true, issuePrice: opts.blockTag === 99 ? '791000' : '783600' });
+  f.context.pool.offerings = async (_, opts) => ({ exists: true, issuePrice: opts.blockTag === 99 ? '982700' : '981100' });
   assert.equal((await readSmokeChain(f.context, f.config, f.decision)).verified, false);
 });
 
@@ -158,7 +158,7 @@ test('smoke rejects unconfirmed writes, insecure remote URLs and terminal action
 test('server smoke proposals enforce the pool, exact order and reuse the existing decision', async () => {
   const submitted = [];
   const decisions = [];
-  const pool = { poolId: 'C', status: 'Open', subscribedUsd: 0, quote: { payout_speed: 'FAST', final_issue_price_usd: 0.8 },
+  const pool = { poolId: 'C', status: 'Open', subscribedUsd: 0, quote: { payout_speed: 'FAST', final_issue_price_usd: 0.9846 },
     caseData: (await import('./helpers/phase5.js')).copper };
   const service = { env: { AGENT_LIVE_SMOKE_ENABLED: 'true' }, running: true, getMode: () => 'live', ensurePools: async () => {},
     now: () => new Date('2026-10-15'), registry: { list: () => [{ case_id: 'C', pool_id: 'C', chain: { pool_id: 2 } }], isProtected: () => true },

@@ -187,7 +187,9 @@ try {
   check('HTTP and x402', 'Health endpoint', health.response.ok && health.body.ok);
   const mode = await getJson(`${api}/api/demo/mode`);
   check('HTTP and x402', 'Runtime mode endpoint', mode.response.ok && mode.body.mode === runtimeMode.mode);
-  const reset = await getJson(`${api}/api/demo/reset`, { method: 'POST' });
+  // A configured admin token protects the shared reset, so the operator's token is presented here.
+  const adminToken = String(process.env.AGENTBL_ADMIN_TOKEN ?? '').trim();
+  const reset = await getJson(`${api}/api/demo/reset`, { method: 'POST', headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {} });
   check('HTTP and x402', 'One-click demo reset', runtimeMode.demoMode ? reset.response.ok : reset.response.status === 409);
   const catalog = await getJson(`${api}/api/x402/config`);
   check('HTTP and x402', 'x402 catalog returns four reports', catalog.body.services?.length === 4);

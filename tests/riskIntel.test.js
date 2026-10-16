@@ -44,3 +44,15 @@ test('AI-11: a custom corpus can be supplied (no hidden global state)', () => {
   assert.equal(matches.length, 1);
   assert.equal(matches[0].id, 'X');
 });
+
+test('case retrieval only cites intel that shares the commodity, a region or a global risk type', async () => {
+  const read = async (name) => JSON.parse(await fs.readFile(new URL(`../data/cases/${name}.case.json`, import.meta.url), 'utf8'));
+  // Jakarta fuel, Bangkok rubber and Pilbara ore share nothing with the copper/crude/Shanghai/Hormuz corpus.
+  for (const name of ['refined-sg-jkt', 'rubber-bkk-qd', 'ironore-au-tj']) {
+    assert.deepEqual(retrieveRiskIntel(await read(name)), [], name);
+  }
+  const copper = retrieveRiskIntel(await read('copper-sg-shanghai')).map((doc) => doc.id);
+  assert.ok(copper.includes('MRI-COPPER-VOL-2026-06'));
+  assert.ok(copper.includes('MRI-PORT-CONGESTION-SHA-2026'), 'the discharge port counts as a case region');
+  assert.ok(!copper.includes('MRI-KRW-FX-2026-06'), 'a crude-specific item never reaches a copper cargo');
+});

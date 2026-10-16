@@ -54,7 +54,7 @@ export function loadAgentConfig(env = process.env) {
       ? [2]
       : parsePoolList(env.AGENT_PROTECTED_CHAIN_POOLS),
     monitorIntervalSec: int(env.AGENT_MONITOR_INTERVAL_SEC, 300, { min: 30 }),
-    maxPriceMoveBps: int(env.AGENT_MAX_PRICE_MOVE_BPS, 1500, { min: 0 }),
+    maxPriceMoveBps: int(env.AGENT_MAX_PRICE_MOVE_BPS, 200, { min: 0 }),
     cooldownSec: int(env.AGENT_COOLDOWN_SEC, 600, { min: 0 }),
     maxActionsPerPoolPerDay: int(env.AGENT_MAX_ACTIONS_PER_POOL_PER_DAY, 12, { min: 1 }),
     chainConfirmations: int(env.AGENT_CHAIN_CONFIRMATIONS, 1, { min: 1 }),

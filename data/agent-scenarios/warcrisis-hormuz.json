@@ -1,7 +1,7 @@
 {
   "name": "warcrisis-hormuz",
-  "title": { "en": "Hormuz crisis on a crude cargo: warning, then pause", "zh": "霍尔木兹危机（原油货）：先预警，后暂停" },
-  "description": { "en": "A war-risk escalation near the Strait of Hormuz hits a crude cargo whose price already carries a war discount: the agent warns first (the price has no room left to fall), then pauses the pool when the strait closes. It stays paused until risk clears. Simulated.", "zh": "霍尔木兹海峡附近战争风险升级，冲击一批价格已含战争折价的原油货：Agent 先预警（价格已无下调空间），海峡封闭后暂停资金池，风险解除前保持暂停。全程为模拟。" },
+  "title": { "en": "Hormuz crisis on a crude cargo: reprice, then pause", "zh": "霍尔木兹危机（原油货）：先降价，后暂停" },
+  "description": { "en": "A war-risk escalation near the Strait of Hormuz hits a crude cargo: as war risk rises the agent lowers the issue price (a higher annual rate for the added risk), then pauses the pool when the strait closes. It stays paused until risk clears. Simulated.", "zh": "霍尔木兹海峡附近战争风险升级，冲击一批原油货：风险上升时 Agent 先下调发行价（为新增风险支付更高的年化利率），海峡封闭后暂停资金池，风险解除前保持暂停。全程为模拟。" },
   "case_id": "CASE-EBL-2026-OIL-SG-ULS",
   "start_at": "2026-06-20T00:00:00Z",
   "steps": [

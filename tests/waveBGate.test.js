@@ -17,7 +17,7 @@ const owner = '0x3333333333333333333333333333333333333333';
 
 const log = (abi, name, args, address) => ({ address, ...new Interface(abi).encodeEventLog(name, args) });
 function fixture({ registered = true, state = 2n, processed = false } = {}) {
-  const offering = { exists: true, eblId: 2n, issuePrice: 800000n, state, tokenSupply: 4125000n, subscribed: 0n };
+  const offering = { exists: true, eblId: 2n, issuePrice: 984600n, state, tokenSupply: 4125000n, subscribed: 0n };
   let currentEvidence = report.report_hash, currentQuote = null;
   const registry = { eblIdForCargo: async () => registered ? 2n : 0n, cargoHashOf: async () => cargoIdentityHash(copper),
     nextEblId: async () => 3n, owner: async () => owner, pledgedTo: async () => chain.contracts.RWAOfferingPool };
@@ -89,9 +89,9 @@ test('Wave B plan: paused/terminal pools, wrong pledge, missing mapping and emer
 test('Wave B plan: already processed current quote is a no-op; a displaced commitment cannot bypass oracle replay', async () => {
   const f = fixture(); const initial = await f.plan(); f.processed(true); f.latest(report.report_hash, initial.pricing.quote_hash);
   const current = await f.plan(); assert.equal(current.no_op, true); assert.equal(current.steps.length, 0);
-  f.offering.issuePrice = 790000n;
+  f.offering.issuePrice = 982000n;
   await assert.rejects(f.plan(), { code: 'pricing_commitment_already_processed' });
-  f.offering.issuePrice = 800000n; f.latest('0x' + '2'.repeat(64), initial.pricing.quote_hash);
+  f.offering.issuePrice = 984600n; f.latest('0x' + '2'.repeat(64), initial.pricing.quote_hash);
   await assert.rejects(f.plan(), { code: 'pricing_commitment_already_processed' });
 });
 

@@ -25,7 +25,7 @@ export const PRICING_ACTIONS = [
 //   EXPORTER_PROFIT - the profit-share policy price (the normal path)
 //   COLLATERAL      - the safe-coverage floor lifted the price above the policy price
 //   PRICE_CLAMP     - the absolute MIN/MAX price clamp bound it (edge case)
-export const BINDING_CONSTRAINTS = ['EXPORTER_PROFIT', 'COLLATERAL', 'PRICE_CLAMP'];
+export const BINDING_CONSTRAINTS = ['EXPORTER_PROFIT', 'TENOR_RATE', 'COLLATERAL', 'PRICE_CLAMP'];
 
 // RWA offering lifecycle states (PRD §8.5).
 export const RWA_OFFERING_STATES = [
