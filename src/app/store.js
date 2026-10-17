@@ -1,7 +1,10 @@
 import crypto from 'node:crypto';
+import path from 'node:path';
 import { STATE_BY_PRICING_ACTION } from '../core/pricingSchema.js';
 import { HttpError } from './http.js';
 import { subscriptionAvailability } from '../core/subscription.js';
+import { Ledger } from '../ledger/ledger.js';
+import { runtimeDir } from '../runtimePaths.js';
 
 // In-memory data store for the AgentBL backend.
 // Satisfies hackathon requirements for mock persistence without an external DB.
@@ -11,6 +14,9 @@ export const storeState = {
   pools: new Map(),
   investments: []
 };
+
+const ledgerBaseDir = process.env.AGENTBL_LEDGER_DIR || path.join(runtimeDir(), 'ledger');
+export const ledger = new Ledger({ baseDir: ledgerBaseDir });
 
 export function resetStore() {
   storeState.pools.clear();
@@ -112,4 +118,22 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
 
   storeState.investments.push(investment);
   return { reference, mode: 'demo', txHash: null, investment, poolStatus: pool.status };
+}
+
+/**
+ * Record a Live subscription intent in the persistent ledger before it is signed
+ * or broadcast. The returned intent carries an `intent_id` that callers can use
+ * to track the transaction through broadcast and confirmation.
+ */
+export async function recordLiveSubscriptionIntent({ walletAddress, poolId, protocolInstance, chainPoolId, asset, amountAtomic, shares, calldata }) {
+  return ledger.recordIntent({
+    protocol_instance: protocolInstance,
+    chain_pool_id: chainPoolId,
+    operation: 'SUBSCRIBE',
+    investor: walletAddress,
+    asset,
+    amount_atomic: amountAtomic,
+    shares,
+    calldata
+  });
 }
