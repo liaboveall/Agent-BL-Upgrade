@@ -115,11 +115,29 @@ test('RPC failure keeps the cursor, sanitizes errors, backs off and recovers onl
   assert.ok(h.service.activity.buffer.some((e) => e.action === 'CHAIN_WATCHER_RECOVERED'));
 });
 
-test('hung RPC is bounded and cannot fabricate observations or advance a cursor', async () => {
-  const chain = watcherChain(); chain.provider.getLogs = async () => new Promise(() => {});
-  const h = await watcherService({ chain, timeoutMs: 30 });
-  assert.equal((await h.poll()).last_error.code, 'rpc_timeout');
-  assert.equal(h.watcher.saved.next_block, 100); assert.equal(observed(h.service).length, 0);
+for (const stage of ['context', 'logs']) test(`hung ${stage} RPC is bounded without fabricating observations or advancing a cursor`, async (t) => {
+  const chain = watcherChain(), h = await watcherService({ chain });
+  if (stage === 'logs') {
+    assert.equal((await h.poll()).state, 'healthy');
+    chain.state.latest += 1;
+  }
+  const before = structuredClone(h.watcher.saved), eventsBefore = observed(h.service).length;
+  let requested;
+  const reached = new Promise((resolve) => { requested = resolve; });
+  const hang = async () => { requested(); return new Promise(() => {}); };
+  if (stage === 'context') h.watcher.getContext = hang;
+  else chain.provider.getLogs = hang;
+  // Freeze the deadline while the poll reaches the intended RPC. Runner load must not
+  // turn the log-timeout case into an unrelated timeout during descriptor initialization.
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'] });
+  h.watcher.timeoutMs = 30;
+  const pending = h.poll();
+  await reached;
+  t.mock.timers.tick(30);
+  assert.equal((await pending).last_error.code, 'rpc_timeout');
+  assert.deepEqual(h.watcher.saved, before);
+  assert.equal(observed(h.service).length, eventsBefore);
+  assert.equal(h.service.chainSafetyUnknown, true);
 });
 
 test('a restart with changed chain addresses preserves the cursor and requires reconciliation', async (t) => {

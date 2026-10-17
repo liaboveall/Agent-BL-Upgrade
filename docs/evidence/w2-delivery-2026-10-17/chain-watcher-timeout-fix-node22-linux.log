@@ -1,0 +1,348 @@
+TAP version 13
+# Subtest: chain configuration: independent polling defaults, interval bounds and opt-out
+ok 1 - chain configuration: independent polling defaults, interval bounds and opt-out
+  ---
+  duration_ms: 0.840359
+  type: 'test'
+  ...
+# Subtest: read-only chain context does not resolve any private key or create a wallet
+ok 2 - read-only chain context does not resolve any private key or create a wallet
+  ---
+  duration_ms: 26.979449
+  type: 'test'
+  ...
+# Subtest: confirmed logs are sorted, decoded, deduplicated, observed and committed after durable delivery
+ok 3 - confirmed logs are sorted, decoded, deduplicated, observed and committed after durable delivery
+  ---
+  duration_ms: 340.687574
+  type: 'test'
+  ...
+# Subtest: confirmations defer recent logs and all snapshot reads use the confirmed batch block
+ok 4 - confirmations defer recent logs and all snapshot reads use the confirmed batch block
+  ---
+  duration_ms: 30.761255
+  type: 'test'
+  ...
+# Subtest: each log request is capped at 5000 blocks, empty batches advance and catching up gates execution
+ok 5 - each log request is capped at 5000 blocks, empty batches advance and catching up gates execution
+  ---
+  duration_ms: 24.937153
+  type: 'test'
+  ...
+# Subtest: restart resumes from the next block and restores a confirmed mirror without reprocessing logs
+ok 6 - restart resumes from the next block and restores a confirmed mirror without reprocessing logs
+  ---
+  duration_ms: 45.631748
+  type: 'test'
+  ...
+# Subtest: RPC failure keeps the cursor, sanitizes errors, backs off and recovers only on a fresh successful poll
+ok 7 - RPC failure keeps the cursor, sanitizes errors, backs off and recovers only on a fresh successful poll
+  ---
+  duration_ms: 25.42202
+  type: 'test'
+  ...
+# Subtest: hung context RPC is bounded without fabricating observations or advancing a cursor
+ok 8 - hung context RPC is bounded without fabricating observations or advancing a cursor
+  ---
+  duration_ms: 10.073898
+  type: 'test'
+  ...
+# (node:97374) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: hung logs RPC is bounded without fabricating observations or advancing a cursor
+ok 9 - hung logs RPC is bounded without fabricating observations or advancing a cursor
+  ---
+  duration_ms: 18.391472
+  type: 'test'
+  ...
+# Subtest: a restart with changed chain addresses preserves the cursor and requires reconciliation
+ok 10 - a restart with changed chain addresses preserves the cursor and requires reconciliation
+  ---
+  duration_ms: 33.077469
+  type: 'test'
+  ...
+# Subtest: v1 cursor migrates exactly before the independent Phase 7 deployment
+ok 11 - v1 cursor migrates exactly before the independent Phase 7 deployment
+  ---
+  duration_ms: 88.148915
+  type: 'test'
+  ...
+# Subtest: v1 cursor migrates exactly after the independent Phase 7 deployment
+ok 12 - v1 cursor migrates exactly after the independent Phase 7 deployment
+  ---
+  duration_ms: 73.904958
+  type: 'test'
+  ...
+# Subtest: v2 cursor ignores unrelated deployment metadata and retains every committed position
+ok 13 - v2 cursor ignores unrelated deployment metadata and retains every committed position
+  ---
+  duration_ms: 24.116899
+  type: 'test'
+  ...
+# Subtest: v2 cursor rejects a changed watched deployment
+ok 14 - v2 cursor rejects a changed watched deployment
+  ---
+  duration_ms: 27.211377
+  type: 'test'
+  ...
+# Subtest: v2 cursor rejects a changed collateral registry address
+ok 15 - v2 cursor rejects a changed collateral registry address
+  ---
+  duration_ms: 23.120486
+  type: 'test'
+  ...
+# Subtest: v2 cursor rejects a changed confirmation depth
+ok 16 - v2 cursor rejects a changed confirmation depth
+  ---
+  duration_ms: 25.014011
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on watched deployment
+ok 17 - v1 migration preserves history on watched deployment
+  ---
+  duration_ms: 73.073501
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on canonical block
+ok 18 - v1 migration preserves history on canonical block
+  ---
+  duration_ms: 81.276615
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on write failure
+ok 19 - v1 migration preserves history on write failure
+  ---
+  duration_ms: 73.256014
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on unresolved reconciliation
+ok 20 - v1 migration preserves history on unresolved reconciliation
+  ---
+  duration_ms: 70.07328
+  type: 'test'
+  ...
+# Subtest: wrong RPC chain never accepts logs or changes a mirror
+ok 21 - wrong RPC chain never accepts logs or changes a mirror
+  ---
+  duration_ms: 12.06153
+  type: 'test'
+  ...
+# Subtest: a changed committed block freezes the original cursor and persists the reorg boundary
+ok 22 - a changed committed block freezes the original cursor and persists the reorg boundary
+  ---
+  duration_ms: 25.578335
+  type: 'test'
+  ...
+# Subtest: cursor corruption fails closed without replacing evidence
+ok 23 - cursor corruption fails closed without replacing evidence
+  ---
+  duration_ms: 13.614644
+  type: 'test'
+  ...
+# Subtest: reject removed log without observation or cursor progress
+ok 24 - reject removed log without observation or cursor progress
+  ---
+  duration_ms: 14.623941
+  type: 'test'
+  ...
+# Subtest: reject wrong canonical hash log without observation or cursor progress
+ok 25 - reject wrong canonical hash log without observation or cursor progress
+  ---
+  duration_ms: 14.972471
+  type: 'test'
+  ...
+# Subtest: reject wrong address log without observation or cursor progress
+ok 26 - reject wrong address log without observation or cursor progress
+  ---
+  duration_ms: 14.239056
+  type: 'test'
+  ...
+# Subtest: reject invalid watched payload log without observation or cursor progress
+ok 27 - reject invalid watched payload log without observation or cursor progress
+  ---
+  duration_ms: 17.235259
+  type: 'test'
+  ...
+# Subtest: reject pending index log without observation or cursor progress
+ok 28 - reject pending index log without observation or cursor progress
+  ---
+  duration_ms: 14.422004
+  type: 'test'
+  ...
+# Subtest: conflicting duplicate positions fail instead of arbitrarily choosing one log
+ok 29 - conflicting duplicate positions fail instead of arbitrarily choosing one log
+  ---
+  duration_ms: 19.30566
+  type: 'test'
+  ...
+# Subtest: every promised event ABI is watched and remains informational, including both non-pool contracts
+ok 30 - every promised event ABI is watched and remains informational, including both non-pool contracts
+  ---
+  duration_ms: 84.103013
+  type: 'test'
+  ...
+# Subtest: PaymentAttested correlates its SHA-256 case hash and does not assert trade repayment
+ok 31 - PaymentAttested correlates its SHA-256 case hash and does not assert trade repayment
+  ---
+  duration_ms: 24.095339
+  type: 'test'
+  ...
+# Subtest: unknown cargo is registered for chain monitoring but excluded from risk and investor eligibility
+ok 32 - unknown cargo is registered for chain monitoring but excluded from risk and investor eligibility
+  ---
+  duration_ms: 22.319524
+  type: 'test'
+  ...
+# Subtest: new terminal offerings remain history and existing CLI mappings are not replaced
+ok 33 - new terminal offerings remain history and existing CLI mappings are not replaced
+  ---
+  duration_ms: 30.073068
+  type: 'test'
+  ...
+# Subtest: current stop takes effect before history replay; historical false cannot release a current chain stop
+ok 34 - current stop takes effect before history replay; historical false cannot release a current chain stop
+  ---
+  duration_ms: 22.936867
+  type: 'test'
+  ...
+# Subtest: chain stop release waits for confirmed state and preserves an independent local stop
+ok 35 - chain stop release waits for confirmed state and preserves an independent local stop
+  ---
+  duration_ms: 22.136186
+  type: 'test'
+  ...
+# Subtest: Demo mode makes no RPC calls, restores independent Demo mirrors and preserves the Live cursor
+ok 36 - Demo mode makes no RPC calls, restores independent Demo mirrors and preserves the Live cursor
+  ---
+  duration_ms: 18.296107
+  type: 'test'
+  ...
+# Subtest: a mode switch while an RPC is in flight cannot inject chain logs into Demo or commit a cursor
+ok 37 - a mode switch while an RPC is in flight cannot inject chain logs into Demo or commit a cursor
+  ---
+  duration_ms: 17.051806
+  type: 'test'
+  ...
+# Subtest: overlapping polls share one request and never apply a batch twice
+ok 38 - overlapping polls share one request and never apply a batch twice
+  ---
+  duration_ms: 18.749491
+  type: 'test'
+  ...
+# Subtest: delivery failure keeps the cursor and retries the same log without another observation or decision
+ok 39 - delivery failure keeps the cursor and retries the same log without another observation or decision
+  ---
+  duration_ms: 22.360849
+  type: 'test'
+  ...
+# Subtest: missing deployment block resolves the canonical deployment receipt and never guesses an origin
+ok 40 - missing deployment block resolves the canonical deployment receipt and never guesses an origin
+  ---
+  duration_ms: 26.186017
+  type: 'test'
+  ...
+# Subtest: deployment start override cannot silently skip historical logs
+ok 41 - deployment start override cannot silently skip historical logs
+  ---
+  duration_ms: 13.702205
+  type: 'test'
+  ...
+# Subtest: large atomic amounts remain exact strings and cannot acquire rounded UI prices
+ok 42 - large atomic amounts remain exact strings and cannot acquire rounded UI prices
+  ---
+  duration_ms: 12.187461
+  type: 'test'
+  ...
+# Subtest: confirmed repayment proofs are observations and never fabricate a verified payment or SETTLE approval
+ok 43 - confirmed repayment proofs are observations and never fabricate a verified payment or SETTLE approval
+  ---
+  duration_ms: 18.852356
+  type: 'test'
+  ...
+# Subtest: unavailable chain observation blocks every state-changing proposal, including PAUSE, while records remain available
+ok 44 - unavailable chain observation blocks every state-changing proposal, including PAUSE, while records remain available
+  ---
+  duration_ms: 0.372335
+  type: 'test'
+  ...
+# Subtest: chain price drift is exposed without rewriting a priced quote hash or offering stale investor action cards
+ok 45 - chain price drift is exposed without rewriting a priced quote hash or offering stale investor action cards
+  ---
+  duration_ms: 12.646388
+  type: 'test'
+  ...
+# Subtest: known collateral mismatch requires reconciliation rather than silently relinking a case
+ok 46 - known collateral mismatch requires reconciliation rather than silently relinking a case
+  ---
+  duration_ms: 13.930133
+  type: 'test'
+  ...
+# Subtest: mode-change notification immediately restores Demo scope before the next scheduled poll
+ok 47 - mode-change notification immediately restores Demo scope before the next scheduled poll
+  ---
+  duration_ms: 14.960244
+  type: 'test'
+  ...
+# Subtest: Demo reset discards old backup balances while preserving the Live cursor
+ok 48 - Demo reset discards old backup balances while preserving the Live cursor
+  ---
+  duration_ms: 13.915885
+  type: 'test'
+  ...
+# Subtest: cursor persistence failure retries an already delivered log without losing or duplicating its proof
+ok 49 - cursor persistence failure retries an already delivered log without losing or duplicating its proof
+  ---
+  duration_ms: 32.345972
+  type: 'test'
+  ...
+# Subtest: an approved server action remains pending during a watcher outage and recovers after confirmation
+ok 50 - an approved server action remains pending during a watcher outage and recovers after confirmation
+  ---
+  duration_ms: 28.521176
+  type: 'test'
+  ...
+# Subtest: an owner payment correction removes stale verification and decimal amounts from the Live mirror
+ok 51 - an owner payment correction removes stale verification and decimal amounts from the Live mirror
+  ---
+  duration_ms: 16.574849
+  type: 'test'
+  ...
+# Subtest: a routine poll in flight keeps a caught-up watcher confirmed: Live proposals, approval and broadcast checks proceed
+ok 52 - a routine poll in flight keeps a caught-up watcher confirmed: Live proposals, approval and broadcast checks proceed
+  ---
+  duration_ms: 20.07151
+  type: 'test'
+  ...
+# Subtest: startup stays fail-closed while the first poll is in flight
+ok 53 - startup stays fail-closed while the first poll is in flight
+  ---
+  duration_ms: 18.092073
+  type: 'test'
+  ...
+# Subtest: a poll that finds the watcher behind by more than one batch fails closed before replaying logs
+ok 54 - a poll that finds the watcher behind by more than one batch fails closed before replaying logs
+  ---
+  duration_ms: 18.518094
+  type: 'test'
+  ...
+# Subtest: an emergency stop seen at head applies mid-poll; its release waits for the poll to commit
+ok 55 - an emergency stop seen at head applies mid-poll; its release waits for the poll to commit
+  ---
+  duration_ms: 24.27776
+  type: 'test'
+  ...
+# Subtest: a failed poll and an aged confirmation both fail closed
+ok 56 - a failed poll and an aged confirmation both fail closed
+  ---
+  duration_ms: 30.643726
+  type: 'test'
+  ...
+1..56
+# tests 56
+# suites 0
+# pass 56
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14301.158918

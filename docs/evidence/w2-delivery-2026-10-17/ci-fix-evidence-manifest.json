@@ -1,0 +1,96 @@
+{
+  "schema": "agentbl-w2-ci-fix-evidence-v1",
+  "failed_run": "https://github.com/liaboveall/Agent-BL-Upgrade/actions/runs/39035730890",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "a22d5199b1f1c49229323c45bda5c922420dc56066bc1bbed1d9128fdc2c80d1",
+      "bytes": 2520
+    },
+    {
+      "path": "chain-watcher-timeout-fix-node22-linux.log",
+      "sha256": "f1db1dc72780966dcb7aad76870c9f547cabbc184c4d4efd13ab66fcbbb0b394",
+      "bytes": 13255
+    },
+    {
+      "path": "chain-watcher-timeout-fix.log",
+      "sha256": "4c3a55f803f631af05eab302e5506d8579af889ebc201822b9f8e5b98e103c3e",
+      "bytes": 5490
+    },
+    {
+      "path": "check-ci-fixes-final.log",
+      "sha256": "283dbe517b190c85c285ad325532533d4c83656bd9b7462b330c3a75a04118b0",
+      "bytes": 190
+    },
+    {
+      "path": "ci-39035730890-linux-node22.log",
+      "sha256": "1886e6b5a2591f2274c56097f75051a53515038b65d1bbea650fec9f1ccd2096",
+      "bytes": 554594
+    },
+    {
+      "path": "ci-39035730890-windows-node22.log",
+      "sha256": "367f5d2e33bf942e84562a6ece62f3758b2f672fd4a4ce2b51efd0097f65f65d",
+      "bytes": 560453
+    },
+    {
+      "path": "ci-fix-source-manifest.json",
+      "sha256": "ed709f6b0cfa69500b716ff32806697d68bb24ffe8873c06ca4088fed9352aef",
+      "bytes": 107725
+    },
+    {
+      "path": "ci-fixes.md",
+      "sha256": "167482b1a5cd18610ca62575b022c7be2861a928aa23ff7439f1f0a79e8cd87e",
+      "bytes": 2524
+    },
+    {
+      "path": "docker-web-build.log",
+      "sha256": "c92c2578ec87745732f28be8e5df392cf32439e59596c0b222cfb0e2b6000b74",
+      "bytes": 521
+    },
+    {
+      "path": "docker-web-npm-ci.log",
+      "sha256": "e97f90d982b2307d2838256e77f1d0664c73e23e50611d17bab11881c444fb67",
+      "bytes": 143
+    },
+    {
+      "path": "lint-ci-fix.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "lint-ci-fixes-final.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "preflight.json",
+      "sha256": "8ccf996fbb9537aab26fac297e00ee837b6318fc68dfc877686ddf2c3844bb47",
+      "bytes": 949
+    },
+    {
+      "path": "source-delta.json",
+      "sha256": "aafe4d31d102567979592fbbfae98f6090550adbd0a58e100cbafc50d735deeb",
+      "bytes": 360
+    },
+    {
+      "path": "staged-source-manifest.json",
+      "sha256": "cf7edf6fab608d6bc92ea8d4430197eb87de1f8b141e61a1f59e6363a845dd8b",
+      "bytes": 107473
+    },
+    {
+      "path": "wave-b-expiry-before-fix-reproduction.log",
+      "sha256": "a63a98dc9a99ae5fcb96346159a69f7d3a794485e63814448f9937d01bb6d3e4",
+      "bytes": 889
+    },
+    {
+      "path": "wave-b-expiry-fix-node22-linux.log",
+      "sha256": "a73b1942c51b2673020fcc65e377e746bd560b2422d12c8cd857591f39992aa0",
+      "bytes": 4160
+    },
+    {
+      "path": "wave-b-expiry-fix-windows.log",
+      "sha256": "774def16e024bfb4c47de8a837c363c0f0357e7792accb853da070bafab97610",
+      "bytes": 1769
+    }
+  ]
+}

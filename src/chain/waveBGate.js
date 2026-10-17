@@ -63,7 +63,7 @@ export function gateMetadata(caseData, report) {
 }
 
 /** Read-only transaction planning. No signing methods or keys are accepted here. */
-export async function planWaveBGate({ caseData, report, chain, registry, pool, oracle }) {
+export async function planWaveBGate({ caseData, report, chain, registry, pool, oracle, validUntil }) {
   requireThat(Number(chain.chainIdDecimal) === 1439, 'wrong_network', 'Wave B is pinned to Injective testnet 1439');
   requireThat(report.case_id === caseData.case_id && hash32(report.report_hash), 'case_mismatch', 'Case and report commitment must agree');
   for (const name of ['PaymentOracle', 'EBLRegistry', 'RWAOfferingPool', 'RiskPricingOracle']) requireThat(isAddress(chain.contracts[name]), 'contract_missing', `${name} deployment is missing`);
@@ -103,7 +103,7 @@ export async function planWaveBGate({ caseData, report, chain, registry, pool, o
   const lastSeq = oracle.lastDecisionSeq ? await oracle.lastDecisionSeq(poolId).catch(() => 0n) : 0n;
   const pricing = toChainPricingArgs({ ...quote, evidence_hash: report.report_hash }, {
     pool_id: poolId, expected_quote_version: expectedVersion,
-    valid_until: BigInt(Math.floor(Date.now() / 1000) + 3600), decision_seq: BigInt(lastSeq) + 1n
+    valid_until: validUntil ?? BigInt(Math.floor(Date.now() / 1000) + 3600), decision_seq: BigInt(lastSeq) + 1n
   });
   pricing.chain_id = Number(chain.chainIdDecimal);
   pricing.oracle_address = chain.contracts.RiskPricingOracle;

@@ -1,0 +1,96 @@
+TAP version 13
+# Subtest: cargo identity: deployed copper hash is frozen, including the legacy empty voyage and JSON key order
+ok 1 - cargo identity: deployed copper hash is frozen, including the legacy empty voyage and JSON key order
+  ---
+  duration_ms: 1.223347
+  type: 'test'
+  ...
+# Subtest: Wave B plan: unregistered cargo plans mint, pledge, open and pricing without invoking any signer
+ok 2 - Wave B plan: unregistered cargo plans mint, pledge, open and pricing without invoking any signer
+  ---
+  duration_ms: 34.72134
+  type: 'test'
+  ...
+# Subtest: Wave B plan: registered active cargo reuses eBL/pool and only proposes pricing
+ok 3 - Wave B plan: registered active cargo reuses eBL/pool and only proposes pricing
+  ---
+  duration_ms: 4.431798
+  type: 'test'
+  ...
+# Subtest: Wave B plan: paused/terminal pools, wrong pledge, missing mapping and emergency stop fail before any transaction
+ok 4 - Wave B plan: paused/terminal pools, wrong pledge, missing mapping and emergency stop fail before any transaction
+  ---
+  duration_ms: 11.156098
+  type: 'test'
+  ...
+# Subtest: Wave B plan: already processed current quote is a no-op; a displaced commitment cannot bypass oracle replay
+ok 5 - Wave B plan: already processed current quote is a no-op; a displaced commitment cannot bypass oracle replay
+  ---
+  duration_ms: 5.68952
+  type: 'test'
+  ...
+# Subtest: Wave B proof: only exact successful token transfer and PaymentAttested logs validate historical evidence
+ok 6 - Wave B proof: only exact successful token transfer and PaymentAttested logs validate historical evidence
+  ---
+  duration_ms: 5.940512
+  type: 'test'
+  ...
+# Subtest: Wave B CLI: default and explicit dry-run never read .env/private keys, create a signer or send
+ok 7 - Wave B CLI: default and explicit dry-run never read .env/private keys, create a signer or send
+  ---
+  duration_ms: 13.031435
+  type: 'test'
+  ...
+# Subtest: Wave B CLI: only fresh evidence paths are written; an existing historical file cannot be overwritten on failure
+ok 8 - Wave B CLI: only fresh evidence paths are written; an existing historical file cannot be overwritten on failure
+  ---
+  duration_ms: 20.850744
+  type: 'test'
+  ...
+# Subtest: Wave B CLI: wrong network or cross-deployment contract links fail before planning
+ok 9 - Wave B CLI: wrong network or cross-deployment contract links fail before planning
+  ---
+  duration_ms: 5.541703
+  type: 'test'
+  ...
+# Subtest: Wave B CLI: explicit confirmation with an already current commitment does not need or construct a signer
+ok 10 - Wave B CLI: explicit confirmation with an already current commitment does not need or construct a signer
+  ---
+  duration_ms: 9.835426
+  type: 'test'
+  ...
+# Subtest: Wave B CLI: explicit confirmation creates the new lifecycle or only reprices the reused pool; receipts and final chain state are verified
+ok 11 - Wave B CLI: explicit confirmation creates the new lifecycle or only reprices the reused pool; receipts and final chain state are verified
+  ---
+  duration_ms: 42.43999
+  type: 'test'
+  ...
+# Subtest: Wave B CLI: static failures, bad receipts and uncertain broadcasts retain evidence and never send a second transaction
+ok 12 - Wave B CLI: static failures, bad receipts and uncertain broadcasts retain evidence and never send a second transaction
+  ---
+  duration_ms: 57.969454
+  type: 'test'
+  ...
+# (node:97511) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Wave B CLI: updater authorization and a changed preflight plan block before broadcast
+ok 13 - Wave B CLI: updater authorization and a changed preflight plan block before broadcast
+  ---
+  duration_ms: 24.46349
+  type: 'test'
+  ...
+# Subtest: Wave B CLI: elapsed wall time preserves the reviewed expiry while chain changes still block sends
+ok 14 - Wave B CLI: elapsed wall time preserves the reviewed expiry while chain changes still block sends
+  ---
+  duration_ms: 25.207547
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 25890.574404

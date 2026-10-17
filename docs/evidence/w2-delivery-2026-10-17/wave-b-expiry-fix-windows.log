@@ -1,0 +1,22 @@
+✔ cargo identity: deployed copper hash is frozen, including the legacy empty voyage and JSON key order (0.8427ms)
+✔ Wave B plan: unregistered cargo plans mint, pledge, open and pricing without invoking any signer (16.3414ms)
+✔ Wave B plan: registered active cargo reuses eBL/pool and only proposes pricing (2.3939ms)
+✔ Wave B plan: paused/terminal pools, wrong pledge, missing mapping and emergency stop fail before any transaction (9.3312ms)
+✔ Wave B plan: already processed current quote is a no-op; a displaced commitment cannot bypass oracle replay (3.6018ms)
+✔ Wave B proof: only exact successful token transfer and PaymentAttested logs validate historical evidence (3.5629ms)
+✔ Wave B CLI: default and explicit dry-run never read .env/private keys, create a signer or send (8.8161ms)
+✔ Wave B CLI: only fresh evidence paths are written; an existing historical file cannot be overwritten on failure (16.2631ms)
+✔ Wave B CLI: wrong network or cross-deployment contract links fail before planning (3.2527ms)
+✔ Wave B CLI: explicit confirmation with an already current commitment does not need or construct a signer (6.7102ms)
+✔ Wave B CLI: explicit confirmation creates the new lifecycle or only reprices the reused pool; receipts and final chain state are verified (48.4661ms)
+✔ Wave B CLI: static failures, bad receipts and uncertain broadcasts retain evidence and never send a second transaction (64.5366ms)
+✔ Wave B CLI: updater authorization and a changed preflight plan block before broadcast (24.7495ms)
+✔ Wave B CLI: elapsed wall time preserves the reviewed expiry while chain changes still block sends (22.7646ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 571.5743

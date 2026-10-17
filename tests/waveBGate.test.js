@@ -158,7 +158,8 @@ async function confirmFixture(t, { registered = true, failure, changes } = {}) {
     contract[step.method] = Object.assign(async (...values) => {
       sends += 1;
       if (failure === 'broadcast') throw new Error('unconfirmed broadcast result');
-      assert.deepEqual(values.slice(0, -1), step.args);
+      const reviewedStep = JSON.parse(f.logs[0]).plan.steps[step.index];
+      assert.deepEqual(values.slice(0, -1), reviewedStep.args);
       const hash = '0x' + String(sends).repeat(64);
       return { hash, wait: async () => {
         if (failure === 'timeout') return null;
@@ -217,4 +218,20 @@ test('Wave B CLI: updater authorization and a changed preflight plan block befor
   await assert.rejects(run(changed.options), { code: 'plan_changed' }); assert.equal(changed.counts().sends, 0);
   const missingKey = await confirmFixture(t); missingKey.options.env = {};
   await assert.rejects(run(missingKey.options), { code: 'owner_key_unavailable' }); assert.equal(missingKey.counts().sends, 0);
+});
+
+test('Wave B CLI: elapsed wall time preserves the reviewed expiry while chain changes still block sends', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-17T00:00:00Z') });
+  const f = await confirmFixture(t, { changes: () => { t.mock.timers.tick(5000); } });
+  const result = await run(f.options);
+  const reviewed = JSON.parse(f.logs[0]).plan;
+  assert.equal(result.status, 'COMPLETED');
+  assert.equal(result.final.pricing.valid_until, reviewed.pricing.valid_until);
+  assert.equal(result.final.decision_id, reviewed.decision_id);
+  assert.equal(f.counts().sends, 1);
+  const changed = await confirmFixture(t, { changes: (fixture) => {
+    t.mock.timers.tick(5000); fixture.offering.issuePrice = 790000n;
+  } });
+  await assert.rejects(run(changed.options), { code: 'plan_changed' });
+  assert.equal(changed.counts().sends, 0);
 });

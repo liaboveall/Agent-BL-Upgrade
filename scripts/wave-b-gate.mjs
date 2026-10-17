@@ -75,7 +75,9 @@ export async function run({ argv = process.argv.slice(2), env = process.env, log
     }
     const proof = verifyWaveBPayment({ report, chain, paymentReceipt: await provider.getTransactionReceipt(report.payment_tx),
       attestationReceipt: await provider.getTransactionReceipt(report.attestation_tx) });
-    const buildPlan = () => planWaveBGate({ caseData, report, chain, registry, pool, oracle });
+    // Rechecks refresh chain preconditions while retaining the reviewed transaction's expiry.
+    const validUntil = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const buildPlan = () => planWaveBGate({ caseData, report, chain, registry, pool, oracle, validUntil });
     const plan = await buildPlan();
     attempt = { schema: 'agentbl-wave-b-attempt-v2', checked_at: new Date().toISOString(),
       mode: options.confirm ? 'confirm' : 'dry-run', status: plan.no_op ? 'ALREADY_CURRENT' : 'PLANNED',
