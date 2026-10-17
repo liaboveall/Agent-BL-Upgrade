@@ -21,6 +21,7 @@ export const PROTOCOL_V5_ABI = Object.freeze({
     'function recordAdditionalPayment(uint256,bytes32,uint256)',
     'function recordLiquidationRecovery(uint256,bytes32,uint256)',
     'function resolveLiquidation(uint256,bytes32)',
+    'function offerings(uint256) view returns (uint256,uint256,uint256,uint256,uint256,uint256,bytes32,bytes32,address,uint256,uint256,uint8,bool)',
     // v5 capital-layer events.
     'event PoolFundingTermsSet(uint256 indexed poolId,address settlementAsset,uint256 minRaise,uint256 maxRaise)',
     'event Subscribed(uint256 indexed poolId,address indexed investor,uint256 amount,uint256 paidAmount)',

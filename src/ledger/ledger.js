@@ -67,6 +67,22 @@ export class Ledger {
     return entry;
   }
 
+  _applyToPosition(pos, event) {
+    if (event.kind === 'INVESTOR_DEPOSIT') {
+      pos.shares = (BigInt(pos.shares) + BigInt(event.shares)).toString();
+      pos.cost_atomic = (BigInt(pos.cost_atomic) + BigInt(event.amount_atomic)).toString();
+    } else if (event.kind === 'REFUND') {
+      pos.status = 'refunded';
+      pos.cost_atomic = '0';
+      pos.shares = '0';
+    } else if (event.kind === 'CLAIM') {
+      pos.claimed_atomic = (BigInt(pos.claimed_atomic) + BigInt(event.amount_atomic)).toString();
+      pos.shares = (BigInt(pos.shares) - BigInt(event.shares)).toString();
+      if (pos.shares === '0') pos.status = 'fully_claimed';
+    }
+    return pos;
+  }
+
   async applyEvent(event) {
     const entry = await this.recordCashEntry(event);
     const investor = event.kind === 'INVESTOR_DEPOSIT' ? event.from : event.to;
@@ -86,19 +102,7 @@ export class Ledger {
       status: 'active'
     };
 
-    if (event.kind === 'INVESTOR_DEPOSIT') {
-      pos.shares = (BigInt(pos.shares) + BigInt(event.shares)).toString();
-      pos.cost_atomic = (BigInt(pos.cost_atomic) + BigInt(event.amount_atomic)).toString();
-    } else if (event.kind === 'REFUND') {
-      pos.status = 'refunded';
-      pos.cost_atomic = '0';
-      pos.shares = '0';
-    } else if (event.kind === 'CLAIM') {
-      pos.claimed_atomic = (BigInt(pos.claimed_atomic) + BigInt(event.amount_atomic)).toString();
-      pos.shares = (BigInt(pos.shares) - BigInt(event.shares)).toString();
-      if (pos.shares === '0') pos.status = 'fully_claimed';
-    }
-
+    this._applyToPosition(pos, event);
     positions[key] = pos;
     await this.writer.writePositions(positions);
     return { entry, position: pos };
@@ -126,18 +130,7 @@ export class Ledger {
         claimed_atomic: '0',
         status: 'active'
       };
-      if (event.kind === 'INVESTOR_DEPOSIT') {
-        pos.shares = (BigInt(pos.shares) + BigInt(event.shares)).toString();
-        pos.cost_atomic = (BigInt(pos.cost_atomic) + BigInt(event.amount_atomic)).toString();
-      } else if (event.kind === 'REFUND') {
-        pos.status = 'refunded';
-        pos.cost_atomic = '0';
-        pos.shares = '0';
-      } else if (event.kind === 'CLAIM') {
-        pos.claimed_atomic = (BigInt(pos.claimed_atomic) + BigInt(event.amount_atomic)).toString();
-        pos.shares = (BigInt(pos.shares) - BigInt(event.shares)).toString();
-        if (pos.shares === '0') pos.status = 'fully_claimed';
-      }
+      this._applyToPosition(pos, event);
       positions[key] = pos;
     }
     await this.writer.writePositions(positions);
