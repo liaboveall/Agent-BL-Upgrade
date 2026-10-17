@@ -12,7 +12,9 @@ export const CHAIN_STATE_NAMES = Object.freeze([
 ]);
 
 export const ACTIVE_STATES = Object.freeze(['Open', 'Subscribed', 'Funded', 'InTransit', 'Repriced']);
-export const TERMINAL_STATES = Object.freeze(['Repaid', 'Redeemed', 'Liquidation', 'Cancelled', 'LossSettled']);
+export const TERMINAL_STATES = Object.freeze(['Repaid', 'Redeemed', 'Cancelled', 'LossSettled']);
+/** Liquidation is an exit-bearing state; it closes only through an approved resolution (A01). */
+export const RECOVERY_STATES = Object.freeze(['Liquidation', 'Defaulted', 'Frozen']);
 
 export function chainStateName(index) {
   const name = CHAIN_STATE_NAMES[Number(index)];
@@ -21,6 +23,9 @@ export function chainStateName(index) {
 }
 
 const isActive = (state) => ACTIVE_STATES.includes(state);
+// Defaulted and Frozen keep the investors' claim alive: verified recovery and settlement must
+// remain recordable there (A02/A03). Liquidation records recovery through its own entry point.
+const isSettleable = (state) => isActive(state) || state === 'Defaulted' || state === 'Frozen';
 
 /**
  * @param {string} action  an agent action
@@ -50,26 +55,58 @@ export function planTransition(action, pool) {
       return isActive(from) || from === 'Paused' || from === 'Frozen' ? ok('Liquidation') : no('the offering is not in a liquidatable state');
     case 'CANCEL':
       if (subscribed) return no('it already has subscribers', 'has_subscribers');
-      return ['Open', 'Repriced', 'Paused'].includes(from) ? ok('Cancelled') : no('only an unsubscribed open, repriced or paused offering can be cancelled');
+      return ['Open', 'Repriced', 'Paused', 'Frozen', 'Liquidation'].includes(from)
+        ? ok('Cancelled') : no('only an unsubscribed open, repriced, paused, frozen or liquidating offering can be cancelled');
     case 'MARK_IN_TRANSIT':
       return from === 'Funded' || from === 'Subscribed' ? ok('InTransit') : no('the offering is not funded');
     case 'RECORD_PAYMENT':
-      if (!isActive(from)) return no('the offering is not in a settleable state');
+      if (!isSettleable(from)) return no('the offering is not in a settleable state');
       if (!subscribed) return no('nobody subscribed, so there is nothing to repay', 'no_subscribers');
       if (pool.paymentProof) return no('a payment proof is already recorded', 'already_recorded');
       return ok(from, false);
+    case 'RECORD_ADDITIONAL_PAYMENT':
+      if (!isSettleable(from)) return no('the offering is not in a settleable state');
+      if (!subscribed) return no('nobody subscribed, so there is nothing to repay', 'no_subscribers');
+      if (!pool.paymentProof) return no('the first payment must be recorded before an additional recovery', 'payment_missing');
+      return ok(from, false);
     case 'RECORD_ARRIVAL':
-      if (!isActive(from)) return no('the offering is not in a settleable state');
+      if (!isSettleable(from)) return no('the offering is not in a settleable state');
       if (!subscribed) return no('nobody subscribed, so there is nothing to repay', 'no_subscribers');
       if (pool.arrivalProof) return no('an arrival proof is already recorded', 'already_recorded');
       return ok(from, false);
     case 'SETTLE':
-      if (!isActive(from) && from !== 'Defaulted') return no('the offering is not in a settleable state');
+      if (!isSettleable(from)) return no('the offering is not in a settleable state');
       if (!subscribed) return no('nobody subscribed, so there is nothing to repay', 'no_subscribers');
       if (!pool.paymentProof || !pool.arrivalProof) return no('both the payment proof and the arrival proof are required first', 'proofs_missing');
       if (pool.repaymentAmountAtomic === undefined || pool.targetRedemptionValueAtomic === undefined) return no('debt and recovery must be reconciled first', 'debt_unverified');
       if (BigInt(pool.repaymentAmountAtomic) < BigInt(pool.subscribed) * BigInt(pool.targetRedemptionValueAtomic)) return no('partial recovery does not discharge the outstanding debt', 'outstanding_debt');
       return ok('Repaid');
+    case 'MARK_DEFAULT':
+      if (!isActive(from) && from !== 'Paused' && from !== 'Frozen') return no('the offering is not in a defaultable state');
+      if (!subscribed) return no('nobody subscribed, so there is no debt to default', 'no_subscribers');
+      if (!pool.overdue) return no('the debt has not reached maturity', 'not_overdue');
+      return ok('Defaulted');
+    case 'SETTLE_LOSS':
+      if (from !== 'Defaulted') return no('only a defaulted offering can record a loss settlement');
+      if (!subscribed) return no('nobody subscribed, so there is no loss to allocate', 'no_subscribers');
+      return ok('LossSettled');
+    case 'RESOLVE_LIQUIDATION':
+      if (from !== 'Liquidation') return no('the offering is not liquidating');
+      if (!subscribed) return ok('Cancelled');
+      return ok(BigInt(pool.recoveredAtomic ?? 0) >= BigInt(pool.outstandingAtomic ?? 0) ? 'Repaid' : 'LossSettled');
+    case 'UNFREEZE':
+      if (from !== 'Frozen') return no('the offering is not frozen');
+      return ok(pool.stateBeforePause && isActive(pool.stateBeforePause) ? pool.stateBeforePause : 'Open');
+    case 'DISBURSE':
+      if (from !== 'Funded' && from !== 'InTransit') return no('only funded or in-transit offering can disburse');
+      return ok(from, false);
+    case 'REFUND':
+      if (!['Open','Subscribed','Repriced','Paused','Frozen','Cancelled'].includes(from)) return no('not refundable');
+      if (!subscribed && from !== 'Cancelled') return no('no subscribers to refund');
+      return ok('Cancelled', true);
+    case 'CLAIM':
+      if (from !== 'Repaid' && from !== 'LossSettled') return no('not claimable');
+      return ok(from, false);
     case 'WARNING':
     case 'HOLD_FOR_REVIEW':
     case 'REJECT':

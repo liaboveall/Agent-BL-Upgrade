@@ -10,22 +10,59 @@
 import { proofToBytes32 } from './executors/chainExecutor.js';
 import { buildOpeningPlan, OPENING_ACTIONS, positiveChainId } from './openingPlan.js';
 import { buildSettlementPlan, SETTLEMENT_ACTIONS } from '../pipelines/settlementPipeline.js';
+import { chainStateName, planTransition } from './poolRules.js';
 
 const POOL = 'RWAOfferingPool';
 
-export const OWNER_PLAN_ACTIONS = Object.freeze([...OPENING_ACTIONS, 'MARK_IN_TRANSIT', 'RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE', 'CANCEL']);
+export const OWNER_PLAN_ACTIONS = Object.freeze([...OPENING_ACTIONS, 'MARK_IN_TRANSIT',
+  ...SETTLEMENT_ACTIONS, 'CANCEL', 'MARK_DEFAULT', 'SETTLE_LOSS', 'RESOLVE_LIQUIDATION', 'UNFREEZE',
+  'DISBURSE', 'REFUND', 'DEDUCT_FEE']);
 
 const METHODS = {
   MARK_IN_TRANSIT: { method: 'markInTransit', events: ['DepartureRecorded'], describe: 'Record the departure proof and move the offering to InTransit' },
-  CANCEL: { method: 'cancelOffering', events: ['OfferingCancelled'], describe: 'Cancel an offering nobody subscribed to' }
+  CANCEL: { method: 'cancelOffering', events: ['OfferingCancelled'], describe: 'Cancel an offering nobody subscribed to' },
+  MARK_DEFAULT: { method: 'markDefault', events: ['OfferingDefaulted'], describe: 'Mark an overdue offering as Defaulted; collateral stays locked' },
+  SETTLE_LOSS: { method: 'settleLoss', events: ['LossSettlementRecorded'], describe: 'Record an approved loss resolution; this is not full repayment' },
+  RESOLVE_LIQUIDATION: { method: 'resolveLiquidation', events: ['LiquidationResolved'], describe: 'Close a liquidation with full recovery or an approved loss' },
+  UNFREEZE: { method: 'unfreezeOffering', events: ['OfferingUnfrozen'], describe: 'Restore a frozen offering after an evidenced risk clearance' },
+  DISBURSE: { method: 'disburseToExporter', events: ['DisbursedToExporter'], describe: 'Disburse escrowed funds to the exporter' },
+  REFUND: { method: 'refundInvestor', events: ['InvestorRefunded'], describe: 'Refund an investor after failed raise' },
+  CLAIM: { method: 'claim', events: ['Claimed'], describe: 'Claim repayment proceeds as an investor' },
+  DEDUCT_FEE: { method: 'deductFee', events: ['FeeDeducted'], describe: 'Deduct a service fee from escrowed funds' }
 };
 
+/** Read the fields every lifecycle plan must agree with, at the current head. */
+async function readPoolState({ context, poolId }) {
+  if (!context?.pool) throw new OwnerPlanError('chain_unavailable', 'A read-only chain context is required to plan this action', 503);
+  const poolIdNumber = Number(poolId);
+  const optional = (call) => call ? Promise.resolve().then(call).catch(() => null) : Promise.resolve(null);
+  const [offering, state, maturity, deadline, latest] = await Promise.all([
+    context.pool.offerings(poolIdNumber), context.pool.stateOf(poolIdNumber),
+    optional(() => context.pool.maturityAt?.(poolIdNumber)),
+    optional(() => context.pool.subscriptionDeadline?.(poolIdNumber)),
+    context.provider?.getBlockNumber ? context.provider.getBlockNumber() : Promise.resolve(null)
+  ]);
+  const block = latest !== null && context.provider?.getBlock ? await context.provider.getBlock(latest) : null;
+  const now = block?.timestamp ?? Math.floor(Date.now() / 1000);
+  const zero = /^0x0{64}$/iu;
+  const present = (value) => Boolean(value) && !zero.test(String(value));
+  return {
+    state: chainStateName(state), subscribed: Number(offering?.subscribed ?? 0),
+    paymentProof: present(offering?.paymentProof), arrivalProof: present(offering?.arrivalProof),
+    repaymentAmountAtomic: offering?.repaymentAmount === undefined ? undefined : String(offering.repaymentAmount),
+    targetRedemptionValueAtomic: offering?.targetRedemptionValue === undefined ? undefined : String(offering.targetRedemptionValue),
+    overdue: maturity != null && Number(maturity) > 0 && Number(now) >= Number(maturity),
+    maturity_at: maturity == null ? null : Number(maturity),
+    subscription_deadline: deadline == null ? null : Number(deadline)
+  };
+}
+
 export class OwnerPlanError extends Error {
-  constructor(code, message) {
+  constructor(code, message, status = 422) {
     super(message);
     this.name = 'OwnerPlanError';
     this.code = code;
-    this.status = 422;
+    this.status = status;
     this.expose = true;
   }
 }
@@ -46,9 +83,27 @@ export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {
   const address = chainConfig?.contracts?.[POOL];
   if (!address) throw new OwnerPlanError('contract_missing', `${POOL} is not deployed on ${chainConfig?.network ?? 'this network'}`);
 
+  // Exit plans are derived from live state so an impossible exit is never proposed. The older
+  // departure/cancel plans remain context-free; the contract's staticCall is their guard.
+  if (['MARK_DEFAULT', 'SETTLE_LOSS', 'RESOLVE_LIQUIDATION', 'UNFREEZE'].includes(action)) {
+    const state = await readPoolState({ context, poolId });
+    if (action === 'RESOLVE_LIQUIDATION') {
+      state.recoveredAtomic = BigInt(state.repaymentAmountAtomic ?? 0);
+      state.outstandingAtomic = BigInt(state.subscribed) * BigInt(state.targetRedemptionValueAtomic ?? 0) - state.recoveredAtomic;
+    }
+    const transition = planTransition(action, state);
+    if (!transition.ok) throw new OwnerPlanError(transition.code, transition.message);
+  }
+
   const args = [String(Number(poolId))];
   if (action === 'MARK_IN_TRANSIT') args.push(await proofToBytes32(params.departure_proof));
   if (action === 'CANCEL') args.push(await proofToBytes32(params.reason ?? 'agent-cancel'));
+  if (action === 'SETTLE_LOSS') args.push(await proofToBytes32(params.resolution_hash ?? params.resolution));
+  if (action === 'RESOLVE_LIQUIDATION') args.push(await proofToBytes32(params.resolution_hash ?? params.resolution));
+  if (action === 'UNFREEZE') args.push(await proofToBytes32(params.evidence_hash ?? params.evidence));
+  if (action === 'DISBURSE') args.push(String(params.amount_atomic), String(params.exporter), await proofToBytes32(params.evidence_hash ?? params.evidence));
+  if (action === 'REFUND') args.push(String(params.investor));
+  if (action === 'DEDUCT_FEE') args.push(String(params.amount_atomic), String(params.fee_recipient), await proofToBytes32(params.evidence_hash ?? params.evidence));
 
   return {
     network: chainConfig.network,
