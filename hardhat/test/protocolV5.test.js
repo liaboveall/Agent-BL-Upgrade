@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { STATE, ACTION, TARGET, ISSUE_PRICE, send, uniqueHash, deployProtocolV5, newOfferingV5, ethers } from './helpers/protocolV5.js';
+import { STATE, TARGET, ISSUE_PRICE, send, uniqueHash, deployProtocolV5, newOfferingV5, ethers } from './helpers/protocolV5.js';
 
 describe('protocol v5 W2 regressions', () => {
   async function now() { return BigInt((await ethers.provider.getBlock('latest')).timestamp); }
@@ -23,6 +23,8 @@ describe('protocol v5 W2 regressions', () => {
     await expect(ctx.pool.connect(ctx.investor).subscribeWithTerms(poolId, 5n, ISSUE_PRICE, 1n, (await now()) + 600n))
       .to.revert(ethers);
     expect(await ctx.token.balanceOf(poolId, ctx.investor.address)).to.equal(0n);
+    expect(await ctx.usdc.balanceOf(ctx.investor.address)).to.equal(0n);
+    expect(await ctx.usdc.balanceOf(await ctx.pool.getAddress())).to.equal(0n);
   });
 
   it('rejects subscription after deadline', async () => {
@@ -61,6 +63,22 @@ describe('protocol v5 W2 regressions', () => {
     const before = await ctx.usdc.balanceOf(ctx.exporter.address);
     await send(ctx.pool.disburseToExporter(poolId, cost, ctx.exporter.address, uniqueHash('disburse')));
     expect(await ctx.usdc.balanceOf(ctx.exporter.address)).to.equal(before + cost);
+  });
+
+  it('emits RepaymentReceived when exporter repays', async () => {
+    const ctx = await deployProtocolV5();
+    const { poolId } = await newOfferingV5(ctx, 'repay-event', { supply: 10n });
+    const cost = 10n * ISSUE_PRICE;
+    await send(ctx.usdc.mint(ctx.investor.address, cost));
+    await send(ctx.usdc.connect(ctx.investor).approve(await ctx.pool.getAddress(), cost));
+    await send(ctx.pool.connect(ctx.investor).subscribeWithTerms(poolId, 10n, ISSUE_PRICE, 1n, (await now()) + 600n));
+    await send(ctx.pool.disburseToExporter(poolId, cost, ctx.exporter.address, uniqueHash('disburse')));
+    const recovery = 10n * TARGET;
+    await send(ctx.usdc.mint(ctx.exporter.address, recovery));
+    await send(ctx.usdc.connect(ctx.exporter).approve(await ctx.pool.getAddress(), recovery));
+    await expect(ctx.pool.connect(ctx.exporter).repay(poolId, recovery))
+      .to.emit(ctx.pool, 'RepaymentReceived')
+      .withArgs(poolId, await ctx.usdc.getAddress(), ctx.exporter.address, recovery);
   });
 
   it('lets investors claim pro-rata after settlement', async () => {

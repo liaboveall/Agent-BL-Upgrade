@@ -426,11 +426,19 @@ contract RWAOfferingPoolV5 is Owned {
         emit DisbursedToExporter(poolId, o.settlementAsset, amountAtomic, evidenceHash);
     }
 
+    /// @notice Move repayment assets into the on-chain escrow so investors can claim.
+    /// @dev    This entry point was added during v5 regression testing as an escrow-gap
+    ///         fix: without it, `claim` underflows `escrowed` because subscription funds
+    ///         were already disbursed to the exporter. It is therefore a required
+    ///         production change, not merely a test helper.
     function repay(uint256 poolId, uint256 amountAtomic) external whenOperational {
         Offering storage o = offerings[poolId];
         require(o.exists, "pool missing");
         require(amountAtomic > 0, "amount=0");
-        require(_isActive(o.state) || o.state == OfferingState.Defaulted, "not repayable");
+        require(
+            o.state == OfferingState.Funded || o.state == OfferingState.InTransit || o.state == OfferingState.Defaulted,
+            "not repayable"
+        );
         IERC20 asset = IERC20(o.settlementAsset);
         uint256 balanceBefore = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), amountAtomic);
@@ -528,6 +536,7 @@ contract RWAOfferingPoolV5 is Owned {
         uint256 already = investorClaimed[poolId][o.settlementAsset][msg.sender];
         uint256 owed = (distributable * balance) / total;
         require(owed > 0, "claim too small");
+        require(escrowed[poolId][o.settlementAsset] >= owed, "insufficient escrow");
         investorClaimed[poolId][o.settlementAsset][msg.sender] = already + owed;
         totalClaimed[poolId] += owed;
         escrowed[poolId][o.settlementAsset] -= owed;
