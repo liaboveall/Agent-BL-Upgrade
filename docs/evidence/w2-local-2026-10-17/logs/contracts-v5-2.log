@@ -1,0 +1,43 @@
+
+> agentbl-contracts@0.1.0 test
+> hardhat test
+
+
+DeclarationError: Identifier already declared.
+   --> .\contracts\RWAOfferingPoolV5.sol:316:5:
+    |
+316 |     event FundingFinalized(uint256 indexed poolId, uint256 raisedAtomic);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The previous declaration is here:
+  --> .\contracts\RWAOfferingPoolV5.sol:79:5:
+   |
+79 |     error FundingFinalized();
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TypeError: Wrong argument count for function call: 2 arguments given but expected 0.
+   --> .\contracts\RWAOfferingPoolV5.sol:509:18:
+    |
+509 |             emit FundingFinalized(poolId, o.raisedAtomic);
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TypeError: Expression has to be an event invocation.
+   --> .\contracts\RWAOfferingPoolV5.sol:509:18:
+    |
+509 |             emit FundingFinalized(poolId, o.raisedAtomic);
+    |                  ^^^^^^^^^^^^^^^^
+
+TypeError: Wrong argument count for function call: 2 arguments given but expected 0.
+   --> .\contracts\RWAOfferingPoolV5.sol:523:14:
+    |
+523 |         emit FundingFinalized(poolId, o.raisedAtomic);
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TypeError: Expression has to be an event invocation.
+   --> .\contracts\RWAOfferingPoolV5.sol:523:14:
+    |
+523 |         emit FundingFinalized(poolId, o.raisedAtomic);
+    |              ^^^^^^^^^^^^^^^^
+
+Error HHE910: Compilation failed
+
+For more info go to https://hardhat.org/HHE910 or run Hardhat with --show-stack-traces

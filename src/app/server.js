@@ -24,7 +24,7 @@ import { chainStateName } from '../agent/runtime/poolRules.js';
 import { subscriptionAvailability } from '../core/subscription.js';
 import { demoModeController, LiveModeUnavailableError } from '../demo/mode.js';
 import { DEFAULT_MYSTERY_QUOTE_MAX_AGE_SECONDS } from '../mystery/policy.js';
-import { storeState, createPool, resetStore, subscribeToPool, ledger } from './store.js';
+import { storeState, createPool, resetStore, subscribeToPool } from './store.js';
 import { parseLlmCriteria, poolToAdvisorCase, recommend } from '../agent/investmentAdvisor.js';
 import {
   loadSpotPurchase,
@@ -68,7 +68,6 @@ import { isRecord, looksLikeCase } from './shapes.js';
 import { createX402ServiceDefinitions } from './x402Services.js';
 import { createLiveGateway } from '../x402/liveGateway.js';
 import { createPricingDelegate } from '../interop/delegation.js';
-import { buildPositionView } from '../ledger/positionView.js';
 import { createInteropRoutes } from './interopRoutes.js';
 import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase } from './workspaceAccess.js';
 
@@ -544,6 +543,7 @@ export const copilotService = new CopilotService({
     const [offering, stopped] = await Promise.all([live.pool.offerings(mapping.chain.pool_id), live.pool.emergencyStopped()]);
     return { pool_id: mapping.chain.pool_id, chain_id: Number(agent.chainConfig.chainIdDecimal), contract: agent.chainConfig.contracts.RWAOfferingPool,
       price_e6: offering.issuePrice.toString(), remaining_shares: (offering.tokenSupply - offering.subscribed).toString(),
+      protocol_version: Number(agent.chainConfig.protocolVersion), settlement_asset: offering.settlementAsset ?? null,
       exists: offering.exists, status: chainStateName(offering.state), emergency_stopped: stopped };
   },
   file: process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href ? runtimePath('copilot-sessions.json') : null
@@ -1126,10 +1126,26 @@ async function routeRequest(request, response, url) {
     if (!wallet || !/^0x[0-9a-fA-F]{40}$/u.test(wallet)) {
       throw new HttpError(400, 'invalid_wallet', 'wallet (42-char hex) is required');
     }
-    const demoInvestments = storeState.investments;
-    const ledgerPositions = await ledger.listPositions();
-    const positions = buildPositionView({ wallet, demoInvestments, ledgerPositions });
-    sendJson(response, 200, { wallet, positions });
+    const demoInvestments = storeState.investments.filter((investment) => canReadWorkspaceCase(getAgentService(), request, investment.poolId));
+    sendJson(response, 200, await getAgentService().capital.list(wallet, demoInvestments));
+    return;
+  }
+
+  if (method === 'POST' && pathname === '/api/positions/subscription-intents') {
+    const body = await readJsonBody(request);
+    const intent = await getAgentService().capital.prepareSubscription(body);
+    sendJson(response, 201, { intent });
+    return;
+  }
+  if (method === 'POST' && pathname === '/api/positions/claim-intents') {
+    const body = await readJsonBody(request);
+    sendJson(response, 201, { intent: await getAgentService().capital.prepareClaim(body) });
+    return;
+  }
+  const intentTx = pathname.match(/^\/api\/positions\/subscription-intents\/([a-f0-9-]{36})\/transaction$/u);
+  if (method === 'POST' && intentTx) {
+    const body = await readJsonBody(request);
+    sendJson(response, 200, { intent: await getAgentService().capital.attach(intentTx[1], body.tx_hash) });
     return;
   }
 

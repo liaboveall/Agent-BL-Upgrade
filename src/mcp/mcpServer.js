@@ -108,6 +108,9 @@ export const MCP_TOOLS_MANIFEST = [
           description: 'The PricingQuote object from generate_pricing_quote. Must include final_issue_price_usd, risk_level, pricing_action, evidence_hash, and quote_hash.'
         },
         pool_id: { type: 'integer', minimum: 1, default: 1 },
+        expected_quote_version: { type: 'integer', minimum: 1, description: 'Pool quote version the quote was priced against; resolved from chain when omitted.' },
+        valid_until: { type: 'integer', minimum: 1, description: 'Unix timestamp after which the quote must not be applied; resolved from chain when omitted.' },
+        decision_seq: { type: 'integer', minimum: 1, description: 'Strictly increasing per-pool sequence; resolved from chain when omitted.' },
         network: { type: 'string', enum: ['eip155:1439'], default: 'eip155:1439' },
         contract: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
         dry_run: { type: 'boolean', default: true },

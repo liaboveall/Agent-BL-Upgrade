@@ -168,11 +168,11 @@ async function confirmFixture(t, { registered = true, failure, changes } = {}) {
           f.registered(true); f.input.registry.eblIdForCargo = async () => BigInt(plan.ebl_id); f.offering.eblId = BigInt(plan.ebl_id);
         } else if (step.method === 'pledge') {
           eventName = 'EBLPledged'; eventArgs = [plan.ebl_id, chain.contracts.RWAOfferingPool, owner];
-        } else if (step.method === 'createOffering') {
+        } else if (step.method === 'createOffering' || step.method === 'createOfferingWithTerms') {
           eventName = 'OfferingCreated'; eventArgs = [plan.pool_id, plan.ebl_id, step.args[1], step.args[2], step.args[3]];
           f.input.pool.poolOfEbl = async () => BigInt(plan.pool_id);
         } else {
-          eventName = 'PricingUpdated'; eventArgs = [...step.args, owner];
+          eventName = 'PricingUpdated'; eventArgs = [...step.args.slice(0, 6), owner];
           f.processed(true); f.latest(report.report_hash, plan.pricing.quote_hash);
         }
         const eventLog = log(chain.abis[step.contract], eventName, eventArgs, failure === 'mismatch' ? owner : step.address);

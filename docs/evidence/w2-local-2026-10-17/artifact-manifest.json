@@ -1,0 +1,325 @@
+{
+  "schema": "agentbl-w2-evidence-manifest-v1",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "7d0b79dd95a2c746d06339537e14f111adffac9f5ee666b97bbe259e6433dae4",
+      "bytes": 6896
+    },
+    {
+      "path": "initial-head.txt",
+      "sha256": "546a055b13f17f5125a43cf3b742d78bbce8578a924337bacaf6bcafae0741ae",
+      "bytes": 41
+    },
+    {
+      "path": "initial-status.txt",
+      "sha256": "61b233de9f1fba905885b8246bad7c78681c141d9176cf92a3491c2b228418ac",
+      "bytes": 2114
+    },
+    {
+      "path": "logs/agent-regressions-1.log",
+      "sha256": "99bf99444655a0c2a07d03ce3f65e9b33faf31e0e3bda3aa5a36c83cfa829a8e",
+      "bytes": 15147
+    },
+    {
+      "path": "logs/agent-regressions-2.log",
+      "sha256": "4afdab361b8d30fe88d98b2252d36ad93276c07aff2297043321856d2655ebd2",
+      "bytes": 4514
+    },
+    {
+      "path": "logs/browser-1.log",
+      "sha256": "f007d8d562200e36b19ff2e0e642ffc2349197b03a22bc4238d7558a3813ceb2",
+      "bytes": 19319
+    },
+    {
+      "path": "logs/browser-final-1.log",
+      "sha256": "0b4ab964d09b83834d5dc8b74a42a6948faeba45ed733e5000d5beadda992b9a",
+      "bytes": 1419
+    },
+    {
+      "path": "logs/browser-windows-2.log",
+      "sha256": "b4eaefb7e1025449f4090a37b1b15d29ca3664a14e4df974c73d2b9b81d7f021",
+      "bytes": 1145
+    },
+    {
+      "path": "logs/browser-windows-3.log",
+      "sha256": "f7fdd9a44caaa38123a0b287baaa2ec46944b8282111942bfd72c2fc471c26e3",
+      "bytes": 6325
+    },
+    {
+      "path": "logs/browser-windows-4.log",
+      "sha256": "5f4905c3dd0970569e2b938cf424a73f13a86966e0ef56c296860940c8054808",
+      "bytes": 1419
+    },
+    {
+      "path": "logs/build-1.log",
+      "sha256": "9a2555aa03a5435955cd703b92defc5fb32f3c23ea5abf6f384833dfec357160",
+      "bytes": 551
+    },
+    {
+      "path": "logs/build-2.log",
+      "sha256": "2e19ef9080ac15012903afa19f85479cf4eab6a26a7085eedd1d32a80c1fdefd",
+      "bytes": 551
+    },
+    {
+      "path": "logs/build-3.log",
+      "sha256": "cb3cd451074645dcac50c1560bf777ee6c5b4355b84de8e056c0859b1ae9eec6",
+      "bytes": 551
+    },
+    {
+      "path": "logs/build-final-1.log",
+      "sha256": "b6c20df2f3f39cc87491344995a1b3875986e294bc58253fbc5386635744f5fe",
+      "bytes": 551
+    },
+    {
+      "path": "logs/check-1.log",
+      "sha256": "283dbe517b190c85c285ad325532533d4c83656bd9b7462b330c3a75a04118b0",
+      "bytes": 190
+    },
+    {
+      "path": "logs/check-final-2.log",
+      "sha256": "283dbe517b190c85c285ad325532533d4c83656bd9b7462b330c3a75a04118b0",
+      "bytes": 190
+    },
+    {
+      "path": "logs/check-final-3.log",
+      "sha256": "283dbe517b190c85c285ad325532533d4c83656bd9b7462b330c3a75a04118b0",
+      "bytes": 190
+    },
+    {
+      "path": "logs/contracts-final-4.log",
+      "sha256": "bc31c9801c02bdf8bab50afdb59a45e39f57cb5e8fd61bd6179ae36b8ae70e9a",
+      "bytes": 12840
+    },
+    {
+      "path": "logs/contracts-final-5.log",
+      "sha256": "d11d1164878fc847cdc0a6a22748022fc582f58f97669694b4466d321e86c60a",
+      "bytes": 13053
+    },
+    {
+      "path": "logs/contracts-hardening-1.log",
+      "sha256": "9a96d4d5846a50fc232490a722fdc017dc2a5d0ebdbaac84676165c88947fb53",
+      "bytes": 17553
+    },
+    {
+      "path": "logs/contracts-hardening-2.log",
+      "sha256": "d526b5bfe8a17ff02c24e4f9e8cdc4a82430c132953af771e86dca0de9290474",
+      "bytes": 11807
+    },
+    {
+      "path": "logs/contracts-initial.log",
+      "sha256": "30086ec07e617c072163ab063d3b344553f754d97a3db525c0aa42c77c68ae1d",
+      "bytes": 10513
+    },
+    {
+      "path": "logs/contracts-model-3.log",
+      "sha256": "5b416a7fbd24afeb0cf1d8a6409c6ac43d9710da648931d31cd1a34b86a8c15e",
+      "bytes": 12243
+    },
+    {
+      "path": "logs/contracts-v5-1.log",
+      "sha256": "d02d1a2f9399197d05c99fce83ab38b3d6186165415eae77042440ecc860fb24",
+      "bytes": 22140
+    },
+    {
+      "path": "logs/contracts-v5-2.log",
+      "sha256": "8f84310b4302633163086d963189db7636425e5f3212bdc4e50500aa47efcefd",
+      "bytes": 1545
+    },
+    {
+      "path": "logs/contracts-v5-3.log",
+      "sha256": "bacc6d7b568ff913ab37dc8344b7d5f269531222a0fee84df86df4d50ccc1af3",
+      "bytes": 10517
+    },
+    {
+      "path": "logs/coverage-final-1.log",
+      "sha256": "7b397e5c326998c5cd87976d63be502112b78922a42ab11bf1c85a6c3038bf16",
+      "bytes": 142373
+    },
+    {
+      "path": "logs/coverage-final-2.log",
+      "sha256": "901baf215d95139c2f144557da011ed545d5804a4fd2c700730662f5ddc1e35c",
+      "bytes": 142385
+    },
+    {
+      "path": "logs/coverage-final-3.log",
+      "sha256": "5e9f68ff804ac1503e364aaa6c9056d1120c6db8fed35dd151ca99cd13c70f31",
+      "bytes": 142361
+    },
+    {
+      "path": "logs/cross-layer-1.log",
+      "sha256": "963683c41412a8416bf66620c27606caa959585a5d7230151a3345d8335b329a",
+      "bytes": 2476
+    },
+    {
+      "path": "logs/cross-layer-final-6.log",
+      "sha256": "03cd5efca000825bc4a0d32e939b11e43b341e932ecc708be0deb648ff85f642",
+      "bytes": 3213
+    },
+    {
+      "path": "logs/cross-layer-linux-5.log",
+      "sha256": "41adc7aee3ccc23207e26c40527c34d4de28669915c4c2730ae528b7a17040d2",
+      "bytes": 1218
+    },
+    {
+      "path": "logs/cross-layer-linux-final-10.log",
+      "sha256": "996b67c730a1685a7d8082a74d389046d0af44c503dfadb9e997be0d9fd65aa5",
+      "bytes": 1179
+    },
+    {
+      "path": "logs/cross-layer-linux-final-8.log",
+      "sha256": "8b484b7a84387f8e29bc126b0809fe9d967efe0fbbd698a8f913a4595cb30391",
+      "bytes": 1179
+    },
+    {
+      "path": "logs/cross-layer-windows-1.log",
+      "sha256": "e499093da74cfc79d6a86d5475402cebe8a18b25ef30fc3a317fa532e60482fa",
+      "bytes": 206
+    },
+    {
+      "path": "logs/cross-layer-windows-2.log",
+      "sha256": "850dd958928b61b8fc4f509978393b86e7395102d0667af1709fc363fd35af2e",
+      "bytes": 977
+    },
+    {
+      "path": "logs/cross-layer-windows-3.log",
+      "sha256": "aa45298ae776740d80d4e72b7b0a75ee7303f2c8d8b4810631f3fac01d22c397",
+      "bytes": 1015
+    },
+    {
+      "path": "logs/cross-layer-windows-4.log",
+      "sha256": "0e3fed9640ccd803a50d913dbe156f09ccb99c23c8313a655d1b78be836665f7",
+      "bytes": 1095
+    },
+    {
+      "path": "logs/cross-layer-windows-final-7.log",
+      "sha256": "4e9f0ca0e84cce0142ccfe6fa5dc6bba5120d6f30409e05b1e499cfca9523105",
+      "bytes": 1095
+    },
+    {
+      "path": "logs/cross-layer-windows-final-9.log",
+      "sha256": "d774ede840b3bfb0b6527768c14d391d5f419bbdb2d73bb2909fdc329e150e75",
+      "bytes": 1096
+    },
+    {
+      "path": "logs/diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "logs/docs-final.log",
+      "sha256": "84f238216132f8fcc63a242caa8ad9abcd4b9443b6852a6fc1a7e32542979513",
+      "bytes": 1095
+    },
+    {
+      "path": "logs/ledger-initial.log",
+      "sha256": "d858f311251c6f1c5f8914a491153b512cb74b1c56d9c8e294e74359564643dd",
+      "bytes": 976
+    },
+    {
+      "path": "logs/ledger-wallet-2.log",
+      "sha256": "906a299ece684c700b75922228ac24f82fe0d4b6079682c5c8c2c71b014208a8",
+      "bytes": 2332
+    },
+    {
+      "path": "logs/ledger-wallet-3.log",
+      "sha256": "75e1a5f1e9480af6026f6da61a97664f6fa584936b53063c631bc5c60e269db0",
+      "bytes": 1921
+    },
+    {
+      "path": "logs/lint-final-1.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/lint-final-2.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/lint-final-3.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/lint-initial.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/lint-w2-1.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/lint-w2-2.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/lint-w2-3.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/lint-w2-4.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "logs/linux-native-install.log",
+      "sha256": "fa1d8afaf6c0ab8968ba2aee430256917efe6442b1472f823e9888ba0f26fa01",
+      "bytes": 26
+    },
+    {
+      "path": "logs/node-full-1.log",
+      "sha256": "f08f3f9d7a09616272a156647d4d4f244aa7481997ac186ac00b0d9bce00a2d0",
+      "bytes": 137497
+    },
+    {
+      "path": "logs/node-windows-full-1.log",
+      "sha256": "8f171c1da3d5e468a89b9540b16d669dff3c4a0331ff14e97b7e037f6cc7c6d3",
+      "bytes": 123936
+    },
+    {
+      "path": "logs/w2-unit-4.log",
+      "sha256": "e07a631bc6df5780798dbf9f8ec70f151db73aa618694c7bbf1fee6ef7187759",
+      "bytes": 2873
+    },
+    {
+      "path": "logs/wallet-positions-1.log",
+      "sha256": "4314397a15c2f6db88edf24d187052112e307e5445a8f1cd0ab6398d2b655ce3",
+      "bytes": 3253
+    },
+    {
+      "path": "screenshots/initial/review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio.png",
+      "sha256": "082c4280fe15aa58e2029fcc86911590086eaa8bccac09bdd0d9bfe636b12774",
+      "bytes": 35563
+    },
+    {
+      "path": "screenshots/initial/review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio.png",
+      "sha256": "645106d44e79b63de4a8d24fd53fae7df774ef4702661be69942ba369a241c3f",
+      "bytes": 46016
+    },
+    {
+      "path": "screenshots/positions-en-390.png",
+      "sha256": "86185daaea1f6d11d25b0a7a7a6740558bc2ae0f8bbbfd17c6e7206b670afb5b",
+      "bytes": 30605
+    },
+    {
+      "path": "screenshots/positions-zh-390.png",
+      "sha256": "953851d95ff9c099b11b04af26487742bf47ef267891da1255e85b0a31889fdc",
+      "bytes": 31660
+    },
+    {
+      "path": "source-manifest.json",
+      "sha256": "ac8eb7edac2532a6781873f505c2d814bbcef468bfc5111967b5dae3cfbef64b",
+      "bytes": 74530
+    },
+    {
+      "path": "validation.json",
+      "sha256": "d83814dfdea5498de9c05bdb0de15b45c8a3eb81f8e500b31cadc6aec458611b",
+      "bytes": 2432
+    }
+  ]
+}

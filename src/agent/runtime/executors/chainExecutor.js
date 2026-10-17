@@ -11,6 +11,7 @@
 // transaction is sent; one transaction per signer at a time (nonce order); a result is only
 // "success" once a receipt with the expected events is in. There is no simulated fallback here.
 
+import { protocolAbi } from '../../../chain/protocolV4Abi.js';
 import { toChainPricingArgs } from '../../../core/oracle.js';
 import { chainStateName, planTransition } from '../poolRules.js';
 import { buildSettlementPlan, SETTLEMENT_ACTIONS, SETTLEMENT_SCHEMA } from '../../pipelines/settlementPipeline.js';
@@ -30,21 +31,23 @@ export const PRICING_ACTION_FOR = Object.freeze({
 export const EXECUTOR_METHOD_FOR = Object.freeze({
   MARK_IN_TRANSIT: 'markInTransit',
   RECORD_PAYMENT: 'recordImporterPayment',
+  RECORD_ADDITIONAL_PAYMENT: 'recordAdditionalPayment',
   RECORD_ARRIVAL: 'recordCargoArrival',
   SETTLE: 'settle'
 });
 
 /** Events that must appear in the receipt (any one of an inner array is enough). */
 const EXPECTED_EVENTS = Object.freeze({
-  OPEN: ['PricingUpdated'],
-  OPEN_WITH_WARNING: ['PricingUpdated'],
-  REPRICE: ['PricingUpdated', ['OfferingRepriced', 'OfferingStateChanged']],
-  PAUSE: ['PricingUpdated', 'OfferingPaused'],
-  RESUME: ['PricingUpdated', 'OfferingResumed'],
-  FREEZE: ['PricingUpdated', 'OfferingStateChanged'],
-  LIQUIDATE: ['PricingUpdated', 'OfferingStateChanged'],
+  OPEN: ['PricingUpdated', 'PricingDecision'],
+  OPEN_WITH_WARNING: ['PricingUpdated', 'PricingDecision'],
+  REPRICE: ['PricingUpdated', 'PricingDecision', ['OfferingRepriced', 'OfferingStateChanged']],
+  PAUSE: ['PricingUpdated', 'PricingDecision', 'OfferingPaused'],
+  RESUME: ['PricingUpdated', 'PricingDecision', 'OfferingResumed'],
+  FREEZE: ['PricingUpdated', 'PricingDecision', 'OfferingFrozen'],
+  LIQUIDATE: ['PricingUpdated', 'PricingDecision', 'OfferingStateChanged'],
   MARK_IN_TRANSIT: ['DepartureRecorded'],
   RECORD_PAYMENT: ['SettlementProofRecorded'],
+  RECORD_ADDITIONAL_PAYMENT: ['AdditionalPaymentRecorded'],
   RECORD_ARRIVAL: ['SettlementProofRecorded'],
   SETTLE: ['OfferingSettled']
 });
@@ -82,16 +85,34 @@ export async function proofToBytes32(value) {
   return keccak256(toUtf8Bytes(text));
 }
 
-/** The decisionId RiskPricingOracle derives for replay protection. */
-export async function oracleDecisionId({ pool_id, issue_price_e6, pricing_action, evidence_hash, quote_hash }) {
+/**
+ * The decisionId RiskPricingOracle derives for replay protection. v4 binds the decision to the
+ * chain, oracle deployment, expected quote version and sequence (A07). `legacy: true` reproduces
+ * the v3 id so historical receipts can still be audited.
+ */
+export async function oracleDecisionId({
+  pool_id, issue_price_e6, pricing_action, evidence_hash, quote_hash,
+  expected_quote_version, decision_seq, chain_id, oracle_address, legacy = false
+}) {
   const { AbiCoder, keccak256 } = await import('ethers');
+  if (legacy) {
+    return keccak256(AbiCoder.defaultAbiCoder().encode(
+      ['uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
+      [pool_id, issue_price_e6, pricing_action, evidence_hash, quote_hash]
+    ));
+  }
+  if (!Number.isSafeInteger(Number(chain_id)) || !oracle_address) {
+    throw new TypeError('oracleDecisionId requires chain_id and oracle_address for the v4 decision domain');
+  }
   return keccak256(AbiCoder.defaultAbiCoder().encode(
-    ['uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
-    [pool_id, issue_price_e6, pricing_action, evidence_hash, quote_hash]
+    ['uint256', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32', 'uint256', 'uint256'],
+    [chain_id, oracle_address, pool_id, issue_price_e6, pricing_action, evidence_hash, quote_hash,
+      expected_quote_version, decision_seq]
   ));
 }
 
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
+const matchesPricingArg = (actual, expected) => actual !== undefined && String(actual).toLowerCase() === String(expected).toLowerCase();
 
 function eventNames(contracts, receipt) {
   const names = [];
@@ -152,7 +173,17 @@ export class ChainExecutor {
     if (!PRICING_ACTION_FOR[cmd.action] || !cmd.params?.quote || !cmd.chain_pool_id) return null;
     const ctx = await this.getContext();
     const args = toChainPricingArgs({ ...cmd.params.quote, pricing_action: PRICING_ACTION_FOR[cmd.action] }, { pool_id: cmd.chain_pool_id });
-    if (!await ctx.oracle.isDecisionProcessed(await oracleDecisionId(args))) return null;
+    // If the preconditions were persisted with the command, the exact decision id is available.
+    // Otherwise search the confirmed events for the same terms; an unknown broadcast must never
+    // be resent just because its version/sequence can no longer be reconstructed.
+    if (cmd.pricing_preconditions) {
+      Object.assign(args, cmd.pricing_preconditions);
+      args.chain_id = Number(ctx.chainConfig?.chainIdDecimal ?? 1439);
+      args.oracle_address = await ctx.oracle.getAddress();
+      if (await ctx.oracle.isDecisionProcessed(await oracleDecisionId(args))) {
+        return this.#reconcileProcessed(cmd, ctx, cmd.chain_pool_id, args);
+      }
+    }
     return this.#reconcileProcessed(cmd, ctx, cmd.chain_pool_id, args);
   }
 
@@ -195,13 +226,32 @@ export class ChainExecutor {
           || quote.data_quality?.status === 'live' && Date.parse(quote.data_quality.expires_at) <= Date.now())) {
       throw new ChainExecutionError('terms_not_openable', 'Current economic and data-quality constraints do not permit new issuance terms');
     }
-    const args = toChainPricingArgs({ ...quote, pricing_action: pricingAction }, { pool_id: chainPoolId });
+    // A07: bind the quote to the version it was priced against, a short validity window and
+    // the next sequence for this pool. These values are persisted on the command so a crashed
+    // broadcast can be reconciled without guessing.
+    const [version, lastSeq, latest] = await Promise.all([
+      ctx.pool.quoteVersion(chainPoolId), ctx.oracle.lastDecisionSeq(chainPoolId), ctx.provider.getBlock('latest')
+    ]);
+    if (!latest?.timestamp) throw new ChainExecutionError('chain_unavailable', 'Latest block is unavailable before pricing');
+    const preconditions = {
+      expected_quote_version: BigInt(version), valid_until: BigInt(latest.timestamp + 3600),
+      decision_seq: BigInt(lastSeq) + 1n, chain_id: Number(ctx.chainConfig?.chainIdDecimal ?? 1439),
+      oracle_address: await ctx.oracle.getAddress()
+    };
+    const args = toChainPricingArgs({ ...quote, pricing_action: pricingAction }, { pool_id: chainPoolId, ...preconditions });
+    args.chain_id = preconditions.chain_id;
+    args.oracle_address = preconditions.oracle_address;
 
     // Check replay protection before state preconditions: a mined PAUSE/REPRICE changed those already.
     const decisionId = await oracleDecisionId(args);
     if (await ctx.oracle.isDecisionProcessed(decisionId)) {
       return this.#reconcileProcessed(cmd, ctx, chainPoolId, args);
     }
+    cmd.pricing_preconditions = {
+      expected_quote_version: preconditions.expected_quote_version.toString(),
+      valid_until: preconditions.valid_until.toString(), decision_seq: preconditions.decision_seq.toString(),
+      chain_id: preconditions.chain_id, oracle_address: preconditions.oracle_address
+    };
 
     const state = await this.#readPool(ctx, chainPoolId);
     if (state.emergencyStopped) throw new ChainExecutionError('emergency_stopped', 'The pool contract is in emergency stop; no pricing action can be applied');
@@ -224,12 +274,12 @@ export class ChainExecutor {
       }
     }
 
-    const send = () => ctx.oracle.updatePricing(
-      args.pool_id, args.issue_price_e6, args.risk_level, args.pricing_action, args.evidence_hash, args.quote_hash
-    );
-    await this.#preflight(() => ctx.oracle.updatePricing.staticCall(
-      args.pool_id, args.issue_price_e6, args.risk_level, args.pricing_action, args.evidence_hash, args.quote_hash
-    ));
+    const pricingArgs = [
+      args.pool_id, args.issue_price_e6, args.risk_level, args.pricing_action, args.evidence_hash, args.quote_hash,
+      args.expected_quote_version, args.valid_until, args.decision_seq
+    ];
+    const send = () => ctx.oracle.updatePricing(...pricingArgs);
+    await this.#preflight(() => ctx.oracle.updatePricing.staticCall(...pricingArgs));
     return this.#submit({ cmd, ctx, signer: ctx.signers?.PRICING_UPDATER ?? 'PRICING_UPDATER', signerRole: 'PRICING_UPDATER', send });
   }
 
@@ -294,11 +344,15 @@ export class ChainExecutor {
   // ---- shared ----
 
   async #readPool(ctx, chainPoolId) {
-    const [stateIndex, emergencyStopped, offering, proofs] = await Promise.all([
+    const optional = (call) => call ? Promise.resolve().then(call).catch(() => null) : Promise.resolve(null);
+    const [stateIndex, emergencyStopped, offering, proofs, maturity, deadline, version] = await Promise.all([
       ctx.pool.stateOf(chainPoolId),
       ctx.pool.emergencyStopped(),
       ctx.pool.offerings(chainPoolId),
-      ctx.pool.settlementProofs ? ctx.pool.settlementProofs(chainPoolId).catch(() => null) : null
+      optional(() => ctx.pool.settlementProofs?.(chainPoolId)),
+      optional(() => ctx.pool.maturityAt?.(chainPoolId)),
+      optional(() => ctx.pool.subscriptionDeadline?.(chainPoolId)),
+      optional(() => ctx.pool.quoteVersion?.(chainPoolId))
     ]);
     const zero = /^0x0*$/u;
     const paymentProof = proofs ? !zero.test(String(proofs.paymentProof ?? proofs[0] ?? '0x0')) : false;
@@ -313,6 +367,9 @@ export class ChainExecutor {
       repaymentAmountAtomic: offering?.repaymentAmount === undefined ? undefined : String(offering.repaymentAmount),
       paymentProof,
       arrivalProof,
+      maturityAt: maturity === null ? undefined : Number(maturity),
+      subscriptionDeadline: deadline === null ? undefined : Number(deadline),
+      quoteVersion: version === null ? undefined : Number(version),
       stateBeforePause: undefined
     };
   }
@@ -397,8 +454,21 @@ export class ChainExecutor {
     let method, args;
     if (pricing) {
       const value = toChainPricingArgs({ ...cmd.params?.quote, pricing_action: PRICING_ACTION_FOR[cmd.action] }, { pool_id: cmd.chain_pool_id });
+      const tx = await ctx.provider.getTransaction(txHash);
+      let decoded;
+      try { decoded = ctx.oracle.interface.parseTransaction({ data: tx.data, value: tx.value }); } catch { decoded = null; }
+      if (!decoded || decoded.name !== 'updatePricing' || decoded.args.length !== 9) {
+        throw new ChainExecutionError('tx_verification_failed', 'Pricing transaction does not decode as a v4 updatePricing call');
+      }
+      const terms = [value.pool_id, value.issue_price_e6, value.risk_level, value.pricing_action, value.evidence_hash, value.quote_hash];
+      if (!terms.every((expected, index) => matchesPricingArg(decoded.args[index], expected))) {
+        throw new ChainExecutionError('tx_verification_failed', 'Pricing transaction terms differ from the approved quote');
+      }
+      if (BigInt(decoded.args[6]) < 1n || BigInt(decoded.args[7]) < 1n || BigInt(decoded.args[8]) < 1n) {
+        throw new ChainExecutionError('tx_verification_failed', 'Pricing transaction has invalid version, validity or sequence');
+      }
       method = 'updatePricing';
-      args = [value.pool_id, value.issue_price_e6, value.risk_level, value.pricing_action, value.evidence_hash, value.quote_hash];
+      args = Array.from(decoded.args);
     } else {
       method = EXECUTOR_METHOD_FOR[cmd.action];
       if (cmd.action === 'MARK_IN_TRANSIT') args = [cmd.chain_pool_id, await proofToBytes32(cmd.params?.departure_proof)];
@@ -476,7 +546,7 @@ export async function createChainContext({ chainConfig, env = process.env, resol
   };
 
   const oracleRead = new ethers.Contract(addr('RiskPricingOracle'), abi('RiskPricingOracle'), provider);
-  const pool = new ethers.Contract(addr('RWAOfferingPool'), [...abi('RWAOfferingPool'), 'function protocolVersion() view returns (uint256)'], provider);
+  const pool = new ethers.Contract(addr('RWAOfferingPool'), protocolAbi('RWAOfferingPool', [...abi('RWAOfferingPool'), 'function protocolVersion() view returns (uint256)'], network.protocolVersion), provider);
   const registry = new ethers.Contract(addr('EBLRegistry'), abi('EBLRegistry'), provider);
   const context = { provider, pool, registry, explorerBase: network.explorerBase, signers: {}, oracle: oracleRead,
     chainConfig: network, settlementPayer: String(env.AGENT_SETTLEMENT_PAYER ?? '').trim(),

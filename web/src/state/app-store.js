@@ -68,7 +68,7 @@ export const appStore = createStore({
   networkKey: null,
 
   // portfolio + agent activity
-  portfolio: { investments: [], summary: null, error: null },
+  portfolio: { investments: [], positions: [], summary: null, error: null },
   agentLogs: [],
   agentActivities: [],
 

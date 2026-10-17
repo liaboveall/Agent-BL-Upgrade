@@ -11,7 +11,8 @@ export const actionSchema = z.object({
   amount_usd: z.number().positive(), budget_usd: z.number().positive().nullable(), price_usd: z.number().positive(),
   shares: z.string().nullable(), quote_hash: z.string().nullable(), risk_level: z.string(),
   service_id: z.string().optional(), endpoint: z.string().optional(), service_title: z.string().optional(),
-  chain: z.object({ pool_id: z.number().int().positive(), chain_id: z.number().int().positive(), contract: z.string(), price_e6: z.string() }).optional(),
+  chain: z.object({ pool_id: z.number().int().positive(), chain_id: z.number().int().positive(), contract: z.string(), price_e6: z.string(),
+    protocol_version: z.number().optional(), settlement_asset: z.string().nullable().optional() }).optional(),
   result: z.object({ mode: z.enum(['demo', 'chain']), reference: z.string().optional(), txHash: z.string().nullable().optional(),
     amountUsd: z.number().optional(), tokenCount: z.number().optional(), price: z.number().optional(), poolStatus: z.string().optional() }).optional()
 });
@@ -64,7 +65,8 @@ export async function proposeAction({ query, turn, context, recommendations, get
   if (!shares) return blocked(type, 'amount_too_small');
   if (shares > BigInt(live.remaining_shares)) return blocked(type, 'capacity_exceeded');
   return actionSchema.parse({ ...base, amount_usd: Number(shares * price) / 1_000_000, price_usd: Number(price) / 1_000_000,
-    shares: shares.toString(), chain: { pool_id: live.pool_id, chain_id: live.chain_id, contract: live.contract, price_e6: live.price_e6 } });
+    shares: shares.toString(), chain: { pool_id: live.pool_id, chain_id: live.chain_id, contract: live.contract, price_e6: live.price_e6,
+      protocol_version: live.protocol_version, settlement_asset: live.settlement_asset } });
 }
 
 export async function validateAction({ action, context, pools, decisions, services, getLiveOffering, now }) {

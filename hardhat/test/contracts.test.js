@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { network } from 'hardhat';
+import { applyPricing } from './helpers/protocol.js';
 
 const { ethers } = await network.create();
 
@@ -111,7 +112,7 @@ describe('AgentBL contracts', () => {
     const quoteHash = ethers.id('pricing-quote-1');
 
     await (
-      await ctx.oracle.updatePricing(poolId, 800_000n, 2, ACTION.REPRICE_DOWN, evidenceHash, quoteHash)
+      await applyPricing(ctx, poolId, 800_000n, ACTION.REPRICE_DOWN, 2, { evidenceHash, quoteHash })
     ).wait();
 
     const priced = await ctx.oracle.queryFilter(ctx.oracle.filters.PricingUpdated());
@@ -143,7 +144,7 @@ describe('AgentBL contracts', () => {
     const quoteHash = ethers.id('quote-critical');
 
     await (
-      await ctx.oracle.updatePricing(poolId, 700_000n, 3, ACTION.TRIGGER_LIQUIDATION, evidenceHash, quoteHash)
+      await applyPricing(ctx, poolId, 700_000n, ACTION.TRIGGER_LIQUIDATION, 3, { evidenceHash, quoteHash })
     ).wait();
 
     expect(await ctx.pool.stateOf(poolId)).to.equal(BigInt(STATE.Liquidation));
@@ -163,7 +164,8 @@ describe('AgentBL contracts', () => {
     try {
       const tx = await ctx.oracle
         .connect(ctx.outsider)
-        .updatePricing(poolId, 800_000n, 2, ACTION.REPRICE_DOWN, ethers.id('e'), ethers.id('q'));
+        .updatePricing(poolId, 800_000n, 2, ACTION.REPRICE_DOWN, ethers.id('e'), ethers.id('q'),
+          1n, BigInt(Math.floor(Date.now() / 1000) + 3600), 1n);
       await tx.wait();
     } catch {
       reverted = true;

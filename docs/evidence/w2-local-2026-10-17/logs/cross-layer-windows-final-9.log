@@ -1,0 +1,19 @@
+No contracts to compile
+(node:41816) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ W2 real EVM + HTTP + wallet lifecycle
+  ✔ persists wallet subscriptions, additional purchases, fees and claims through the real HTTP adapter (5356.8957ms)
+  ✔ refunds actual paid capital, isolates Demo holdings and survives an empty position snapshot (2056.6664ms)
+  ✔ recovers a broadcast whose process died before attaching its hash, without signing again (1892.4657ms)
+  ✔ removes reorganized receipts from the position while preserving their audit history (3390.4111ms)
+  ✔ preflights owner capital plans, refuses forged receipts and waits for canonical confirmation depth (3094.3437ms)
+  ✔ supports liquidation recovery, zero recovery and proportional loss without duplicate payouts (9919.9961ms)
+✔ W2 real EVM + HTTP + wallet lifecycle (26286.2837ms)
+ℹ tests 6
+ℹ suites 1
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 26817.7171

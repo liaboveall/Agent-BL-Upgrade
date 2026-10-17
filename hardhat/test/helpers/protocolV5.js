@@ -13,17 +13,19 @@ export async function deployProtocolV5() {
     await token.getAddress()
   );
   await pool.waitForDeployment();
+  const oracle = await (await ethers.getContractFactory('RiskPricingOracle')).deploy(await pool.getAddress());
+  await oracle.waitForDeployment();
   await send(token.setPool(await pool.getAddress()));
-  await send(pool.setOracle(await ctx.oracle.getAddress()));
+  await send(pool.setOracle(await oracle.getAddress()));
   await send(pool.setAgentExecutor(ctx.agent.address, true));
   // Use a signer distinct from the v4 roles for the exporter/disbursement recipient.
   const [, , , , , , exporter] = await ethers.getSigners();
-  return { ...ctx, exporter, usdc, token, pool };
+  return { ...ctx, exporter, usdc, token, pool, oracle };
 }
 
 export async function newOfferingV5(ctx, tag, {
   supply = 100n, issuePrice = ISSUE_PRICE, target = TARGET,
-  maturityIn = 1_000, deadlineIn = 100, minRaise = (supply * issuePrice * 80n) / 100n
+  maturityIn = 1_000, deadlineIn = 100, minRaise = (supply * issuePrice * 80n) / 100n, asset = ctx.usdc
 } = {}) {
   await send(ctx.registry.mintEBL(ethers.id(`metadata:${tag}`), ctx.owner.address));
   const eblId = (await ctx.registry.nextEblId()) - 1n;
@@ -31,6 +33,6 @@ export async function newOfferingV5(ctx, tag, {
   const start = (await ethers.provider.getBlock('latest')).timestamp;
   const maturity = BigInt(start) + BigInt(maturityIn);
   const deadline = BigInt(start) + BigInt(deadlineIn);
-  await send(ctx.pool.createOfferingWithTerms(eblId, supply, issuePrice, target, maturity, deadline, await ctx.usdc.getAddress(), minRaise));
+  await send(ctx.pool.createOfferingWithTerms(eblId, supply, issuePrice, target, maturity, deadline, await asset.getAddress(), minRaise));
   return { eblId, poolId: (await ctx.pool.nextPoolId()) - 1n, maturity, deadline };
 }

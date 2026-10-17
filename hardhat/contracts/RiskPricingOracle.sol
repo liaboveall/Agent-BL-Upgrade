@@ -11,6 +11,8 @@ interface IRWAOfferingPoolActions {
         bytes32 evidenceHash,
         bytes32 quoteHash
     ) external;
+
+    function quoteVersion(uint256 poolId) external view returns (uint256);
 }
 
 /// @title RiskPricingOracle (WEB3-4 / WEB3-7 / WEB3-9)
@@ -21,10 +23,16 @@ contract RiskPricingOracle is Owned {
 
     IRWAOfferingPoolActions public pool;
 
+    /// @notice Upper bound on how far ahead a quote may claim to be valid. A far-future quote
+    ///         could otherwise be replayed after newer decisions.
+    uint256 public constant MAX_QUOTE_VALIDITY = 30 days;
+
     mapping(address => bool) private _updaters;
     mapping(uint256 => bytes32) private _latestQuoteHash;
     mapping(uint256 => bytes32) private _latestEvidenceHash;
     mapping(bytes32 => bool) private _processedDecision;
+    mapping(uint256 => uint256) private _lastDecisionSeq;
+    mapping(uint256 => uint256) private _latestQuoteVersion;
 
     event PricingUpdated(
         uint256 indexed poolId,
@@ -34,6 +42,14 @@ contract RiskPricingOracle is Owned {
         bytes32 evidenceHash,
         bytes32 quoteHash,
         address indexed updater
+    );
+    /// @notice Emitted alongside PricingUpdated so consumers can audit ordering and freshness.
+    event PricingDecision(
+        uint256 indexed poolId,
+        uint256 expectedQuoteVersion,
+        uint256 resultingQuoteVersion,
+        uint256 decisionSeq,
+        uint256 validUntil
     );
     event UpdaterSet(address indexed updater, bool allowed);
 
@@ -64,31 +80,52 @@ contract RiskPricingOracle is Owned {
         return _updaters[updater];
     }
 
-    /// @notice Push AI pricing/risk result. Emits PricingUpdated and triggers pool state change.
+    /// @notice Push an AI pricing/risk result with the preconditions the updater saw (A07).
+    /// @param expectedQuoteVersion pool quote version the decision was priced against
+    /// @param validUntil last instant at which this quote may be applied
+    /// @param decisionSeq strictly increasing per pool; blocks replayed or reordered quotes
     function updatePricing(
         uint256 poolId,
         uint256 issuePrice,
         uint8 riskLevel,
         uint8 action,
         bytes32 evidenceHash,
-        bytes32 quoteHash
+        bytes32 quoteHash,
+        uint256 expectedQuoteVersion,
+        uint256 validUntil,
+        uint256 decisionSeq
     ) external {
         require(_updaters[msg.sender], "not updater");
         require(issuePrice > 0, "issuePrice=0");
         require(riskLevel <= MAX_RISK_LEVEL, "riskLevel>3");
         require(evidenceHash != bytes32(0), "evidenceHash=0");
         require(quoteHash != bytes32(0), "quoteHash=0");
+        require(validUntil >= block.timestamp, "quote expired");
+        require(validUntil <= block.timestamp + MAX_QUOTE_VALIDITY, "quote validity too long");
 
-        bytes32 decisionId = keccak256(abi.encode(poolId, issuePrice, action, evidenceHash, quoteHash));
+        // Bind the decision to this oracle, pool and ordering so it cannot be replayed on
+        // another deployment or after a newer decision (A07).
+        bytes32 decisionId = keccak256(abi.encode(
+            block.chainid, address(this), poolId, issuePrice, action, evidenceHash, quoteHash,
+            expectedQuoteVersion, decisionSeq
+        ));
         require(!_processedDecision[decisionId], "decision replay");
+        require(decisionSeq > _lastDecisionSeq[poolId], "quote out of order");
+        uint256 currentVersion = pool.quoteVersion(poolId);
+        require(expectedQuoteVersion == currentVersion, "quote version changed");
+
         _processedDecision[decisionId] = true;
+        _lastDecisionSeq[poolId] = decisionSeq;
 
         _latestQuoteHash[poolId] = quoteHash;
         _latestEvidenceHash[poolId] = evidenceHash;
 
-        emit PricingUpdated(poolId, issuePrice, riskLevel, action, evidenceHash, quoteHash, msg.sender);
-
         pool.applyPricingAction(poolId, issuePrice, action, evidenceHash, quoteHash);
+        uint256 resultingVersion = pool.quoteVersion(poolId);
+        _latestQuoteVersion[poolId] = resultingVersion;
+
+        emit PricingUpdated(poolId, issuePrice, riskLevel, action, evidenceHash, quoteHash, msg.sender);
+        emit PricingDecision(poolId, expectedQuoteVersion, resultingVersion, decisionSeq, validUntil);
     }
 
     function latestQuoteHash(uint256 poolId) external view returns (bytes32) {
@@ -97,6 +134,14 @@ contract RiskPricingOracle is Owned {
 
     function latestEvidenceHash(uint256 poolId) external view returns (bytes32) {
         return _latestEvidenceHash[poolId];
+    }
+
+    function lastDecisionSeq(uint256 poolId) external view returns (uint256) {
+        return _lastDecisionSeq[poolId];
+    }
+
+    function latestQuoteVersion(uint256 poolId) external view returns (uint256) {
+        return _latestQuoteVersion[poolId];
     }
 
     function isDecisionProcessed(bytes32 decisionId) external view returns (bool) {

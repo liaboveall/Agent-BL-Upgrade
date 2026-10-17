@@ -18,7 +18,6 @@ export function TopBar() {
           </span>
           <span className="brand-text">
             <strong>AgentBL</strong>
-            <span>{t('brand_tag_short')}</span>
           </span>
         </a>
         <nav className="nav" role="tablist" aria-label={t('a11y_views')} onKeyDown={onKeyDown}>

@@ -1,0 +1,79 @@
+
+Running 10 tests using 1 worker
+
+  ok  1 tests\browser\review.spec.js:13:3 › zh: four desktop pages have no overflow, page errors or contrast violations (2.5s)
+  ok  2 tests\browser\review.spec.js:13:3 › en: four desktop pages have no overflow, page errors or contrast violations (2.3s)
+  ok  3 tests\browser\review.spec.js:31:1 › F06: Demo mint never connects or sends through a configured wallet (515ms)
+  ok  4 tests\browser\review.spec.js:46:1 › F07/F08: switching with a delayed preference response removes old terms immediately and isolates preferences (610ms)
+  ok  5 tests\browser\review.spec.js:64:1 › F05: uploaded working documents are absent from public listings and inaccessible to another browser (1.0s)
+  ok  6 tests\browser\review.spec.js:79:1 › F09: a funded or in-transit pool cannot show an enabled subscription or OPEN status (578ms)
+  ok  7 tests\browser\review.spec.js:91:1 › F06: a Live wallet failure remains a failure and never becomes simulated issuance (563ms)
+  ok  8 tests\browser\review.spec.js:100:1 › F07/F08: a late B preference response cannot overwrite a newer A selection (515ms)
+  x   9 tests\browser\review.spec.js:115:3 › W2 zh: confirmed and reconciling Live positions fit a 390px wallet portfolio (632ms)
+  x  10 tests\browser\review.spec.js:115:3 › W2 en: confirmed and reconciling Live positions fit a 390px wallet portfolio (737ms)
+
+
+  1) tests\browser\review.spec.js:115:3 › W2 zh: confirmed and reconciling Live positions fit a 390px wallet portfolio 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      142 |     await expect(positions.locator('button')).toBeDisabled();
+      143 |     expect(await positions.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    > 144 |     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+          |                                                                                           ^
+      145 |     await page.screenshot({ path: testInfo.outputPath(`positions-${language}-390.png`), fullPage: true });
+      146 |   });
+      147 | }
+        at E:\NUS\BlockChain\Project\Agent-BL-Upgrade\tests\browser\review.spec.js:144:91
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests\browser\review.spec.js:115:3 › W2 en: confirmed and reconciling Live positions fit a 390px wallet portfolio 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      142 |     await expect(positions.locator('button')).toBeDisabled();
+      143 |     expect(await positions.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    > 144 |     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+          |                                                                                           ^
+      145 |     await page.screenshot({ path: testInfo.outputPath(`positions-${language}-390.png`), fullPage: true });
+      146 |   });
+      147 | }
+        at E:\NUS\BlockChain\Project\Agent-BL-Upgrade\tests\browser\review.spec.js:144:91
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    tests\browser\review.spec.js:115:3 › W2 zh: confirmed and reconciling Live positions fit a 390px wallet portfolio 
+    tests\browser\review.spec.js:115:3 › W2 en: confirmed and reconciling Live positions fit a 390px wallet portfolio 
+  8 passed (12.8s)

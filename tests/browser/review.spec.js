@@ -110,3 +110,46 @@ test('F07/F08: a late B preference response cannot overwrite a newer A selection
   await expect(page.locator('.deal-strip')).toContainText('Shanghai');
   await expect(page.locator('#pref-min-price')).toHaveValue('');
 });
+
+for (const language of ['zh', 'en']) {
+  test(`W2 ${language}: confirmed and reconciling Live positions fit a 390px wallet portfolio`, async ({ page }, testInfo) => {
+    const wallet = `0x${'2'.repeat(40)}`, pool = `0x${'1'.repeat(40)}`, asset = `0x${'3'.repeat(40)}`;
+    await page.addInitScript(({ language, wallet }) => {
+      localStorage.setItem('ts_lang', language); localStorage.setItem('agentbl.walletType', 'metamask');
+      window.walletHandlers = {};
+      window.ethereum = { isMetaMask: true, on(name, handler) { window.walletHandlers[name] = handler; }, removeListener() {}, request: async ({ method }) => {
+        if (method === 'eth_chainId') return '0x59f';
+        if (method === 'eth_accounts' || method === 'eth_requestAccounts') return [wallet];
+        throw new Error('Browser regression does not authorize transactions');
+      } };
+    }, { language, wallet });
+    await page.route('**/api/investors/portfolio?**', (route) => route.fulfill({ json: { ok: true, investments: [], summary: { totalInvestedUsd: 0, avgYieldBps: 0 } } }));
+    await page.route('**/api/positions?**', (route) => route.fulfill({ json: { wallet, positions: [
+      { position_id: 'confirmed', mode: 'live', protocol_instance: { chain_id: 1439, pool_address: pool, protocol_version: 5 }, chain_pool_id: 1,
+        investor: wallet, asset, shares: '10', cost_atomic: '8000000', claimed_atomic: '0', claimable_atomic: '9500000', status: 'active', reconciled: true, chain_state: 'Repaid' },
+      { position_id: 'unknown', mode: 'live', protocol_instance: { chain_id: 1439, pool_address: pool, protocol_version: 5 }, chain_pool_id: 2,
+        investor: wallet, asset, shares: '7', cost_atomic: null, claimed_atomic: null, claimable_atomic: null, status: 'reconciling', reconciled: false }
+    ] } }));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/#/market');
+    await expect(page.locator('.portfolio-btn')).toBeVisible();
+    await page.locator('.portfolio-btn').click();
+    const positions = page.locator('.live-positions');
+    await expect(positions).toBeVisible();
+    await expect(positions).toContainText('8.000000'); await expect(positions).toContainText('9.500000');
+    await expect(positions).toContainText(language === 'zh' ? '对账中' : 'Reconciling');
+    // Demo mode keeps wallet withdrawal disabled until the user changes the runtime explicitly.
+    await expect(positions.locator('button')).toHaveCount(1);
+    await expect(positions.locator('button')).toBeDisabled();
+    expect(await positions.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const bounds = await page.locator('#portfolio-dialog').boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+    await page.locator('#portfolio-dialog').screenshot({ path: testInfo.outputPath(`positions-${language}-390.png`) });
+    let release;
+    const delayedPortfolio = new Promise((resolve) => { release = resolve; });
+    await page.route('**/api/investors/portfolio?**', async (route) => { await delayedPortfolio; await route.fulfill({ json: { ok: true, investments: [], summary: null } }); });
+    await page.evaluate(() => window.walletHandlers.accountsChanged([]));
+    await expect(page.locator('.live-positions')).toHaveCount(0);
+    release();
+  });
+}

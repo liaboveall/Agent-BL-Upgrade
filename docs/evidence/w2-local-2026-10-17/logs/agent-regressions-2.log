@@ -1,0 +1,52 @@
+✔ matrix: late clearing cannot undo a newer escalation, including indexes written before the shared stream (60.2892ms)
+✔ matrix: concurrent duplicate events produce one approval and one execution (11.809ms)
+✔ matrix: RPC preflight timeout recovers with bounded retry and one broadcast (6.3566ms)
+✔ matrix: mined nonce conflict recovers with bounded retry and one broadcast (5.8617ms)
+✔ matrix: persistent RPC outage fails explicitly before any broadcast, never simulates (6.8113ms)
+✔ matrix: broadcast timeout survives restart and transient reconciliation outage without resending (89.4015ms)
+✔ matrix: approval granted just before restart resumes once; an ambiguous broadcast requires operator reconciliation (11.8693ms)
+✔ matrix: known reverted receipt fails decision and approval without retries (5.0806ms)
+✔ matrix: an interrupted pricing broadcast without a hash recovers read-only from exact oracle replay protection (6.8809ms)
+✔ matrix: confirmation after a mode change records the Live fact without mutating Demo pools (5.129ms)
+✔ matrix: a completed decision repairs an interrupted approval checkpoint without another broadcast (7.7958ms)
+✔ matrix: injected clock expires approvals and synchronizes their decisions even if approve observed expiry first (4.0412ms)
+✔ matrix: switching away and back invalidates approvals and queued events by generation (3.7401ms)
+✔ matrix: mode changes while signer queue waits prevent broadcast (1.0489ms)
+✔ matrix: unavailable LLM and xAPI use labelled deterministic fallbacks and keep constraints (10.2062ms)
+✔ matrix: evidence expiring during RPC preflight blocks the signer before any broadcast (4.104ms)
+✔ Demo: a world-risk event becomes a decision, an executed simulated reprice, activity and a trace (48.3818ms)
+✔ Demo: injecting the same event again never produces a second execution (8.4665ms)
+✔ Demo: the full risk cycle reprice → pause → resume restores the previous state (11.037ms)
+✔ Demo: events that change nothing are ignored with a reason, not turned into decisions (4.4518ms)
+✔ invalid events are refused before they are queued (3.928ms)
+✔ policy: a price move above the cap waits for approval; approving it executes, rejecting does not (10.8472ms)
+✔ policy: rejecting a pending proposal records it and changes nothing (5.2964ms)
+✔ policy: observe and off modes never execute; set_autonomy changes it at runtime and is logged (10.044ms)
+✔ policy: an emergency stop blocks a reprice but lets a pause through, and can be lifted (7.0092ms)
+✔ policy: the cooldown stops a flapping signal from acting twice in a row (7.2442ms)
+✔ settlement actions: RECORD_PAYMENT always needs approval, RECORD_ARRIVAL does not (10.4345ms)
+✔ a failing action is recorded as FAILED with its reason, and the event itself still completes (5.6191ms)
+✔ status reports mode, autonomy, signers (booleans only) and queue depth (3.1416ms)
+✔ listDecisions filters and paginates; getDecision returns one (11.5683ms)
+✔ Demo reset clears the agent state of Demo mode only (7.8812ms)
+✔ decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate (60.0974ms)
+✔ a replayed event whose decision already exists does not decide again (49.0797ms)
+[agentbl] AGENT_AUTONOMY=auto is treated as propose in Live mode: every action needs human approval.
+✔ Live: a mapped pool gets a proposal that waits for approval; approving sends exactly one real-looking transaction and records its hash (13.49ms)
+✔ Live: AGENT_AUTONOMY=auto is downgraded to propose and the downgrade is visible (7.6811ms)
+✔ Live: a pool with no on-chain mapping gets a recorded proposal and nothing is executed (5.0177ms)
+✔ Live: the protected pool refuses terminal actions outright and never queues them (3.0105ms)
+✔ Live: an action only the owner can sign becomes an owner-CLI approval; the reported tx is verified before anything completes (9.0378ms)
+✔ Live: an approval is not executed after the runtime mode changed (6.0737ms)
+✔ Live: only proof-carrying events can be injected by hand (3.7242ms)
+✔ Live: a hand-injected arrival without a proof is rejected before queueing (3.8872ms)
+✔ Live: a broadcast transaction that is not yet confirmed stays EXECUTING and is reconciled on the next tick (42.9287ms)
+✔ Live: an unreachable chain never degrades to a simulated result (4.5596ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 824.4245

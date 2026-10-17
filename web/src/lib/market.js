@@ -199,16 +199,28 @@ export function caseOptionLabel(state, entry) {
 /** The cargo picture for a case id or cargo name. Every name returned here exists in public/img/cargo/. */
 export function cargoType(value) {
   const text = String(value ?? '').toLowerCase();
-  if (/copper|cuconc|-cu-|铜/u.test(text)) return 'copper';
-  if (/crude|refined|-oil-|oil|petroleum|原油|成品油|油/u.test(text)) return 'oil';
+  if (/cuconc|copper[ -]concentrate|铜精矿/u.test(text)) return 'copper-concentrate';
+  if (/copper|-cu-|铜/u.test(text)) return 'copper';
+  if (/refined|gasoil|diesel|成品油|柴油/u.test(text)) return 'diesel';
+  if (/crude|-oil-|oil|petroleum|原油|油/u.test(text)) return 'oil';
   if (/ironore|iron|\bore\b|铁|矿/u.test(text)) return 'ore';
   if (/rubber|橡胶/u.test(text)) return 'rubber';
   if (/soybean|-soy-|soy|大豆/u.test(text)) return 'soybean';
   return 'alu';
 }
 
-export const CARGO_TYPES = ['copper', 'oil', 'ore', 'rubber', 'soybean', 'alu'];
+export const CARGO_TYPES = ['copper', 'copper-concentrate', 'oil', 'diesel', 'ore', 'rubber', 'soybean', 'alu'];
 
-export function cargoImage(value) {
-  return `/img/cargo/${cargoType(value)}.webp`;
+const CASE_CARGO_IMAGES = {
+  'CASE-EBL-2026-0001': 'copper-hamburg',
+  'CASE-EBL-2026-CU-SG-SHA': 'copper-historical',
+  'CASE-EBL-2026-ALU-FS-WH-00013': 'alu-fs-wh-00013',
+  'CASE-EBL-2026-ALU-FS-WH-00014': 'alu-fs-wh-00014',
+  'CASE-EBL-2026-ALU-FS-WH-00015': 'alu-fs-wh-00015'
+};
+
+/** Use the project's own image when available, otherwise the appropriate cargo photo. */
+export function cargoImage(value, caseId = value) {
+  const image = Object.hasOwn(CASE_CARGO_IMAGES, caseId) ? CASE_CARGO_IMAGES[caseId] : cargoType(value);
+  return `/img/cargo/${image}.webp?v=2`;
 }

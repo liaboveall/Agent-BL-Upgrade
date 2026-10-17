@@ -20,11 +20,16 @@ const UPDATE_PRICING_ACTIONS = Object.freeze(
 
 /**
  * The exact arguments for RiskPricingOracle.updatePricing(poolId, issuePrice, riskLevel, action,
- * evidenceHash, quoteHash). Shared by the MCP tool and the Agent's chain executor so both encode
- * a quote identically. An unknown risk level or action throws: silently mapping it to a default
- * would put a different decision on-chain than the one the quote describes.
+ * evidenceHash, quoteHash, expectedQuoteVersion, validUntil, decisionSeq). Shared by the MCP tool
+ * and the Agent's chain executor so both encode a quote identically. An unknown risk level or
+ * action throws: silently mapping it to a default would put a different decision on-chain than
+ * the one the quote describes.
+ *
+ * The ordering fields are part of the on-chain decision (A07): a caller that omits them gets
+ * explicit defaults, but the chain executor and MCP tool always read them from the chain.
  * @param {object} quote a PricingQuote (risk_level, pricing_action, final_issue_price_usd, hashes)
- * @param {{pool_id:number|string}} opts the on-chain pool id
+ * @param {{pool_id:number|string, expected_quote_version?:number|bigint,
+ *          valid_until?:number|bigint, decision_seq?:number|bigint}} opts on-chain preconditions
  */
 export function toChainPricingArgs(quote, opts = {}) {
   if (!quote || typeof quote !== 'object') throw new TypeError('pricing quote is required');
@@ -41,13 +46,22 @@ export function toChainPricingArgs(quote, opts = {}) {
   if (!UPDATE_PRICING_ACTIONS.includes(quote.pricing_action)) {
     throw new RangeError(`unknown or unsupported pricing_action: ${String(quote.pricing_action)}`);
   }
+  // Strings keep the payload JSON-serialisable for plans and evidence.
+  const uint = (value, label) => {
+    const number = BigInt(value);
+    if (number < 0n) throw new RangeError(`${label} must be non-negative`);
+    return number.toString();
+  };
   return {
     pool_id: poolId,
     issue_price_e6: Math.round(price * 1_000_000),
     risk_level: riskLevel,
     pricing_action: PRICING_ACTION_TO_UINT8[quote.pricing_action],
     evidence_hash: normalizeHash32(quote.evidence_hash, 'evidence_hash'),
-    quote_hash: normalizeHash32(quote.quote_hash, 'quote_hash')
+    quote_hash: normalizeHash32(quote.quote_hash, 'quote_hash'),
+    expected_quote_version: uint(opts.expected_quote_version ?? 1, 'expected_quote_version'),
+    valid_until: uint(opts.valid_until ?? 0, 'valid_until'),
+    decision_seq: uint(opts.decision_seq ?? 1, 'decision_seq')
   };
 }
 
@@ -70,6 +84,9 @@ export function toOracleUpdate(quote, opts = {}) {
     offering_state: STATE_BY_PRICING_ACTION[quote.pricing_action] ?? null,
     evidence_hash: normalizeHash32(quote.evidence_hash, 'evidence_hash'),
     quote_hash: normalizeHash32(quote.quote_hash, 'quote_hash'),
+    expected_quote_version: opts.expected_quote_version ?? null,
+    valid_until: opts.valid_until ?? null,
+    decision_seq: opts.decision_seq ?? null,
     // RWAOfferingPool.createOffering(eblId, tokenSupply, issuePrice, targetRedemptionValue)
     recommended_token_supply: quote.recommended_token_supply,
     target_redemption_value_usd: quote.target_redemption_value_usd,

@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { Interface } from 'ethers';
 import { cargoIdentityHash } from '../../src/chain/cargoIdentity.js';
 import { loadChainConfig } from '../../src/agent/runtime/factory.js';
+import { protocolAbi } from '../../src/chain/protocolV4Abi.js';
 import { ChainWatcher } from '../../src/agent/runtime/sources/chainWatcher.js';
 import { createAgentService } from '../../src/agent/runtime/factory.js';
 import { createPool } from '../../src/app/store.js';
@@ -53,7 +54,7 @@ export function watcherChain({ latest = 110 } = {}) {
   };
   const context = { provider, pool, registry, signers: {}, chainConfig };
   const log = (name, args, { contract = 'RWAOfferingPool', height = 105, index = 0, transactionIndex = 0, ...extra } = {}) => {
-    const iface = new Interface(chainConfig.abis[contract]);
+    const iface = new Interface(protocolAbi(contract, chainConfig.abis[contract]));
     const encoded = iface.encodeEventLog(iface.getEvent(name), args);
     return { ...encoded, address: chainConfig.contracts[contract], blockNumber: height, blockHash: block(height).hash,
       transactionHash: hash(10000 + height), transactionIndex, index, removed: false, ...extra };

@@ -52,13 +52,19 @@ export async function writeFileAtomic(file, contents, options = {}) {
   const {
     retries = DEFAULT_RETRIES,
     backoffMs = DEFAULT_BACKOFF_MS,
-    rename = fs.rename
+    rename = fs.rename,
+    durable = false
   } = options;
   await fs.mkdir(path.dirname(file), { recursive: true });
   const temporary = tempPathFor(file);
   try {
     await fs.writeFile(temporary, contents, typeof contents === 'string' ? 'utf8' : undefined);
+    if (durable) {
+      const handle = await fs.open(temporary, 'r+');
+      try { await handle.sync(); } finally { await handle.close(); }
+    }
     await renameWithRetry(temporary, file, { retries, backoffMs, rename });
+    if (durable) await syncDirectory(path.dirname(file));
   } catch (error) {
     await removeQuietly(temporary);
     throw error;
@@ -100,7 +106,7 @@ function rotatedName(file, index) {
  * Append one record (a JSON line). When the file would grow past `maxBytes` it is rotated to
  * `<file>.1` (older generations shift up) and at most `keepFiles` rotated files are kept.
  */
-export async function appendJsonl(file, record, { maxBytes = 5 * 1024 * 1024, keepFiles = 3 } = {}) {
+export async function appendJsonl(file, record, { maxBytes = 5 * 1024 * 1024, keepFiles = 3, durable = false } = {}) {
   const line = `${JSON.stringify(record)}\n`;
   await fs.mkdir(path.dirname(file), { recursive: true });
   let size = 0;
@@ -121,7 +127,18 @@ export async function appendJsonl(file, record, { maxBytes = 5 * 1024 * 1024, ke
     if (keepFiles >= 1) await fs.rename(file, rotatedName(file, 1));
     else await removeQuietly(file);
   }
-  await fs.appendFile(file, line, 'utf8');
+  const handle = await fs.open(file, 'a');
+  try {
+    await handle.writeFile(line, 'utf8');
+    if (durable) await handle.sync();
+  } finally { await handle.close(); }
+  if (durable) await syncDirectory(path.dirname(file));
+}
+
+async function syncDirectory(dir) {
+  if (process.platform === 'win32') return;
+  const handle = await fs.open(dir, 'r');
+  try { await handle.sync(); } finally { await handle.close(); }
 }
 
 async function readJsonlFile(file) {

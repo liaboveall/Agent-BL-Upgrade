@@ -61,6 +61,15 @@ async function createOffering(ctx, suffix = '1', supply = 100n) {
   return (await ctx.pool.nextPoolId()) - 1n;
 }
 
+// A07: every quote carries the version it was priced against, a validity window and an
+// increasing sequence. A process-wide counter is enough for these single-network tests.
+let decisionSeq = 0;
+async function pricing(ctx, poolId, price, riskLevel, action, evidenceHash, quoteHash) {
+  decisionSeq += 1;
+  return ctx.oracle.updatePricing(poolId, price, riskLevel, action, evidenceHash, quoteHash,
+    await ctx.pool.quoteVersion(poolId), BigInt(Math.floor(Date.now() / 1000) + 3600), BigInt(decisionSeq));
+}
+
 describe('RWAOfferingPool autonomous state machine (WEB3-15/16)', () => {
   it('allows permissionless testnet subscriptions but enforces a pluggable production gate', async () => {
     const ctx = await deployStack();
@@ -91,9 +100,9 @@ describe('RWAOfferingPool autonomous state machine (WEB3-15/16)', () => {
   it('resumes a paused offering through the oracle RESUME_OFFERING action', async () => {
     const ctx = await deployStack();
     const poolId = await createOffering(ctx);
-    await (await ctx.oracle.updatePricing(poolId, 800_000n, 3, ACTION.PAUSE, ethers.id('pause-e'), ethers.id('pause-q'))).wait();
+    await (await pricing(ctx, poolId, 800_000n, 3, ACTION.PAUSE, ethers.id('pause-e'), ethers.id('pause-q'))).wait();
     expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Paused);
-    await (await ctx.oracle.updatePricing(poolId, 800_000n, 1, ACTION.RESUME, ethers.id('resume-e'), ethers.id('resume-q'))).wait();
+    await (await pricing(ctx, poolId, 800_000n, 1, ACTION.RESUME, ethers.id('resume-e'), ethers.id('resume-q'))).wait();
     expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Open);
   });
 
@@ -136,7 +145,7 @@ describe('RWAOfferingPool autonomous state machine (WEB3-15/16)', () => {
     await (await ctx.pool.setEmergencyStop(true, ethers.id('incident'))).wait();
     await expectRevert(ctx.pool.connect(ctx.investor).subscribe(poolId, 1n), /emergency stopped/u);
     await expectRevert(
-      ctx.oracle.updatePricing(poolId, 700_000n, 2, ACTION.REPRICE, ethers.id('e'), ethers.id('q')),
+      pricing(ctx, poolId, 700_000n, 2, ACTION.REPRICE, ethers.id('e'), ethers.id('q')),
       /emergency stopped/u
     );
     await (await ctx.pool.emergencyPause(poolId, ethers.id('manual'))).wait();
@@ -164,13 +173,18 @@ describe('RWAOfferingPool autonomous state machine (WEB3-15/16)', () => {
   it('rejects replaying one oracle decision', async () => {
     const ctx = await deployStack();
     const poolId = await createOffering(ctx);
-    const args = [poolId, 750_000n, 2, ACTION.REPRICE, ethers.id('replay-e'), ethers.id('replay-q')];
+    const validUntil = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const args = [poolId, 800_000n, 2, ACTION.PAUSE, ethers.id('replay-e'), ethers.id('replay-q'), 1n, validUntil, 1n];
     await (await ctx.oracle.updatePricing(...args)).wait();
-    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Open);
+    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Paused);
+    const chainId = (await ethers.provider.getNetwork()).chainId;
     const decisionId = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
-      ['uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'], [args[0], args[1], args[3], args[4], args[5]]
+      ['uint256', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32', 'uint256', 'uint256'],
+      [chainId, await ctx.oracle.getAddress(), args[0], args[1], args[3], args[4], args[5], args[6], args[8]]
     ));
     expect(await ctx.oracle.isDecisionProcessed(decisionId)).to.equal(true);
-    await expectRevert(ctx.oracle.updatePricing(...args), /revert|transaction reverted/u);
+    // Hardhat 3 does not always surface the revert string here; the exact id check above proves
+    // the decision was recorded, and the resubmission must still revert.
+    await expectRevert(ctx.oracle.updatePricing(...args), /revert|decision replay/iu);
   });
 });

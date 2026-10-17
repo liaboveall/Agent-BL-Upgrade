@@ -1,0 +1,11 @@
+{
+  "previous_source_sha256": "dfb00336a623497dd091a874a341d5d15d51292eda5daad37a8ee7bfd58e6c2a",
+  "files_compared": 522,
+  "changes": [
+    {
+      "path": "Dockerfile",
+      "previous_sha256": "f9daa28d463140b7bf0fa7abc897b1883161368931104b258f3a7b9cac7488ab",
+      "sha256": "cfa4fb6547d9b4b2526f8ab290f2b479ddd6e2563e273e94de45230264994861"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+No contracts to compile
+(node:18820) Warning: node:test run() is being called recursively within a test file. skipping running files.
+(Use `node --trace-warnings ...` to show where the warning was created)

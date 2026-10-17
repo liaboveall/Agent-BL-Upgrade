@@ -33,7 +33,7 @@ describe('protocol v5 W2 regressions', () => {
     await ethers.provider.send('evm_setNextBlockTimestamp', [Number(deadline) + 1]);
     await ethers.provider.send('evm_mine', []);
     await expect(ctx.pool.connect(ctx.investor).subscribeWithTerms(poolId, 1n, ISSUE_PRICE, 1n, (await now()) + 600n))
-      .to.be.revertedWith('subscription deadline elapsed');
+      .to.be.revertedWithCustomError(ctx.pool, 'SubscriptionDeadlineElapsed');
   });
 
   it('refunds investors when minRaise is not met', async () => {

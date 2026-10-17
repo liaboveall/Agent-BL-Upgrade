@@ -98,7 +98,15 @@ export async function planWaveBGate({ caseData, report, chain, registry, pool, o
     add('RWAOfferingPool', 'createOffering', [String(eblId), String(Math.round(quote.recommended_token_supply)),
       String(Math.round(quote.final_issue_price_usd * 1_000_000)), '1000000'], 'Create the new offering');
   }
-  const pricing = toChainPricingArgs({ ...quote, evidence_hash: report.report_hash }, { pool_id: poolId });
+  // A07: bind the plan to the current version and next sequence, with a bounded validity.
+  const expectedVersion = pool.quoteVersion ? await pool.quoteVersion(poolId).catch(() => 1n) : 1n;
+  const lastSeq = oracle.lastDecisionSeq ? await oracle.lastDecisionSeq(poolId).catch(() => 0n) : 0n;
+  const pricing = toChainPricingArgs({ ...quote, evidence_hash: report.report_hash }, {
+    pool_id: poolId, expected_quote_version: expectedVersion,
+    valid_until: BigInt(Math.floor(Date.now() / 1000) + 3600), decision_seq: BigInt(lastSeq) + 1n
+  });
+  pricing.chain_id = Number(chain.chainIdDecimal);
+  pricing.oracle_address = chain.contracts.RiskPricingOracle;
   const decisionId = await oracleDecisionId(pricing);
   let noOp = false;
   if (existing > 0n && await oracle.isDecisionProcessed(decisionId)) {
@@ -108,7 +116,9 @@ export async function planWaveBGate({ caseData, report, chain, registry, pool, o
     noOp = true;
   } else {
     add('RiskPricingOracle', 'updatePricing', [String(poolId), String(pricing.issue_price_e6), pricing.risk_level,
-      pricing.pricing_action, pricing.evidence_hash, pricing.quote_hash], 'Bind the existing paid report to pricing; this may restore the report price on protected pool #2');
+      pricing.pricing_action, pricing.evidence_hash, pricing.quote_hash,
+      String(pricing.expected_quote_version), String(pricing.valid_until), String(pricing.decision_seq)],
+    'Bind the existing paid report to pricing; this may restore the report price on protected pool #2');
   }
   return { schema: 'agentbl-wave-b-plan-v1', network: 'eip155:1439', case_id: caseData.case_id, cargo_hash: cargoHash,
     cargo_identity_version: 'wave-b-v1', ebl_id: eblId, pool_id: poolId, reused: existing > 0n, state, no_op: noOp,

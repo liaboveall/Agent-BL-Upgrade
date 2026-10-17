@@ -387,10 +387,10 @@ function fakeLiveContext(state = { stateIndex: 2, subscribed: 0, price: 790_000 
   const sent = [];
   const oracle = '0x1111111111111111111111111111111111111111', pool = '0x2222222222222222222222222222222222222222';
   const updater = '0x3333333333333333333333333333333333333333', blockHash = `0x${'cd'.repeat(32)}`;
-  const iface = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32)']);
-  const parse = { parseLog: (log) => (log.name ? { name: log.name } : null), encodeFunctionData: iface.encodeFunctionData.bind(iface) };
+  const iface = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32,uint256,uint256,uint256)']);
+  const parse = { parseLog: (log) => (log.name ? { name: log.name } : null), parseTransaction: iface.parseTransaction.bind(iface), encodeFunctionData: iface.encodeFunctionData.bind(iface) };
   const receipt = { hash: TXH, from: updater, to: oracle, status: 1, blockNumber: 4242, blockHash,
-    logs: ['PricingUpdated', 'OfferingPaused', 'OfferingRepriced', 'OfferingResumed'].map((name) => ({ name, address: name === 'PricingUpdated' ? oracle : pool })) };
+    logs: ['PricingUpdated', 'PricingDecision', 'OfferingPaused', 'OfferingRepriced', 'OfferingResumed'].map((name) => ({ name, address: ['PricingUpdated', 'PricingDecision'].includes(name) ? oracle : pool })) };
   const transaction = { hash: TXH, from: updater, to: oracle, chainId: 1439n, value: 0n };
   const updatePricing = Object.assign(async (...args) => {
     sent.push(args); transaction.data = iface.encodeFunctionData('updatePricing', args);
@@ -398,13 +398,13 @@ function fakeLiveContext(state = { stateIndex: 2, subscribed: 0, price: 790_000 
   }, { staticCall: async () => {} });
   return {
     sent, state, receipt,
-    provider: { send: async () => '0x59f', getBlockNumber: async () => 5000, getBlock: async () => ({ hash: blockHash }),
+    provider: { send: async () => '0x59f', getBlockNumber: async () => 5000, getBlock: async () => ({ hash: blockHash, timestamp: 1_791_849_600 }),
       getTransaction: async () => transaction, getTransactionReceipt: async () => receipt },
     explorerBase: 'https://explorer.example',
     signers: { PRICING_UPDATER: updater },
-    oracle: { target: oracle, interface: parse, isDecisionProcessed: async () => false, updatePricing, filters: {}, queryFilter: async () => [] },
+    oracle: { target: oracle, getAddress: async () => oracle, lastDecisionSeq: async () => 0n, interface: parse, isDecisionProcessed: async () => false, updatePricing, filters: {}, queryFilter: async () => [] },
     pool: {
-      target: pool,
+      target: pool, quoteVersion: async () => 1n,
       interface: parse,
       owner: async () => '0xOwner',
       stateOf: async () => state.stateIndex,

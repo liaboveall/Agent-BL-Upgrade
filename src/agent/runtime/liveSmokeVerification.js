@@ -22,8 +22,16 @@ export async function readSmokeChain(context, config, decision, { historical = f
     provider.getTransaction(decision.execution.tx_hash), provider.getBlockNumber()]);
   if (!receipt || !tx) throw new Error('Smoke transaction is unconfirmed');
   const args = toChainPricingArgs({ ...decision.proposal.params.quote, pricing_action: PRICING_ACTION_FOR[decision.proposed_action] }, { pool_id: 2 });
+  let decoded = null;
+  try { decoded = oracle.interface.parseTransaction({ data: tx.data, value: tx.value }); } catch { decoded = null; }
+  const legacyCalldata = decoded?.name === 'updatePricing' && decoded.args.length === 6;
+  const decisionArgs = legacyCalldata ? { ...args, legacy: true } : decoded?.name === 'updatePricing' && decoded.args.length === 9
+    ? { ...args, expected_quote_version: decoded.args[6], valid_until: decoded.args[7], decision_seq: decoded.args[8],
+      chain_id: chainId, oracle_address: config.contracts.RiskPricingOracle }
+    : null;
   const [before, after, canonical, current, processed] = await Promise.all([view(receipt.blockNumber - 1), view(receipt.blockNumber),
-    provider.getBlock(receipt.blockNumber), historical ? null : view(), oracle.isDecisionProcessed(await oracleDecisionId(args))]);
+    provider.getBlock(receipt.blockNumber), historical ? null : view(),
+    decisionArgs ? oracle.isDecisionProcessed(await oracleDecisionId(decisionArgs)) : Promise.resolve(false)]);
   const events = receipt.logs.flatMap((log) => {
     const contract = same(log.address, config.contracts.RiskPricingOracle) ? oracle
       : same(log.address, config.contracts.RWAOfferingPool) ? pool : null;
@@ -32,8 +40,9 @@ export async function readSmokeChain(context, config, decision, { historical = f
   });
   const pricing = events.find((event) => event.name === 'PricingUpdated');
   const expectedArgs = [args.pool_id, args.issue_price_e6, args.risk_level, args.pricing_action, args.evidence_hash, args.quote_hash];
-  let calldata = false;
-  try { const decoded = oracle.interface.decodeFunctionData('updatePricing', tx.data); calldata = expectedArgs.every((v, i) => same(v, decoded[i])); } catch { /* invalid calldata */ }
+  const calldata = Boolean(decoded) && decoded.name === 'updatePricing' && (decoded.args.length === 6 || decoded.args.length === 9)
+    && expectedArgs.every((v, i) => same(v, decoded.args[i]))
+    && (legacyCalldata || BigInt(decoded.args[6]) >= 1n && BigInt(decoded.args[7]) >= 1n && BigInt(decoded.args[8]) >= 1n);
   const exactPricing = pricing && expectedArgs.every((v, i) => same(v, pricing.args[i])) && same(pricing.args[6], tx.from);
   const transition = events.find((event) => event.name === 'OfferingStateChanged' && same(event.args[0], 2)
     && same(event.args[1], before.state) && same(event.args[2], after.state) && same(event.args[3], args.pricing_action));

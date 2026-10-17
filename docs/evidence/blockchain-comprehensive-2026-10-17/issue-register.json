@@ -1,0 +1,781 @@
+{
+  "schema": "agentbl-improvement-register-v1",
+  "date": "2026-10-17",
+  "timezone": "Asia/Singapore",
+  "source_head": "cc09644fb652d5a995342a083362e7b95e8dd8b1",
+  "status_definitions": {
+    "OPEN": "Known issue or missing capability, not implemented by this report.",
+    "DECISION_REQUIRED": "Trust, business or product design must be decided before implementation is closed.",
+    "VALIDATION_REQUIRED": "Applicable implementation or external conditions require current acceptance evidence.",
+    "IMPLEMENTED": "Local implementation exists; deployment or external validation may still be pending.",
+    "VERIFIED": "All applicable closure conditions have evidence for the specified version and scope."
+  },
+  "issues": [
+    {
+      "id": "A01",
+      "priority": "P1",
+      "kind": "缺陷",
+      "title": "Liquidation 缺少收尾路径",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "E + S",
+      "acceptance": "从所有允许进入 Liquidation 的阶段，都有业务允许且权限明确的结束路径；足额、零回收、部分回收、错误处置、重复执行和全局停止均测试。安全性不变量仍保持，退出过程不能提前释放抵押。需要合约新部署；应用修改不能改变现有地址的行为。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a01",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "npm --prefix hardhat test (102 passing)",
+        "protocolV4: A01 partial/full/zero/unsubscribed liquidation"
+      ],
+      "external_gates": [
+        "Independent review, clean rebuild and a new RWAOfferingPool / RiskPricingOracle deployment; the deployed v3 addresses keep their v3 behaviour."
+      ],
+      "closure_note": {
+        "design": "Liquidation 缺少收尾路径",
+        "files": [
+          "hardhat/contracts/RWAOfferingPool.sol",
+          "hardhat/test/protocolV4.test.js"
+        ],
+        "tests": [
+          "npm --prefix hardhat test (102 passing)",
+          "protocolV4: A01 partial/full/zero/unsubscribed liquidation"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "Added recordLiquidationRecovery + resolveLiquidation; full recovery -> Repaid, shortfall -> LossSettled, no subscribers -> Cancelled; collateral is released only at resolution. Deployment pending."
+      }
+    },
+    {
+      "id": "A02",
+      "priority": "P1",
+      "kind": "缺陷",
+      "title": "Frozen 退出条件不完整",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "E + S",
+      "acceptance": "组合矩阵覆盖零 / 部分 / 满额认购 × 零 / 部分 / 足额回款 × 到期前后；每格说明允许路径或合理禁止原因。不能通过统一 owner 强制解押代替这套规则。需要合约新部署及消费者同步。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a02",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "protocolV4: frozen cancel/settle/default/unfreeze",
+        "offeringModel randomised seeds"
+      ],
+      "external_gates": [
+        "Independent review, clean rebuild and a new RWAOfferingPool / RiskPricingOracle deployment; the deployed v3 addresses keep their v3 behaviour."
+      ],
+      "closure_note": {
+        "design": "Frozen 退出条件不完整",
+        "files": [
+          "hardhat/contracts/RWAOfferingPool.sol",
+          "src/agent/runtime/poolRules.js",
+          "hardhat/test/protocolV4.test.js"
+        ],
+        "tests": [
+          "protocolV4: frozen cancel/settle/default/unfreeze",
+          "offeringModel randomised seeds"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "Frozen now has explicit exits: cancel without subscribers, settle after full verified recovery, markDefault when overdue, unfreeze with evidence. Frozen stays settleable for late recovery."
+      }
+    },
+    {
+      "id": "A03",
+      "priority": "P1",
+      "kind": "缺陷",
+      "title": "Defaulted 后证明录入的跨层规则不一致",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "E + J + S",
+      "acceptance": "标准应用 / CLI 路径能够从 Defaulted 完成迟到付款与到港、足额结清及部分损失处理；停机、过期审批、权限不足和重复回执都按预期拒绝。不能以直接调用合约的成功代替应用验收。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a03",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "w1CrossLayer: Defaulted/Frozen record payment, arrival, additional payment",
+        "agentSettlement: 43 passing"
+      ],
+      "external_gates": [],
+      "closure_note": {
+        "design": "Defaulted 后证明录入的跨层规则不一致",
+        "files": [
+          "src/agent/runtime/poolRules.js",
+          "src/agent/runtime/executors/chainExecutor.js",
+          "src/agent/pipelines/settlementPipeline.js",
+          "tests/w1CrossLayer.test.js"
+        ],
+        "tests": [
+          "w1CrossLayer: Defaulted/Frozen record payment, arrival, additional payment",
+          "agentSettlement: 43 passing"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "RECORD_PAYMENT / RECORD_ADDITIONAL_PAYMENT / RECORD_ARRIVAL / SETTLE are allowed from Defaulted and Frozen in the shared rules and settlement plans; no unattended path was added for owner-only markDefault/settleLoss."
+      }
+    },
+    {
+      "id": "A04",
+      "priority": "P1",
+      "kind": "缺陷",
+      "title": "多笔回款与结算审批模型不一致",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "E + J + S",
+      "acceptance": "一笔、多笔、不同付款来源、超额、重复、撤销 / 更正、重组和重启后仍能对账；未确认或已用于另一债务的分录不能进入累计值；不能为了结算伪造一笔“等于总和”的付款。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a04",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "w1CrossLayer: two verified entries sum to on-chain total; duplicate, short total and missing primary rejected"
+      ],
+      "external_gates": [],
+      "closure_note": {
+        "design": "多笔回款与结算审批模型不一致",
+        "files": [
+          "src/agent/pipelines/settlementPipeline.js",
+          "src/agent/runtime/ownerTxPlan.js",
+          "tests/w1CrossLayer.test.js"
+        ],
+        "tests": [
+          "w1CrossLayer: two verified entries sum to on-chain total; duplicate, short total and missing primary rejected"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "SETTLE accepts params.recoveries, verifies every USDC transfer independently, deduplicates by tx+log index, requires the sum to equal the on-chain repayment amount and the primary proof to be included. RECORD_ADDITIONAL_PAYMENT is a separate owner/executor action."
+      }
+    },
+    {
+      "id": "A05",
+      "priority": "P1",
+      "kind": "缺陷",
+      "title": "报价期限未绑定链上到期日",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "E + J + S",
+      "acceptance": "同一案例的 quote、审批内容、calldata、链上时间、年化和 UI 解释完全一致；覆盖跨日、延迟开盘、已过去的原定到期日、不同付款条款及剩余期限。建议在新创建接口中原子绑定；涉及合约新部署。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a05",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "protocolV4: createOfferingWithTerms binding and invalid terms",
+        "agentOpening: three-step plan with terms"
+      ],
+      "external_gates": [
+        "Independent review, clean rebuild and a new RWAOfferingPool / RiskPricingOracle deployment; the deployed v3 addresses keep their v3 behaviour."
+      ],
+      "closure_note": {
+        "design": "报价期限未绑定链上到期日",
+        "files": [
+          "hardhat/contracts/RWAOfferingPool.sol",
+          "src/agent/runtime/openingPlan.js",
+          "tests/w1CrossLayer.test.js",
+          "hardhat/test/protocolV4.test.js"
+        ],
+        "tests": [
+          "protocolV4: createOfferingWithTerms binding and invalid terms",
+          "agentOpening: three-step plan with terms"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "Opening now uses createOfferingWithTerms with quote tenor and an explicit subscription window in the same transaction; setMaturity emits OfferingTermsSet and shortening maturity also shortens the cutoff."
+      }
+    },
+    {
+      "id": "A06",
+      "priority": "P1",
+      "kind": "缺陷",
+      "title": "到期后仍可新增认购",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "E + S",
+      "acceptance": "截止前、截止秒、截止后、债务到期、链下缓存旧时间和直接钱包调用分别验证；接口拒绝时不得铸造份额或产生成功付款记录。需要合约新部署。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a06",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "protocolV4: subscribe at deadline succeeds, next block fails",
+        "w1CrossLayer: shared subscription predicate disables a closed deadline",
+        "offeringModel seeds"
+      ],
+      "external_gates": [
+        "Independent review, clean rebuild and a new RWAOfferingPool / RiskPricingOracle deployment; the deployed v3 addresses keep their v3 behaviour."
+      ],
+      "closure_note": {
+        "design": "到期后仍可新增认购",
+        "files": [
+          "hardhat/contracts/RWAOfferingPool.sol",
+          "src/core/subscription.js"
+        ],
+        "tests": [
+          "protocolV4: subscribe at deadline succeeds, next block fails",
+          "w1CrossLayer: shared subscription predicate disables a closed deadline",
+          "offeringModel seeds"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "subscriptionDeadline is stored per pool and checked on every subscribe/subscribeWithTerms call, independent of debt maturity. Per-pool deadline changes are limited to unsubscribed offerings."
+      }
+    },
+    {
+      "id": "A07",
+      "priority": "P1",
+      "kind": "防护缺口",
+      "title": "Oracle 无报价时效 / 顺序前置条件",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "E + S",
+      "acceptance": "旧报价、未来报价、过期报价、跨池 / 跨合约复用、乱序并发、重复提交被区分处理；签名前静态预检后状态变化也不能绕过链上前置条件。需要 Oracle / Pool 新部署和 ABI 同步。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a07",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "protocolV4: expired/far-future/wrong-version/replay/out-of-order quotes",
+        "agentExecutors: 29 passing"
+      ],
+      "external_gates": [
+        "Independent review, clean rebuild and a new RWAOfferingPool / RiskPricingOracle deployment; the deployed v3 addresses keep their v3 behaviour."
+      ],
+      "closure_note": {
+        "design": "Oracle 无报价时效 / 顺序前置条件",
+        "files": [
+          "hardhat/contracts/RiskPricingOracle.sol",
+          "src/core/oracle.js",
+          "src/agent/runtime/executors/chainExecutor.js",
+          "src/mcp/tools.js",
+          "hardhat/test/protocolV4.test.js"
+        ],
+        "tests": [
+          "protocolV4: expired/far-future/wrong-version/replay/out-of-order quotes",
+          "agentExecutors: 29 passing"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "updatePricing now requires expectedQuoteVersion, bounded validUntil and a strictly increasing decisionSeq; decision ids bind chainId+oracle+pool. Executor/MCP read these from chain and persist them for reconciliation."
+      }
+    },
+    {
+      "id": "A08",
+      "priority": "P1",
+      "kind": "防护缺口",
+      "title": "认购无链上价格 / 版本 / 截止前置条件",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S",
+      "acceptance": "批准后由另一个合法更新改变价格、版本、容量或截止条件，交易要么按用户允许的条件原子成功，要么完全回滚；未知广播进入对账状态且不能提示直接重复购买。需要合约新部署；接入付款腿时必须一起验收。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a08",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "protocolV4: subscribeWithTerms price/version/deadline drift",
+        "web3 subscribe path (lint/build)"
+      ],
+      "external_gates": [
+        "Independent review, clean rebuild and a new RWAOfferingPool / RiskPricingOracle deployment; the deployed v3 addresses keep their v3 behaviour."
+      ],
+      "closure_note": {
+        "design": "认购无链上价格 / 版本 / 截止前置条件",
+        "files": [
+          "hardhat/contracts/RWAOfferingPool.sol",
+          "web/src/lib/web3.js",
+          "hardhat/test/protocolV4.test.js"
+        ],
+        "tests": [
+          "protocolV4: subscribeWithTerms price/version/deadline drift",
+          "web3 subscribe path (lint/build)"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "subscribeWithTerms enforces maxUnitPrice, expected quote version and user/offering deadlines atomically. The browser uses it when present and reports termsBound=false on a legacy address instead of pretending the terms were bound."
+      }
+    },
+    {
+      "id": "A09",
+      "priority": "P2",
+      "kind": "功能缺口",
+      "title": "Live 认购不进入统一持仓视图",
+      "batch": "W2",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + local EVM/HTTP/wallet + fault-injection + automated browser evidence",
+      "acceptance": "钱包认购、追加认购、重启、从部署点重建、相同 poolId 不同地址和回执被重组后，持仓、成本及状态正确；未知余额来源明确提示对账，而非自动归为已付款融资。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a09",
+      "implemented_commit": null,
+      "verified_source_sha256": "dfb00336a623497dd091a874a341d5d15d51292eda5daad37a8ee7bfd58e6c2a",
+      "verification_receipts": [
+        "docs/evidence/w2-local-2026-10-17/README.md",
+        "docs/evidence/w2-local-2026-10-17/validation.json",
+        "tests/w2Positions.test.js",
+        "tests/w2Wallet.test.js",
+        "tests/w2CrossLayer.test.js",
+        "tests/browser/review.spec.js"
+      ],
+      "external_gates": [
+        "v5 新部署及独立审查尚未执行；现有链配置和历史协议实例保持原样。",
+        "真实资金、真实钱包人工试用、生产异机灾备/物理断电和远端 CI 不属于本轮本地证据。"
+      ],
+      "closure_note": {
+        "design": "Live 持仓由链事件成本分录与同一确认块的份额、可领取金额合并；追加认购、钱包切换、重启、完整重建、未知余额与重组均有明确结果。",
+        "files": [
+          "src/ledger/positionView.js",
+          "src/ledger/service.js",
+          "src/app/server.js",
+          "web/src/features/positions/PositionList.jsx",
+          "web/src/pages/market/PortfolioDialog.jsx"
+        ],
+        "tests": [
+          "tests/w2Positions.test.js",
+          "tests/w2Wallet.test.js",
+          "tests/w2CrossLayer.test.js",
+          "tests/browser/review.spec.js"
+        ],
+        "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
+        "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      }
+    },
+    {
+      "id": "A10",
+      "priority": "P2",
+      "kind": "一致性缺陷",
+      "title": "v3 文档、事件和状态语义未同步",
+      "batch": "W1",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S",
+      "acceptance": "部署版本、ABI、枚举、规则表、文档、索引器、前端和测试有统一契约校验；每项关键业务变更能够从交易 / 事件 / 账本恢复含义。事件签名变更需提供兼容方案，不能篡改历史回执。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#a10",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [
+        "w1CrossLayer: source/ABI/docs consistency",
+        "agentChainWatcher: 55 passing including every promised event",
+        "agentLiveSmoke: 12 passing"
+      ],
+      "external_gates": [
+        "Deploy v4, regenerate chain-config.json ABI/addresses and re-run bytecode/gate verification; historical v3 receipts remain auditable through legacy encoding."
+      ],
+      "closure_note": {
+        "design": "v3 文档、事件和状态语义未同步",
+        "files": [
+          "docs/contracts.md",
+          "src/chain/protocolV4Abi.js",
+          "src/agent/runtime/sources/chainWatcher.js",
+          "src/agent/runtime/liveSmokeVerification.js",
+          "tests/w1CrossLayer.test.js"
+        ],
+        "tests": [
+          "w1CrossLayer: source/ABI/docs consistency",
+          "agentChainWatcher: 55 passing including every promised event",
+          "agentLiveSmoke: 12 passing"
+        ],
+        "deployment_scope": "local source candidate; no broadcast or migration performed",
+        "remaining_boundary": "FREEZE now emits OfferingFrozen; terms/deadline/追加回收/违约/损失/清算 events are watched; docs describe the v4 local candidate and distinguish it from the deployed v3. ABI additions are merged for planning/verification without changing deployed-address claims."
+      }
+    },
+    {
+      "id": "B01",
+      "priority": "G0",
+      "kind": "能力缺口",
+      "title": "原子认购与按池资金隔离",
+      "batch": "W2",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + local EVM/HTTP/wallet + fault-injection + automated browser evidence",
+      "acceptance": "资金失败无份额、份额发放失败无扣款；跨池不能动用他池负债资金；并发认购不超供给；错误资产、重入、返回 false / 无返回值及余额差异按约定处理。测试代币闭环和真实资金上线是两项不同验收。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b01",
+      "implemented_commit": null,
+      "verified_source_sha256": "dfb00336a623497dd091a874a341d5d15d51292eda5daad37a8ee7bfd58e6c2a",
+      "verification_receipts": [
+        "docs/evidence/w2-local-2026-10-17/README.md",
+        "docs/evidence/w2-local-2026-10-17/validation.json",
+        "hardhat/test/protocolV5.test.js",
+        "hardhat/test/protocolV5Hardening.test.js",
+        "tests/w2Wallet.test.js"
+      ],
+      "external_gates": [
+        "v5 新部署及独立审查尚未执行；现有链配置和历史协议实例保持原样。",
+        "真实资金、真实钱包人工试用、生产异机灾备/物理断电和远端 CI 不属于本轮本地证据。"
+      ],
+      "closure_note": {
+        "design": "v5 认购原子收资并 mint，按池/资产核算，转账及 mint 失败回滚；六位小数资产检查、SafeERC20、余额差额检查与重入保护覆盖异常资产和并发。",
+        "files": [
+          "hardhat/contracts/RWAOfferingPoolV5.sol",
+          "hardhat/contracts/RWATokenV5.sol",
+          "hardhat/contracts/CapitalTestAssets.sol"
+        ],
+        "tests": [
+          "hardhat/test/protocolV5.test.js",
+          "hardhat/test/protocolV5Hardening.test.js",
+          "tests/w2Wallet.test.js"
+        ],
+        "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
+        "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      }
+    },
+    {
+      "id": "B02",
+      "priority": "G0",
+      "kind": "能力缺口",
+      "title": "募集目标、截止、放款与退款",
+      "batch": "W2",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + local EVM/HTTP/wallet + fault-injection + automated browser evidence",
+      "acceptance": "截止前成功、截止后不足、恰好达标、超额竞争、部分放款、退款失败重试及重复退款都可验证；暂停 / 冻结期间已取得的退款权如何行使有明确规则。退款按投资者实际出资，不按目标兑付金额计算。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b02",
+      "implemented_commit": null,
+      "verified_source_sha256": "dfb00336a623497dd091a874a341d5d15d51292eda5daad37a8ee7bfd58e6c2a",
+      "verification_receipts": [
+        "docs/evidence/w2-local-2026-10-17/README.md",
+        "docs/evidence/w2-local-2026-10-17/validation.json",
+        "hardhat/test/protocolV5Hardening.test.js",
+        "tests/w2CrossLayer.test.js"
+      ],
+      "external_gates": [
+        "v5 新部署及独立审查尚未执行；现有链配置和历史协议实例保持原样。",
+        "真实资金、真实钱包人工试用、生产异机灾备/物理断电和远端 CI 不属于本轮本地证据。"
+      ],
+      "closure_note": {
+        "design": "最低募集额与截止绑定；售罄达标自动完成，部分达标到期后 finalize；分批放款和剩余本金返还；失败募集按实际出资退款，暂停/冻结保留退款权，全局停止期间暂停资金操作。",
+        "files": [
+          "hardhat/contracts/RWAOfferingPoolV5.sol",
+          "src/agent/runtime/ownerTxPlan.js",
+          "src/agent/runtime/poolRules.js"
+        ],
+        "tests": [
+          "hardhat/test/protocolV5Hardening.test.js",
+          "tests/w2CrossLayer.test.js"
+        ],
+        "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
+        "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      }
+    },
+    {
+      "id": "B03",
+      "priority": "G0",
+      "kind": "能力缺口",
+      "title": "兑付、费用、损失分配与防双领",
+      "batch": "W2",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + local EVM/HTTP/wallet + fault-injection + automated browser evidence",
+      "acceptance": "足额 / 部分 / 零回收、迟到回收、超额、最小单位舍入和收款失败均有确定结果；重复领取不多付，恶意收款人不阻塞别人；已分配 + 可领取不超过可分配实际回收。LossSettled 应与投资者分配和余款处理相符，不能仅关状态。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b03",
+      "implemented_commit": null,
+      "verified_source_sha256": "dfb00336a623497dd091a874a341d5d15d51292eda5daad37a8ee7bfd58e6c2a",
+      "verification_receipts": [
+        "docs/evidence/w2-local-2026-10-17/README.md",
+        "docs/evidence/w2-local-2026-10-17/validation.json",
+        "hardhat/test/protocolV5Hardening.test.js",
+        "tests/w2CrossLayer.test.js"
+      ],
+      "external_gates": [
+        "v5 新部署及独立审查尚未执行；现有链配置和历史协议实例保持原样。",
+        "真实资金、真实钱包人工试用、生产异机灾备/物理断电和远端 CI 不属于本轮本地证据。"
+      ],
+      "closure_note": {
+        "design": "结算核对实际 repay 与付款归证，合并未放款本金；全额/部分/零/超额回收按剩余份额分配，尾差由最后领取者领取；费用在首笔领取后锁定；失败转账回滚；终态后的迟到回款明确拒绝。",
+        "files": [
+          "hardhat/contracts/RWAOfferingPoolV5.sol",
+          "src/ledger/rebuilder.js",
+          "web/src/lib/web3.js",
+          "web/src/features/positions/PositionList.jsx"
+        ],
+        "tests": [
+          "hardhat/test/protocolV5Hardening.test.js",
+          "tests/w2CrossLayer.test.js"
+        ],
+        "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
+        "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      }
+    },
+    {
+      "id": "B04",
+      "priority": "G0",
+      "kind": "信任模型",
+      "title": "可信签发、持有人控制与资产唯一性",
+      "batch": "W3",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "S + H + U",
+      "acceptance": "同单不同 case、V1 / V2、文档修订、换名、跨部署不能在受控系统重复占用；真实来源验签、背书、交回和失效可验证。MLETR 的核心涉及可识别记录、完整性和可归属的排他控制，并不等于“上链就完成货权法律安排”。具体适用性须由业务伙伴和法律专业人员确认。[UNCITRAL MLETR 官方说明](https://uncitral.un.org/en/texts/ecommerce/modellaw/electronic_transferable_records)",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b04",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B05",
+      "priority": "G0",
+      "kind": "能力缺口",
+      "title": "抵押处置与损失结清的权利安排",
+      "batch": "W3",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "S + U",
+      "acceptance": "违约、争议、部分回收、处置失败、超额回收和最终解押都具备对应业务证据；未完成分配不能仅靠 owner 声明抹掉义务。测试网可验证技术处置，真实处置须另有合法控制权和参与方材料。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b05",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B06",
+      "priority": "G0",
+      "kind": "信任模型",
+      "title": "可信估值、条款承诺与链上金融边界",
+      "batch": "W3",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "S + U",
+      "acceptance": "单位 / 精度、过期估值、跨资产复用、超覆盖、极端输入、算术上界和调整条款均拒绝或按批准规则处理；报价承诺可以从保存材料重算。真实业务还需要估值方法、误差和回收成本的业务验证。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b06",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B07",
+      "priority": "G0",
+      "kind": "信任模型",
+      "title": "治理、密钥、可更换 minter 的供应完整性",
+      "batch": "W3",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "S + R + U",
+      "acceptance": "低权限账户不能改变角色或供应；旧 key 撤权后无法写入；迁移不改变已有权益；关键变更有事件与可观察等待条件；应急停机不会无理由永久剥夺已确定的领取权。多签本身不证明安全，还需实测执行和接管。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b07",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B08",
+      "priority": "G0",
+      "kind": "设计决策",
+      "title": "投资者资格范围及持续准入",
+      "batch": "W3",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "R + S + U",
+      "acceptance": "资格过期、钱包变更、撤销、名单变化和服务失效均验证；明确拒绝“新增认购”是否影响已经取得的退款 / 兑付权。不能把一次 KYC 勾选或演示名单当作持续合规证明。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b08",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B09",
+      "priority": "G0",
+      "kind": "能力缺口",
+      "title": "业务主体身份、权限与发布审批",
+      "batch": "W3",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "S + H + U",
+      "acceptance": "跨组织 / 工作区、管理员和普通用户、HTTP / SSE / MCP / A2A / 文件下载均按权限矩阵检查；失效会话不再访问；公开摘要不泄漏私人字段。本次未声称已有工作区隔离再次被攻破。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b09",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B10",
+      "priority": "G0",
+      "kind": "隐私设计",
+      "title": "链上商业字段最小披露",
+      "batch": "W3",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "S + U",
+      "acceptance": "使用真实单证前完成数据流和字段审查；浏览器、合约 storage / calldata / event、日志、证据下载和错误响应均无未经批准的披露。已经上链的明文不能通过删数据库“撤回”。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b10",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B11",
+      "priority": "P1",
+      "kind": "审计缺口",
+      "title": "证据 schema、可取回性和锚定运行验收",
+      "batch": "W4",
+      "status": "OPEN",
+      "evidence_summary": "S + R + U",
+      "acceptance": "另一台机器无需原进程即可重算关键哈希、获取被授权证据并验证包含；材料缺失明确失败；敏感字段不进入公共叶子；版本变更、批次失败、未知广播、重启与备份恢复可核验。首次链上批次按独立授权执行，不能由报告自动触发。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b11",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "B12",
+      "priority": "G0",
+      "kind": "能力缺口",
+      "title": "可恢复融资账本与事务一致性",
+      "batch": "W2",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + local EVM/HTTP/wallet + fault-injection + automated browser evidence",
+      "acceptance": "断电 / 崩溃发生在付款前后、落库前后、消息发布前后均不会重复付款或丢份额；独立进程竞争不能双占同一付款；从链和保存材料重建的余额与原账本一致。真实资金版本不得用空内存初始化掩盖恢复失败。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b12",
+      "implemented_commit": null,
+      "verified_source_sha256": "dfb00336a623497dd091a874a341d5d15d51292eda5daad37a8ee7bfd58e6c2a",
+      "verification_receipts": [
+        "docs/evidence/w2-local-2026-10-17/README.md",
+        "docs/evidence/w2-local-2026-10-17/validation.json",
+        "tests/ledger.test.js",
+        "tests/w2CrossLayer.test.js"
+      ],
+      "external_gates": [
+        "v5 新部署及独立审查尚未执行；现有链配置和历史协议实例保持原样。",
+        "真实资金、真实钱包人工试用、生产异机灾备/物理断电和远端 CI 不属于本轮本地证据。"
+      ],
+      "closure_note": {
+        "design": "追加现金日志与意图先落盘，快照可重算；跨实例队列和跨进程锁防止重复占用，唯一交易绑定、分录去重、死进程恢复、尾行隔离、确认深度、块哈希、重组失效日志、日志缺失重放及按池托管余额守恒检查均已实现。",
+        "files": [
+          "src/ledger/ledger.js",
+          "src/ledger/writer.js",
+          "src/ledger/rebuilder.js",
+          "src/lib/jsonStore.js",
+          "src/ledger/service.js"
+        ],
+        "tests": [
+          "tests/ledger.test.js",
+          "tests/w2CrossLayer.test.js"
+        ],
+        "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
+        "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      }
+    },
+    {
+      "id": "C01",
+      "priority": "P1",
+      "kind": "待验证",
+      "title": "行情适用性、估值与经济参数校准",
+      "batch": "W4",
+      "status": "VALIDATION_REQUIRED",
+      "evidence_summary": "S + H + U",
+      "acceptance": "缺失、过期、跨源冲突、市场停盘和极端波动不产生虚假 CLEAR / 恢复；独立数据集给出估值误差、拒绝率和经济边界；实际年化和剩余期限使用 A05 的同一时间模型。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c01",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "C02",
+      "priority": "P1",
+      "kind": "待验证",
+      "title": "真实单证 / LLM / 合规效果与人工接管",
+      "batch": "W4",
+      "status": "VALIDATION_REQUIRED",
+      "evidence_summary": "S + H + U",
+      "acceptance": "真实提供方评测与本地确定性回归分别记录；关键错误达不到预先约定门槛则保留人工复核；超时、服务失效、版本变化和应急接管有可重放记录。报告不擅自设一个没有业务依据的“99% 即可上线”。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c02",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "C03",
+      "priority": "P1",
+      "kind": "信任 / 验证",
+      "title": "x402 独立付款核验及失败恢复",
+      "batch": "W4",
+      "status": "OPEN",
+      "evidence_summary": "S + H + U",
+      "acceptance": "假成功响应、错误网络 / 资产 / 金额、重复 nonce、已用授权、超时后实际到账、进程重启、报告生成失败及重复取回分别验证；不重复收费、不将支付报告的钱计入 RWA 融资，也不凭任意 tx hash 解锁。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c03",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "C04",
+      "priority": "G0",
+      "kind": "待验证",
+      "title": "运行监控、容量、密钥备份与异机恢复",
+      "batch": "W5",
+      "status": "VALIDATION_REQUIRED",
+      "evidence_summary": "S + H + U",
+      "acceptance": "先定义用户量、事件量、证据体量和延迟目标，再验证；磁盘满、写失败、RPC 中断、重组、提供方限流及源机器丢失都有演练。新机器恢复后可对账和核验权利，不依赖原机器仍在线；告警实际到达值班方。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c04",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "C05",
+      "priority": "P1",
+      "kind": "交付验证",
+      "title": "可复现构建、迁移与同 SHA 发布证据",
+      "batch": "W5",
+      "status": "VALIDATION_REQUIRED",
+      "evidence_summary": "S + H + U",
+      "acceptance": "最终源码、全部必须 CI job、镜像、部署配置、角色和回执对应同一版本；没有依赖绿色历史记录替代当前结果。广播未知先只读对账；回滚应用不得把新资金池误指向旧协议。真实交易计划在完成本地审查后单独取得授权。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c05",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "C06",
+      "priority": "P2",
+      "kind": "产品改进",
+      "title": "三路径、权利、资金状态与操作恢复展示",
+      "batch": "W1–W5",
+      "status": "VALIDATION_REQUIRED",
+      "evidence_summary": "S + H + U",
+      "acceptance": "中英文、1280 / 1440 桌面宽度、键盘 / 焦点 / 对比度、慢请求 / 快切、钱包 / 网络变化、未知广播及失败恢复均实测。已记录 Repaid 但未兑付时不能显示“投资者已到账”。当前约定不以手机适配作为本轮范围。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c06",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "C07",
+      "priority": "P1",
+      "kind": "验证策略",
+      "title": "跨层属性、活性与故障注入回归",
+      "batch": "W1–W5",
+      "status": "OPEN",
+      "evidence_summary": "S + H + U",
+      "acceptance": "A01–A10 具备修复后会因原缺陷而失败的正式回归；资金版满足第 9 部分不变量。反例观察脚本仍作为历史证据保存，不直接把“缺陷仍存在”的绿色断言当作生产通过门槛。结果包含 seed / 操作轨迹及最小反例。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c07",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    },
+    {
+      "id": "C08",
+      "priority": "P3",
+      "kind": "产品决策",
+      "title": "主流程收敛及 Injective 能力取舍",
+      "batch": "W0",
+      "status": "DECISION_REQUIRED",
+      "evidence_summary": "产品决策",
+      "acceptance": "W0 有明确保留 / 隔离 / 延后清单；新功能不抢占核心退出、资金、持仓和恢复工作的验收资源。",
+      "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c08",
+      "implemented_commit": null,
+      "verified_source_sha256": null,
+      "verification_receipts": [],
+      "external_gates": [],
+      "closure_note": null
+    }
+  ],
+  "w1_closure": {
+    "date": "2026-10-17",
+    "scope": "A01-A08, A10",
+    "state": "IMPLEMENTED locally; A09 and W2-W5 remain OPEN",
+    "evidence": "docs/evidence/blockchain-comprehensive-2026-10-17/w1-closure.md"
+  }
+}

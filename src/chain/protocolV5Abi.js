@@ -20,7 +20,17 @@ const RWAOfferingPoolV5 = Object.freeze([
   'function recordAdditionalPayment(uint256,bytes32,uint256)',
   'function recordLiquidationRecovery(uint256,bytes32,uint256)',
   'function resolveLiquidation(uint256,bytes32)',
-  'function offerings(uint256) view returns (uint256,uint256,uint256,uint256,uint256,uint256,bytes32,bytes32,address,uint256,uint256,uint8,bool)',
+  'function offerings(uint256) view returns (uint256 eblId,uint256 tokenSupply,uint256 issuePrice,uint256 targetRedemptionValue,uint256 subscribed,uint256 repaymentAmount,bytes32 paymentProof,bytes32 arrivalProof,address settlementAsset,uint256 minRaise,uint256 raisedAtomic,uint8 state,bool exists)',
+  'function protocolVersion() view returns (uint256)',
+  'function quoteVersion(uint256) view returns (uint256)',
+  'function subscriptionDeadline(uint256) view returns (uint256)',
+  'function maturityAt(uint256) view returns (uint256)',
+  'function emergencyStopped() view returns (bool)',
+  'function isInvestorEligible(address,uint256) view returns (bool)',
+  'function claimable(uint256,address) view returns (uint256)',
+  'function finalizeFunding(uint256)',
+  'function recoveredAtomic(uint256) view returns (uint256)',
+  'function fundingFinalized(uint256) view returns (bool)',
   // v5 capital-layer view functions.
   'function escrowed(uint256,address) view returns (uint256)',
   'function investorPaid(uint256,address,address) view returns (uint256)',
@@ -37,11 +47,14 @@ const RWAOfferingPoolV5 = Object.freeze([
   'event Claimed(uint256 indexed poolId,address indexed investor,address indexed asset,uint256 amountAtomic,uint256 sharesBurned)',
   'event FeeDeducted(uint256 indexed poolId,address indexed asset,uint256 feeAtomic,bytes32 feeEvidenceHash)',
   'event RepaymentReceived(uint256 indexed poolId,address indexed asset,address indexed payer,uint256 amountAtomic)',
+  'event FundingFinalized(uint256 indexed poolId,uint256 raisedAtomic)',
   'event LiquidationRecoveryRecorded(uint256 indexed poolId,bytes32 paymentProof,uint256 amount,uint256 totalRecovered)',
   'event AdditionalPaymentRecorded(uint256 indexed poolId,bytes32 paymentProof,uint256 amount,uint256 totalRecovered)'
 ]);
 
 const RWATokenV5 = Object.freeze([
+  'function balanceOf(uint256,address) view returns (uint256)',
+  'function totalSupply(uint256) view returns (uint256)',
   'function burn(uint256,address,uint256)',
   'event RWABurned(uint256 indexed poolId,address indexed investor,uint256 amount)'
 ]);
@@ -50,7 +63,8 @@ export const PROTOCOL_V5_ABI = Object.freeze({
   RWAOfferingPoolV5,
   // Backwards-compatible alias used by Task 5 rebuilder/tests before the V5 naming was finalised.
   RWAOfferingPool: RWAOfferingPoolV5,
-  RWATokenV5
+  RWATokenV5,
+  RWAToken: RWATokenV5
 });
 
 /** Return the configured ABI plus any missing v5 fragments; unknown contracts are unchanged. */
@@ -58,6 +72,6 @@ export function protocolAbi(name, abi = []) {
   const additions = PROTOCOL_V5_ABI[name];
   if (!additions) return abi;
   const key = (fragment) => (fragment.type === 'constructor' ? 'constructor' : `${fragment.type}:${fragment.format('sighash')}`);
-  const known = new Set(new Interface(abi).fragments.map(key));
-  return [...abi, ...additions.filter((entry) => !known.has(key(new Interface([entry]).fragments[0])))];
+  const replaced = new Set(new Interface(additions).fragments.map(key));
+  return [...new Interface(abi).fragments.filter((fragment) => !replaced.has(key(fragment))), ...additions];
 }

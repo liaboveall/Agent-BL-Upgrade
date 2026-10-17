@@ -13,6 +13,9 @@ export function subscriptionAvailability(pool) {
   if (pool.historical || pool.caseData?.historical) reason = 'historical';
   else if (!SUBSCRIBABLE_STATES.includes(state)) reason = 'lifecycle_closed';
   else if (['PAUSE_OFFERING', 'FREEZE_POOL', 'TRIGGER_LIQUIDATION'].includes(pool.quote?.pricing_action)) reason = 'quote_closed';
+  // A06: the on-chain subscription cutoff is part of the offer, not just the debt maturity.
+  else if (Number(pool.chainSnapshot?.subscription_deadline) > 0
+      && Number(pool.chainSnapshot.subscription_deadline) * 1000 <= Date.now()) reason = 'subscription_closed';
   else if (pool.quote?.data_quality?.status === 'live' && Number.isFinite(Date.parse(pool.quote.data_quality.expires_at))
       && Date.parse(pool.quote.data_quality.expires_at) <= Date.now()) reason = 'data_expired';
   else if (pool.chainOnly || pool.chainQuoteMismatch || pool.investorEligible === false) reason = 'unverified_terms';

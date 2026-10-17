@@ -17,7 +17,9 @@ export const STATE = Object.freeze({
   Repaid: 9n,
   Redeemed: 10n,
   Liquidation: 11n,
-  Cancelled: 12n
+  Cancelled: 12n,
+  Defaulted: 13n,
+  LossSettled: 14n
 });
 
 /** Pricing action codes understood by RWAOfferingPool.applyPricingAction. */
@@ -81,9 +83,25 @@ export async function newOffering(ctx, tag, { supply = 100n, issuePrice = ISSUE_
   return { eblId, poolId: (await ctx.pool.nextPoolId()) - 1n };
 }
 
-/** Push one pricing decision through the oracle (unique evidence/quote hashes). */
-export function applyPricing(ctx, poolId, price, action, riskLevel = 1) {
-  return ctx.oracle.updatePricing(poolId, price, riskLevel, action, uniqueHash('evidence'), uniqueHash('quote'));
+const decisionSeqs = new WeakMap();
+
+/**
+ * Push one pricing decision through the oracle (unique evidence/quote hashes) using the current
+ * pool quote version and a strictly increasing per-pool sequence (A07). Callers can override the
+ * preconditions to exercise stale/expired/out-of-order quotes.
+ */
+export async function applyPricing(ctx, poolId, price, action, riskLevel = 1, {
+  expectedQuoteVersion, validUntil, decisionSeq, evidenceHash, quoteHash
+} = {}) {
+  let seqs = decisionSeqs.get(ctx);
+  if (!seqs) { seqs = new Map(); decisionSeqs.set(ctx, seqs); }
+  const key = String(poolId);
+  const seq = decisionSeq ?? (seqs.get(key) ?? 0) + 1;
+  if (decisionSeq === undefined) seqs.set(key, seq);
+  const version = expectedQuoteVersion ?? await ctx.pool.quoteVersion(poolId);
+  const until = validUntil ?? (await ethers.provider.getBlock('latest')).timestamp + 3600;
+  return ctx.oracle.updatePricing(poolId, price, riskLevel, action,
+    evidenceHash ?? uniqueHash('evidence'), quoteHash ?? uniqueHash('quote'), version, until, seq);
 }
 
 /** Drive an offering through proofs and settlement as the executor. */

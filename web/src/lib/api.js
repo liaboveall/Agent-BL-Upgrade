@@ -142,3 +142,5 @@ export function getAgentActivity({ caseId, poolId } = {}) {
   const query = params.toString();
   return fetchJson('/api/agent/activity' + (query ? '?' + query : ''));
 }
+
+export function getPositions(wallet) { return fetchJson('/api/positions?wallet=' + encodeURIComponent(wallet)); }

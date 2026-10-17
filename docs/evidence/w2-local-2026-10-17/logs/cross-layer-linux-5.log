@@ -1,0 +1,24 @@
+
+> agentbl-agent-starter@0.1.0 test:w2
+> node scripts/test-w2.mjs
+
+
+Compiled 13 Solidity files with solc 0.8.24 (evm target: paris)
+(node:91049) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ W2 real EVM + HTTP + wallet lifecycle
+  ✔ persists wallet subscriptions, additional purchases, fees and claims through the real HTTP adapter (3615.437614ms)
+  ✔ refunds actual paid capital, isolates Demo holdings and survives an empty position snapshot (1620.46647ms)
+  ✔ recovers a broadcast whose process died before attaching its hash, without signing again (1321.970488ms)
+  ✔ removes reorganized receipts from the position while preserving their audit history (2450.166455ms)
+  ✔ preflights owner capital plans, refuses forged receipts and waits for canonical confirmation depth (2250.661258ms)
+  ✔ supports liquidation recovery, zero recovery and proportional loss without duplicate payouts (6406.239726ms)
+✔ W2 real EVM + HTTP + wallet lifecycle (38983.891915ms)
+ℹ tests 6
+ℹ suites 1
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 84017.66583

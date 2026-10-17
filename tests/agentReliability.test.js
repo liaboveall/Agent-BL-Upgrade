@@ -26,11 +26,11 @@ function fakeChain() {
   const calls = { sends: 0, lookups: 0, attempts: 0 };
   const oracle = '0x1111111111111111111111111111111111111111', pool = '0x2222222222222222222222222222222222222222';
   const updater = '0x3333333333333333333333333333333333333333', blockHash = `0x${'ab'.repeat(32)}`;
-  const iface = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32)']);
+  const iface = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32,uint256,uint256,uint256)']);
   let data;
   const receipt = () => ({ hash: TX, from: updater, to: oracle, status: faults.reverted ? 0 : 1, blockNumber: 3, blockHash,
-    logs: ['PricingUpdated', 'OfferingPaused'].map((name) => ({ name, address: name === 'PricingUpdated' ? oracle : pool })) });
-  const parser = { parseLog: ({ name }) => ({ name }), encodeFunctionData: iface.encodeFunctionData.bind(iface) };
+    logs: ['PricingUpdated', 'PricingDecision', 'OfferingPaused'].map((name) => ({ name, address: ['PricingUpdated', 'PricingDecision'].includes(name) ? oracle : pool })) });
+  const parser = { parseLog: ({ name }) => ({ name }), parseTransaction: iface.parseTransaction.bind(iface), encodeFunctionData: iface.encodeFunctionData.bind(iface) };
   const updatePricing = Object.assign(async (...args) => {
     calls.attempts++;
     if (faults.nonce-- > 0) throw Object.assign(new Error('nonce too low'), { code: 'NONCE_EXPIRED' });
@@ -41,11 +41,11 @@ function fakeChain() {
   }, { staticCall: async () => { faults.onPreflight?.(); if (faults.reads-- > 0) throw timeout(); } });
   return { faults, calls, ctx: {
     signers: { PRICING_UPDATER: updater }, explorerBase: 'https://example.invalid',
-    provider: { send: async () => '0x59f', getBlockNumber: async () => 10, getBlock: async () => ({ hash: blockHash }),
+    provider: { send: async () => '0x59f', getBlockNumber: async () => 10, getBlock: async () => ({ hash: blockHash, timestamp: 1_791_849_600 }),
       getTransaction: async () => ({ hash: TX, from: updater, to: oracle, chainId: 1439n, value: 0n, data }),
       getTransactionReceipt: async () => { calls.lookups++; if (faults.lookup) throw timeout(); return receipt(); } },
-    oracle: { target: oracle, updatePricing, isDecisionProcessed: async () => false, interface: parser },
-    pool: { target: pool, interface: parser, emergencyStopped: async () => false, stateOf: async () => 2,
+    oracle: { target: oracle, getAddress: async () => oracle, lastDecisionSeq: async () => 0n, updatePricing, isDecisionProcessed: async () => false, interface: parser },
+    pool: { target: pool, quoteVersion: async () => 1n, interface: parser, emergencyStopped: async () => false, stateOf: async () => 2,
       offerings: async () => ({ exists: true, eblId: 2, issuePrice: 800000, targetRedemptionValue: 1000000, subscribed: 0 }) },
     // Live bootstrap links pool #2 only after its eBL shows the registered cargo identity.
     registry: { cargoHashOf: async () => cargoIdentityHash(copper) }

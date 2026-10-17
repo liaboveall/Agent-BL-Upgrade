@@ -18,7 +18,8 @@ describe('deploy-protocol.js smoke sequence', () => {
   });
 
   it('create -> subscribe -> reprice -> pause -> resume -> settle ends Repaid at the repriced issue price', async () => {
-    const { owner, registry, token, pool, oracle } = await deployProtocol();
+    const ctx = await deployProtocol();
+    const { owner, registry, token, pool } = ctx;
     const metadata = {
       vessel: 'MV Pacific Dawn',
       voyage: 'PD-2026-0618',
@@ -42,7 +43,8 @@ describe('deploy-protocol.js smoke sequence', () => {
     await send(pool.subscribe(poolId, 10_000n));
 
     const decide = (price, riskLevel, action, label) =>
-      send(oracle.updatePricing(poolId, price, riskLevel, action, ethers.id(`wave-b:${label}:evidence`), ethers.id(`wave-b:${label}:quote`)));
+      send(applyPricing(ctx, poolId, price, action, riskLevel,
+        { evidenceHash: ethers.id(`wave-b:${label}:evidence`), quoteHash: ethers.id(`wave-b:${label}:quote`) }));
     await decide(850_000n, 2, ACTION.REPRICE_DOWN, 'reprice');
     await decide(850_000n, 3, ACTION.PAUSE_OFFERING, 'pause');
     expect(await pool.stateOf(poolId)).to.equal(STATE.Paused);

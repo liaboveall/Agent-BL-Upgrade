@@ -1,0 +1,286 @@
+{
+  "schema": "agentbl-comprehensive-report-manifest-v1",
+  "compiled_at": "2026-10-17T10:15:33.234Z",
+  "timezone": "Asia/Singapore",
+  "head": "cc09644fb652d5a995342a083362e7b95e8dd8b1",
+  "report_kind": "Consolidated assessment and implementation specification; no product remediation performed.",
+  "prior_source_recheck": [
+    {
+      "path": "docs/project-blockchain-review-2026-10-17.md",
+      "sha256": "3908bcd1f2efd90ec41b6bdacd16018e77f60527193ca992b6fa1a206aa192ff",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "README.md",
+      "sha256": "8dfa6fc666f6266679b06b60508cbf11ea84d4f66129e313fea6e44cf8ce04f0",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "docs/contracts.md",
+      "sha256": "22610302ce9b55ae02e4d9f74b81b27aa4f0b670a0d5e1bc2fa78c157b5593a0",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/Owned.sol",
+      "sha256": "678bea6ad348484dc8da96460b563709f096e2d9f90c7a87a7284f058002539e",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/EBLRegistry.sol",
+      "sha256": "006f20b4010cdf85832bb54040b11bca5ac3d1a66ba519a795aa44f874285d08",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/RWAToken.sol",
+      "sha256": "2064f65566c6b6a24b68238c2d954e1db3f97b331ba1a6a7a0d010dd448f4ac1",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/RWAOfferingPool.sol",
+      "sha256": "021507d2b60832f55d9cf741df680b36120866f1d53b7d91be8e1a04499af52c",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/RiskPricingOracle.sol",
+      "sha256": "9fe272d7b39315259f03bb4145222e792347a0e8a75808adafe49d667bf4b6c2",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/PaymentOracle.sol",
+      "sha256": "88ad3f5315784193376ad51f228eb14ff3b015549b5b75ef64c144b08a34db37",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/AgentDecisionLog.sol",
+      "sha256": "6c8f1b65e6cbed74cea67a21a46b71e4d53eba7afc009b727472c5185d322538",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/contracts/InvestorComplianceGate.sol",
+      "sha256": "1b5ac5c82471d608d551517e6cf8d8eeb012cec6dfec14698a70ea650da44b9b",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/test/offeringModel.test.js",
+      "sha256": "290d10e1fd3fa318cc4dbe0219b538b84e3d92976a83c630def36c058c31b88a",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/test/contracts.test.js",
+      "sha256": "205ed1d2a82471065bb004568ba130ab81195186e11676bc333004ef542899ba",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/test/contractHardening.test.js",
+      "sha256": "1f27b843a82043f8c9b7654f01a4a74aadeb53173fd66f7723c4ce0343bb8e89",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "hardhat/test/reviewRemediation.test.js",
+      "sha256": "d66838fe3fb5ead32984b09b25d07ddb5c978b087f38148cd2e84fd16c809749",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/core/pricingEngine.js",
+      "sha256": "ec0988cf923a6886ea3837ce0b08b69443d4d793e05097b1af6d58c9ae4a8827",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/openingPlan.js",
+      "sha256": "35c8977f2ca8b9bfdf7fb0c16480791ef227386db8eb28f882742d1f2d9db543",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/ownerTxPlan.js",
+      "sha256": "68c45a754428ffaad29c5449c0be438d52629cd3f55b582b45dcb89c92bfdd0f",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/poolRules.js",
+      "sha256": "7fcff7ef3484deac0264f3362224390c415932ef2f9f88f6926ba55b09ecfccb",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/factory.js",
+      "sha256": "bc330c48cb85790a06c78f3a785a4e1d03a6eca26ea305bb98b75cc17eeba112",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/poolRegistry.js",
+      "sha256": "b0427793af4fa02cb9819677b26d0f76d7e6c3bc7a69a12678e7649135ba7910",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/agentService.js",
+      "sha256": "fd9f263cdbecc8e2cc01afb6c46e7e01e59aeb328feddc00f2bdbecee18be496",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/sources/chainWatcher.js",
+      "sha256": "cccbf5731a682c8a9d7ace808a3ad74da51387526e9eadfd8cdd150779a12bc5",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/pipelines/settlementPipeline.js",
+      "sha256": "17cc966fa851ea2758a74bb2a7e4e965be034cddce86ec5417ac85dd80a87d6e",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/pipelines/monitorPipeline.js",
+      "sha256": "18732e36497a1a9e59c4eaa2b304c1177ca51d65e15288aa515695aa434c8a8a",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/executors/chainExecutor.js",
+      "sha256": "f770c3cce6ada10bf618ffd9ebb04f37e06bb8d940f32175ccf98f189a4dc21a",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/runtime/anchorProof.js",
+      "sha256": "78ec62eb8db1f37ee6543b1a59d9586d1648ae41d0d7441ef958cf86dfd7bd75",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/agent/decisionLogger.js",
+      "sha256": "25479a379606e90cbe7e595dbcca6a84c636891709e383c03ca9d85cf91d7497",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "src/x402/settlement.js",
+      "sha256": "2e2f2df80b3ae1de9395cb41e36b227179e3ea00aa1577b2cfa11f9155cdcdd1",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "web/src/lib/web3.js",
+      "sha256": "5daa2791737bf751d61892eb0d1730b5d314fa4ded8daf6b2cd17fc1c341fa96",
+      "matches_previous_audit": true
+    },
+    {
+      "path": "public/chain-config.json",
+      "sha256": "fa1b20e5541e7a5b7fe27ec9a7204ac8a66839694efdeae51f304f979314b96a",
+      "matches_previous_audit": true
+    }
+  ],
+  "additional_reviewed_inputs": [
+    {
+      "path": "docs/project-review-2026-10-17.md",
+      "sha256": "d151f4f40bb5b95e4181c08056891eb69b754d40c56ed250b77d9b4598614b6e"
+    },
+    {
+      "path": "docs/project-remediation-2026-10-17.md",
+      "sha256": "f193fe9076055c4b57f16fbeaaff2cbb91bff6c0202cd1679308b552a3f7b495"
+    },
+    {
+      "path": "docs/project-blockchain-review-audit-2026-10-17.md",
+      "sha256": "5fdd6b5039f1591900740e6700d4d29e47e526cb834e9b745907f56c43a73d69"
+    },
+    {
+      "path": "docs/evidence/protocol-v3-deployment-2026-10-17/README.md",
+      "sha256": "839c80ffc510fe848b274141d7b8aa962557eb8f65e9c1b86ab55c210fa5b5a7"
+    },
+    {
+      "path": "src/app/workspaceAccess.js",
+      "sha256": "06f290ed18c424deccc78ffd6e5878d754224aa70e405a54502b66f7cf8885a9"
+    },
+    {
+      "path": "src/agent/security/privateStore.js",
+      "sha256": "2827e696a3987fc37247e81112c98ba38b4c442da3e0aeb4327c02387a173ebe"
+    },
+    {
+      "path": "src/lib/jsonStore.js",
+      "sha256": "ca66c3c1aa12c87992ef841d63878475b24e9eba3a0187395094c1e034800fdf"
+    },
+    {
+      "path": "src/agent/runtime/agentVersion.js",
+      "sha256": "6b697e5d157ffd33359d5e2e37233107688d63a6fab803909cb6e5cbc689346c"
+    },
+    {
+      "path": "src/agent/runtime/settlementEvidence.js",
+      "sha256": "0440ee5ad5411788059414b059cc65b3f5ccbccac9d65c725b07c98c3b070922"
+    },
+    {
+      "path": "src/agent/runtime/policy.js",
+      "sha256": "bdd1b477be883278e805dc24355df98fa1bb641710786175fa930535934b1c2a"
+    },
+    {
+      "path": "src/x402/server.js",
+      "sha256": "f26552d4bab1c0463608da8abdfb0fb8cb84516504293cc4e004201b6c928150"
+    },
+    {
+      "path": "web/src/lib/x402-v2.js",
+      "sha256": "639c80f2ef63adb78e6a3d434c82931a9419db52db9ea7bd9928f7686e44e8bc"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "582e0290fbfddf7256abc21fb37989f8b1cb64bd3ea1fdbd24f09e243593750a"
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "f9daa28d463140b7bf0fa7abc897b1883161368931104b258f3a7b9cac7488ab"
+    },
+    {
+      "path": "hardhat/hardhat.config.js",
+      "sha256": "b4aff305ae6e71641bc45f4b1c1edb21784a6232178f31d134df1f8e94a6b4ce"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/project-blockchain-comprehensive-report-2026-10-17.md",
+      "sha256": "2fe86fc04ce9ecce83b489fbf320af3e3ea0eeb4c7842c65f6391d8ea623e724"
+    },
+    {
+      "path": "docs/evidence/blockchain-comprehensive-2026-10-17/issue-register.json",
+      "sha256": "fccbb45f094bed576485d55447589edb4fbe56d8b2d3f5bc30dbe781217a3e63"
+    }
+  ],
+  "issue_count": 30,
+  "issue_status_counts": {
+    "OPEN": 17,
+    "DECISION_REQUIRED": 8,
+    "VALIDATION_REQUIRED": 5
+  },
+  "reused_same_session_evidence": {
+    "existing_hardhat_suite": {
+      "command": "npm run test:contracts",
+      "passed": 92,
+      "exit_code": 0,
+      "evidence": "Command output retained in this session; full raw log not separately saved."
+    },
+    "targeted_node": {
+      "command": "node --test --test-reporter=dot tests/agentSettlement.test.js tests/agentOpening.test.js tests/agentChainWatcher.test.js tests/protocolV3Deployment.test.js",
+      "passed": 105,
+      "exit_code": 0,
+      "log": "targeted-node-tests.log"
+    },
+    "local_contract_observations": 8,
+    "cross_layer_observations": 4,
+    "new_investigation_scripts_eslint": {
+      "exit_code": 0,
+      "warnings": 0
+    },
+    "live": {
+      "block_number": 144160220,
+      "block_hash": "0xd2e1709eb9ba4ec86bf03a3686a5c6f12e1b463c8345275e6d52501c2a43c173",
+      "matching_artifacts": 7,
+      "chain_writes": 0
+    }
+  },
+  "new_test_runs": [],
+  "new_chain_queries": [],
+  "new_chain_transactions": 0,
+  "product_code_modified": false,
+  "commits_created": 0,
+  "pushes_performed": 0,
+  "limitations": [
+    "Prior 31-file source hashes are unchanged; this is not a clean full-repository test rerun.",
+    "Live values remain the prior fixed-block snapshot, not a claim about the latest chain state.",
+    "Business/legal/provider/operations acceptance remains separate from code and test evidence."
+  ],
+  "primary_reference_urls": [
+    "https://docs.openzeppelin.com/contracts/5.x/api/token/erc20#SafeERC20",
+    "https://uncitral.un.org/en/texts/ecommerce/modellaw/electronic_transferable_records",
+    "https://eips.ethereum.org/EIPS/eip-3009#security-considerations",
+    "https://docs.soliditylang.org/en/v0.8.24/contracts.html#events",
+    "https://docs.injective.network/developers-evm/network-information"
+  ]
+}

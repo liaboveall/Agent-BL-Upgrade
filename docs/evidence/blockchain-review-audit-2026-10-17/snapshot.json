@@ -1,0 +1,215 @@
+{
+  "schema": "agentbl-blockchain-review-audit-snapshot-v1",
+  "recorded_at": "2026-10-17T10:01:48.720Z",
+  "user_timezone": "Asia/Singapore",
+  "head": "cc09644fb652d5a995342a083362e7b95e8dd8b1",
+  "sources": [
+    {
+      "path": "docs/project-blockchain-review-2026-10-17.md",
+      "bytes": 29094,
+      "sha256": "3908bcd1f2efd90ec41b6bdacd16018e77f60527193ca992b6fa1a206aa192ff"
+    },
+    {
+      "path": "README.md",
+      "bytes": 12228,
+      "sha256": "8dfa6fc666f6266679b06b60508cbf11ea84d4f66129e313fea6e44cf8ce04f0"
+    },
+    {
+      "path": "docs/contracts.md",
+      "bytes": 24077,
+      "sha256": "22610302ce9b55ae02e4d9f74b81b27aa4f0b670a0d5e1bc2fa78c157b5593a0"
+    },
+    {
+      "path": "hardhat/contracts/Owned.sol",
+      "bytes": 2166,
+      "sha256": "678bea6ad348484dc8da96460b563709f096e2d9f90c7a87a7284f058002539e"
+    },
+    {
+      "path": "hardhat/contracts/EBLRegistry.sol",
+      "bytes": 7453,
+      "sha256": "006f20b4010cdf85832bb54040b11bca5ac3d1a66ba519a795aa44f874285d08"
+    },
+    {
+      "path": "hardhat/contracts/RWAToken.sol",
+      "bytes": 2102,
+      "sha256": "2064f65566c6b6a24b68238c2d954e1db3f97b331ba1a6a7a0d010dd448f4ac1"
+    },
+    {
+      "path": "hardhat/contracts/RWAOfferingPool.sol",
+      "bytes": 23516,
+      "sha256": "021507d2b60832f55d9cf741df680b36120866f1d53b7d91be8e1a04499af52c"
+    },
+    {
+      "path": "hardhat/contracts/RiskPricingOracle.sol",
+      "bytes": 3815,
+      "sha256": "9fe272d7b39315259f03bb4145222e792347a0e8a75808adafe49d667bf4b6c2"
+    },
+    {
+      "path": "hardhat/contracts/PaymentOracle.sol",
+      "bytes": 6823,
+      "sha256": "88ad3f5315784193376ad51f228eb14ff3b015549b5b75ef64c144b08a34db37"
+    },
+    {
+      "path": "hardhat/contracts/AgentDecisionLog.sol",
+      "bytes": 3344,
+      "sha256": "6c8f1b65e6cbed74cea67a21a46b71e4d53eba7afc009b727472c5185d322538"
+    },
+    {
+      "path": "hardhat/contracts/InvestorComplianceGate.sol",
+      "bytes": 1597,
+      "sha256": "1b5ac5c82471d608d551517e6cf8d8eeb012cec6dfec14698a70ea650da44b9b"
+    },
+    {
+      "path": "hardhat/test/offeringModel.test.js",
+      "bytes": 16529,
+      "sha256": "290d10e1fd3fa318cc4dbe0219b538b84e3d92976a83c630def36c058c31b88a"
+    },
+    {
+      "path": "hardhat/test/contracts.test.js",
+      "bytes": 6376,
+      "sha256": "205ed1d2a82471065bb004568ba130ab81195186e11676bc333004ef542899ba"
+    },
+    {
+      "path": "hardhat/test/contractHardening.test.js",
+      "bytes": 27836,
+      "sha256": "1f27b843a82043f8c9b7654f01a4a74aadeb53173fd66f7723c4ce0343bb8e89"
+    },
+    {
+      "path": "hardhat/test/reviewRemediation.test.js",
+      "bytes": 4418,
+      "sha256": "d66838fe3fb5ead32984b09b25d07ddb5c978b087f38148cd2e84fd16c809749"
+    },
+    {
+      "path": "src/core/pricingEngine.js",
+      "bytes": 31207,
+      "sha256": "ec0988cf923a6886ea3837ce0b08b69443d4d793e05097b1af6d58c9ae4a8827"
+    },
+    {
+      "path": "src/agent/runtime/openingPlan.js",
+      "bytes": 13900,
+      "sha256": "35c8977f2ca8b9bfdf7fb0c16480791ef227386db8eb28f882742d1f2d9db543"
+    },
+    {
+      "path": "src/agent/runtime/ownerTxPlan.js",
+      "bytes": 7927,
+      "sha256": "68c45a754428ffaad29c5449c0be438d52629cd3f55b582b45dcb89c92bfdd0f"
+    },
+    {
+      "path": "src/agent/runtime/poolRules.js",
+      "bytes": 4839,
+      "sha256": "7fcff7ef3484deac0264f3362224390c415932ef2f9f88f6926ba55b09ecfccb"
+    },
+    {
+      "path": "src/agent/runtime/factory.js",
+      "bytes": 10909,
+      "sha256": "bc330c48cb85790a06c78f3a785a4e1d03a6eca26ea305bb98b75cc17eeba112"
+    },
+    {
+      "path": "src/agent/runtime/poolRegistry.js",
+      "bytes": 11783,
+      "sha256": "b0427793af4fa02cb9819677b26d0f76d7e6c3bc7a69a12678e7649135ba7910"
+    },
+    {
+      "path": "src/agent/runtime/agentService.js",
+      "bytes": 80277,
+      "sha256": "fd9f263cdbecc8e2cc01afb6c46e7e01e59aeb328feddc00f2bdbecee18be496"
+    },
+    {
+      "path": "src/agent/runtime/sources/chainWatcher.js",
+      "bytes": 31360,
+      "sha256": "cccbf5731a682c8a9d7ace808a3ad74da51387526e9eadfd8cdd150779a12bc5"
+    },
+    {
+      "path": "src/agent/pipelines/settlementPipeline.js",
+      "bytes": 12796,
+      "sha256": "17cc966fa851ea2758a74bb2a7e4e965be034cddce86ec5417ac85dd80a87d6e"
+    },
+    {
+      "path": "src/agent/pipelines/monitorPipeline.js",
+      "bytes": 12240,
+      "sha256": "18732e36497a1a9e59c4eaa2b304c1177ca51d65e15288aa515695aa434c8a8a"
+    },
+    {
+      "path": "src/agent/runtime/executors/chainExecutor.js",
+      "bytes": 26604,
+      "sha256": "f770c3cce6ada10bf618ffd9ebb04f37e06bb8d940f32175ccf98f189a4dc21a"
+    },
+    {
+      "path": "src/agent/runtime/anchorProof.js",
+      "bytes": 4525,
+      "sha256": "78ec62eb8db1f37ee6543b1a59d9586d1648ae41d0d7441ef958cf86dfd7bd75"
+    },
+    {
+      "path": "src/agent/decisionLogger.js",
+      "bytes": 9399,
+      "sha256": "25479a379606e90cbe7e595dbcca6a84c636891709e383c03ca9d85cf91d7497"
+    },
+    {
+      "path": "src/x402/settlement.js",
+      "bytes": 24751,
+      "sha256": "2e2f2df80b3ae1de9395cb41e36b227179e3ea00aa1577b2cfa11f9155cdcdd1"
+    },
+    {
+      "path": "web/src/lib/web3.js",
+      "bytes": 38031,
+      "sha256": "5daa2791737bf751d61892eb0d1730b5d314fa4ded8daf6b2cd17fc1c341fa96"
+    },
+    {
+      "path": "public/chain-config.json",
+      "bytes": 406569,
+      "sha256": "fa1b20e5541e7a5b7fe27ec9a7204ac8a66839694efdeae51f304f979314b96a"
+    }
+  ],
+  "tracked_worktree_paths": [
+    "public/img/cargo/alu.webp",
+    "public/img/cargo/copper.webp",
+    "public/img/cargo/oil.webp",
+    "public/img/cargo/ore.webp",
+    "public/img/cargo/rubber.webp",
+    "public/img/cargo/soybean.webp",
+    "tests/cargoImages.test.js",
+    "web/src/lib/i18n-ui.js",
+    "web/src/lib/market.js",
+    "web/src/pages/agent/DemoPlayback.jsx",
+    "web/src/pages/market/ProjectCard.jsx",
+    "web/src/shell/TopBar.jsx",
+    "web/src/styles/agent.css",
+    "web/src/styles/shell.css"
+  ],
+  "tracked_change_set_matches_initial": true,
+  "verification": {
+    "existing_hardhat_suite": {
+      "command": "npm run test:contracts",
+      "passed": 92,
+      "exit_code": 0,
+      "evidence": "Command output retained in this session; full raw log not separately saved."
+    },
+    "targeted_node": {
+      "command": "node --test --test-reporter=dot tests/agentSettlement.test.js tests/agentOpening.test.js tests/agentChainWatcher.test.js tests/protocolV3Deployment.test.js",
+      "passed": 105,
+      "exit_code": 0,
+      "log": "targeted-node-tests.log"
+    },
+    "local_contract_observations": 8,
+    "cross_layer_observations": 4,
+    "new_investigation_scripts_eslint": {
+      "exit_code": 0,
+      "warnings": 0
+    },
+    "live": {
+      "block_number": 144160220,
+      "block_hash": "0xd2e1709eb9ba4ec86bf03a3686a5c6f12e1b463c8345275e6d52501c2a43c173",
+      "matching_artifacts": 7,
+      "chain_writes": 0
+    }
+  },
+  "boundaries": {
+    "full_node_suite_rerun": false,
+    "full_lint_rerun": false,
+    "web_build_rerun": false,
+    "browser_rerun": false,
+    "clean_compile_rerun": false,
+    "live_transactions_sent": 0,
+    "product_source_modified": false
+  }
+}

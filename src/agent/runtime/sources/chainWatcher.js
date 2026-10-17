@@ -8,12 +8,15 @@ import { hashSnapshot } from '../../decisionLogger.js';
 import { chainStateName } from '../poolRules.js';
 import { KNOWN_LIVE_POOLS } from '../poolRegistry.js';
 import { Scheduler } from '../scheduler.js';
+import { protocolAbi } from '../../../chain/protocolV4Abi.js';
 
 export const WATCHED_EVENTS = Object.freeze({
-  RWAOfferingPool: ['OfferingCreated', 'Subscribed', 'OfferingStateChanged', 'OfferingRepriced',
-    'OfferingPaused', 'OfferingResumed', 'SettlementProofRecorded', 'OfferingSettled', 'EmergencyStopSet',
-    'DepartureRecorded', 'ImporterPaymentCorrected', 'OfferingCancelled'],
-  RiskPricingOracle: ['PricingUpdated'],
+  RWAOfferingPool: ['OfferingCreated', 'OfferingTermsSet', 'SubscriptionDeadlineSet', 'Subscribed',
+    'OfferingStateChanged', 'OfferingRepriced', 'OfferingPaused', 'OfferingFrozen', 'OfferingUnfrozen',
+    'OfferingResumed', 'SettlementProofRecorded', 'AdditionalPaymentRecorded', 'OfferingSettled',
+    'OfferingDefaulted', 'LossSettlementRecorded', 'LiquidationRecoveryRecorded', 'LiquidationResolved',
+    'CollateralReleased', 'EmergencyStopSet', 'DepartureRecorded', 'ImporterPaymentCorrected', 'OfferingCancelled'],
+  RiskPricingOracle: ['PricingUpdated', 'PricingDecision'],
   AgentBLRWA: ['Tokenized', 'Repriced'],
   PaymentOracle: ['PaymentAttested']
 });
@@ -40,8 +43,8 @@ export class WatcherError extends Error {
 
 export class ChainWatcher {
   constructor({ file = null, chainConfig, getContext, confirmations = 1, pollSec = 15,
-    startBlock = null, batchBlocks = 5000, timeoutMs = 20_000, maxStaleMs = null, now = () => new Date(), write = writeJsonAtomic } = {}) {
-    Object.assign(this, { file, chainConfig, getContext, startBlock, now, timeoutMs, write });
+    capital = null, startBlock = null, batchBlocks = 5000, timeoutMs = 20_000, maxStaleMs = null, now = () => new Date(), write = writeJsonAtomic } = {}) {
+    Object.assign(this, { file, chainConfig, getContext, startBlock, now, timeoutMs, write, capital });
     // A healthy watcher re-confirms within one (jittered) interval plus one bounded poll. Older than
     // this, the last confirmation no longer describes the chain (stopped scheduler, stuck poll).
     this.maxStaleMs = maxStaleMs ?? 2 * pollSec * 1000 + timeoutMs;
@@ -317,6 +320,7 @@ export class ChainWatcher {
       await service.activity.flush();
       if (service.activity.lastPersistError) throw new WatcherError('activity_persist_failed', 'Chain activity could not be persisted');
       await this.#assertBlock(provider, to, endBlock.hash); assertCurrent();
+      if (this.capital && Number(this.chainConfig?.protocolVersion) === 5) { await this.capital.sync(); assertCurrent(); }
       const next = { ...this.saved, next_block: to + 1, last_block: to, last_block_hash: endBlock.hash.toLowerCase(),
         snapshots: { ...this.saved.snapshots, ...snapshots }, emergency_stopped: stopped };
       if (this.file) await this.write(this.file, next);
@@ -359,11 +363,12 @@ export class ChainWatcher {
 
   #descriptors() {
     return Object.entries(WATCHED_EVENTS).map(([name, events]) => {
+      if (name === 'RWAOfferingPool' && Number(this.chainConfig?.protocolVersion) === 5) events = [...events, 'FundEscrowed', 'DisbursedToExporter', 'InvestorRefunded', 'Claimed', 'FeeDeducted', 'RepaymentReceived', 'FundingFinalized', 'PoolFundingTermsSet'];
       const address = this.chainConfig?.contracts?.[name];
       if (!isAddress(address ?? '')) throw new WatcherError('contract_missing', `${name} has no configured address`);
       let iface, topics;
       try {
-        iface = new Interface(this.chainConfig.abis?.[name] ?? []);
+        iface = new Interface(protocolAbi(name, this.chainConfig.abis?.[name] ?? [], this.chainConfig.protocolVersion));
         topics = events.map((event) => iface.getEvent(event).topicHash);
       } catch { throw new WatcherError('abi_missing', `${name} has no complete event ABI`); }
       return { name, address: address.toLowerCase(), iface, topics };
@@ -381,7 +386,12 @@ export class ChainWatcher {
       const offering = await context.pool.offerings(id, opts);
       if (!offering?.exists) return { exists: false };
       const eblId = integer(offering.eblId, 'collateral id', 1);
-      const [state, cargoHash, metadata] = await Promise.all([context.pool.stateOf(id, opts), context.registry.cargoHashOf(eblId, opts), context.registry.metadataOf(eblId, opts)]);
+      const optional = (call) => call ? Promise.resolve().then(call).catch(() => null) : Promise.resolve(null);
+      const [state, cargoHash, metadata, maturity, deadline, realizedLoss, version] = await Promise.all([
+        context.pool.stateOf(id, opts), context.registry.cargoHashOf(eblId, opts), context.registry.metadataOf(eblId, opts),
+        optional(() => context.pool.maturityAt?.(id, opts)), optional(() => context.pool.subscriptionDeadline?.(id, opts)),
+        optional(() => context.pool.realizedLoss?.(id, opts)), optional(() => context.pool.quoteVersion?.(id, opts))
+      ]);
       if (!HASH.test(cargoHash)) throw new WatcherError('invalid_rpc_data', 'Invalid cargo identity');
       const payment = offering.paymentProof, arrival = offering.arrivalProof;
       if (!HASH.test(payment) || !HASH.test(arrival)) throw new WatcherError('invalid_rpc_data', 'Invalid settlement proof');
@@ -390,6 +400,8 @@ export class ChainWatcher {
         issue_price_atomic: amount(offering.issuePrice), token_supply_atomic: amount(offering.tokenSupply),
         target_redemption_atomic: amount(offering.targetRedemptionValue), subscribed_atomic: amount(offering.subscribed),
         repayment_amount_atomic: amount(offering.repaymentAmount), payment_proof: payment.toLowerCase(), arrival_proof: arrival.toLowerCase(),
+        maturity_at: maturity == null ? null : amount(maturity), subscription_deadline: deadline == null ? null : amount(deadline),
+        realized_loss_atomic: realizedLoss == null ? null : amount(realizedLoss), quote_version: version == null ? null : amount(version),
         metadata: Object.fromEntries(fields.map((field) => [field, typeof metadata[field] === 'bigint' ? metadata[field].toString() : metadata[field]])),
         block_number: block, block_hash: hash.toLowerCase() };
     });

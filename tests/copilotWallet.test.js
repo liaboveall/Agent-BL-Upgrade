@@ -8,7 +8,7 @@ function walletFixture() {
   const hash = '0x' + 'a'.repeat(64);
   const action = { shares: '1250', chain: { pool_id: 2, chain_id: 1439, contract: contractAddress, price_e6: '800000' } };
   let network = '0x59f', accounts = [address], current = null, sends = 0, simulations = 0;
-  const session = { kind: 'evm', address, signer: {}, provider: { request: async ({ method }) => method === 'eth_chainId' ? network : accounts } };
+  const session = { kind: 'evm', address, signer: {}, provider: { request: async ({ method }) => method === 'eth_chainId' ? network : method === 'eth_getBlockByNumber' ? { timestamp: '0x1000' } : accounts } };
   current = session;
   const offering = { exists: true, state: 2n, issuePrice: 800000n, tokenSupply: 10000n, subscribed: 0n };
   const event = { name: 'Subscribed', args: { poolId: 2n, investor: address, amount: 1250n, paidAmount: 1000000000n } };

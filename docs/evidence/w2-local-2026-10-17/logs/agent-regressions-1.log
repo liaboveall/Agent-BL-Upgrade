@@ -1,0 +1,325 @@
+✔ matrix: late clearing cannot undo a newer escalation, including indexes written before the shared stream (66.6516ms)
+✖ matrix: concurrent duplicate events produce one approval and one execution (7.9451ms)
+✖ matrix: RPC preflight timeout recovers with bounded retry and one broadcast (5.1639ms)
+✖ matrix: mined nonce conflict recovers with bounded retry and one broadcast (5.0479ms)
+✖ matrix: persistent RPC outage fails explicitly before any broadcast, never simulates (4.7655ms)
+✖ matrix: broadcast timeout survives restart and transient reconciliation outage without resending (49.8077ms)
+✖ matrix: approval granted just before restart resumes once; an ambiguous broadcast requires operator reconciliation (5.8704ms)
+✖ matrix: known reverted receipt fails decision and approval without retries (4.5858ms)
+✖ matrix: an interrupted pricing broadcast without a hash recovers read-only from exact oracle replay protection (4.0573ms)
+✖ matrix: confirmation after a mode change records the Live fact without mutating Demo pools (3.9453ms)
+✖ matrix: a completed decision repairs an interrupted approval checkpoint without another broadcast (3.9461ms)
+✔ matrix: injected clock expires approvals and synchronizes their decisions even if approve observed expiry first (4.6083ms)
+✔ matrix: switching away and back invalidates approvals and queued events by generation (4.3905ms)
+✖ matrix: mode changes while signer queue waits prevent broadcast (1.1835ms)
+✔ matrix: unavailable LLM and xAPI use labelled deterministic fallbacks and keep constraints (9.9072ms)
+✖ matrix: evidence expiring during RPC preflight blocks the signer before any broadcast (4.7296ms)
+✔ Demo: a world-risk event becomes a decision, an executed simulated reprice, activity and a trace (53.0552ms)
+✔ Demo: injecting the same event again never produces a second execution (8.7411ms)
+✔ Demo: the full risk cycle reprice → pause → resume restores the previous state (11.5557ms)
+✔ Demo: events that change nothing are ignored with a reason, not turned into decisions (4.3822ms)
+✔ invalid events are refused before they are queued (3.8474ms)
+✔ policy: a price move above the cap waits for approval; approving it executes, rejecting does not (11.0518ms)
+✔ policy: rejecting a pending proposal records it and changes nothing (5.2615ms)
+✔ policy: observe and off modes never execute; set_autonomy changes it at runtime and is logged (10.5595ms)
+✔ policy: an emergency stop blocks a reprice but lets a pause through, and can be lifted (7.2025ms)
+✔ policy: the cooldown stops a flapping signal from acting twice in a row (7.7767ms)
+✔ settlement actions: RECORD_PAYMENT always needs approval, RECORD_ARRIVAL does not (11.5963ms)
+✔ a failing action is recorded as FAILED with its reason, and the event itself still completes (6.581ms)
+✔ status reports mode, autonomy, signers (booleans only) and queue depth (3.1395ms)
+✔ listDecisions filters and paginates; getDecision returns one (11.7226ms)
+✔ Demo reset clears the agent state of Demo mode only (7.3513ms)
+✔ decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate (60.7505ms)
+✔ a replayed event whose decision already exists does not decide again (46.7742ms)
+[agentbl] AGENT_AUTONOMY=auto is treated as propose in Live mode: every action needs human approval.
+✖ Live: a mapped pool gets a proposal that waits for approval; approving sends exactly one real-looking transaction and records its hash (8.4255ms)
+✔ Live: AGENT_AUTONOMY=auto is downgraded to propose and the downgrade is visible (8.3245ms)
+✔ Live: a pool with no on-chain mapping gets a recorded proposal and nothing is executed (5.0841ms)
+✔ Live: the protected pool refuses terminal actions outright and never queues them (2.8057ms)
+✔ Live: an action only the owner can sign becomes an owner-CLI approval; the reported tx is verified before anything completes (8.5531ms)
+✔ Live: an approval is not executed after the runtime mode changed (5.247ms)
+✔ Live: only proof-carrying events can be injected by hand (3.1944ms)
+✔ Live: a hand-injected arrival without a proof is rejected before queueing (3.5849ms)
+✖ Live: a broadcast transaction that is not yet confirmed stays EXECUTING and is reconciled on the next tick (5.9573ms)
+✔ Live: an unreachable chain never degrades to a simulated result (4.8216ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 29
+ℹ fail 14
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 787.4813
+
+✖ failing tests:
+
+test at tests\agentReliability.test.js:99:1
+✖ matrix: concurrent duplicate events produce one approval and one execution (7.9451ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:106:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:109:41
+✖ matrix: RPC preflight timeout recovers with bounded retry and one broadcast (5.1639ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'COMPLETED'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:114:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'COMPLETED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:109:41
+✖ matrix: mined nonce conflict recovers with bounded retry and one broadcast (5.0479ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'COMPLETED'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:114:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'COMPLETED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:120:1
+✖ matrix: persistent RPC outage fails explicitly before any broadcast, never simulates (4.7655ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'TypeError'
+  - 'rpc_unavailable'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:125:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'TypeError',
+    expected: 'rpc_unavailable',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:130:1
+✖ matrix: broadcast timeout survives restart and transient reconciliation outage without resending (49.8077ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'EXECUTING'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:137:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'EXECUTING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:155:1
+✖ matrix: approval granted just before restart resumes once; an ambiguous broadcast requires operator reconciliation (5.8704ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:161:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:174:1
+✖ matrix: known reverted receipt fails decision and approval without retries (4.5858ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'TypeError'
+  - 'tx_reverted'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:179:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'TypeError',
+    expected: 'tx_reverted',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:184:1
+✖ matrix: an interrupted pricing broadcast without a hash recovers read-only from exact oracle replay protection (4.0573ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'EXECUTING'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:188:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'EXECUTING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:203:1
+✖ matrix: confirmation after a mode change records the Live fact without mutating Demo pools (3.9453ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'COMPLETED'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:208:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'COMPLETED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:215:1
+✖ matrix: a completed decision repairs an interrupted approval checkpoint without another broadcast (3.9461ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'COMPLETED'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:221:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'COMPLETED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:253:1
+✖ matrix: mode changes while signer queue waits prevent broadcast (1.1835ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + Comparison {}
+  - Comparison {
+  -   code: 'mode_changed'
+  - }
+  
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:257:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: TypeError: ctx.pool.quoteVersion is not a function
+        at #runPricing (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/agent/runtime/executors/chainExecutor.js:233:16)
+        at ChainExecutor.execute (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/agent/runtime/executors/chainExecutor.js:198:72)
+        at async waitForActual (node:assert:615:5)
+        at async strict.rejects (node:assert:738:25)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:257:3)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7),
+    expected: { code: 'mode_changed' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests\agentReliability.test.js:279:1
+✖ matrix: evidence expiring during RPC preflight blocks the signer before any broadcast (4.7296ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'TypeError'
+  - 'evidence_expired'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentReliability.test.js:286:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'TypeError',
+    expected: 'evidence_expired',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentService.test.js:444:1
+✖ Live: a mapped pool gets a proposal that waits for approval; approving sends exactly one real-looking transaction and records its hash (8.4255ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'COMPLETED'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentService.test.js:461:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'COMPLETED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentService.test.js:583:1
+✖ Live: a broadcast transaction that is not yet confirmed stays EXECUTING and is reconciled on the next tick (5.9573ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'FAILED'
+  - 'EXECUTING'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentService.test.js:596:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FAILED',
+    expected: 'EXECUTING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -7,6 +7,7 @@ import { Interface } from 'ethers';
 import { createChainContext } from '../src/agent/runtime/executors/chainExecutor.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
 import { WATCHED_EVENTS } from '../src/agent/runtime/sources/chainWatcher.js';
+import { protocolAbi } from '../src/chain/protocolV4Abi.js';
 import { evaluatePolicy } from '../src/agent/runtime/policy.js';
 import { poolCandidate } from '../src/copilot/retrieval.js';
 import { hashSnapshot } from '../src/agent/decisionLogger.js';
@@ -22,7 +23,7 @@ async function legacyCursor(dir, chain) {
   const saved = JSON.parse(await fs.readFile(file, 'utf8'));
   const contracts = Object.entries(WATCHED_EVENTS).map(([name, events]) => ({ name,
     address: chain.chainConfig.contracts[name].toLowerCase(),
-    topics: events.map((event) => new Interface(chain.chainConfig.abis[name]).getEvent(event).topicHash) }));
+    topics: events.map((event) => new Interface(protocolAbi(name, chain.chainConfig.abis[name])).getEvent(event).topicHash) }));
   const legacy = { ...saved, version: 1, identity: hashSnapshot({ chain_id: 1439, contracts,
     deployments: chain.chainConfig.deployments, start_override: null }) };
   await fs.writeFile(file, JSON.stringify(legacy));
@@ -234,7 +235,7 @@ test('conflicting duplicate positions fail instead of arbitrarily choosing one l
 test('every promised event ABI is watched and remains informational, including both non-pool contracts', async () => {
   const chain = watcherChain();
   for (const [contract, names] of Object.entries(WATCHED_EVENTS)) {
-    const iface = new Interface(chain.chainConfig.abis[contract]);
+    const iface = new Interface(protocolAbi(contract, chain.chainConfig.abis[contract]));
     for (const name of names) {
       const fragment = iface.getEvent(name);
       const args = fragment.inputs.map((input) => input.name === 'poolId' ? 11n : input.name === 'eblId' ? 21n

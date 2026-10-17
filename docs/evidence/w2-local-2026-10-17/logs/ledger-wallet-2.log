@@ -1,0 +1,37 @@
+(node:84666) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Copilot wallet: a matching contract receipt is required for a Live subscription result (2.102119ms)
+✔ Copilot wallet: deployment, account, network, price, capacity, eligibility and stopped pools refuse before signing (0.589465ms)
+✔ Copilot wallet: a wallet or mode change after static simulation prevents broadcast (0.351938ms)
+✔ Copilot wallet: wrong events, failed receipts and price changes during mining remain unconfirmed without automatic retry (0.668546ms)
+▶ W2 durable capital ledger
+  ✔ retains intent terms and refuses a second transaction hash on restart (12.682188ms)
+  ✖ records deposits, zero/partial claims and refunds without mixing wallets or protocol instances (7.956568ms)
+  ✔ deduplicates concurrent same-process writers and rejects conflicting evidence (22.866334ms)
+  ✔ recovers a committed cash entry after a crash before writing its position snapshot (6.09934ms)
+  ✔ keeps orphaned chain facts in the audit history while rebuilding canonical positions (9.292625ms)
+  ✔ preserves a torn tail for audit, recovers the committed prefix, and rejects interior corruption (7.53481ms)
+  ✔ serializes independent processes and recovers a dead writer lease without double counting (131.695835ms)
+  ✔ records disbursement, recovery and fee without creating fictitious investor positions (9.093661ms)
+✖ W2 durable capital ledger (208.397981ms)
+▶ position view
+  ✔ merges demo and live positions (0.527531ms)
+  ✔ falls back to ledger shares when no chain balance is supplied (0.123656ms)
+  ✔ prefers chain balance when supplied (0.151137ms)
+✔ position view (2.004838ms)
+ℹ tests 15
+ℹ suites 2
+ℹ pass 14
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 470.219877
+
+✖ failing tests:
+
+test at tests/ledger.test.js:40:3
+✖ records deposits, zero/partial claims and refunds without mixing wallets or protocol instances (7.956568ms)
+  Error: Conflicting chain event; reconciliation required
+      at file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/ledger/ledger.js:119:52
+      at async file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/src/ledger/writer.js:50:16

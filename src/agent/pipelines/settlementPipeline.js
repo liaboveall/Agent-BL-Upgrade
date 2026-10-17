@@ -4,7 +4,7 @@ import { X402_NETWORKS } from '../../x402/config.js';
 import { chainStateName, planTransition } from '../runtime/poolRules.js';
 
 export const SETTLEMENT_SCHEMA = 'agentbl-settlement-plan-v1';
-export const SETTLEMENT_ACTIONS = Object.freeze(['RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE']);
+export const SETTLEMENT_ACTIONS = Object.freeze(['RECORD_PAYMENT', 'RECORD_ADDITIONAL_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE']);
 const transferInterface = new Interface(['event Transfer(address indexed from,address indexed to,uint256 value)']);
 const hash = (value) => /^0x[0-9a-f]{64}$/iu.test(value ?? '') && !/^0x0{64}$/iu.test(value);
 const same = (a, b) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
@@ -92,13 +92,20 @@ export async function readSettlementState({ context, chainConfig, poolId }) {
   requireThat(Number.isSafeInteger(Number(poolId)) && Number(poolId) > 0, 'no_chain_pool', 'A verified on-chain pool mapping is required');
   await assertSettlementChain(context?.provider, chainConfig);
   const blockTag = await context.provider.getBlockNumber();
-  const [offering, proofs, stopped] = await Promise.all([
-    context.pool.offerings(poolId, { blockTag }), context.pool.settlementProofs(poolId, { blockTag }), context.pool.emergencyStopped({ blockTag })
+  const optional = (call) => call ? Promise.resolve().then(call).catch(() => null) : Promise.resolve(null);
+  const [offering, proofs, stopped, maturity, deadline, version] = await Promise.all([
+    context.pool.offerings(poolId, { blockTag }), context.pool.settlementProofs(poolId, { blockTag }),
+    context.pool.emergencyStopped({ blockTag }), optional(() => context.pool.maturityAt?.(poolId, { blockTag })),
+    optional(() => context.pool.subscriptionDeadline?.(poolId, { blockTag })),
+    optional(() => context.pool.quoteVersion?.(poolId, { blockTag }))
   ]);
   requireThat(offering?.exists, 'chain_pool_missing', 'The mapped offering does not exist');
   const paymentProof = String(proofs.paymentProof ?? proofs[0]), arrivalProof = String(proofs.arrivalProof ?? proofs[1]);
   requireThat(/^0x[0-9a-f]{64}$/iu.test(paymentProof) && /^0x[0-9a-f]{64}$/iu.test(arrivalProof), 'invalid_pool_proofs', 'The pool returned invalid settlement proofs');
   return { state: chainStateName(offering.state), emergencyStopped: Boolean(stopped), subscribed: String(offering.subscribed),
+    maturity_at: maturity === null ? undefined : Number(maturity),
+    subscription_deadline: deadline === null ? undefined : Number(deadline),
+    quote_version: version === null ? undefined : Number(version),
     ebl_id: Number(offering.eblId), payment_proof: paymentProof.toLowerCase(), arrival_proof: arrivalProof.toLowerCase(),
     repayment_amount_atomic: String(offering.repaymentAmount ?? 0),
     repaymentAmountAtomic: offering.repaymentAmount === undefined ? undefined : String(offering.repaymentAmount),
@@ -112,6 +119,36 @@ function proofBytes32(value) {
   return hash(text) ? text.toLowerCase() : keccak256(toUtf8Bytes(text));
 }
 
+/**
+ * Verify each recovery entry independently (A04). A single transaction may contain several
+ * matching transfers, but each (tx, log index) entry is claimed exactly once. The caller never
+ * supplies a total that the entries do not add up to.
+ */
+async function verifyRecoveries({ entries, provider, chainConfig, recipient, expectedPayer, confirmations }) {
+  requireThat(Array.isArray(entries) && entries.length > 0, 'recovery_entries_required', 'At least one verified recovery entry is required');
+  const verified = [];
+  const seen = new Set();
+  let total = 0n;
+  for (const [index, entry] of entries.entries()) {
+    requireThat(entry?.payment_verification?.source === 'confirmed-usdc-transfer',
+      'payment_verification_required', `Recovery entry ${index} has no verified USDC evidence`);
+    const atomic = atomicRepayment(entry.repayment_amount_atomic);
+    if (entry.repayment_amount !== undefined) {
+      requireThat(repaymentAtomic(entry.repayment_amount) === atomic, 'repayment_amount_mismatch', `Recovery entry ${index} display and atomic amounts disagree`);
+    }
+    const payment = await verifyUsdcTransfer({ provider, chainConfig, recipient, expectedPayer,
+      txHash: entry.payment_proof, amountAtomic: atomic, confirmations });
+    requireThat(samePaymentEvidence(payment, entry.payment_verification),
+      'payment_evidence_changed', `Recovery entry ${index} changed since it was accepted`);
+    const key = `${payment.tx_hash}:${payment.log_index}`;
+    requireThat(!seen.has(key), 'duplicate_recovery_entry', `Recovery entry ${index} reuses the same transfer log`);
+    seen.add(key);
+    verified.push({ entry_index: index, payment });
+    total += BigInt(atomic);
+  }
+  return { verified, total };
+}
+
 /** A contextual plan is checked again by the CLI immediately before signing. */
 export async function buildSettlementPlan({ action, chain_pool_id: poolId, params = {}, chainConfig, context, recipient, expectedPayer, confirmations = 1 }) {
   const address = chainConfig?.contracts?.RWAOfferingPool;
@@ -121,8 +158,8 @@ export async function buildSettlementPlan({ action, chain_pool_id: poolId, param
   const transition = planTransition(action, state);
   requireThat(transition.ok, transition.code, transition.message);
   const args = [String(poolId)];
-  let method, payment, expected, eventArgs;
-  if (action === 'RECORD_PAYMENT' || action === 'SETTLE') {
+  let method, payment, expected, eventArgs, recoveries;
+  if (action === 'RECORD_PAYMENT' || action === 'RECORD_ADDITIONAL_PAYMENT') {
     requireThat(params.payment_verification?.source === 'confirmed-usdc-transfer', 'payment_verification_required', 'Verified USDC evidence is required before recording payment or settling');
     const atomic = atomicRepayment(params.repayment_amount_atomic);
     requireThat(repaymentAtomic(params.repayment_amount) === atomic, 'repayment_amount_mismatch', 'Display and atomic repayment amounts disagree');
@@ -133,6 +170,30 @@ export async function buildSettlementPlan({ action, chain_pool_id: poolId, param
       method = 'recordImporterPayment'; args.push(payment.tx_hash, atomic); expected = 'SettlementProofRecorded';
       eventArgs = { poolId: String(poolId), paymentProof: payment.tx_hash, arrivalProof: state.arrival_proof };
     } else {
+      method = 'recordAdditionalPayment'; args.push(payment.tx_hash, atomic); expected = 'AdditionalPaymentRecorded';
+      eventArgs = { poolId: String(poolId), paymentProof: payment.tx_hash, amount: atomic,
+        totalRecovered: (BigInt(state.repayment_amount_atomic) + BigInt(atomic)).toString() };
+    }
+  } else if (action === 'SETTLE') {
+    requireThat(state.arrival_proof && !/^0x0{64}$/iu.test(state.arrival_proof), 'arrival_proof_missing', 'The arrival proof must be recorded before settlement');
+    if (params.recoveries !== undefined) {
+      // Multi-entry recovery: each entry is verified; their sum must equal the on-chain total.
+      recoveries = await verifyRecoveries({ entries: params.recoveries, provider: context.provider, chainConfig, recipient, expectedPayer, confirmations });
+      requireThat(recoveries.total.toString() === state.repayment_amount_atomic, 'settlement_total_mismatch',
+        'Verified recovery entries do not add up to the on-chain repayment amount');
+      requireThat(recoveries.verified.some(({ payment: entry }) => same(entry.tx_hash, state.payment_proof)),
+        'settlement_primary_missing', 'The on-chain primary payment proof is not one of the verified recovery entries');
+      requireThat(same(state.arrival_proof, params.arrival_proof), 'settlement_proofs_changed', 'The arrival proof differs from the approved proposal');
+      method = 'settle'; args.push(recoveries.total.toString()); expected = 'OfferingSettled';
+      eventArgs = { poolId: String(poolId), repaymentAmount: recoveries.total.toString(),
+        paymentProof: state.payment_proof, arrivalProof: state.arrival_proof };
+    } else {
+      requireThat(params.payment_verification?.source === 'confirmed-usdc-transfer', 'payment_verification_required', 'Verified USDC evidence is required before recording payment or settling');
+      const atomic = atomicRepayment(params.repayment_amount_atomic);
+      requireThat(repaymentAtomic(params.repayment_amount) === atomic, 'repayment_amount_mismatch', 'Display and atomic repayment amounts disagree');
+      payment = await verifyUsdcTransfer({ provider: context.provider, chainConfig, recipient, expectedPayer, txHash: params.payment_proof, amountAtomic: atomic, confirmations });
+      requireThat(samePaymentEvidence(payment, params.payment_verification),
+        'payment_evidence_changed', 'Payment evidence changed since it was accepted');
       requireThat(same(state.payment_proof, payment.tx_hash) && same(state.arrival_proof, params.arrival_proof)
         && state.repayment_amount_atomic === atomic, 'settlement_proofs_changed', 'The current on-chain proofs or repayment amount differ from this proposal');
       method = 'settle'; args.push(atomic); expected = 'OfferingSettled';
@@ -144,7 +205,8 @@ export async function buildSettlementPlan({ action, chain_pool_id: poolId, param
     eventArgs = { poolId: String(poolId), paymentProof: state.payment_proof, arrivalProof: proof };
   }
   return { schema: SETTLEMENT_SCHEMA, network: chainConfig.network, chain_id: 1439, action, chain_pool_id: Number(poolId),
-    ...(payment ? { payment } : {}), params, checked_block: state.block_number,
+    ...(payment ? { payment } : {}), ...(recoveries ? { recoveries: recoveries.verified.map((item) => item.payment) } : {}),
+    params, checked_block: state.block_number,
     steps: [{ index: 0, contract: 'RWAOfferingPool', address, method, args,
       description: 'Record settlement evidence; the contract does not hold or distribute funds.',
       expected_events: [expected], event_checks: [{ name: expected, args: eventArgs }] }] };

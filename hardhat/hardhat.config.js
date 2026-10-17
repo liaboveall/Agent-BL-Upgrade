@@ -6,7 +6,7 @@ import hardhatEthersChaiMatchers from '@nomicfoundation/hardhat-ethers-chai-matc
 import hardhatMocha from '@nomicfoundation/hardhat-mocha';
 
 // Secrets live in the project-root .env; configVariable() reads them from process.env.
-dotenv.config({ path: path.join(import.meta.dirname, '..', '.env') });
+if (!process.env.NODE_TEST_CONTEXT && process.env.AGENTBL_W2_INTEGRATION !== '1') dotenv.config({ path: path.join(import.meta.dirname, '..', '.env'), quiet: true });
 
 export default defineConfig({
   plugins: [hardhatEthers, hardhatEthersChaiMatchers, hardhatMocha],

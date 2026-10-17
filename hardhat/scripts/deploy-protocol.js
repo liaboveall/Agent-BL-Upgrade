@@ -146,17 +146,24 @@ async function main() {
   ));
   const poolId = Number((await pool.contract.nextPoolId()) - 1n);
   smoke.push(await send('subscribe', pool.contract.subscribe(poolId, 10_000n, CALL_OVERRIDES)));
+  // A07: each quote carries the version it was priced against, a validity window and a
+  // strictly increasing per-pool sequence.
+  const chainNow = (await ethers.provider.getBlock('latest')).timestamp;
+  const validUntil = chainNow + 3600;
   smoke.push(await send(
     'reprice',
-    oracle.contract.updatePricing(poolId, 850_000n, 2, 2, ethers.id('wave-b:reprice:evidence'), ethers.id('wave-b:reprice:quote'), CALL_OVERRIDES)
+    oracle.contract.updatePricing(poolId, 850_000n, 2, 2, ethers.id('wave-b:reprice:evidence'), ethers.id('wave-b:reprice:quote'),
+      1n, validUntil, 1n, CALL_OVERRIDES)
   ));
   smoke.push(await send(
     'pause',
-    oracle.contract.updatePricing(poolId, 850_000n, 3, 3, ethers.id('wave-b:pause:evidence'), ethers.id('wave-b:pause:quote'), CALL_OVERRIDES)
+    oracle.contract.updatePricing(poolId, 850_000n, 3, 3, ethers.id('wave-b:pause:evidence'), ethers.id('wave-b:pause:quote'),
+      2n, validUntil, 2n, CALL_OVERRIDES)
   ));
   smoke.push(await send(
     'resume',
-    oracle.contract.updatePricing(poolId, 850_000n, 1, 6, ethers.id('wave-b:resume:evidence'), ethers.id('wave-b:resume:quote'), CALL_OVERRIDES)
+    oracle.contract.updatePricing(poolId, 850_000n, 1, 6, ethers.id('wave-b:resume:evidence'), ethers.id('wave-b:resume:quote'),
+      2n, validUntil, 3n, CALL_OVERRIDES)
   ));
   const repaymentAmount = 10_000n * 1_000_000n;
   smoke.push(await send(

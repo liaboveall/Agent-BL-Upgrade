@@ -222,9 +222,17 @@ describe('RWAOfferingPool hardening', () => {
       await send(ctx.pool.cancelOffering(poolId, ethers.id('first')));
       await expect(ctx.pool.cancelOffering(poolId, ethers.id('again'))).to.be.revertedWith('illegal transition');
 
+      // A frozen offering without investors can still exit through cancellation (A02).
       const frozen = await newOffering(ctx, 'frozen');
       await send(applyPricing(ctx, frozen.poolId, ISSUE_PRICE, ACTION.FREEZE_POOL));
-      await expect(ctx.pool.cancelOffering(frozen.poolId, ethers.id('x'))).to.be.revertedWith('illegal transition');
+      await send(ctx.pool.cancelOffering(frozen.poolId, ethers.id('x')));
+      expect(await ctx.pool.stateOf(frozen.poolId)).to.equal(STATE.Cancelled);
+
+      // Once investors exist, cancellation is not an exit; debt/frozen rules apply instead.
+      const funded = await newOffering(ctx, 'frozen-funded');
+      await send(ctx.pool.connect(ctx.investor).subscribe(funded.poolId, 1n));
+      await send(applyPricing(ctx, funded.poolId, ISSUE_PRICE, ACTION.FREEZE_POOL));
+      await expect(ctx.pool.cancelOffering(funded.poolId, ethers.id('y'))).to.be.revertedWith('has subscribers');
     });
   });
 

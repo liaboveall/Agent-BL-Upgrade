@@ -6,7 +6,7 @@
 // and eBL has to equal the model, and a set of global invariants has to hold. A
 // disagreement prints the seed, the step and the operation, so it can be replayed.
 import { expect } from 'chai';
-import { ACTION, ISSUE_PRICE, TARGET, deployProtocol, ethers, send, uniqueHash } from './helpers/protocol.js';
+import { ACTION, ISSUE_PRICE, TARGET, applyPricing, deployProtocol, ethers, send, uniqueHash } from './helpers/protocol.js';
 
 const S = { Open: 2, Subscribed: 3, Funded: 4, InTransit: 5, Repriced: 6, Paused: 7, Frozen: 8, Repaid: 9, Liquidation: 11, Cancelled: 12 };
 const STATE_NAME = Object.fromEntries(Object.entries(S).map(([name, code]) => [code, name]));
@@ -61,7 +61,8 @@ function describeOperation(op) {
 
 /** Predict, execute and apply one random operation. Returns the touched pool (if any). */
 function planOperation(kind, ctx, model, rng) {
-  const settleable = (pool) => !model.emergency && isActive(pool.state) && pool.subscribed > 0;
+  // Frozen keeps the investors' claim: verified recovery may still arrive and settle (A02).
+  const settleable = (pool) => !model.emergency && (isActive(pool.state) || pool.state === S.Frozen) && pool.subscribed > 0;
   // Mostly pick a pool for which the operation is meaningful, so the walk reaches deep
   // states (Funded, Repaid, ...) instead of dying early; 25% of the time pick any pool to
   // keep probing illegal moves.
@@ -196,7 +197,7 @@ function planOperation(kind, ctx, model, rng) {
       }
       return {
         kind, pool: p, args: { action, price, riskLevel }, ok,
-        run: () => ctx.oracle.updatePricing(p.id, price, riskLevel, action, uniqueHash('evidence'), uniqueHash('quote')),
+        run: () => applyPricing(ctx, p.id, price, action, riskLevel),
         apply: () => {
           if (action === ACTION.RESUME_OFFERING) p.state = p.before;
           else if (action === ACTION.PAUSE_OFFERING) { p.before = p.state; p.state = S.Paused; }
@@ -242,7 +243,7 @@ function planOperation(kind, ctx, model, rng) {
     }
     case 'cancel':
       return {
-        kind, pool: p, ok: p.subscribed === 0 && [S.Open, S.Repriced, S.Paused].includes(p.state),
+        kind, pool: p, ok: p.subscribed === 0 && [S.Open, S.Repriced, S.Paused, S.Frozen, S.Liquidation].includes(p.state),
         run: () => poolContract.cancelOffering(p.id, uniqueHash('cancel')),
         apply: () => { p.state = S.Cancelled; releaseCollateral(p); }
       };

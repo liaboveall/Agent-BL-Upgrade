@@ -12,7 +12,6 @@
 .brand-mark { color: var(--accent); }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
 .brand-text strong { font-size: var(--fs-16); }
-.brand-text span { color: var(--muted); font-size: 11px; }
 
 .nav { display: flex; gap: 2px; }
 .nav-tab {
@@ -73,3 +72,8 @@
   display: flex; justify-content: space-between; gap: var(--s-6); max-width: var(--page-max); width: 100%;
   margin: 0 auto; padding: var(--s-5) var(--page-pad) 72px; border-top: 1px solid var(--line); font-size: var(--fs-12);
 }
+
+.position-address { overflow-wrap: anywhere; }
+.position-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.position-values dt { color: var(--text-muted); font-size: 12px; }
+.position-values dd { margin: 4px 0 0; overflow-wrap: anywhere; }

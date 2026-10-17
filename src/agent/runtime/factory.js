@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 import chainConfigLib from '../../../scripts/lib/chain-config.cjs';
 import { resolveSignerKey } from '../../chain/signerKeys.js';
 import { runtimeDir } from '../../runtimePaths.js';
-import { storeState } from '../../app/store.js';
+import { storeState, ledger } from '../../app/store.js';
+import { CapitalLedgerService } from '../../ledger/service.js';
 import { DecisionLogger } from '../decisionLogger.js';
 import { IngestService } from '../ingest/ingestService.js';
 import { createDocumentModel } from '../ingest/modelExtraction.js';
@@ -140,8 +141,14 @@ export function createAgentService(options = {}) {
 
   // Isolated read-only provider: this path never builds wallets or resolves signer keys.
   let watcherContext = null;
+  const capital = new CapitalLedgerService({ ledger: options.ledger ?? ledger, chainConfig, getMode, confirmations: config.chainConfirmations,
+    getContext: options.getLedgerContext ?? options.getWatcherContext ?? options.getChainContext ?? (async () => {
+      if (!chainConfig) return null;
+      watcherContext ??= await createChainContext({ chainConfig, env, readOnly: true });
+      return watcherContext;
+    }) });
   const watcher = options.chainWatcher === false || !config.chainWatcherEnabled || !monitorsOn && !options.chainWatcher ? null
-    : options.chainWatcher ?? new ChainWatcher({ file: file('agent-chain-cursor.json'), chainConfig,
+    : options.chainWatcher ?? new ChainWatcher({ file: file('agent-chain-cursor.json'), chainConfig, capital,
       confirmations: config.chainConfirmations, pollSec: config.chainPollSec, startBlock: config.chainStartBlock ?? chainConfig?.watcherStartBlock ?? null,
       now: options.now, getContext: options.getWatcherContext ?? options.getChainContext ?? (async () => {
         if (!chainConfig) return null;
@@ -177,6 +184,7 @@ export function createAgentService(options = {}) {
     preferences,
     orchestrator: options.orchestrator
   });
+  service.capital = capital;
   return service;
 }
 

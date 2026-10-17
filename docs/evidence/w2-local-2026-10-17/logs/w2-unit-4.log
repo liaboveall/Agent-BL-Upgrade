@@ -1,0 +1,40 @@
+(node:37376) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Copilot wallet: a matching contract receipt is required for a Live subscription result (2.2487ms)
+✔ Copilot wallet: deployment, account, network, price, capacity, eligibility and stopped pools refuse before signing (0.5679ms)
+✔ Copilot wallet: a wallet or mode change after static simulation prevents broadcast (0.3766ms)
+✔ Copilot wallet: wrong events, failed receipts and price changes during mining remain unconfirmed without automatic retry (0.6542ms)
+▶ W2 durable capital ledger
+  ✔ retains intent terms and refuses a second transaction hash on restart (43.1328ms)
+  ✔ records deposits, zero/partial claims and refunds without mixing wallets or protocol instances (65.1077ms)
+  ✔ deduplicates concurrent same-process writers and rejects conflicting evidence (108.4053ms)
+  ✔ recovers a committed cash entry after a crash before writing its position snapshot (23.5259ms)
+  ✔ keeps orphaned chain facts in the audit history while rebuilding canonical positions (44.9436ms)
+  ✔ preserves a torn tail for audit, recovers the committed prefix, and rejects interior corruption (28.1853ms)
+  ✔ serializes independent processes and recovers a dead writer lease without double counting (268.2262ms)
+  ✔ records disbursement, recovery and fee without creating fictitious investor positions (34.8564ms)
+✔ W2 durable capital ledger (617.5858ms)
+▶ position view
+  ✔ merges demo and live positions (1.1485ms)
+  ✔ falls back to ledger shares when no chain balance is supplied (0.1026ms)
+  ✔ prefers chain balance when supplied (0.0935ms)
+✔ position view (1.9322ms)
+▶ confirmed position boundaries
+  ✔ exposes only the requested wallet and uses exact atomic claim amounts (0.2388ms)
+  ✔ does not invent paid cost or claimable proceeds for unknown chain balances (0.083ms)
+  ✔ does not infer current claimable money from a stale ledger snapshot or a balance mismatch (0.1247ms)
+✔ confirmed position boundaries (0.566ms)
+(node:50224) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ W2 wallet saves the funding intent before approval, then simulates with allowance and verifies escrow (9.465ms)
+✔ W2 wallet refuses version, asset and decimal changes before a subscription signature (10.2324ms)
+✔ W2 wallet rechecks the session after approval and never broadcasts a failed preflight (6.1634ms)
+✔ W2 wallet keeps missing escrow and insufficient canonical confirmations unresolved after one broadcast (7.2143ms)
+ℹ tests 22
+ℹ suites 3
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 681.4104

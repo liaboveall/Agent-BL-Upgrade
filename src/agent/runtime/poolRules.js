@@ -101,9 +101,16 @@ export function planTransition(action, pool) {
       if (from !== 'Funded' && from !== 'InTransit') return no('only funded or in-transit offering can disburse');
       return ok(from, false);
     case 'REFUND':
-      if (!['Open','Subscribed','Repriced','Paused','Frozen','Cancelled'].includes(from)) return no('not refundable');
+      if (!['Open','Subscribed','Repriced','Paused','Frozen','Cancelled','Liquidation'].includes(from)) return no('not refundable');
       if (!subscribed && from !== 'Cancelled') return no('no subscribers to refund');
-      return ok('Cancelled', true);
+      return ok(from, false);
+    case 'FINALIZE_FUNDING':
+      if (!['Open', 'Subscribed', 'Repriced'].includes(from)) return no('not open');
+      if (!pool.deadlinePassed || !pool.minimumRaised) return no('funding terms are not satisfied');
+      return ok('Funded');
+    case 'DEDUCT_FEE':
+      if (!['Repaid', 'LossSettled'].includes(from) || pool.claimsStarted) return no('fees are locked');
+      return ok(from, false);
     case 'CLAIM':
       if (from !== 'Repaid' && from !== 'LossSettled') return no('not claimable');
       return ok(from, false);

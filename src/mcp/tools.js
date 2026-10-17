@@ -275,6 +275,9 @@ export async function handlePushPricingToOracle({
   case_id,
   pricing_quote,
   pool_id = 1,
+  expected_quote_version,
+  valid_until,
+  decision_seq,
   network = MCP_PINNED_NETWORK,
   contract,
   dry_run = true,
@@ -308,8 +311,16 @@ export async function handlePushPricingToOracle({
     oracle_id: 'AgentBL-RiskPricingOracle-v1',
     oracle_address: oracleAddress,
     case_id,
-    ...toChainPricingArgs(pricing_quote, { pool_id })
+    ...toChainPricingArgs(pricing_quote, {
+      pool_id,
+      // A07 preconditions: a live write resolves these from the chain; a dry run shows the
+      // caller-supplied values, or records that they are resolved at execution time.
+      expected_quote_version, valid_until, decision_seq
+    })
   };
+  if (expected_quote_version === undefined || valid_until === undefined || decision_seq === undefined) {
+    txPayload.preconditions = 'resolved_at_execution';
+  }
 
   if (policy.dry_run) {
     return {
@@ -341,13 +352,26 @@ export async function handlePushPricingToOracle({
   const provider = new ethers.JsonRpcProvider(rpcUrl, 1439);
   const wallet = new ethers.Wallet(signer.privateKey, provider);
   const oracle = new ethers.Contract(oracleAddress, oracleAbi, wallet);
+  if (txPayload.expected_quote_version === undefined || txPayload.valid_until === undefined
+    || txPayload.decision_seq === undefined || txPayload.preconditions) {
+    const [version, lastSeq, block] = await Promise.all([
+      oracle.quoteVersion(txPayload.pool_id), oracle.lastDecisionSeq(txPayload.pool_id), provider.getBlock('latest')
+    ]);
+    txPayload.expected_quote_version = version;
+    txPayload.valid_until = BigInt(block.timestamp + 3600);
+    txPayload.decision_seq = BigInt(lastSeq) + 1n;
+    delete txPayload.preconditions;
+  }
   const transaction = await oracle.updatePricing(
     txPayload.pool_id,
     txPayload.issue_price_e6,
     txPayload.risk_level,
     txPayload.pricing_action,
     txPayload.evidence_hash,
-    txPayload.quote_hash
+    txPayload.quote_hash,
+    txPayload.expected_quote_version,
+    txPayload.valid_until,
+    txPayload.decision_seq
   );
   const mined = await transaction.wait();
   const explorerUrl = `${chainConfig.explorerBase}/tx/${mined.hash}`;

@@ -2,6 +2,13 @@
 // dictionary in i18n.js; a key here wins over an older one with the same name.
 export const UI_DICT = {
   zh: {
+    position_portfolio_sub: 'Demo 模拟投入与按协议实例核对的链上持仓。', position_demo_total: 'Demo 累计投入', position_demo_yield: 'Demo 目标收益',
+    position_reconciliation_warning: '链上持仓暂未完成核对，请稍后刷新。领取暂不可用。',
+    position_live: '链上持仓', position_empty: '暂无已确认的链上持仓', position_pool: '协议与池', position_asset: '结算资产', position_shares: '份额',
+    position_cost: '实际出资', position_claimable: '可领取', position_claimed: '已领取', position_status: '状态', position_claim: '领取', position_busy: '确认中…',
+    position_active: '持有中', position_fully_claimed: '已全部领取', position_refunded: '已退款', position_reconciling: '对账中', position_receipt: '交易回执',
+    position_claim_confirm: '领取该池的可分配回收资金并销毁份额。零回收时领取金额为 0。请在钱包核对交易。继续？',
+    cp_action_live_capital: 'v5 测试协议：支付 {amount} 个六位小数资产 {asset}，资金进入池托管。份额按比例分享实际回收，目标兑付不保证实现；募集截止后未达最低金额可按实际出资退款。',
     pref_load_failed: '项目偏好加载失败，操作已暂停。请重新选择项目后重试。',
     src_stale: '源观测已滞后或刷新失败，需要复核', src_mixed: '部分来源滞后、缺失或来自离线快照',
     risk_clear: '未见额外信号', wf_base: '基准锚点', wf_note_anchor: '低成本资金基准', wf_note_redemption: '目标兑付价值',
@@ -34,7 +41,6 @@ export const UI_DICT = {
     ec_aipick: 'AI 推荐',
     market_cases_loading: '正在加载项目…',
     market_route_same: '{place} · 仓内交货',
-    brand_tag_short: 'eBL 支撑的 RWA 投资',
     network_locked_hint: '已连接钱包时不能切换网络，请先断开钱包。',
     wallet_not_installed: '未安装',
     mode_switched_live: '已切换到真实模式',
@@ -178,6 +184,13 @@ export const UI_DICT = {
     cp_subtitle: '用一句话描述偏好，Copilot 从服务器的最新报价里推荐项目。'
   },
   en: {
+    position_portfolio_sub: 'Demo investments and Live holdings reconciled by protocol instance.', position_demo_total: 'Demo invested', position_demo_yield: 'Demo target yield',
+    position_reconciliation_warning: 'Live holdings need reconciliation. Refresh shortly; claims are temporarily unavailable.',
+    position_live: 'Live positions', position_empty: 'No confirmed Live positions', position_pool: 'Protocol and pool', position_asset: 'Settlement asset', position_shares: 'Shares',
+    position_cost: 'Paid', position_claimable: 'Claimable', position_claimed: 'Claimed', position_status: 'Status', position_claim: 'Claim', position_busy: 'Confirming…',
+    position_active: 'Active', position_fully_claimed: 'Fully claimed', position_refunded: 'Refunded', position_reconciling: 'Reconciling', position_receipt: 'Transaction receipt',
+    position_claim_confirm: 'Claim the available recovery and burn these shares. A zero recovery pays 0. Review the transaction in your wallet. Continue?',
+    cp_action_live_capital: 'v5 test protocol: pay {amount} units of the six-decimal asset {asset} into pool escrow. Shares distribute actual recovery proportionally; target redemption is not guaranteed. A failed minimum raise after the deadline refunds the amount paid.',
     pref_load_failed: 'Could not load project preferences. Actions are paused; select the project again to retry.',
     src_stale: 'Source observations are delayed or refresh failed; review required', src_mixed: 'Some sources are delayed, missing or offline snapshots',
     risk_clear: 'No extra signal', wf_base: 'Base anchor', wf_note_anchor: 'Low-cost funding basis', wf_note_redemption: 'Target redemption value',
@@ -210,7 +223,6 @@ export const UI_DICT = {
     ec_aipick: 'AI pick',
     market_cases_loading: 'Loading projects…',
     market_route_same: '{place} · in-warehouse',
-    brand_tag_short: 'eBL-backed RWA investing',
     network_locked_hint: 'Disconnect the wallet to switch networks.',
     wallet_not_installed: 'not installed',
     mode_switched_live: 'Switched to Live mode',

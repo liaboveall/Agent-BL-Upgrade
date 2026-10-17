@@ -219,7 +219,9 @@ function ActionProposal({ result }) {
       <p>{`${tData(action.label)} · ${tData(action.route)}`}</p>
       <p>{t('cp_action_cost', { amount: action.amount_usd.toFixed(6), price: action.price_usd.toFixed(6) })}</p>
       <p>{isReport ? t(`cp_report_${action.service_id}`) : t('cp_action_shares', { shares: action.shares })}</p>
-      <p className="muted">{t(action.mode === 'demo' ? 'cp_action_demo' : isReport ? 'cp_action_live_report' : 'cp_action_live_shares')}</p>
+      <p className="muted">{action.mode === 'live' && !isReport && action.chain?.protocol_version === 5
+        ? t('cp_action_live_capital', { amount: action.amount_usd.toFixed(6), asset: action.chain.settlement_asset })
+        : t(action.mode === 'demo' ? 'cp_action_demo' : isReport ? 'cp_action_live_report' : 'cp_action_live_shares')}</p>
       <p className="muted">{t('cp_action_expiry')}</p>
       <div className="cp-action-buttons">
         <Button variant="primary" className="cp-action-confirm" data-focus-key={`cp-confirm-${action.id}`} disabled={started} onClick={confirm}>

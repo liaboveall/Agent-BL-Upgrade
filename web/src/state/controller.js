@@ -482,16 +482,20 @@ export async function subscribeSelected() {
   }
 }
 
+let portfolioRequest = 0;
 export async function refreshPortfolio() {
   const wallet = walletAddress(), modeGeneration = get().modeGeneration;
+  const requestVersion = ++portfolioRequest;
+  if (get().portfolio.wallet !== wallet || get().portfolio.generation !== modeGeneration) set({ portfolio: { wallet, generation: modeGeneration, investments: [], positions: [], summary: null, error: null } });
   try {
     const response = await fetch('/api/investors/portfolio?wallet_address=' + encodeURIComponent(wallet));
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error);
-    if (wallet !== walletAddress() || modeGeneration !== get().modeGeneration) return;
-    set({ portfolio: { investments: data.investments, summary: data.summary, error: null } });
+    const positions = /^0x[0-9a-f]{40}$/iu.test(wallet) ? await api.getPositions(wallet) : { positions: [] };
+    if (requestVersion !== portfolioRequest || wallet !== walletAddress() || modeGeneration !== get().modeGeneration) return;
+    set({ portfolio: { wallet, generation: modeGeneration, investments: data.investments, positions: positions.positions, warning: positions.warning, summary: data.summary, error: null } });
   } catch (error) {
-    if (modeGeneration === get().modeGeneration) set((state) => ({ portfolio: { ...state.portfolio, error: error.message } }));
+    if (requestVersion === portfolioRequest && wallet === walletAddress() && modeGeneration === get().modeGeneration) set((state) => ({ portfolio: { ...state.portfolio, error: error.message } }));
   }
 }
 
@@ -609,7 +613,7 @@ async function restoreWalletIfSaved() {
 
 export async function connectWallet(walletType = 'metamask') {
   const { address, kind } = await web3.connectWallet(walletType);
-  set({ wallet: { address, walletType, kind } });
+  set({ wallet: { address, walletType, kind }, portfolio: { investments: [], positions: [], summary: null, error: null } });
   toast(t('wallet_connected_toast', { wallet: WALLET_LABELS[walletType] ?? walletType, network: get().networkName }));
   refreshPortfolio();
   return address;
@@ -630,7 +634,7 @@ export async function chooseWallet(walletType) {
 export async function disconnectWallet() {
   try {
     const { revoked } = await web3.disconnect();
-    set({ wallet: null });
+    set({ wallet: null, portfolio: { investments: [], positions: [], summary: null, error: null } });
     toast(t(revoked ? 't_wallet_disconnected' : 't_wallet_disconnected_local'));
     refreshPortfolio();
   } catch (error) {
@@ -715,7 +719,7 @@ export function subscribeToAgentActivity(caseId, { retry = false } = {}) {
 
 function wireWindowEvents() {
   window.addEventListener('agentbl:walletchange', (event) => {
-    if (!event.detail?.address) set({ wallet: null });
+    if (!event.detail?.address) set({ wallet: null, portfolio: { investments: [], positions: [], summary: null, error: null } });
     refreshPortfolio();
   });
   window.addEventListener('agentbl:portfoliochange', () => refreshPortfolio());

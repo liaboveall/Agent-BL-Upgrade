@@ -37,7 +37,7 @@ export function MarketPage() {
     node?.focus({ preventScroll: true });
   }, [focusRequest]);
 
-  const holdings = state.portfolio.investments?.length ?? 0;
+  const holdings = (state.portfolio.investments?.length ?? 0) + (state.portfolio.positions?.filter((position) => position.mode === 'live').length ?? 0);
   return (
     <div className="market">
       <header className="page-head">

@@ -152,7 +152,7 @@ function fakeChain(options = {}) {
   const events = [];
   const o = {
     state: 2, emergency: false, subscribed: 0, price: 800_000, target: 1_000_000, processed: false,
-    revert: null, receiptStatus: 1, logs: ['PricingUpdated', 'OfferingPaused'], processedLogs: [], waitMs: 0,
+    revert: null, receiptStatus: 1, logs: ['PricingUpdated', 'PricingDecision', 'OfferingPaused'], processedLogs: [], waitMs: 0,
     executorPool: false, ...options
   };
   const oracleAddress = '0x1111111111111111111111111111111111111111';
@@ -160,17 +160,25 @@ function fakeChain(options = {}) {
   const updater = '0x3333333333333333333333333333333333333333';
   const executorAddress = '0x4444444444444444444444444444444444444444';
   const blockHash = `0x${'ab'.repeat(32)}`;
-  const functions = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32)',
+  const functions = new Interface(['function updatePricing(uint256,uint256,uint8,uint8,bytes32,bytes32,uint256,uint256,uint256)',
     'function markInTransit(uint256,bytes32)', 'function recordImporterPayment(uint256,bytes32,uint256)',
+    'function recordAdditionalPayment(uint256,bytes32,uint256)',
     'function recordCargoArrival(uint256,bytes32)', 'function settle(uint256,uint256)']);
-  const initial = toChainPricingArgs({ ...baseQuote, pricing_action: 'PAUSE_OFFERING' }, { pool_id: 2 });
+  const initial = toChainPricingArgs({ ...baseQuote, pricing_action: 'PAUSE_OFFERING' }, {
+    pool_id: 2, expected_quote_version: 1, valid_until: 2_000_000_000, decision_seq: 1
+  });
   let transaction = { hash: TX, to: oracleAddress, from: updater, chainId: 1439n, value: 0n,
     data: functions.encodeFunctionData('updatePricing', [initial.pool_id, initial.issue_price_e6, initial.risk_level,
-      initial.pricing_action, initial.evidence_hash, initial.quote_hash]) };
+      initial.pricing_action, initial.evidence_hash, initial.quote_hash,
+      initial.expected_quote_version, initial.valid_until, initial.decision_seq]) };
   const receipt = () => ({ hash: transaction.hash, from: transaction.from, to: transaction.to,
     status: o.receiptStatus, blockNumber: o.receiptBlock ?? 12345, blockHash,
     logs: o.logs.map((name) => ({ name, address: o.logAddress ?? (name === 'PricingUpdated' ? oracleAddress : poolAddress) })) });
-  const parse = { parseLog: (log) => (log.name ? { name: log.name } : null), encodeFunctionData: functions.encodeFunctionData.bind(functions) };
+  const parse = {
+    parseLog: (log) => (log.name ? { name: log.name } : null),
+    encodeFunctionData: functions.encodeFunctionData.bind(functions),
+    parseTransaction: functions.parseTransaction.bind(functions)
+  };
   const staticCheck = async () => { if (o.revert) throw Object.assign(new Error('call exception'), { reason: o.revert }); };
   const updatePricing = Object.assign(async (...args) => {
     events.push('send');
@@ -198,7 +206,7 @@ function fakeChain(options = {}) {
     provider: {
       send: async () => o.chainId ?? '0x59f',
       getBlockNumber: async () => o.head ?? 20000,
-      getBlock: async () => ({ hash: o.blockHash ?? blockHash }),
+      getBlock: async () => ({ hash: o.blockHash ?? blockHash, timestamp: o.timestamp ?? Math.floor(Date.now() / 1000) }),
       getTransaction: async () => ({ ...transaction, ...o.transaction }),
       getTransactionReceipt: async (hash) => (o.pendingTx === hash ? null : { ...receipt(), ...o.receipt })
     },
@@ -207,7 +215,9 @@ function fakeChain(options = {}) {
     oracle: {
       target: oracleAddress,
       interface: parse,
+      getAddress: async () => oracleAddress,
       isDecisionProcessed: async () => o.processed,
+      lastDecisionSeq: async () => o.lastSeq ?? 0n,
       updatePricing,
       filters: { PricingUpdated: (id) => ({ id }) },
       queryFilter: async () => o.processedLogs
@@ -217,6 +227,7 @@ function fakeChain(options = {}) {
       interface: parse,
       stateOf: async () => o.state,
       emergencyStopped: async () => o.emergency,
+      quoteVersion: async () => o.version ?? 1n,
       offerings: async () => ({ subscribed: o.subscribed, issuePrice: o.price, targetRedemptionValue: o.target }),
       settlementProofs: async () => [ZERO, ZERO]
     }
@@ -239,27 +250,31 @@ const chainCmd = (action, extra = {}) => cmd(action, { chain_pool_id: 2, params:
 const makeExecutor = (context, extra = {}) => new ChainExecutor({ getContext: async () => context, txTimeoutMs: 200, ...extra });
 
 test('ChainExecutor: a PAUSE is sent once with the exact oracle arguments and confirmed from the receipt', async () => {
-  const context = fakeChain({ logs: ['PricingUpdated', 'OfferingPaused', 'OfferingStateChanged'] });
+  const context = fakeChain({ logs: ['PricingUpdated', 'PricingDecision', 'OfferingPaused', 'OfferingStateChanged'] });
   const submitted = [];
   const result = await makeExecutor(context).execute({ ...chainCmd('PAUSE'), onSubmitted: async (info) => submitted.push(info) });
   assert.equal(context.sent.length, 1);
   const expected = toChainPricingArgs({ ...baseQuote, pricing_action: 'PAUSE_OFFERING' }, { pool_id: 2 });
-  assert.deepEqual(context.sent[0], [expected.pool_id, expected.issue_price_e6, expected.risk_level, 3, expected.evidence_hash, expected.quote_hash]);
+  const [poolId, price, risk, action, evidence, quote, version, validUntil, seq] = context.sent[0];
+  assert.deepEqual([poolId, price, risk, action, evidence, quote], [expected.pool_id, expected.issue_price_e6, expected.risk_level, 3, expected.evidence_hash, expected.quote_hash]);
+  assert.equal(String(version), '1', 'quote version read from the pool');
+  assert.equal(String(seq), '1', 'next sequence for the pool');
+  assert.ok(BigInt(validUntil) > 1_700_000_000n, 'a bounded validity is attached');
   assert.deepEqual(
     { success: result.success, mode: result.mode, tx_hash: result.tx_hash, signer_role: result.signer_role, block: result.block_number },
     { success: true, mode: 'chain', tx_hash: TX, signer_role: 'PRICING_UPDATER', block: 12345 }
   );
   assert.equal(result.explorer_url, `https://explorer.example/tx/${TX}`);
-  assert.deepEqual(result.confirmed_events, ['PricingUpdated', 'OfferingPaused', 'OfferingStateChanged']);
+  assert.deepEqual(result.confirmed_events, ['PricingUpdated', 'PricingDecision', 'OfferingPaused', 'OfferingStateChanged']);
   assert.deepEqual(submitted, [{ tx_hash: TX, signer_role: 'PRICING_UPDATER' }], 'the hash is reported before waiting for the receipt');
 });
 
 test('ChainExecutor: each pricing action uses its oracle action code (RESUME = 6)', async () => {
   const cases = [
-    ['PAUSE', 2, ['PricingUpdated', 'OfferingPaused'], 3],
-    ['RESUME', 7, ['PricingUpdated', 'OfferingResumed'], 6],
-    ['FREEZE', 2, ['PricingUpdated', 'OfferingStateChanged'], 4],
-    ['LIQUIDATE', 2, ['PricingUpdated', 'OfferingStateChanged'], 5]
+    ['PAUSE', 2, ['PricingUpdated', 'PricingDecision', 'OfferingPaused'], 3],
+    ['RESUME', 7, ['PricingUpdated', 'PricingDecision', 'OfferingResumed'], 6],
+    ['FREEZE', 2, ['PricingUpdated', 'PricingDecision', 'OfferingFrozen'], 4],
+    ['LIQUIDATE', 2, ['PricingUpdated', 'PricingDecision', 'OfferingStateChanged'], 5]
   ];
   for (const [action, state, logs, code] of cases) {
     const context = fakeChain({ state, logs });
@@ -271,7 +286,7 @@ test('ChainExecutor: each pricing action uses its oracle action code (RESUME = 6
 
 test('ChainExecutor: REPRICE must lower the price and not exceed the redemption value', async () => {
   const lower = quoteFor({ final_issue_price_usd: 0.75 });
-  const context = fakeChain({ state: 2, logs: ['PricingUpdated', 'OfferingRepriced'] });
+  const context = fakeChain({ state: 2, logs: ['PricingUpdated', 'PricingDecision', 'OfferingRepriced'] });
   const ok = await makeExecutor(context).execute(chainCmd('REPRICE', { params: { quote: lower } }));
   assert.equal(ok.success, true);
   assert.equal(context.sent[0][1], 750_000);
@@ -356,7 +371,7 @@ test('ChainExecutor: a reverted receipt or missing events is a failure, not a su
 });
 
 test('ChainExecutor: one transaction per signer at a time, so nonces stay in order', async () => {
-  const context = fakeChain({ waitMs: 20, state: 2, logs: ['PricingUpdated', 'OfferingPaused'] });
+  const context = fakeChain({ waitMs: 20, state: 2, logs: ['PricingUpdated', 'PricingDecision', 'OfferingPaused'] });
   const executor = makeExecutor(context);
   // Two different decisions against the same signer, started together.
   const a = executor.execute(chainCmd('PAUSE', { params: { quote: quoteFor({ evidence_hash: `0x${'11'.repeat(32)}` }) } }));
@@ -382,7 +397,7 @@ test('ChainExecutor: executor-role actions go to an operator unless the optional
 });
 
 test('ChainExecutor: findTransaction resolves a submitted hash only once it is mined', async () => {
-  const context = fakeChain({ logs: ['PricingUpdated', 'OfferingPaused'] });
+  const context = fakeChain({ logs: ['PricingUpdated', 'PricingDecision', 'OfferingPaused'] });
   context.options.pendingTx = TX;
   const executor = makeExecutor(context);
   assert.equal(await executor.findTransaction(TX, 'PAUSE', chainCmd('PAUSE')), null);
@@ -429,10 +444,16 @@ test('helpers: proofToBytes32 and oracleDecisionId match what the contracts comp
   assert.equal(await proofToBytes32(hash), hash.toLowerCase());
   await assert.rejects(proofToBytes32('  '), { code: 'proof_required' });
 
-  const args = toChainPricingArgs({ ...baseQuote, pricing_action: 'PAUSE_OFFERING' }, { pool_id: 2 });
+  const oracleAddress = '0x1111111111111111111111111111111111111111';
+  const args = {
+    ...toChainPricingArgs({ ...baseQuote, pricing_action: 'PAUSE_OFFERING' }, {
+      pool_id: 2, expected_quote_version: 1, valid_until: 2_000_000_000, decision_seq: 4
+    }),
+    chain_id: 1439, oracle_address: oracleAddress
+  };
   const expected = keccak256(AbiCoder.defaultAbiCoder().encode(
-    ['uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'],
-    [2, args.issue_price_e6, 3, args.evidence_hash, args.quote_hash]
+    ['uint256', 'address', 'uint256', 'uint256', 'uint8', 'bytes32', 'bytes32', 'uint256', 'uint256'],
+    [1439, oracleAddress, 2, args.issue_price_e6, 3, args.evidence_hash, args.quote_hash, 1, 4]
   ));
   assert.equal(await oracleDecisionId(args), expected);
   assert.throws(() => new ChainExecutor({}), /getContext/u);

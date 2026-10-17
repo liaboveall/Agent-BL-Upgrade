@@ -1,0 +1,98 @@
+{
+  "schema": "agentbl-w2-local-validation-v1",
+  "date": "2026-10-17",
+  "timezone": "Asia/Singapore",
+  "base_head": "788db8a731de90862a62eb49d6d579e9fb34aa3f",
+  "source_sha256": "dfb00336a623497dd091a874a341d5d15d51292eda5daad37a8ee7bfd58e6c2a",
+  "scope": "local protocol v5 candidate, isolated EVM and automated UI; no real-funds or deployment acceptance",
+  "checks": {
+    "contracts": {
+      "passed": true,
+      "tests": 132,
+      "log": "logs/contracts-final-5.log",
+      "platform": "Windows Node 26.8.1"
+    },
+    "application": {
+      "passed": true,
+      "tests": 1333,
+      "failed": 0,
+      "log": "logs/coverage-final-3.log",
+      "platform": "Windows Node 26.8.1"
+    },
+    "coverage": {
+      "lines": 93.83,
+      "branches": 84.71,
+      "functions": 91.83,
+      "thresholds": {
+        "lines": 88,
+        "branches": 72,
+        "functions": 86
+      }
+    },
+    "real_evm_windows": {
+      "passed": true,
+      "tests": 6,
+      "skipped": 0,
+      "log": "logs/cross-layer-windows-final-9.log"
+    },
+    "real_evm_linux": {
+      "passed": true,
+      "tests": 6,
+      "skipped": 0,
+      "log": "logs/cross-layer-linux-final-10.log",
+      "platform": "WSL Linux Node 26.8.1"
+    },
+    "browser": {
+      "passed": true,
+      "tests": 10,
+      "log": "logs/browser-final-1.log",
+      "platform": "Windows Chromium, Playwright automated"
+    },
+    "lint": {
+      "passed": true,
+      "log": "logs/lint-final-3.log"
+    },
+    "build": {
+      "passed": true,
+      "log": "logs/build-final-1.log"
+    },
+    "check": {
+      "passed": true,
+      "log": "logs/check-final-3.log"
+    },
+    "diff": {
+      "passed": true,
+      "log": "logs/diff-check.log"
+    }
+  },
+  "contract": {
+    "protocol_version": 5,
+    "solidity": "0.8.24",
+    "evm": "paris",
+    "via_ir": true,
+    "optimizer_runs": 200,
+    "pool_deployed_bytecode_bytes": 23822,
+    "size_limit_bytes": 24576
+  },
+  "issues_implemented": [
+    "A09",
+    "B01",
+    "B02",
+    "B03",
+    "B12"
+  ],
+  "actions": {
+    "committed": false,
+    "pushed": false,
+    "deployed": false,
+    "remote_ci_run": false,
+    "existing_uncommitted_work_preserved": true
+  },
+  "remaining_boundaries": [
+    "independent review and v5 deployment",
+    "real funds and external institutions",
+    "real wallet human acceptance",
+    "production power-loss and off-host recovery",
+    "remote CI for this uncommitted tree"
+  ]
+}

@@ -69,11 +69,15 @@ contract RWAOfferingPool is Owned {
     AccessMode public accessMode = AccessMode.Permissionless;
     bool public emergencyStopped;
     uint256 public nextPoolId = 1;
-    uint256 public constant protocolVersion = 3;
+    uint256 public constant protocolVersion = 4;
     mapping(uint256 => uint256) public quoteVersion;
     mapping(uint256 => uint256) public maturityAt;
+    /// @notice Last instant at which new subscriptions are accepted. The subscription
+    ///         deadline is independent of the debt maturity (A05/A06).
+    mapping(uint256 => uint256) public subscriptionDeadline;
     mapping(uint256 => uint256) public realizedLoss;
     mapping(bytes32 => bool) public usedPaymentProof;
+    mapping(uint256 => OfferingState) private _stateBeforeFreeze;
 
     struct Offering {
         uint256 eblId;
@@ -135,6 +139,20 @@ contract RWAOfferingPool is Owned {
     event OfferingDefaulted(uint256 indexed poolId, uint256 outstandingAmount);
     event LossSettlementRecorded(uint256 indexed poolId, uint256 recoveredAmount, uint256 lossAmount, bytes32 resolutionHash);
     event AdditionalPaymentRecorded(uint256 indexed poolId, bytes32 paymentProof, uint256 amount, uint256 totalRecovered);
+    /// @notice Creation terms are written atomically with the offering (A05).
+    event OfferingTermsSet(uint256 indexed poolId, uint256 maturityAt, uint256 subscriptionDeadline);
+    event SubscriptionDeadlineSet(uint256 indexed poolId, uint256 subscriptionDeadline);
+    /// @notice Freezing is a risk action, not a pause; consumers must not conflate them (A10).
+    event OfferingFrozen(uint256 indexed poolId, bytes32 evidenceHash);
+    event OfferingUnfrozen(uint256 indexed poolId, OfferingState restoredState, bytes32 evidenceHash);
+    event LiquidationRecoveryRecorded(uint256 indexed poolId, bytes32 paymentProof, uint256 amount, uint256 totalRecovered);
+    event LiquidationResolved(
+        uint256 indexed poolId,
+        OfferingState outcome,
+        uint256 recoveredAmount,
+        uint256 lossAmount,
+        bytes32 resolutionHash
+    );
 
     modifier onlyExecutor() {
         require(msg.sender == owner || agentExecutor[msg.sender], "not executor");
@@ -193,12 +211,42 @@ contract RWAOfferingPool is Owned {
         return address(complianceGate) != address(0) && complianceGate.isEligible(investor, poolId);
     }
 
+    /// @notice Legacy creation entry point. Kept for clients that do not yet carry terms; it
+    ///         binds the historical 60-day default atomically so the maturity is still on-chain.
     function createOffering(
         uint256 eblId,
         uint256 tokenSupply,
         uint256 issuePrice,
         uint256 targetRedemptionValue
     ) external onlyOwner whenOperational returns (uint256 poolId) {
+        uint256 maturity = block.timestamp + 60 days;
+        return _createOffering(eblId, tokenSupply, issuePrice, targetRedemptionValue, maturity, maturity);
+    }
+
+    /// @notice Create an offering with the approved maturity and subscription deadline in one
+    ///         transaction (A05). The quote tenor and the debt terms cannot diverge later.
+    function createOfferingWithTerms(
+        uint256 eblId,
+        uint256 tokenSupply,
+        uint256 issuePrice,
+        uint256 targetRedemptionValue,
+        uint256 maturity,
+        uint256 subscribeUntil
+    ) external onlyOwner whenOperational returns (uint256 poolId) {
+        require(maturity > block.timestamp, "maturity elapsed");
+        require(subscribeUntil > block.timestamp, "deadline elapsed");
+        require(subscribeUntil <= maturity, "deadline>maturity");
+        return _createOffering(eblId, tokenSupply, issuePrice, targetRedemptionValue, maturity, subscribeUntil);
+    }
+
+    function _createOffering(
+        uint256 eblId,
+        uint256 tokenSupply,
+        uint256 issuePrice,
+        uint256 targetRedemptionValue,
+        uint256 maturity,
+        uint256 subscribeUntil
+    ) internal returns (uint256 poolId) {
         require(issuePrice > 0, "issuePrice=0");
         require(tokenSupply > 0, "supply=0");
         require(targetRedemptionValue >= issuePrice, "redemption<price");
@@ -221,19 +269,45 @@ contract RWAOfferingPool is Owned {
             exists: true
         });
         quoteVersion[poolId] = 1;
-        maturityAt[poolId] = block.timestamp + 60 days;
+        maturityAt[poolId] = maturity;
+        subscriptionDeadline[poolId] = subscribeUntil;
 
         emit OfferingCreated(poolId, eblId, tokenSupply, issuePrice, targetRedemptionValue);
+        emit OfferingTermsSet(poolId, maturity, subscribeUntil);
         emit OfferingStateChanged(poolId, OfferingState.Created, OfferingState.Open, OPEN_OFFERING);
     }
 
     function subscribe(uint256 poolId, uint256 amount) external whenOperational {
+        _subscribe(poolId, amount);
+    }
+
+    /// @notice Subscribe under the terms the user approved (A08): the unit price cannot exceed
+    ///         `maxUnitPrice`, the quote version cannot have moved, and both the user deadline and
+    ///         the offering deadline must still be open. Any mismatch reverts atomically.
+    function subscribeWithTerms(
+        uint256 poolId,
+        uint256 amount,
+        uint256 maxUnitPrice,
+        uint256 expectedQuoteVersion,
+        uint256 deadline
+    ) external whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.exists, "pool missing");
+        require(maxUnitPrice > 0, "maxUnitPrice=0");
+        require(o.issuePrice <= maxUnitPrice, "price above user limit");
+        require(quoteVersion[poolId] == expectedQuoteVersion, "quote version changed");
+        require(block.timestamp <= deadline, "user deadline elapsed");
+        _subscribe(poolId, amount);
+    }
+
+    function _subscribe(uint256 poolId, uint256 amount) internal {
         Offering storage o = offerings[poolId];
         require(o.exists, "pool missing");
         require(
             o.state == OfferingState.Open || o.state == OfferingState.Repriced || o.state == OfferingState.Subscribed,
             "not open"
         );
+        require(block.timestamp <= subscriptionDeadline[poolId], "subscription deadline elapsed");
         require(isInvestorEligible(msg.sender, poolId), "not eligible");
         require(amount > 0, "amount=0");
         require(o.subscribed + amount <= o.tokenSupply, "exceeds supply");
@@ -278,7 +352,8 @@ contract RWAOfferingPool is Owned {
         require(o.exists, "pool missing");
         require(o.subscribed == 0, "has subscribers");
         require(
-            o.state == OfferingState.Open || o.state == OfferingState.Repriced || o.state == OfferingState.Paused,
+            o.state == OfferingState.Open || o.state == OfferingState.Repriced || o.state == OfferingState.Paused
+                || o.state == OfferingState.Frozen || o.state == OfferingState.Liquidation,
             "illegal transition"
         );
         _changeState(poolId, OfferingState.Cancelled, CANCEL_OFFERING);
@@ -345,11 +420,41 @@ contract RWAOfferingPool is Owned {
     }
 
     /// @notice Terms may be set before investors subscribe; existing rights cannot be extended.
+    ///         New clients should bind them atomically with `createOfferingWithTerms`.
     function setMaturity(uint256 poolId, uint256 timestamp) external onlyOwner whenOperational {
         Offering storage o = offerings[poolId];
         require(o.exists && o.subscribed == 0 && o.state == OfferingState.Open, "terms locked");
         require(timestamp > block.timestamp, "maturity elapsed");
         maturityAt[poolId] = timestamp;
+        // Shortening maturity before any share is sold must also shorten the subscription
+        // cutoff; otherwise shares could still be sold after the debt matured.
+        if (subscriptionDeadline[poolId] > timestamp) {
+            subscriptionDeadline[poolId] = timestamp;
+            emit SubscriptionDeadlineSet(poolId, timestamp);
+        }
+        emit OfferingTermsSet(poolId, timestamp, subscriptionDeadline[poolId]);
+    }
+
+    /// @notice Move the subscription cutoff without touching debt terms, while no shares are sold.
+    function setSubscriptionDeadline(uint256 poolId, uint256 timestamp) external onlyOwner whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.exists && o.subscribed == 0 && o.state == OfferingState.Open, "terms locked");
+        require(timestamp > block.timestamp, "deadline elapsed");
+        require(timestamp <= maturityAt[poolId], "deadline>maturity");
+        subscriptionDeadline[poolId] = timestamp;
+        emit SubscriptionDeadlineSet(poolId, timestamp);
+    }
+
+    /// @notice Restore an offering from Frozen after an explicit, evidenced risk clearance.
+    ///         The pre-freeze state is restored; this never releases collateral or erases debt.
+    function unfreezeOffering(uint256 poolId, bytes32 evidenceHash) external onlyOwner whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.state == OfferingState.Frozen, "not frozen");
+        require(evidenceHash != bytes32(0), "evidenceHash=0");
+        OfferingState restored = _stateBeforeFreeze[poolId];
+        require(restored == OfferingState.Paused || _isActive(restored), "unfreeze state invalid");
+        _changeState(poolId, restored, RESUME_OFFERING);
+        emit OfferingUnfrozen(poolId, restored, evidenceHash);
     }
 
     function outstandingDebt(uint256 poolId) public view returns (uint256) {
@@ -390,6 +495,53 @@ contract RWAOfferingPool is Owned {
         _releaseCollateral(poolId, o.eblId);
     }
 
+    /// @notice Record one verified recovery while the collateral is being liquidated. Every entry
+    ///         keeps its own proof so recovery can be reconciled entry by entry (A04).
+    function recordLiquidationRecovery(
+        uint256 poolId,
+        bytes32 paymentProof,
+        uint256 amount
+    ) external onlyExecutor whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.state == OfferingState.Liquidation, "not liquidating");
+        require(o.subscribed > 0, "no subscribers");
+        require(paymentProof != bytes32(0) && !usedPaymentProof[paymentProof], "payment proof reused");
+        require(amount > 0, "repayment=0");
+        usedPaymentProof[paymentProof] = true;
+        o.repaymentAmount += amount;
+        emit LiquidationRecoveryRecorded(poolId, paymentProof, amount, o.repaymentAmount);
+    }
+
+    /// @notice Close a liquidation with a business-approved resolution. This is the only exit from
+    ///         Liquidation: full recovery settles the offering, a shortfall is recorded as a loss.
+    ///         Neither outcome releases the collateral before the resolution is authorised.
+    function resolveLiquidation(uint256 poolId, bytes32 resolutionHash) external onlyOwner whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.state == OfferingState.Liquidation, "not liquidating");
+        require(resolutionHash != bytes32(0), "resolution required");
+
+        if (o.subscribed == 0) {
+            _changeState(poolId, OfferingState.Cancelled, CANCEL_OFFERING);
+            emit OfferingCancelled(poolId, resolutionHash);
+            emit LiquidationResolved(poolId, OfferingState.Cancelled, 0, 0, resolutionHash);
+            _releaseCollateral(poolId, o.eblId);
+            return;
+        }
+
+        uint256 due = o.subscribed * o.targetRedemptionValue;
+        uint256 recovered = o.repaymentAmount;
+        if (recovered >= due) {
+            _changeState(poolId, OfferingState.Repaid, SETTLE_OFFERING);
+            emit LiquidationResolved(poolId, OfferingState.Repaid, recovered, 0, resolutionHash);
+        } else {
+            realizedLoss[poolId] = due - recovered;
+            _changeState(poolId, OfferingState.LossSettled, SETTLE_OFFERING);
+            emit LossSettlementRecorded(poolId, recovered, realizedLoss[poolId], resolutionHash);
+            emit LiquidationResolved(poolId, OfferingState.LossSettled, recovered, realizedLoss[poolId], resolutionHash);
+        }
+        _releaseCollateral(poolId, o.eblId);
+    }
+
     /// @notice Apply an AI pricing action coming from RiskPricingOracle.
     function applyPricingAction(
         uint256 poolId,
@@ -413,8 +565,9 @@ contract RWAOfferingPool is Owned {
         }
         if (action == FREEZE_POOL) {
             require(_isActive(o.state) || o.state == OfferingState.Paused, "illegal transition");
+            _stateBeforeFreeze[poolId] = o.state;
             _changeState(poolId, OfferingState.Frozen, action);
-            emit OfferingPaused(poolId, evidenceHash);
+            emit OfferingFrozen(poolId, evidenceHash);
             return;
         }
         if (action == TRIGGER_LIQUIDATION) {
@@ -501,10 +654,15 @@ contract RWAOfferingPool is Owned {
             || state == OfferingState.Repriced;
     }
 
-    /// @dev Settlement is only meaningful for a live offering that has investors: an
-    ///      offering nobody subscribed to has nothing to repay.
+    /// @dev Settlement is only meaningful for an offering that has investors: an offering nobody
+    ///      subscribed to has nothing to repay. Frozen offerings may still record verified
+    ///      recovery and settle, because freezing protects the investors' claim rather than
+    ///      erasing it (A02). Defaulted offerings keep accepting late recovery (A03).
     function _requireSettleable(Offering storage o) internal view {
-        require(_isActive(o.state) || o.state == OfferingState.Defaulted, "bad settlement state");
+        require(
+            _isActive(o.state) || o.state == OfferingState.Defaulted || o.state == OfferingState.Frozen,
+            "bad settlement state"
+        );
         require(o.subscribed > 0, "no subscribers");
     }
 }

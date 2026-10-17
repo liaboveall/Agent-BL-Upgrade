@@ -35,6 +35,7 @@ import { Scheduler } from './scheduler.js';
 import { planTransition } from './poolRules.js';
 import { hashSnapshot } from '../decisionLogger.js';
 import { createAgentVersion } from './agentVersion.js';
+import { protocolAbi } from '../../chain/protocolV4Abi.js';
 import { SETTLEMENT_ACTIONS, SETTLEMENT_SCHEMA, SettlementError, readSettlementState, verifyUsdcTransfer,
   validateSettlementStep, assertSettlementChain, samePaymentEvidence } from '../pipelines/settlementPipeline.js';
 
@@ -1142,8 +1143,9 @@ export class AgentService {
       }
     }
     const { Interface } = await import('ethers');
-    const abi = this.chainConfig?.abis?.[step.contract];
-    if (!abi) return { ok: false, errors: [`No ABI for ${step.contract}`], confirmed_events: [] };
+    const configured = this.chainConfig?.abis?.[step.contract];
+    if (!configured) return { ok: false, errors: [`No ABI for ${step.contract}`], confirmed_events: [] };
+    const abi = protocolAbi(step.contract, configured, this.chainConfig?.protocolVersion);
     const allowed = [];
     try {
       const contract = step.contract === 'EBLRegistry' ? context.registry : context.pool;
@@ -1151,7 +1153,9 @@ export class AgentService {
     } catch {
       return { ok: false, errors: ['Could not read the contract owner to check who sent the transaction'], confirmed_events: [] };
     }
-    if (context.signers?.AGENT_EXECUTOR && !['mintEBLV2', 'pledge', 'createOffering', 'cancelOffering'].includes(step.method)) allowed.push(context.signers.AGENT_EXECUTOR);
+    if (context.signers?.AGENT_EXECUTOR && !['mintEBLV2', 'pledge', 'createOffering', 'createOfferingWithTerms',
+      'cancelOffering', 'markDefault', 'settleLoss', 'resolveLiquidation', 'unfreezeOffering', 'setMaturity',
+      'setSubscriptionDeadline'].includes(step.method)) allowed.push(context.signers.AGENT_EXECUTOR);
     return verifyOwnerTx({ step, txHash, provider: context.provider, iface: new Interface(abi), allowedSenders: allowed });
   }
 

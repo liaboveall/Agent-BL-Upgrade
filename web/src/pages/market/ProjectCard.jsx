@@ -35,7 +35,7 @@ export function ProjectCard({ entry, state, now }) {
       onClick={() => selectCase(entry.case_id)}
     >
       <span className="deal-card-head">
-        <img className="deal-thumb" src={cargoImage(`${entry.case_id} ${bl.cargo || entry.cargo || ''}`)} alt="" width="44" height="44" loading="lazy" />
+        <img className="deal-thumb" src={cargoImage(bl.cargo || entry.cargo || entry.case_id, entry.case_id)} alt="" width="44" height="44" loading="lazy" />
         <span className="deal-title">
           <span className="deal-name" title={cargo}>{shortCargoName(cargo)}</span>
           <span className="deal-route" title={routeText(bl)}>{shortRoute(bl)}</span>

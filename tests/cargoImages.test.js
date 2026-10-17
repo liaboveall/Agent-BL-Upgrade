@@ -10,9 +10,9 @@ const root = path.join(import.meta.dirname, '..');
 const imageDir = path.join(root, 'public', 'img', 'cargo');
 
 test('every cargo picture the frontend can request exists as WebP', () => {
-  assert.equal(CARGO_TYPES.length, 6);
+  assert.equal(CARGO_TYPES.length, 8);
   for (const name of CARGO_TYPES) {
-    assert.equal(cargoImage(name), `/img/cargo/${name}.webp`);
+    assert.equal(cargoImage(name), `/img/cargo/${name}.webp?v=2`);
     const file = path.join(imageDir, `${name}.webp`);
     assert.ok(fs.existsSync(file), `public/img/cargo/${name}.webp is referenced but missing`);
     const header = fs.readFileSync(file).subarray(0, 12);
@@ -22,17 +22,25 @@ test('every cargo picture the frontend can request exists as WebP', () => {
 });
 
 test('each catalog case maps to the picture of its own cargo', () => {
-  const expected = { copper: /copper|cuconc|铜/iu, oil: /crude|oil|gasoil|diesel|原油|柴油/iu, ore: /iron ore|ironore|铁矿/iu, rubber: /rubber|橡胶/iu, soybean: /soy|大豆/iu, alu: /alu|铝/iu };
+  const expected = { copper: /copper|铜/iu, 'copper-concentrate': /cuconc|copper concentrate|铜精矿/iu,
+    oil: /crude|oil|原油/iu, diesel: /gasoil|diesel|成品油|柴油/iu, ore: /iron ore|ironore|铁矿/iu,
+    rubber: /rubber|橡胶/iu, soybean: /soy|大豆/iu, alu: /alu|铝/iu };
   const dir = path.join(root, 'data', 'cases');
-  const files = fs.readdirSync(dir).filter((name) => name.endsWith('.case.json'));
+  const files = [path.join(root, 'data', 'demo-case.json'), ...[dir, path.join(dir, 'archive')].flatMap((folder) =>
+    fs.readdirSync(folder).filter((name) => name.endsWith('.case.json')).map((name) => path.join(folder, name)))];
+  const images = new Set();
   assert.ok(files.length >= 5);
   for (const file of files) {
-    const data = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
     const cargo = data.bill_of_lading?.cargo ?? '';
     const type = cargoType(`${data.case_id ?? file} ${cargo}`);
     assert.ok(CARGO_TYPES.includes(type), `${file}: ${type}`);
     assert.match(`${data.case_id ?? file} ${cargo}`, expected[type], `${file} (${cargo}) got the ${type} picture`);
+    const image = cargoImage(cargo, data.case_id);
+    assert.ok(fs.existsSync(path.join(root, 'public', image.split('?')[0])), `${file}: missing ${image}`);
+    images.add(image);
   }
+  assert.equal(images.size, files.length, 'each catalog project, including historical and warehouse lots, has its own photo');
 });
 
 test('the cargo pictures stay web-sized', () => {

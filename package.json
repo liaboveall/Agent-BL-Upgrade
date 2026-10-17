@@ -50,7 +50,8 @@
     "agent:smoke": "node scripts/agent-live-smoke.mjs",
     "interop:demo": "node scripts/agent-interop-demo.mjs",
     "agent:verify-anchor": "node scripts/agent-verify-anchor.mjs",
-    "agent:anchor-plan": "node scripts/agent-anchor-plan.mjs"
+    "agent:anchor-plan": "node scripts/agent-anchor-plan.mjs",
+    "test:w2": "node scripts/test-w2.mjs"
   },
   "engines": {
     "node": ">=20.11"

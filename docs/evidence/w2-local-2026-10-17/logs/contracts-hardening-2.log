@@ -1,0 +1,186 @@
+
+> agentbl-contracts@0.1.0 test
+> hardhat test
+
+No contracts to compile
+
+Running Solidity tests
+
+
+Running Mocha tests
+
+
+  AgentBLRWA (browser demo contract)
+    [32m√[39m tokenizes an eBL, mints RWA = floor(financing*1e6/price) to the caller
+    [32m√[39m caps minted RWA at tokenSupply when financing exceeds it
+    [32m√[39m increments poolId per tokenize call
+    [32m√[39m reprices an offering on an in-transit event and emits Repriced
+    [32m√[39m rejects price=0 / supply=0 and reprice on a missing pool
+
+  AgentDecisionLog append-only decision commitments
+    [32m√[39m only the owner registers immutable versions and role permissions
+    [32m√[39m rejects empty version metadata, zero role addresses and unknown versions
+    [32m√[39m requires the explicit anchorer role, including for the owner, and permits revocation
+    [32m√[39m commits exact continuous ranges and events without duplicate or skipped sequences
+    [32m√[39m rejects empty roots, mismatched counts, reversed ranges and batches over 256
+    [32m√[39m verifies JavaScript-generated proofs on the real local contract (1 leaves)
+    [32m√[39m verifies JavaScript-generated proofs on the real local contract (3 leaves)
+    [32m√[39m verifies JavaScript-generated proofs on the real local contract (256 leaves)
+    [32m√[39m ownership transfer preserves batch history and does not implicitly grant the new owner an anchorer role
+    [32m√[39m deployment defaults to zero broadcasts and needs no signer, network, keys or filesystem
+    [32m√[39m deploys and initializes locally, merges only the new contract, verifies bytecode and resumes without retransmission (47ms)
+
+  RWAOfferingPool hardening
+    collateral: one eBL backs one live offering
+      [32m√[39m refuses a second offering on an eBL that already backs a live one
+      [32m√[39m frees the eBL when an unsubscribed offering is cancelled, so it can be offered again
+      [32m√[39m releases the pledge when an offering is repaid, so the eBL can move again
+      [32m√[39m prevents owner bypass of the pledge before settlement
+      [32m√[39m stops selling shares once the eBL is no longer pledged to the pool
+    pricing bounds
+      [32m√[39m never lets the oracle price an offering above its target redemption value
+      [32m√[39m REPRICE_DOWN has to lower the price
+      [32m√[39m allows a recovery: an OPEN action may raise a repriced offering again, up to the target
+      [32m√[39m rejects an out-of-range risk level at the oracle and a zero pool
+    settlement
+      [32m√[39m refuses proofs and settlement for an offering nobody subscribed to
+      [32m√[39m lets only the owner correct a mistaken importer payment, and keeps the audit trail
+      [32m√[39m validates a correction
+      [32m√[39m records the departure proof and the oracle / token wiring in the event log
+    cancelOffering
+      [32m√[39m is owner-only and needs an existing offering
+      [32m√[39m cannot cancel an offering that already has subscribers
+      [32m√[39m works from Open, Repriced and Paused, also during a global emergency stop
+      [32m√[39m rejects a second cancel and any state that is not cancellable
+    documented limitation
+      [32m√[39m subscribe records an amount owed but holds no funds (no payment leg yet)
+
+  EBLRegistry hardening
+    [32m√[39m registers a legacy document only once, whoever holds it
+    [32m√[39m only the owner can register eBLs, and a V2 cargo hash can never be registered twice
+    [32m√[39m only the holder can transfer or endorse, never while pledged, and never to a bad recipient
+
+  PaymentOracle ownership
+    [32m√[39m hands the contract over in two steps and moves the attestor role with it
+    [32m√[39m keeps an explicitly authorised attestor across an ownership transfer
+
+  two-step ownership of the protocol contracts
+    [32m√[39m registry: a transfer completes only when the nominee accepts
+    [32m√[39m token: a transfer completes only when the nominee accepts
+    [32m√[39m pool: a transfer completes only when the nominee accepts
+    [32m√[39m oracle: a transfer completes only when the nominee accepts
+    [32m√[39m gate: a transfer completes only when the nominee accepts
+    [32m√[39m a nomination can be replaced before it is accepted
+    [32m√[39m the new pool owner takes over the administrative powers
+    [32m√[39m the oracle updater role moves with ownership, like the deployer role it started as
+
+  AgentBLRWA hardening
+    [32m√[39m only the wallet that tokenized an offering can reprice it
+    [32m√[39m rejects out-of-range actions, risk levels and scores when repricing
+    [32m√[39m rejects out-of-range risk inputs when tokenizing
+
+  AgentBL contracts
+    [32m√[39m creates an offering and opens it
+    [32m√[39m lets an arbitrary testnet investor subscribe and mints RWA shares
+    [32m√[39m keeps testnet access permissionless by default
+    [32m√[39m writes evidence and quote hash on PricingUpdated and reprices the pool
+    [32m√[39m drives the pool into liquidation on a critical action
+    [32m√[39m rejects pricing updates from non-updaters
+
+  deploy-protocol.js smoke sequence
+    [32m√[39m testnet smoke keeps the repriced offering price when PAUSE commits a lower risk quote
+    [32m√[39m create -> subscribe -> reprice -> pause -> resume -> settle ends Repaid at the repriced issue price
+
+  EBLRegistry V2
+    [32m√[39m registers one unique cargo with structured trade metadata
+    [32m√[39m rejects duplicate cargoHash while accepting a distinct cargo
+    [32m√[39m records ordered transfer and endorsement history
+    [32m√[39m locks transfers while pledged and releases custody safely
+    [32m√[39m prevents an offering from opening before the eBL is pledged to that pool
+
+  RWAOfferingPool vs. reference model (randomised)
+    [32m√[39m agrees with the model on seed 11 (713ms)
+    [32m√[39m agrees with the model on seed 22 (746ms)
+    [32m√[39m agrees with the model on seed 33 (578ms)
+    [32m√[39m agrees with the model on seed 44 (375ms)
+    [32m√[39m agrees with the model on seed 55 (654ms)
+    [32m√[39m agrees with the model on seed 66 (660ms)
+      states reached: Cancelled, Frozen, Funded, InTransit, Liquidation, Open, Paused, Repaid, Subscribed
+    [32m√[39m the random walks actually reached the interesting states and rejections
+
+  RWAOfferingPool autonomous state machine (WEB3-15/16)
+    [32m√[39m allows permissionless testnet subscriptions but enforces a pluggable production gate
+    [32m√[39m lets only an authorized executor pause and resume the exact prior state
+    [32m√[39m resumes a paused offering through the oracle RESUME_OFFERING action
+    [32m√[39m requires payment and arrival proofs before settlement and rejects duplicates
+    [32m√[39m settles a fully funded offering and records an ordered legal lifecycle
+    [32m√[39m global emergency stop blocks autonomous and investor actions while preserving human pause
+    [32m√[39m rejects executor impersonation, illegal transitions and repayment mismatch
+    [32m√[39m rejects replaying one oracle decision
+
+  PaymentOracle
+    [32m√[39m binds report, case, original payment transaction, payer, asset and amount
+    [32m√[39m rejects a duplicate receipt id
+    [32m√[39m rejects replaying an original payment tx under a different receipt
+    [32m√[39m rejects zero receipt, report, case and payment transaction hashes
+    [32m√[39m rejects zero payer and asset addresses
+    [32m√[39m rejects a zero payment amount
+    [32m√[39m rejects unauthorised callers and supports owner-managed attestors
+    [32m√[39m only lets the owner manage attestors and exposes unknown-receipt failure
+
+  protocol v4 W1 regressions
+    A01: Liquidation always has an authorised exit
+      [32m√[39m records partial recovery entry by entry and closes as LossSettled without early release
+      [32m√[39m closes full recovery as Repaid and a zero-recovery liquidation as LossSettled
+      [32m√[39m returns an unsubscribed liquidation to Cancelled and releases the pledge
+    A02: every Frozen combination has a defined exit
+      [32m√[39m lets an unsubscribed frozen offering cancel, and a subscribed one settle after full recovery
+      [32m√[39m lets a frozen overdue offering default and an evidenced unfreeze restore the prior state
+    A05/A06: approved terms and subscription cutoff are on-chain from creation
+      [32m√[39m binds maturity and deadline atomically and refuses inconsistent terms
+      [32m√[39m refuses subscriptions after the deadline and keeps the maturity/deadline order when shortened
+    A07: quote freshness, version and order are enforced on-chain
+      [32m√[39m rejects expired, too-far, stale, replayed and wrong-version quotes
+      [32m√[39m does not let a quote prepared before a reprice overwrite the new price
+    A08: subscription is bound to price, version and deadline
+      [32m√[39m accepts only the approved price/version/deadline and rejects drift atomically
+
+  protocol v5 W2 regressions
+    [32m√[39m escrows funds and mints shares atomically on subscribe
+    [32m√[39m reverts if transfer fails, leaving no shares
+    [32m√[39m rejects subscription after deadline
+    [32m√[39m refunds investors when minRaise is not met
+    [32m√[39m disburses escrow to exporter after funded
+    [32m√[39m emits RepaymentReceived when exporter repays
+    [32m√[39m lets investors claim pro-rata after settlement (41ms)
+    [32m√[39m distributes partial recovery correctly in LossSettled (43ms)
+
+  protocol v5 capital safety and conservation
+    [32m√[39m rejects unsupported settlement assets and invalid funding terms
+    [32m√[39m rolls back both money and shares for insufficient balance, allowance, or failed mint (43ms)
+    [32m√[39m accepts a no-return ERC20 and rejects a taxed transfer without retaining funds (66ms)
+    [32m√[39m blocks transfer callbacks during subscribe and refund (42ms)
+    [32m√[39m binds quote version, price and user deadline, and never oversells
+    [32m√[39m finalizes a successful partial raise only after the deadline, preserving the minimum (39ms)
+    [32m√[39m refunds actual paid amounts after repricing even when every share sold below the minimum (45ms)
+    [32m√[39m does not accept a proof as funds and cannot borrow another pool escrow (44ms)
+    [32m√[39m settles 0 recovery with fees, dust, no double claim and no fee changes after claims (48ms)
+    [32m√[39m settles 1 recovery with fees, dust, no double claim and no fee changes after claims (51ms)
+    [32m√[39m settles 10000000 recovery with fees, dust, no double claim and no fee changes after claims (52ms)
+    [32m√[39m returns undistributed principal to investors when no exporter drawdown occurred (38ms)
+    [32m√[39m blocks every capital transfer while globally stopped
+
+  2026-10-17 review invariants (local candidate v3)
+    [32m√[39m preserves Open through all price updates and pause/resume
+    [32m√[39m preserves Subscribed through all price updates and pause/resume
+    [32m√[39m preserves Funded through all price updates and pause/resume
+    [32m√[39m preserves InTransit through all price updates and pause/resume
+    [32m√[39m retains collateral for one atomic unit of recovery; additional payments repay the original debt
+    [32m√[39m locks debt terms once shares are sold and records overdue loss resolution without calling it Repaid
+
+
+  123 passing (6s)
+
+
+123 passing (123 mocha)
+

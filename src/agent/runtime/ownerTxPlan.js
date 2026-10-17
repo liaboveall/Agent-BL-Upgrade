@@ -11,12 +11,13 @@ import { proofToBytes32 } from './executors/chainExecutor.js';
 import { buildOpeningPlan, OPENING_ACTIONS, positiveChainId } from './openingPlan.js';
 import { buildSettlementPlan, SETTLEMENT_ACTIONS } from '../pipelines/settlementPipeline.js';
 import { chainStateName, planTransition } from './poolRules.js';
+import { isAddress } from 'ethers';
 
 const POOL = 'RWAOfferingPool';
 
 export const OWNER_PLAN_ACTIONS = Object.freeze([...OPENING_ACTIONS, 'MARK_IN_TRANSIT',
   ...SETTLEMENT_ACTIONS, 'CANCEL', 'MARK_DEFAULT', 'SETTLE_LOSS', 'RESOLVE_LIQUIDATION', 'UNFREEZE',
-  'DISBURSE', 'REFUND', 'DEDUCT_FEE']);
+  'DISBURSE', 'REFUND', 'DEDUCT_FEE', 'FINALIZE_FUNDING']);
 
 const METHODS = {
   MARK_IN_TRANSIT: { method: 'markInTransit', events: ['DepartureRecorded'], describe: 'Record the departure proof and move the offering to InTransit' },
@@ -27,7 +28,7 @@ const METHODS = {
   UNFREEZE: { method: 'unfreezeOffering', events: ['OfferingUnfrozen'], describe: 'Restore a frozen offering after an evidenced risk clearance' },
   DISBURSE: { method: 'disburseToExporter', events: ['DisbursedToExporter'], describe: 'Disburse escrowed funds to the exporter' },
   REFUND: { method: 'refundInvestor', events: ['InvestorRefunded'], describe: 'Refund an investor after failed raise' },
-  CLAIM: { method: 'claim', events: ['Claimed'], describe: 'Claim repayment proceeds as an investor' },
+  FINALIZE_FUNDING: { method: 'finalizeFunding', events: ['FundingFinalized'], describe: 'Close a successful partial raise after its subscription deadline' },
   DEDUCT_FEE: { method: 'deductFee', events: ['FeeDeducted'], describe: 'Deduct a service fee from escrowed funds' }
 };
 
@@ -96,6 +97,14 @@ export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {
   }
 
   const args = [String(Number(poolId))];
+  const capitalAction = ['DISBURSE', 'REFUND', 'DEDUCT_FEE', 'FINALIZE_FUNDING'].includes(action);
+  if (capitalAction) {
+    if (Number(chainConfig.protocolVersion) !== 5 || !context?.pool) throw new OwnerPlanError('capital_protocol_required', 'This action requires a read-only v5 capital context');
+    if (Number(await context.pool.protocolVersion()) !== 5) throw new OwnerPlanError('protocol_identity_mismatch', 'The configured protocol is not v5');
+    if (['DISBURSE', 'DEDUCT_FEE'].includes(action) && (!/^\d+$/u.test(String(params.amount_atomic)) || BigInt(params.amount_atomic) === 0n)) throw new OwnerPlanError('invalid_amount', 'A positive atomic amount is required');
+    const recipient = action === 'DISBURSE' ? params.exporter : action === 'REFUND' ? params.investor : action === 'DEDUCT_FEE' ? params.fee_recipient : null;
+    if (recipient !== null && (!isAddress(recipient ?? '') || /^0x0{40}$/iu.test(recipient))) throw new OwnerPlanError('invalid_recipient', 'A nonzero EVM recipient is required');
+  }
   if (action === 'MARK_IN_TRANSIT') args.push(await proofToBytes32(params.departure_proof));
   if (action === 'CANCEL') args.push(await proofToBytes32(params.reason ?? 'agent-cancel'));
   if (action === 'SETTLE_LOSS') args.push(await proofToBytes32(params.resolution_hash ?? params.resolution));
@@ -104,6 +113,21 @@ export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {
   if (action === 'DISBURSE') args.push(String(params.amount_atomic), String(params.exporter), await proofToBytes32(params.evidence_hash ?? params.evidence));
   if (action === 'REFUND') args.push(String(params.investor));
   if (action === 'DEDUCT_FEE') args.push(String(params.amount_atomic), String(params.fee_recipient), await proofToBytes32(params.evidence_hash ?? params.evidence));
+
+  let eventChecks;
+  if (capitalAction) {
+    if (args.some((arg) => /^0x0{64}$/iu.test(arg))) throw new OwnerPlanError('evidence_required', 'Capital actions require nonzero evidence');
+    const owner = await context.pool.owner();
+    // The final contract preflight checks the deadline, balance, minimum and fee locks together.
+    await context.pool[spec.method].staticCall(...args, { from: owner });
+    const offering = await context.pool.offerings(poolId);
+    const eventArgs = { poolId: String(poolId) };
+    if (action !== 'FINALIZE_FUNDING') eventArgs.asset = offering.settlementAsset;
+    if (action === 'REFUND') eventArgs.investor = params.investor;
+    if (action === 'DISBURSE') eventArgs.amountAtomic = params.amount_atomic;
+    if (action === 'DEDUCT_FEE') eventArgs.feeAtomic = params.amount_atomic;
+    eventChecks = [{ name: spec.events[0], args: eventArgs }];
+  }
 
   return {
     network: chainConfig.network,
@@ -115,7 +139,8 @@ export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {
       method: spec.method,
       args,
       description: spec.describe,
-      expected_events: spec.events
+      expected_events: spec.events,
+      ...(eventChecks ? { chain_id: Number(chainConfig.chainIdDecimal), event_checks: eventChecks } : {})
     }]
   };
 }

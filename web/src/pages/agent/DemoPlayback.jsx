@@ -3,7 +3,7 @@ import { useStore } from '../../state/hooks.js';
 import { getLang, t, tData } from '../../lib/i18n.js';
 import { agent } from '../../lib/agent-api.js';
 import { toast } from '../../lib/toast.js';
-import { Badge, Button, Card, CardHead } from '../../components/ui.jsx';
+import { Badge, Button, Card, CardHead, Field } from '../../components/ui.jsx';
 import { openDecision as openDecisionEvent } from '../../features/evidence/References.jsx';
 import { agentStore, refresh } from './agent-store.js';
 
@@ -38,13 +38,17 @@ export function DemoPlayback() {
         <Badge tone={run.state === 'failed' ? 'crit' : 'muted'}>{t(`ac_demo_state_${run.state}`)}</Badge>
       </CardHead>
       <p className="muted small">{t('ac_demo_playback_note')}</p>
-      <div className="form-grid">
-        <select id="ac-demo-scenario" className="select" value={selected} disabled={run.active || pending} aria-label={t('ac_demo_scenario')} onChange={(event) => setSelected(event.target.value)}>
-          {scenarios.map((item) => <option key={item.name} value={item.name}>{localized(item.title)}</option>)}
-        </select>
-        <select id="ac-demo-speed" className="select" value={speed} disabled={run.active || pending} aria-label={t('ac_demo_speed')} onChange={(event) => setSpeed(event.target.value)}>
-          {['0.5', '1', '2', '5', '10'].map((value) => <option key={value} value={value}>{`${value}×`}</option>)}
-        </select>
+      <div className="demo-settings">
+        <Field label={t('ac_demo_scenario')} htmlFor="ac-demo-scenario">
+          <select id="ac-demo-scenario" className="select" value={selected} disabled={run.active || pending} onChange={(event) => setSelected(event.target.value)}>
+            {scenarios.map((item) => <option key={item.name} value={item.name}>{localized(item.title)}</option>)}
+          </select>
+        </Field>
+        <Field label={t('ac_demo_speed')} htmlFor="ac-demo-speed">
+          <select id="ac-demo-speed" className="select" value={speed} disabled={run.active || pending} onChange={(event) => setSpeed(event.target.value)}>
+            {['0.5', '1', '2', '5', '10'].map((value) => <option key={value} value={value}>{`${value}×`}</option>)}
+          </select>
+        </Field>
       </div>
       <div className="button-row">
         <Button variant="primary" data-focus-key="demo:run" disabled={run.active || pending || status?.autonomy?.effective !== 'auto'} onClick={() => call(false)}
@@ -52,7 +56,7 @@ export function DemoPlayback() {
         <Button variant="ghost" data-focus-key="demo:stop" disabled={!run.active || pending} onClick={() => call(true)}>{t('ac_demo_stop')}</Button>
       </div>
       {status?.autonomy?.effective !== 'auto' ? <p className="muted small">{t('ac_demo_needs_auto')}</p> : null}
-      <p role="status" aria-live="polite" aria-atomic="true" className="small">{t('ac_demo_progress', { done: scenario?.next_step ?? 0, total: scenario?.total_steps ?? 0 })}</p>
+      <p role="status" aria-live="polite" aria-atomic="true" className="small demo-progress">{t('ac_demo_progress', { done: scenario?.next_step ?? 0, total: scenario?.total_steps ?? 0 })}</p>
       {stages.length ? (
         <ol className="steps demo-steps">
           {stages.map((step, index) => (

@@ -136,18 +136,32 @@ export async function buildOpeningPlan({ params, chainConfig, context }) {
   const price = uint(quote.final_issue_price_usd, 'Issue price', 1_000_000);
   const target = uint(quote.target_redemption_value_usd, 'Target redemption', 1_000_000);
   requireThat(BigInt(price) <= BigInt(target), 'price_above_target', 'The proposed issue price exceeds the redemption target');
+  // A05: the quote's tenor becomes on-chain maturity in the same transaction that creates the
+  // offering. The subscription window is a separate, explicit cutoff (A06).
+  const tenorDays = Math.max(1, Number(quote.tenor_days ?? params.tenor_days ?? 60));
+  requireThat(Number.isSafeInteger(tenorDays) && tenorDays >= 1, 'invalid_tenor', 'Quote tenor must be a positive number of days');
+  const latest = context.provider?.getBlock ? await context.provider.getBlock('latest') : null;
+  const now = Number(latest?.timestamp ?? Math.floor(Date.now() / 1000));
+  const subscriptionDays = Math.min(Math.max(1, Number(params.subscription_days ?? 7)), tenorDays);
+  const maturityAt = now + tenorDays * 86_400;
+  const subscribeUntil = now + subscriptionDays * 86_400;
+  const terms = { tenor_days: tenorDays, start_at: now, maturity_at: maturityAt, subscription_deadline: subscribeUntil };
   const metadataHash = hashSnapshot({ case_data: caseData, documents: params.documents, compliance: params.compliance, quote_hash: quote.quote_hash });
   const registryAddress = chainConfig.contracts.EBLRegistry, poolAddress = chainConfig.contracts.RWAOfferingPool;
-  return { ...base, kind: 'create', holder, metadata_hash: metadataHash, steps: [
+  return { ...base, kind: 'create', holder, metadata_hash: metadataHash, terms, steps: [
     { index: 0, contract: 'EBLRegistry', address: registryAddress, method: 'mintEBLV2', args: [cargoHash, metadataHash, holder, metadata],
       description: 'Register the unregistered cargo and read its eBL ID from the verified mint receipt', expected_events: ['EBLMintedV2'],
       event_checks: [{ name: 'EBLMintedV2', args: { cargoHash, metadataHash, holder }, bind: { ebl_id: 'eblId' } }] },
     { index: 1, contract: 'EBLRegistry', address: registryAddress, method: 'pledge', args: [{ ref: 'ebl_id' }, poolAddress],
       description: 'Pledge the eBL identified by the verified mint receipt', expected_events: ['EBLPledged'],
       event_checks: [{ name: 'EBLPledged', args: { eblId: { ref: 'ebl_id' }, pool: poolAddress, holder } }] },
-    { index: 2, contract: 'RWAOfferingPool', address: poolAddress, method: 'createOffering', args: [{ ref: 'ebl_id' }, supply, price, target],
-      description: 'Create the offering and read its pool ID from the verified creation receipt', expected_events: ['OfferingCreated'],
-      event_checks: [{ name: 'OfferingCreated', args: { eblId: { ref: 'ebl_id' }, tokenSupply: supply, issuePrice: price, targetRedemptionValue: target }, bind: { pool_id: 'poolId' } }] }
+    { index: 2, contract: 'RWAOfferingPool', address: poolAddress, method: 'createOfferingWithTerms',
+      args: [{ ref: 'ebl_id' }, supply, price, target, String(maturityAt), String(subscribeUntil)],
+      description: 'Create the offering with its approved maturity and subscription deadline, and read its pool ID from the verified receipt',
+      expected_events: ['OfferingCreated', 'OfferingTermsSet'],
+      event_checks: [
+        { name: 'OfferingCreated', args: { eblId: { ref: 'ebl_id' }, tokenSupply: supply, issuePrice: price, targetRedemptionValue: target }, bind: { pool_id: 'poolId' } }
+      ] }
   ] };
 }
 
