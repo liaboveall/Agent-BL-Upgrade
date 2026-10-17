@@ -40,7 +40,7 @@
 
 | 文档 | 内容 |
 |---|---|
-| [contracts.md](./contracts.md) | 合约接口；§0 是当前 v2 实现、权限、状态机与已知限制 |
+| [contracts.md](./contracts.md) | 合约接口；§0 记载 v3 部署状态及历史 v2 接口、权限和限制 |
 | [wave-b.md](./wave-b.md) | 链上付费定价闭环与 MCP 的验证记录 |
 | [injective-runbook.md](./injective-runbook.md) | Injective 工程手册 |
 | [injective-precompile-integration.md](./injective-precompile-integration.md) | Bank / Exchange precompile 的集成决策 |
@@ -57,6 +57,7 @@
 
 | 文件 | 内容 |
 |---|---|
+| `protocol-v3-deployment-2026-10-17/` | 新核心合约的 7 笔真实测试网部署/初始化、字节码、旧资产保全与切换后回归 |
 | `review-2026-10-17/`、`remediation-2026-10-17/`、`delivery-2026-10-17/` | 基线反例、整改前后本地验证及提交前干净目录回归；不表示候选合约已部署 |
 | `wave-b-gate.json`、`wave-b-protocol.json`、`x402-live-smoke.json` | 测试网付费定价闭环、协议部署与 x402 实链付款 |
 | `injective-mcp-smoke.json` | 官方 Injective MCP 适配的冒烟记录 |

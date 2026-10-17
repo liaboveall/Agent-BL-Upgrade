@@ -5,7 +5,9 @@ import { cargoIdentityHash, cargoIdentityHashV2 } from '../../src/chain/cargoIde
 import { knownLivePool } from '../../src/agent/runtime/poolRegistry.js';
 
 export const OWNER = '0x1111111111111111111111111111111111111111';
-export const chainConfig = loadChainConfig();
+// This fixture exercises historical v2 associations even after the active deployment advances.
+const activeConfig = loadChainConfig();
+export const chainConfig = activeConfig.legacyProtocols?.find((entry) => entry.protocolVersion === 2)?.config ?? activeConfig;
 export const copper = JSON.parse(await fs.readFile(new URL('../../data/cases/archive/copper-sg-shanghai-2026-06.case.json', import.meta.url), 'utf8'));
 export const oil = JSON.parse(await fs.readFile(new URL('../../data/cases/crude-fuj-sin.case.json', import.meta.url), 'utf8'));
 

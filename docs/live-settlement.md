@@ -1,10 +1,10 @@
 # WP2.6：Live USDC 回执与结算
 
-> 2026-10-17：还需明确配置公共地址 `AGENT_SETTLEMENT_PAYER`，与 `AGENT_SETTLEMENT_RECIPIENT` 分开；未配置或 Transfer 来自其他付款方时失败关闭。SETTLE 核对 `已售整数份额 × 原始目标兑付值`，部分回款不能解押或标记 Repaid。追加回收、Defaulted/LossSettled 是本地 v3 合约候选，尚未部署，也没有自动付款/赔付功能。详见 [整改与迁移](project-remediation-2026-10-17.md)。
+> 2026-10-17：还需明确配置公共地址 `AGENT_SETTLEMENT_PAYER`，与 `AGENT_SETTLEMENT_RECIPIENT` 分开；未配置或 Transfer 来自其他付款方时失败关闭。SETTLE 核对 `已售整数份额 × 原始目标兑付值`，部分回款不能解押或标记 Repaid。追加回收、Defaulted/LossSettled 已随 v3 合约部署，但没有自动付款/赔付功能；本次仅部署初始化，没有运行 USDC 付款、到港证明、清偿或损失结清。详见 [整改与迁移](project-remediation-2026-10-17.md)。
 
 Live 管理员提交 USDC 转账哈希和还款金额，服务器读取实际交易及成功回执，核对测试网、既有 USDC 地址、收款地址、精确金额、确认数和规范区块后才接收证明。付款、到港证明分别批准并签名记录；链上两份证明都齐备后才提出独立的 SETTLE 审批。**合约只记录还款与证明，不托管或分配资金。**
 
-本地实现使用实际 ABI 编解码的隔离链桩验收。没有执行真实 USDC 转账、owner 交易或真实钱包试用；也没有改动或部署合约。
+本地实现使用实际 ABI 编解码的隔离链桩验收。结算路径尚未执行真实 USDC 转账、结算 owner 交易或真实钱包试用。协议部署初始化的 owner 交易独立记录在 [v3 部署证据](evidence/protocol-v3-deployment-2026-10-17/README.md)，不能替代结算验收。
 
 ## 配置与证据
 

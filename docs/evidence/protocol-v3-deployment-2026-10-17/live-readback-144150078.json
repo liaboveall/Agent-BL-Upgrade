@@ -1,0 +1,222 @@
+{
+  "schema": "agentbl-protocol-v3-live-verification-v1",
+  "checked_at": "2026-10-17T08:25:08.922Z",
+  "status": "PASS",
+  "chain_id": 1439,
+  "block_number": 144150078,
+  "block_hash": "0x7469e598771fa9317534a86ca916eeecffa767bd7fa18ab597257c41aac7b370",
+  "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+  "addresses": {
+    "EBLRegistry": "0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612",
+    "RWAToken": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+    "RWAOfferingPool": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+    "RiskPricingOracle": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F"
+  },
+  "owners": {
+    "EBLRegistry": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+    "RWAToken": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+    "RWAOfferingPool": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+    "RiskPricingOracle": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
+  },
+  "transactions": [
+    {
+      "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+      "label": "deploy:EBLRegistry",
+      "nonce": 39,
+      "tx_hash": "0x92cb5425833292a4fe03e595325c8b12c7cdfa5f5d2e0af9dd3c986b2bbe1bd0",
+      "address": "0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612",
+      "estimated_gas": "1914505",
+      "status": "CONFIRMED",
+      "block_number": 144149745,
+      "block_hash": "0x8384497fcf0fdc1f5be6c02864f17d409b02fb3b974b5a5c04392f8bc71fbbc3",
+      "receipt_gas_used": "1914505",
+      "receipt_effective_gas_price": "160000000",
+      "receipt_gas_cost_wei": "306320800000000",
+      "maximum_gas_fee_wei": "480000000000000"
+    },
+    {
+      "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+      "label": "deploy:RWAToken",
+      "nonce": 40,
+      "tx_hash": "0x43067e5e1235f5c9e70f43ab139a22b3ba3e6ad5897a060e3fc044c2816e4a85",
+      "address": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+      "estimated_gas": "417395",
+      "status": "CONFIRMED",
+      "block_number": 144149773,
+      "block_hash": "0x456a5d6c323c611af07c4cb532375db4d6df416066dd5fac84b48f465d76f511",
+      "receipt_gas_used": "417395",
+      "receipt_effective_gas_price": "160000000",
+      "receipt_gas_cost_wei": "66783200000000",
+      "maximum_gas_fee_wei": "160000000000000"
+    },
+    {
+      "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+      "label": "deploy:RWAOfferingPool",
+      "nonce": 41,
+      "tx_hash": "0x3674b349e51669de521f4989f35e15cd5dd9652d9e76f9d3f8ae6256f96c35d0",
+      "address": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+      "estimated_gas": "3116502",
+      "status": "CONFIRMED",
+      "block_number": 144149806,
+      "block_hash": "0xa9b9a19292090a3d8d0b447268e1a1158b36fdf88f5cf1677ef325b30a7d6a79",
+      "receipt_gas_used": "3116502",
+      "receipt_effective_gas_price": "160000000",
+      "receipt_gas_cost_wei": "498640320000000",
+      "maximum_gas_fee_wei": "800000000000000"
+    },
+    {
+      "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+      "label": "deploy:RiskPricingOracle",
+      "nonce": 42,
+      "tx_hash": "0xfd5afa06c5a23cb480496b35ce931025a4cdfe42b00195b587d12a765b10f60b",
+      "address": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F",
+      "estimated_gas": "585254",
+      "status": "CONFIRMED",
+      "block_number": 144149830,
+      "block_hash": "0x450d3ffcb233d5cacb5910f5700d0d03b85282b9090757dc413625e0193eb526",
+      "receipt_gas_used": "585254",
+      "receipt_effective_gas_price": "160000000",
+      "receipt_gas_cost_wei": "93640640000000",
+      "maximum_gas_fee_wei": "240000000000000"
+    },
+    {
+      "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+      "label": "RWAToken.setPool",
+      "nonce": 43,
+      "tx_hash": "0xbe3cfb81bc23588a8f544b6f8354f9a5a7e4f40074cfbb7c7b4c2467ed824cfd",
+      "address": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+      "estimated_gas": "47174",
+      "status": "CONFIRMED",
+      "block_number": 144149859,
+      "block_hash": "0xb23b9d47d268fedee1772a417a6293ee10452bd4bd03e7b17ada0e74673ea791",
+      "receipt_gas_used": "47174",
+      "receipt_effective_gas_price": "160000000",
+      "receipt_gas_cost_wei": "7547840000000",
+      "maximum_gas_fee_wei": "16000000000000"
+    },
+    {
+      "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+      "label": "RWAOfferingPool.setOracle",
+      "nonce": 44,
+      "tx_hash": "0x78d778423de8ef29893bc77cdfd36495f4d44b20e294ba637a2477fcc45c43a8",
+      "address": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+      "estimated_gas": "47601",
+      "status": "CONFIRMED",
+      "block_number": 144149881,
+      "block_hash": "0x44389939a64c9eeef33c75ccaa9a7deedc2e0ec23a6eda1c83eb6c78161d4605",
+      "receipt_gas_used": "47601",
+      "receipt_effective_gas_price": "160000000",
+      "receipt_gas_cost_wei": "7616160000000",
+      "maximum_gas_fee_wei": "16000000000000"
+    },
+    {
+      "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+      "label": "RiskPricingOracle.setUpdater",
+      "nonce": 45,
+      "tx_hash": "0x3968bef579f9dcb3d5aeb9974e2511e180736f71c141fa8e5071dc9587c15960",
+      "address": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F",
+      "estimated_gas": "47692",
+      "status": "CONFIRMED",
+      "block_number": 144149907,
+      "block_hash": "0x26fb2db24d6d653444859fae7aa67460a544cafa0b92574d7d8bf3094b6b3f6c",
+      "receipt_gas_used": "47692",
+      "receipt_effective_gas_price": "160000000",
+      "receipt_gas_cost_wei": "7630720000000",
+      "maximum_gas_fee_wei": "16000000000000"
+    }
+  ],
+  "bytecode": [
+    {
+      "name": "AgentBLRWA",
+      "address": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+      "status": "MATCH",
+      "runtime_keccak256": "0xcea9064a5cb2d3547f4ef75d7117df9f4fd4d2724b24c583985ea0679a45c1c0"
+    },
+    {
+      "name": "PaymentOracle",
+      "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+      "status": "MATCH",
+      "runtime_keccak256": "0x7b4df2f160c0b35b24aa5b8e9a04330476af5d862c6c5313ac7aed48904a96a4"
+    },
+    {
+      "name": "EBLRegistry",
+      "address": "0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612",
+      "status": "MATCH",
+      "runtime_keccak256": "0xd69f1868e14ef8545ab5c4fc5e8cccd1ead4e9e5dc83908db0e6a36c44b3525c"
+    },
+    {
+      "name": "RWAToken",
+      "address": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+      "status": "MATCH",
+      "runtime_keccak256": "0x8f12040360b068b49ccd26d96ace312ec65af41cc852ffe87a2cf6547f01942e"
+    },
+    {
+      "name": "RWAOfferingPool",
+      "address": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+      "status": "MATCH",
+      "runtime_keccak256": "0x84643672c362b5362b5e9396f1ba5498f0488bc30047a652c3fbabaceb072bec"
+    },
+    {
+      "name": "RiskPricingOracle",
+      "address": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F",
+      "status": "MATCH",
+      "runtime_keccak256": "0x21f945ac9cf4ef759d7738143e9cde0c66aaef3873fb649a9df191f1df4343da"
+    },
+    {
+      "name": "AgentDecisionLog",
+      "address": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+      "status": "MATCH",
+      "runtime_keccak256": "0xd640be8fcc656a2c8f1f5aa288f60de77356b202edafd051ade992130943167b"
+    }
+  ],
+  "wiring": {
+    "registry": "0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612",
+    "token": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+    "token_pool": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+    "oracle": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F",
+    "oracle_pool": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+    "protocol_version": 3,
+    "updater_allowed": true,
+    "emergency_stopped": false,
+    "access_mode": 0,
+    "next_ebl_id": 1,
+    "next_pool_id": 1
+  },
+  "legacy_assets_unchanged": true,
+  "legacy_pools": [
+    {
+      "pool_id": 1,
+      "state": "9",
+      "subscribed": "10000",
+      "owner_shares": "10000"
+    },
+    {
+      "pool_id": 2,
+      "state": "6",
+      "subscribed": "0",
+      "owner_shares": "0"
+    },
+    {
+      "pool_id": 3,
+      "state": "2",
+      "subscribed": "0",
+      "owner_shares": "0"
+    }
+  ],
+  "anchors": {
+    "batch_count": "0",
+    "last_seq": "0"
+  },
+  "owner_nonce": 46,
+  "owner_pending_nonce": 46,
+  "owner_balance_after_INJ": "0.633209158615",
+  "fees": {
+    "owner_balance_decrease_INJ": "0.001728",
+    "gas_limit_times_gas_price_INJ": "0.001728",
+    "receipt_gas_used_times_effective_price_INJ": "0.00098817968"
+  },
+  "activated_local_config": false,
+  "mainnet_writes": false,
+  "usdc_payments": false,
+  "synthetic_proofs": false
+}

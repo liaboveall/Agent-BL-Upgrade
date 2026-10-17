@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { Interface } from 'ethers';
 import { quoteFromCase } from '../src/core/pricingEngine.js';
-import { createAgentService, loadChainConfig } from '../src/agent/runtime/factory.js';
+import { createAgentService } from '../src/agent/runtime/factory.js';
+import { chainConfig as historicalChainConfig } from './helpers/opening.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
 import { ChainExecutor } from '../src/agent/runtime/executors/chainExecutor.js';
 import { CopilotService } from '../src/copilot/service.js';
@@ -61,7 +62,7 @@ async function runtime(t, { mode = 'live', dir, chain = fakeChain(), config = {}
   const service = createAgentService({ store: pools, env: {}, dir, now: clock.now, monitors: false,
     config: loadAgentConfig({ AGENT_COOLDOWN_SEC: '0', AGENT_APPROVAL_TTL_SEC: '60', ...config }),
     getMode: () => current.mode, getGeneration: () => current.generation, getChainContext: async () => chain.ctx,
-    chainConfig: loadChainConfig(), sleep: async () => {} });
+    chainConfig: historicalChainConfig, sleep: async () => {} });
   await service.start();
   t.after(() => service.stop());
   return { service, state: current, clock, chain, store: pools };

@@ -1,0 +1,49 @@
+{
+  "schema": "agentbl-v3-live-readonly-startup-v1",
+  "checked_at": "2026-10-17T08:30:59.271Z",
+  "status": "PASS",
+  "protocol_version": 3,
+  "contracts": {
+    "AgentBLRWA": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+    "PaymentOracle": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+    "EBLRegistry": "0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612",
+    "RWAToken": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+    "RWAOfferingPool": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+    "RiskPricingOracle": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F",
+    "AgentDecisionLog": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec"
+  },
+  "mode": "live",
+  "autonomy": {
+    "configured": "observe",
+    "effective": "observe",
+    "downgraded": false
+  },
+  "registry_file": "/tmp/agentbl-v3-readonly-eUerH3/protocol-v3-0xe8fdb7ec3638e84be43f3f8dbc2d4d3a93e829d6/agent-pools.json",
+  "mappings": [],
+  "pending_approvals": 0,
+  "watcher": {
+    "enabled": true,
+    "state": "healthy",
+    "poll_sec": 15,
+    "confirmations": 1,
+    "batch_blocks": 5000,
+    "start_block": 144149745,
+    "next_block": 144150743,
+    "last_block": 144150742,
+    "last_block_hash": "0xfa9be7c2e8ff71e3473b1de188662679f8fe1549dc1c9918bf7f46b7384cc8e3",
+    "latest_block": 144150742,
+    "confirmed_block": 144150742,
+    "lag_blocks": 0,
+    "last_poll_at": "2026-10-17T08:30:59.270Z",
+    "confirmed_at": "2026-10-17T08:30:59.270Z",
+    "max_stale_sec": 50,
+    "stale": false,
+    "retry_at": null,
+    "failures": 0,
+    "reconciliation_required": false,
+    "pools": [],
+    "last_error": null
+  },
+  "signers": {},
+  "chain_writes": 0
+}

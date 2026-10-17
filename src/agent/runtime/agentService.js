@@ -174,7 +174,7 @@ export class AgentService {
     const context = await this.getChainContext().catch(() => null);
     if (!context) return [];
     const { createChainReader } = await import('./poolRegistry.js');
-    const results = await this.registry.bootstrapLive(createChainReader(context));
+    const results = await this.registry.bootstrapLive(createChainReader(context), this.chainConfig?.knownLivePools);
     for (const result of results) {
       this.#activity('SYSTEM', result.linked ? 'POOL_LINKED' : 'POOL_LINK_SKIPPED', null, { case_id: result.case_id, chain_pool_id: result.chain_pool_id, reason: result.reason ?? null }, { caseId: result.case_id });
     }

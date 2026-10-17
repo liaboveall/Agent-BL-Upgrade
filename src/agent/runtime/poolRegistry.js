@@ -52,10 +52,11 @@ export class PoolRegistry {
   /**
    * @param {{file?: string|null, now?: ()=>Date, protectedChainPools?: number[]}} [options]
    */
-  constructor({ file = null, now = () => new Date(), protectedChainPools = [] } = {}) {
+  constructor({ file = null, now = () => new Date(), protectedChainPools = [], historyChainPools = HISTORY_CHAIN_POOLS } = {}) {
     this.file = file;
     this.now = now;
     this.protectedChainPools = new Set(protectedChainPools.map(Number));
+    this.historyChainPools = new Set(historyChainPools.map(Number));
     this.entries = new Map(); // case_id -> entry
     this.enqueueWrite = createWriteQueue();
     this.initialized = false;
@@ -120,7 +121,7 @@ export class PoolRegistry {
     const id = Number(chainPoolId);
     if (!caseId) throw new TypeError('case_id is required');
     if (!Number.isSafeInteger(id) || id < 1) throw new RangeError('chain_pool_id must be a positive integer');
-    if (HISTORY_CHAIN_POOLS.includes(id)) {
+    if (this.historyChainPools.has(id)) {
       throw new RegistryError('history_pool', `On-chain pool #${id} is history only (already in a terminal state)`);
     }
     const taken = [...this.entries.values()].find((entry) => entry.chain?.pool_id === id && entry.case_id !== caseId);
@@ -197,7 +198,7 @@ export class PoolRegistry {
     const existing = this.getByChainPoolId(id);
     if (existing) {
       if (existing.chain.ebl_id !== snapshot.ebl_id) throw new RegistryError('ebl_mismatch', 'Discovered collateral conflicts with the saved pool mapping');
-      const history = HISTORY_CHAIN_POOLS.includes(id) || ![...ACTIVE_STATES, 'Paused'].includes(snapshot.state);
+      const history = this.historyChainPools.has(id) || ![...ACTIVE_STATES, 'Paused'].includes(snapshot.state);
       if (existing.history_only !== history) {
         existing.history_only = history;
         this.entries.set(existing.case_id, existing);
@@ -208,7 +209,7 @@ export class PoolRegistry {
     if (this.get(caseId)?.chain) throw new RegistryError('case_already_linked', 'The case already maps to another on-chain pool');
     const entry = { case_id: caseId, pool_id: this.get(caseId)?.pool_id ?? caseId,
       chain: { pool_id: id, ebl_id: snapshot.ebl_id, contract: 'RWAOfferingPool' },
-      protected: this.protectedChainPools.has(id), history_only: HISTORY_CHAIN_POOLS.includes(id) || ![...ACTIVE_STATES, 'Paused'].includes(snapshot.state),
+      protected: this.protectedChainPools.has(id), history_only: this.historyChainPools.has(id) || ![...ACTIVE_STATES, 'Paused'].includes(snapshot.state),
       source: 'chain-watcher', linked_at: this.now().toISOString(), note: null };
     this.entries.set(caseId, entry);
     await this.#persist();

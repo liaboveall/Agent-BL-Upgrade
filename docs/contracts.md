@@ -4,9 +4,9 @@
 命名来源：以 `docs/PRD.md` v0.2 为准  
 范围：先定义可被 JS contract mock、Hardhat 合约和前端共同复用的最小接口，不做公开募资、不做 AMM、不承诺保本收益。
 
-> 2026-10-17 更新：当前源码含 **本地 v3 候选**，现有测试网仍为 v2。v3 调价保留生命周期，以已售份额目标债务核对清偿，并增加部分回收、到期违约和明确损失结清；registry owner 不能直接解除池子抵押。新状态追加在旧枚举之后。候选尚未部署，详见 [整改与迁移](project-remediation-2026-10-17.md)。下方 v2 表格描述旧部署，不能作为新源码或已部署修复的证明。
+> 2026-10-17 更新：**协议 v3 已部署并初始化**，4 个新核心合约、3 笔连接/角色交易，共 7 笔实链回执与 7 份当前合约字节码核验通过，见 [部署证据](evidence/protocol-v3-deployment-2026-10-17/README.md)。v3 调价保留生命周期，以已售份额原始目标债务核对清偿；支持追加回收、Defaulted/LossSettled，只有质押池能解押。新状态追加在旧枚举之后。旧 v2 资产、持仓、质押和回执留在原地址，未迁移或重铸；当前 v3 是空 Registry/Pool。下方历史 v2 接口表不能覆盖 v3 的状态规则。
 
-## 0. 现有测试网部署（v2）
+## 0. 当前 v3 部署与历史 v2 接口
 
 > **以源码为准。** 下面 §1–§7 是 WEB3-1 ~ WEB3-4 冻结时的最小接口设计，仍可当作接口说明阅读。合约之后演进到了 v2：数字编码（状态序号、动作码）以 `hardhat/contracts/*.sol` 为唯一事实来源，`tests/contractParity.test.js` 会校验 JS 常量与它一致，`hardhat/test/offeringModel.test.js` 用随机序列对照参考模型来验证状态机。
 
@@ -14,9 +14,9 @@
 
 | 项目 | 状态 |
 |---|---|
-| 链上（Injective EVM 测试网，chainId 1439） | 运行的是 **v2 字节码**：2026-10-12（UTC）重新部署，`npm run verify:bytecode` 确认六个合约都与本地构建一致；部署者与 owner 是 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，构造函数把它设为初始的 attestor / updater；服务器专用密钥已另行授权：attestor `0x0dAaa9093971eE7F0BD15f184E86C4fDAE6a1b70`、updater `0xEB43623667f1Add616D0FbdEBbbE067a0F195F79` |
-| 本仓库源码 | 已包含 v2 加固（见 0.3），**已在链上生效**；之后再改合约仍需重新部署 |
-| 重新部署（未来另行授权） | 原六份当前不改、不重部署；未来明确授权协议升级后才执行 `cd hardhat && npm run deploy:all`（需要持有测试网 INJ 的 `DEPLOYER_PRIVATE_KEY`），部署脚本会自动更新 `public/chain-config.json` |
+| 链上（Injective EVM 测试网，chainId 1439） | Registry、Token、Pool、Oracle 为 2026-10-17 v3 核心部署；另外 3 份辅助合约沿用旧地址。7 份字节码均匹配。owner 仍为 `0x9da22292D85e2A584ace6bb347D7054486b5ed6B`，现有专用 updater `0xEB43623667f1Add616D0FbdEBbbE067a0F195F79` 已获新 Oracle 授权 |
+| 本仓库源码 | v3 的定价阶段、全额清偿和解押权限已部署；托管、放款和投资者兑付仍未实现 |
+| 部署工具 | `scripts/deploy-protocol-v3.mjs` 默认只生成计划，真实发送须指定步骤；`scripts/verify-protocol-v3.mjs` 只读核验后才允许本地配置切换。旧 `deploy:all` 含历史 smoke，不用于 v3 升级 |
 | 对比链上与源码 | `npm run verify:bytecode`（只读，调用 `eth_getCode`）；加 `-- --strict` 可在两者不一致时返回非零退出码 |
 
 重新部署之后需要的运维动作：
@@ -29,7 +29,7 @@
 
 | 合约 | 作用 | 谁能写 |
 |---|---|---|
-| `EBLRegistry` | eBL 登记（货物唯一性、结构化元数据）、背书/转让历史、质押 | owner：`mintEBL` / `mintEBLV2`；持有人：`transfer` / `endorse`；持有人或 owner：`pledge`；被质押的池或 owner：`releasePledge` |
+| `EBLRegistry` | eBL 登记（货物唯一性、结构化元数据）、背书/转让历史、质押 | owner：`mintEBL` / `mintEBLV2`；持有人：`transfer` / `endorse`；持有人或 owner：`pledge`；v3 仅被质押的池：`releasePledge`（v2 历史上也允许 owner） |
 | `RWAToken` | 每个池的份额凭证（不可转让） | 仅池可 `mint`；owner：`setPool` / `setTransferPermission` |
 | `RWAOfferingPool` | 发行状态机与审计轨迹 | 见下表 |
 | `RiskPricingOracle` | 记录 AI 定价与风险并转发给池 | updater：`updatePricing`；owner：`setUpdater` |

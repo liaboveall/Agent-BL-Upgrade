@@ -61,19 +61,25 @@ export function loadChainConfig(network = CHAIN_NETWORK) {
  */
 export function createAgentService(options = {}) {
   const env = options.env ?? process.env;
-  const config = options.config ?? loadAgentConfig(env);
+  let config = options.config ?? loadAgentConfig(env);
   const store = options.store ?? storeState;
-  const dir = options.persist || options.dir ? (options.dir ?? runtimeDir(env)) : null;
+  const chainConfig = options.chainConfig === undefined ? loadChainConfig() : options.chainConfig;
+  const v3 = Number(chainConfig?.protocolVersion) >= 3;
+  if (v3 && !options.config && env.AGENT_PROTECTED_CHAIN_POOLS === undefined) config = { ...config, protectedChainPools: [] };
+  const baseDir = options.persist || options.dir ? (options.dir ?? runtimeDir(env)) : null;
+  // Never replay a legacy approval, watcher cursor or numbered pool against a replacement contract.
+  const dir = baseDir && v3 ? path.join(baseDir, `protocol-v3-${chainConfig.contracts.RWAOfferingPool.toLowerCase()}`) : baseDir;
   const file = (name) => (dir ? path.join(dir, name) : null);
   const modeController = options.demoModeController;
   const getMode = options.getMode ?? (() => modeController?.snapshot().mode ?? 'demo');
   const getGeneration = options.getGeneration ?? (() => modeController?.snapshot().generation ?? 1);
-  const chainConfig = options.chainConfig === undefined ? loadChainConfig() : options.chainConfig;
 
   const activity = options.activity ?? new ActivityLog({ store, mode: getMode, now: options.now });
   const logger = options.logger ?? new DecisionLogger({ filePath: file('agent-decisions.json'), clock: options.now });
   const approvals = options.approvals ?? new ApprovalQueue({ file: file('agent-approvals.json'), ttlSec: config.approvalTtlSec, maxRecords: config.maxDecisions, now: options.now });
-  const registry = options.registry ?? new PoolRegistry({ file: file('agent-pools.json'), protectedChainPools: config.protectedChainPools, now: options.now });
+  const registry = options.registry ?? new PoolRegistry({ file: file('agent-pools.json'),
+    protectedChainPools: config.protectedChainPools,
+    ...(v3 ? { historyChainPools: [] } : {}), now: options.now });
   const tracer = options.tracer ?? new Tracer({ file: file('agent-traces.jsonl'), wall: options.now ? () => options.now().getTime() : undefined });
   const bus = options.bus ?? new EventBus({
     handler: async () => {}, // replaced by the service
@@ -136,7 +142,7 @@ export function createAgentService(options = {}) {
   let watcherContext = null;
   const watcher = options.chainWatcher === false || !config.chainWatcherEnabled || !monitorsOn && !options.chainWatcher ? null
     : options.chainWatcher ?? new ChainWatcher({ file: file('agent-chain-cursor.json'), chainConfig,
-      confirmations: config.chainConfirmations, pollSec: config.chainPollSec, startBlock: config.chainStartBlock,
+      confirmations: config.chainConfirmations, pollSec: config.chainPollSec, startBlock: config.chainStartBlock ?? chainConfig?.watcherStartBlock ?? null,
       now: options.now, getContext: options.getWatcherContext ?? options.getChainContext ?? (async () => {
         if (!chainConfig) return null;
         watcherContext ??= await createChainContext({ chainConfig, env, readOnly: true });

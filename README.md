@@ -4,7 +4,7 @@ AgentBL 是一个以电子提单（eBL）为底层资产的贸易融资原型：
 
 > 原型项目，不构成投资建议。Demo 模式下的认购、付款和执行都是模拟的；Live 模式只在测试网运行，并且合约没有认购的付款环节（见下文"局限"）。
 
-2026-10-17 已根据全面评估整改定价、生命周期、资产身份、欠款、上传隐私、数据时效及前端状态一致性，详见 [整改记录与测试网迁移方案](docs/project-remediation-2026-10-17.md)。合约源码为本地 v3 候选，现有测试网地址仍是 v2；新开盘在旧版部署上会被迁移闸门阻止。浏览器 Demo 始终只模拟，LIVE 的独立上链实验需逐次确认。
+2026-10-17 已根据全面评估整改定价、生命周期、资产身份、欠款、上传隐私、数据时效及前端状态一致性，详见 [整改记录与测试网迁移方案](docs/project-remediation-2026-10-17.md)。协议 v3 已完成 4 份核心合约部署与 3 笔初始化，当前链配置已切换；[部署与实链核验](docs/evidence/protocol-v3-deployment-2026-10-17/README.md)记录全部 7 笔交易。旧 eBL/pool/持仓留在旧地址，未重铸或迁移。浏览器 Demo 始终只模拟，LIVE 的独立上链实验需逐次确认。
 
 ## 快速开始
 
@@ -102,21 +102,23 @@ npm run deploy:protocol   # 部署协议合约，需要 DEPLOYER_PRIVATE_KEY 和
 | 合约 | 地址 | 用途 |
 |---|---|---|
 | AgentBLRWA | [`0xEcD538011b889a7f79566d80A835C74cab2b4e0e`](https://testnet.blockscout.injective.network/address/0xEcD538011b889a7f79566d80A835C74cab2b4e0e) | 浏览器演示合约，一笔交易把 eBL 代币化 |
-| EBLRegistry | [`0x8152FE274497C84850Ce79822feA3B885295cf53`](https://testnet.blockscout.injective.network/address/0x8152FE274497C84850Ce79822feA3B885295cf53) | eBL 登记、货物防重复、质押 |
-| RWAOfferingPool | [`0x38c52c33FEC5cc430f19F573768671c47E63b310`](https://testnet.blockscout.injective.network/address/0x38c52c33FEC5cc430f19F573768671c47E63b310) | 发行生命周期状态机 |
-| RiskPricingOracle | [`0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC`](https://testnet.blockscout.injective.network/address/0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC) | AI 定价动作上链 |
-| RWAToken | [`0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C`](https://testnet.blockscout.injective.network/address/0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C) | 每池不可转让的份额凭证（不是 ERC-20） |
+| EBLRegistry | [`0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612`](https://testnet.blockscout.injective.network/address/0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612) | eBL 登记、货物防重复、质押 |
+| RWAOfferingPool | [`0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6`](https://testnet.blockscout.injective.network/address/0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6) | 发行生命周期状态机 |
+| RiskPricingOracle | [`0x4F0E48634a0811de0bD29f7e2738c69343ab836F`](https://testnet.blockscout.injective.network/address/0x4F0E48634a0811de0bD29f7e2738c69343ab836F) | AI 定价动作上链 |
+| RWAToken | [`0x541E3C70347F942e55A98EF76F744b145F88Ab8C`](https://testnet.blockscout.injective.network/address/0x541E3C70347F942e55A98EF76F744b145F88Ab8C) | 每池不可转让的份额凭证（不是 ERC-20） |
 | PaymentOracle | [`0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8`](https://testnet.blockscout.injective.network/address/0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8) | 把 x402 付款与付费报告绑定 |
 | AgentDecisionLog | [`0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec`](https://testnet.blockscout.injective.network/address/0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec) | 决策与版本承诺（已初始化，尚无批次） |
 
 地址以 [public/chain-config.json](public/chain-config.json) 为准（有测试保证本表与它一致）。
 
-测试网上的两个池：
+旧 v2 地址上的两个池（未迁移到 v3）：
 
-- **pool #3**（eBL #3）：当前的 Live 演示池。2026-10-16 用新铜案例 `CASE-EBL-CU-SIN-SHA` 开出，发行价 0.9893，证据见 [docs/evidence/live-opening-pool3.json](docs/evidence/live-opening-pool3.json)。
+- **pool #3**（eBL #3）：2026-10-16 的 Live 铜演示池，案例 `CASE-EBL-CU-SIN-SHA`，发行价 0.9893，证据见 [docs/evidence/live-opening-pool3.json](docs/evidence/live-opening-pool3.json)。
 - **pool #2**：**历史演示池**。2026-06 的铜案例，链上价格 0.7910 来自旧定价模型，只为链上记录保留，不对认购开放。
 
-详见 [docs/real-data.md](docs/real-data.md)。前六个是 2026-10-12 重新部署的 v2 版本，AgentDecisionLog 于 2026-10-15 部署。合约设计、权限和已知限制见 [docs/contracts.md](docs/contracts.md)；链上付费定价闭环的证据见 [docs/wave-b.md](docs/wave-b.md)，可用 `npm run verify:wave-b -- --dry-run` 只读复验。
+当前 v3 Registry 与 Pool 为空；新池编号从 1 开始，必须与新合约地址一起解释。旧提单仍被拒绝重新铸造，旧审批与监听游标保留在旧 runtime。
+
+详见 [docs/real-data.md](docs/real-data.md)。EBLRegistry、RWAToken、RWAOfferingPool、RiskPricingOracle 于 2026-10-17 升级为 v3 核心部署；AgentBLRWA、PaymentOracle 沿用 2026-10-12 地址，AgentDecisionLog 沿用 2026-10-15 地址。旧 v2 历史位于 chain-config 的 legacyProtocols 和独立部署证据中。合约设计、权限和已知限制见 [docs/contracts.md](docs/contracts.md)；链上付费定价闭环的证据见 [docs/wave-b.md](docs/wave-b.md)，旧 Wave B 回执继续按归档 v2 地址核验；当前 v3 Registry 不包含这些旧资产，不能用旧脚本在新地址重铸。
 
 ## 目录结构
 

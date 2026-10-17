@@ -3,7 +3,7 @@
 import crypto from 'node:crypto';
 import { Interface, isAddress } from 'ethers';
 import { readJson, writeJsonAtomic } from '../../../lib/jsonStore.js';
-import { cargoIdentityHash } from '../../../chain/cargoIdentity.js';
+import { cargoIdentityHash, cargoIdentityHashV2 } from '../../../chain/cargoIdentity.js';
 import { hashSnapshot } from '../../decisionLogger.js';
 import { chainStateName } from '../poolRules.js';
 import { KNOWN_LIVE_POOLS } from '../poolRegistry.js';
@@ -210,7 +210,16 @@ export class ChainWatcher {
         })));
         const deploymentStart = Math.min(...starts);
         const start = this.startBlock === null ? deploymentStart : integer(this.startBlock, 'start block');
-        if (start > deploymentStart) throw new WatcherError('start_block_skips_deployment', 'Start block may not skip deployed contract history');
+        // A reviewed replacement starts a new protocol epoch. Only unchanged auxiliary
+        // contracts explicitly preserved in its legacy archive may predate that epoch.
+        const epoch = Number(this.chainConfig.protocolVersion) >= 3 && start === this.chainConfig.watcherStartBlock;
+        const skipsUnarchivedHistory = descriptors.some(({ name, address }, i) => starts[i] < start
+          && !(epoch && ['AgentBLRWA', 'PaymentOracle', 'AgentDecisionLog'].includes(name)
+            && this.chainConfig.legacyProtocols?.some(({ config }) => same(config?.contracts?.[name], address)
+              && (Number(config?.deployments?.[name]?.blockNumber) === starts[i]
+                || HASH.test(config?.deployments?.[name]?.deployTx ?? '')
+                  && same(config.deployments[name].deployTx, this.chainConfig.deployments[name].deployTx)))));
+        if (start > deploymentStart && skipsUnarchivedHistory) throw new WatcherError('start_block_skips_deployment', 'Start block may not skip deployed contract history');
         this.saved = { version: 2, identity, start_block: start, next_block: start, last_block: null,
           last_block_hash: null, snapshots: {}, reconciliation_required: false };
       }
@@ -387,10 +396,12 @@ export class ChainWatcher {
   }
 
   #caseForPool(service, snapshot) {
-    const known = KNOWN_LIVE_POOLS.find((p) => p.chain_pool_id === snapshot.pool_id && p.ebl_id === snapshot.ebl_id);
+    const known = (this.chainConfig.knownLivePools ?? KNOWN_LIVE_POOLS)
+      .find((p) => p.chain_pool_id === snapshot.pool_id && p.ebl_id === snapshot.ebl_id && same(p.cargo_hash, snapshot.cargo_hash));
     if (known) return known.case_id;
     const candidates = [...service.store.pools.values()].filter((pool) => {
-      try { return pool.caseData?.bill_of_lading && same(cargoIdentityHash(pool.caseData), snapshot.cargo_hash); } catch { return false; }
+      try { return pool.caseData?.bill_of_lading && same(Number(this.chainConfig.protocolVersion) >= 3
+        ? cargoIdentityHashV2(pool.caseData) : cargoIdentityHash(pool.caseData), snapshot.cargo_hash); } catch { return false; }
     });
     if (candidates.length === 1 && !service.registry.get(candidates[0].caseData.case_id)?.chain) return candidates[0].caseData.case_id;
     return `chain:${this.chainConfig.chainIdDecimal}:offering:${snapshot.pool_id}`;

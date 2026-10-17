@@ -1,6 +1,6 @@
 # 🚀 AgentBL 部署指南
 
-2026-10-17 整改版本包含本地 v3 合约候选，现有链地址仍为 v2。应用升级不等于链上升级；新开盘在旧合约上会失败关闭。部署前先审阅 [候选迁移方案](project-remediation-2026-10-17.md)，不能直接使用 `deploy:all` 覆盖既有生命周期。
+2026-10-17 的协议 v3 已部署并初始化，见 [7 笔测试网交易与核验](evidence/protocol-v3-deployment-2026-10-17/README.md)。`public/chain-config.json` 指向新核心地址并完整归档 v2；旧池与持仓留在旧合约，没有重铸或迁移。Agent 的审批、决策、事件、游标与映射按新 pool 地址隔离，旧 runtime 文件保留。重新部署应使用生成计划和逐步核验的工具，不能用旧 `deploy:all` 跑含虚构结算证明的 smoke。
 
 私有单证使用 HttpOnly / SameSite 工作区 cookie，Live 仍另需管理员令牌。代理应保留 cookie，并在 HTTPS 终结层设置 Secure；旧上传没有工作区归属时由管理员恢复读取，不自动分配给匿名浏览器。该机制不替代生产身份系统。回款还需 `AGENT_SETTLEMENT_PAYER` 指定核对过的进口商付款地址，不能从任意 Transfer 自动推定。
 

@@ -14,7 +14,8 @@ export const hash = (n) => `0x${BigInt(n).toString(16).padStart(64, '0')}`;
 export const ZERO = hash(0);
 
 export function watcherChain({ latest = 110 } = {}) {
-  const chainConfig = structuredClone(loadChainConfig());
+  const active = loadChainConfig();
+  const chainConfig = structuredClone(active.legacyProtocols?.find((entry) => entry.protocolVersion === 2)?.config ?? active);
   for (const deployment of Object.values(chainConfig.deployments)) deployment.blockNumber = 100;
   const state = { latest, network: 1439, headStop: false, confirmedStop: false, failLogs: false, logs: [], calls: [], blockOverrides: new Map(), pools: new Map() };
   const block = (n) => ({ number: n, hash: state.blockOverrides.get(n) ?? hash(n), timestamp: 1791979200 + n });

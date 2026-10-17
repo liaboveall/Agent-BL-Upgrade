@@ -358,7 +358,7 @@ test('decisions, activity, approvals and event state survive a restart; a duplic
   const approved = await second.service.approve(approval.approval_id);
   assert.equal(approved.decision.status, 'COMPLETED');
   for (const file of ['agent-decisions.json', 'agent-approvals.json', 'agent-event-index.json', 'agent-events.jsonl', 'agent-traces.jsonl', 'agent-pools.json', 'agent-activity.jsonl']) {
-    await fs.access(path.join(dir, file));
+    await fs.access(path.join(file === 'agent-activity.jsonl' ? dir : path.dirname(second.service.registry.file), file));
   }
 });
 
@@ -370,7 +370,7 @@ test('a replayed event whose decision already exists does not decide again', asy
   const decision = await lastDecision(service);
   // The bus index is lost (e.g. restored from an older backup) but the decision log remains.
   await service.stop(); // Release the exclusive Phase 7 sequence writer before simulating a restart.
-  await fs.rm(path.join(dir, 'agent-event-index.json'), { force: true });
+  await fs.rm(path.join(path.dirname(service.registry.file), 'agent-event-index.json'), { force: true });
   const fresh = await demoService({ dir, withIron: true });
   const result = await settle(fresh.service, replayed);
   assert.equal(result.accepted, true);

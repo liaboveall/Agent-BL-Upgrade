@@ -1,0 +1,14 @@
+✔ v3 deployment: the only seven transactions are four creations and necessary wiring; exact nonces, gas and artifacts are bound (8.820123ms)
+✔ v3 deployment: an accepted broadcast timeout reconciles the same hash; all seven receipts and exact wiring events verify (63.165526ms)
+✔ v3 deployment: changed artifacts, wrong nonce, missing dependencies and excess estimates all stop before signing/broadcast (1.941186ms)
+✔ v3 runtime: replacement addresses isolate persisted approvals and pool numbers; legacy state is retained (254.31827ms)
+✔ v3 watcher: a replacement pool with number 2 resolves its title instead of the historical copper case (26.269148ms)
+✔ v3 watcher: a reviewed epoch can omit archived auxiliary history but cannot skip new core or unarchived history (24.489696ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6921.334369

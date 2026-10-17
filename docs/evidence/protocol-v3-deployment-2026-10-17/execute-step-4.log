@@ -1,0 +1,15 @@
+{
+  "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+  "label": "RWAToken.setPool",
+  "nonce": 43,
+  "tx_hash": "0xbe3cfb81bc23588a8f544b6f8354f9a5a7e4f40074cfbb7c7b4c2467ed824cfd",
+  "address": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+  "estimated_gas": "47174",
+  "status": "CONFIRMED",
+  "block_number": 144149859,
+  "block_hash": "0xb23b9d47d268fedee1772a417a6293ee10452bd4bd03e7b17ada0e74673ea791",
+  "receipt_gas_used": "47174",
+  "receipt_effective_gas_price": "160000000",
+  "receipt_gas_cost_wei": "7547840000000",
+  "maximum_gas_fee_wei": "16000000000000"
+}

@@ -1,0 +1,93 @@
+{
+  "schema": "agentbl-protocol-v3-deployment-closeout-v1",
+  "captured_at": "2026-10-17T16:35:20.129102+08:00",
+  "baseline_commit": "8afdb2c2672613773857f8ede905389bd379f6cb",
+  "authorization": "Direct user request: \u90e8\u7f72\uff0c\u5e76\u6267\u884c\u9700\u8981\u7684\u4ea4\u6613; protocol v3 deployment and necessary initialization only",
+  "network": "injective-testnet",
+  "chain_id": 1439,
+  "plan_sha256": "1a7263e2e5d13c19a7d1da52a4ff43a1d1a8323a62533d2118206e4c5cce3e90",
+  "real_transactions": 7,
+  "new_contracts": 4,
+  "initializations": 3,
+  "active_contracts": {
+    "AgentBLRWA": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+    "PaymentOracle": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+    "EBLRegistry": "0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612",
+    "RWAToken": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+    "RWAOfferingPool": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+    "RiskPricingOracle": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F",
+    "AgentDecisionLog": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec"
+  },
+  "bytecode_matches": 7,
+  "legacy_assets_unchanged": true,
+  "new_ebls": 0,
+  "new_offerings": 0,
+  "new_subscriptions": 0,
+  "fees": {
+    "owner_balance_decrease_INJ": "0.001728",
+    "gas_limit_times_gas_price_INJ": "0.001728",
+    "receipt_gas_used_times_effective_price_INJ": "0.00098817968"
+  },
+  "owner_nonce": 46,
+  "owner_pending_nonce": 46,
+  "validation": {
+    "build": "PASS",
+    "lint": "PASS",
+    "node": {
+      "tests": 1311,
+      "pass": 1311,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "coverage_pct": {
+      "lines": 94.67,
+      "branches": 85.21,
+      "functions": 92.59
+    },
+    "contracts": {
+      "pass": 92,
+      "scope": "local EVM; preflight"
+    },
+    "browser": {
+      "startTime": "2026-10-17T08:26:50.208Z",
+      "duration": 21744.083000000002,
+      "expected": 8,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "agent_gates": {
+      "pass": 20,
+      "total": 20,
+      "live_llm": "SKIP"
+    },
+    "preflight": {
+      "PASS": 66,
+      "WARN": 0,
+      "SKIP": 5,
+      "FAIL": 0
+    },
+    "live_readonly_watcher": {
+      "state": "healthy",
+      "lag_blocks": 0,
+      "signers": 0,
+      "broadcasts": 0
+    }
+  },
+  "delivery_state_at_capture": {
+    "new_commit": "PENDING",
+    "push": "PENDING",
+    "matching_remote_ci": "PENDING"
+  },
+  "boundaries": {
+    "mainnet": false,
+    "usdc_payment": false,
+    "payment_or_arrival_proof": false,
+    "legacy_pool_mutation": false,
+    "anchor_batch": false,
+    "background_anchoring": false,
+    "public_application_hosting": false,
+    "production_release": false
+  }
+}
