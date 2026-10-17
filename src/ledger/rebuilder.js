@@ -31,7 +31,7 @@ export class ChainEventRebuilder {
 
     for (const log of logs) {
       const logIndex = Number(log.index ?? log.logIndex);
-      const sourceKey = `${log.transactionHash}:${logIndex}`;
+      const sourceKey = `${log.transactionHash.toLowerCase()}:${logIndex}`;
       if (seen.has(sourceKey)) continue;
 
       const parsed = iface.parseLog(log);
