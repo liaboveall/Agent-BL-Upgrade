@@ -67,6 +67,43 @@ export class Ledger {
     return entry;
   }
 
+  async applyEvent(event) {
+    const entry = await this.recordCashEntry(event);
+    const investor = event.kind === 'INVESTOR_DEPOSIT' ? event.from : event.to;
+    if (!investor) return { entry };
+
+    const positions = await this.writer.readPositions();
+    const key = `${Ledger.protocolInstanceKey(event.protocol_instance)}:${event.chain_pool_id}:${investor.toLowerCase()}`;
+    const pos = positions[key] ?? {
+      position_id: crypto.randomUUID(),
+      protocol_instance: event.protocol_instance,
+      chain_pool_id: event.chain_pool_id,
+      investor: investor.toLowerCase(),
+      asset: event.asset.toLowerCase(),
+      shares: '0',
+      cost_atomic: '0',
+      claimed_atomic: '0',
+      status: 'active'
+    };
+
+    if (event.kind === 'INVESTOR_DEPOSIT') {
+      pos.shares = (BigInt(pos.shares) + BigInt(event.shares)).toString();
+      pos.cost_atomic = (BigInt(pos.cost_atomic) + BigInt(event.amount_atomic)).toString();
+    } else if (event.kind === 'REFUND') {
+      pos.status = 'refunded';
+      pos.cost_atomic = '0';
+      pos.shares = '0';
+    } else if (event.kind === 'CLAIM') {
+      pos.claimed_atomic = (BigInt(pos.claimed_atomic) + BigInt(event.amount_atomic)).toString();
+      pos.shares = (BigInt(pos.shares) - BigInt(event.shares)).toString();
+      if (pos.shares === '0') pos.status = 'fully_claimed';
+    }
+
+    positions[key] = pos;
+    await this.writer.writePositions(positions);
+    return { entry, position: pos };
+  }
+
   async listPositions(protocolInstance) {
     const positions = await this.writer.readPositions();
     if (!protocolInstance) return Object.values(positions);
