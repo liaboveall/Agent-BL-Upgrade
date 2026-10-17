@@ -211,6 +211,12 @@ contract RWAOfferingPoolV5 is Owned {
         uint256 feeAtomic,
         bytes32 feeEvidenceHash
     );
+    event RepaymentReceived(
+        uint256 indexed poolId,
+        address indexed asset,
+        address indexed payer,
+        uint256 amountAtomic
+    );
 
     modifier onlyExecutor() {
         require(msg.sender == owner || agentExecutor[msg.sender], "not executor");
@@ -418,6 +424,19 @@ contract RWAOfferingPoolV5 is Owned {
         escrowed[poolId][o.settlementAsset] -= amountAtomic;
         IERC20(o.settlementAsset).safeTransfer(exporter, amountAtomic);
         emit DisbursedToExporter(poolId, o.settlementAsset, amountAtomic, evidenceHash);
+    }
+
+    function repay(uint256 poolId, uint256 amountAtomic) external whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.exists, "pool missing");
+        require(amountAtomic > 0, "amount=0");
+        require(_isActive(o.state) || o.state == OfferingState.Defaulted, "not repayable");
+        IERC20 asset = IERC20(o.settlementAsset);
+        uint256 balanceBefore = asset.balanceOf(address(this));
+        asset.safeTransferFrom(msg.sender, address(this), amountAtomic);
+        require(asset.balanceOf(address(this)) - balanceBefore == amountAtomic, "transfer tax not supported");
+        escrowed[poolId][o.settlementAsset] += amountAtomic;
+        emit RepaymentReceived(poolId, o.settlementAsset, msg.sender, amountAtomic);
     }
 
     function refundInvestor(uint256 poolId, address investor) external whenOperational {
