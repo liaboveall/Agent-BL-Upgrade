@@ -741,13 +741,34 @@ export async function subscribeOffering(action, { assertCurrent = () => {}, getS
   await check();
   const ethers = await ethersFn();
   const contract = new ethers.Contract(chain.contract, cfg.abis.RWAOfferingPool, session.signer);
-  const [offering, stopped, eligible] = await Promise.all([contract.offerings(chain.pool_id), contract.emergencyStopped(), contract.isInvestorEligible(session.address, chain.pool_id)]);
+  const [offering, stopped, eligible, version, onChainDeadline] = await Promise.all([
+    contract.offerings(chain.pool_id), contract.emergencyStopped(), contract.isInvestorEligible(session.address, chain.pool_id),
+    contract.quoteVersion ? contract.quoteVersion(chain.pool_id).catch(() => 1n) : Promise.resolve(1n),
+    contract.subscriptionDeadline ? contract.subscriptionDeadline(chain.pool_id).catch(() => 0n) : Promise.resolve(0n)
+  ]);
   const shares = BigInt(action.shares), price = BigInt(chain.price_e6);
   if (shares <= 0n || !offering.exists || stopped || !eligible || ![2, 3, 6].includes(Number(offering.state))) throw err('POOL_UNAVAILABLE', 'Offering is no longer available to this wallet');
   if (BigInt(offering.issuePrice) !== price || BigInt(offering.tokenSupply) - BigInt(offering.subscribed) < shares) throw err('QUOTE_CHANGED', 'Price or available shares changed; request a new card');
-  await contract.subscribe.staticCall(BigInt(chain.pool_id), shares);
+  // A08: bind the signature to the price limit, quote version and a user deadline. A v4
+  // deployment enforces this atomically; on a legacy v3 address the call is still made, but the
+  // caller is told that the terms were not bound.
+  const block = await session.provider.request({ method: 'eth_getBlockByNumber', params: ['latest', false] });
+  const now = Number(BigInt(block?.timestamp ?? '0x0'));
+  const userDeadline = BigInt(action.deadline ?? (now + 600));
+  const deadline = onChainDeadline > 0n && onChainDeadline < userDeadline ? onChainDeadline : userDeadline;
+  if (now === 0 || BigInt(now) > deadline) throw err('DEADLINE_PASSED', 'The subscription window has closed; request a new card');
+  const termsBound = typeof contract.subscribeWithTerms === 'function';
+  if (termsBound) await contract.subscribeWithTerms.staticCall(BigInt(chain.pool_id), shares, price, version, deadline);
+  else await contract.subscribe.staticCall(BigInt(chain.pool_id), shares);
   await check();
-  const tx = await contract.subscribe(BigInt(chain.pool_id), shares);
+  if (termsBound && chain.settlement_asset) {
+    const usdc = new ethers.Contract(chain.settlement_asset, ['function approve(address,uint256) returns (bool)', 'function decimals() view returns (uint8)'], session.signer);
+    const cost = shares * price;
+    await (await usdc.approve(chain.contract, cost)).wait();
+  }
+  const tx = termsBound
+    ? await contract.subscribeWithTerms(BigInt(chain.pool_id), shares, price, version, deadline)
+    : await contract.subscribe(BigInt(chain.pool_id), shares);
   try {
     const receipt = await tx.wait();
     if (Number(receipt.status) !== 1 || !/^0x[0-9a-f]{64}$/iu.test(tx.hash)) throw new Error('Subscription receipt was not successful');
@@ -758,7 +779,8 @@ export async function subscribeOffering(action, { assertCurrent = () => {}, getS
     if (!subscribed || BigInt(subscribed.args.paidAmount) !== shares * price) throw new Error('Subscription event or confirmed price differs from the card');
     assertCurrent();
     return { mode: 'chain', txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash), tokenCount: action.shares,
-      amountUsd: Number(subscribed.args.paidAmount) / 1_000_000, blockNumber: receipt.blockNumber };
+      amountUsd: Number(subscribed.args.paidAmount) / 1_000_000, blockNumber: receipt.blockNumber,
+      termsBound, quoteVersion: Number(version) };
   } catch (cause) {
     const failure = new Error(`Transaction ${tx.hash} was submitted; verify its receipt before trying again: ${cause.message}`, { cause });
     failure.txHash = tx.hash; failure.code = 'subscription_reconciliation_required'; throw failure;

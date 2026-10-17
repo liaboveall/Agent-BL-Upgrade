@@ -125,7 +125,7 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
  * or broadcast. The returned intent carries an `intent_id` that callers can use
  * to track the transaction through broadcast and confirmation.
  */
-export async function recordLiveSubscriptionIntent({ walletAddress, poolId, protocolInstance, chainPoolId, asset, amountAtomic, shares, calldata }) {
+export async function recordLiveSubscriptionIntent({ walletAddress, poolId: _poolId, protocolInstance, chainPoolId, asset, amountAtomic, shares, calldata }) {
   return ledger.recordIntent({
     protocol_instance: protocolInstance,
     chain_pool_id: chainPoolId,
