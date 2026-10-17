@@ -1,0 +1,27 @@
+{
+  "schema": "agentbl-ci-build-fix-v1",
+  "generated_at": "2026-10-17T13:36:00.662812+08:00",
+  "first_commit": "6288c20c1909b692c4bcbac6e313c1151bac93c7",
+  "first_ci_run": 39006640376,
+  "failed_job": 117320346731,
+  "failure": "Docker web build stage omitted src/core/subscription.js imported by web/src/lib/market.js",
+  "fix": "Copy src/core into the existing web build stage before Vite build",
+  "source_sha256": {
+    "Dockerfile": "f9daa28d463140b7bf0fa7abc897b1883161368931104b258f3a7b9cac7488ab",
+    ".dockerignore": "6cd9db7d11f8730f75a0b5388169c0e31fedbf7521961e7e08a7c096d1ac6041"
+  },
+  "local_validation": {
+    "isolated_build_inputs": [
+      "package.json",
+      "package-lock.json",
+      "web/",
+      "public/",
+      "src/core/"
+    ],
+    "runtime": "Node v24.22.0 / Linux",
+    "build": "PASS",
+    "real_docker_engine": false
+  },
+  "unchanged_application_sources_manifest": "../source-manifest.json",
+  "final_matching_ci": "PENDING"
+}

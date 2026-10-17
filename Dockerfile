@@ -14,6 +14,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY web ./web
 COPY public ./public
+# The dashboard imports the API's shared subscription eligibility rules.
+COPY src/core ./src/core
 RUN npm run build
 
 FROM node:22-alpine
