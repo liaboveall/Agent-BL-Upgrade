@@ -114,6 +114,12 @@ contract RWAOfferingPoolV5 is Owned {
     mapping(uint256 => address[]) private _investors;
     mapping(uint256 => mapping(address => bool)) private _isInvestor;
 
+    /// @dev Maximum number of investors processed in a single `refundAllOnFailure`
+    ///      batch. If a failed pool has more investors, the owner must continue from
+    ///      the next offset or refund the remaining investors individually via
+    ///      `refundInvestor`.
+    uint256 public constant MAX_REFUND_BATCH = 100;
+
     event OfferingCreated(
         uint256 indexed poolId,
         uint256 indexed eblId,
@@ -430,12 +436,34 @@ contract RWAOfferingPoolV5 is Owned {
         investorPaid[poolId][o.settlementAsset][investor] = 0;
         o.raisedAtomic -= paid;
         escrowed[poolId][o.settlementAsset] -= paid;
+        uint256 shares = rwaToken.balanceOf(poolId, investor);
+        if (shares > 0) {
+            rwaToken.burn(poolId, investor, shares);
+        }
         IERC20(o.settlementAsset).safeTransfer(investor, paid);
         emit InvestorRefunded(poolId, investor, o.settlementAsset, paid);
         _maybeCancelAndRelease(o, poolId);
     }
 
+    /// @notice Refund up to `MAX_REFUND_BATCH` investors in a failed or cancelled pool.
+    /// @dev    Because the investor list is unbounded, this call is gas-capped. If a
+    ///         pool has more than `MAX_REFUND_BATCH` investors, call
+    ///         `refundAllOnFailure(poolId, start, limit)` with `limit <= MAX_REFUND_BATCH`
+    ///         or refund the remaining investors individually with `refundInvestor`.
     function refundAllOnFailure(uint256 poolId) external onlyOwner whenOperational {
+        _refundAllOnFailure(poolId, 0, MAX_REFUND_BATCH);
+    }
+
+    /// @notice Refund a bounded slice of investors in a failed or cancelled pool.
+    /// @param  start Index into the pool's investor list to begin processing.
+    /// @param  limit Maximum number of investors to process in this call; capped at
+    ///         `MAX_REFUND_BATCH` to preserve liveness.
+    function refundAllOnFailure(uint256 poolId, uint256 start, uint256 limit) external onlyOwner whenOperational {
+        require(limit <= MAX_REFUND_BATCH, "limit>max");
+        _refundAllOnFailure(poolId, start, limit);
+    }
+
+    function _refundAllOnFailure(uint256 poolId, uint256 start, uint256 limit) internal {
         Offering storage o = offerings[poolId];
         require(o.exists, "pool missing");
         require(
@@ -449,13 +477,19 @@ contract RWAOfferingPoolV5 is Owned {
 
         address asset = o.settlementAsset;
         address[] storage invs = _investors[poolId];
-        for (uint256 i = 0; i < invs.length; i++) {
+        uint256 end = start + limit;
+        if (end > invs.length) end = invs.length;
+        for (uint256 i = start; i < end; i++) {
             address investor = invs[i];
             uint256 paid = investorPaid[poolId][asset][investor];
             if (paid > 0) {
                 investorPaid[poolId][asset][investor] = 0;
                 o.raisedAtomic -= paid;
                 escrowed[poolId][asset] -= paid;
+                uint256 shares = rwaToken.balanceOf(poolId, investor);
+                if (shares > 0) {
+                    rwaToken.burn(poolId, investor, shares);
+                }
                 IERC20(asset).safeTransfer(investor, paid);
                 emit InvestorRefunded(poolId, investor, asset, paid);
             }
@@ -492,6 +526,7 @@ contract RWAOfferingPoolV5 is Owned {
         require(o.state == OfferingState.Repaid || _isActive(o.state) || o.state == OfferingState.Defaulted, "bad state");
         require(o.repaymentAmount > 0, "no recovery");
         require(feesDeducted[poolId] + amountAtomic <= o.repaymentAmount, "fee>recovery");
+        require(feesDeducted[poolId] + amountAtomic <= escrowed[poolId][o.settlementAsset], "fee>escrow");
         feesDeducted[poolId] += amountAtomic;
         escrowed[poolId][o.settlementAsset] -= amountAtomic;
         IERC20(o.settlementAsset).safeTransfer(feeRecipient, amountAtomic);
