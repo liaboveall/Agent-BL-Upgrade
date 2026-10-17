@@ -1,0 +1,191 @@
+{
+  "schema": "agentbl-w2-ledger-lock-evidence-v1",
+  "failed_run": "https://github.com/liaboveall/Agent-BL-Upgrade/actions/runs/39036360842",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "ac6b4f4680f2ed991adbf2eaca6a740992d08969c0379728e316e13f38fe2e21",
+      "bytes": 2784
+    },
+    {
+      "path": "chain-watcher-timeout-fix-node22-linux.log",
+      "sha256": "f1db1dc72780966dcb7aad76870c9f547cabbc184c4d4efd13ab66fcbbb0b394",
+      "bytes": 13255
+    },
+    {
+      "path": "chain-watcher-timeout-fix.log",
+      "sha256": "4c3a55f803f631af05eab302e5506d8579af889ebc201822b9f8e5b98e103c3e",
+      "bytes": 5490
+    },
+    {
+      "path": "check-ci-fixes-final.log",
+      "sha256": "283dbe517b190c85c285ad325532533d4c83656bd9b7462b330c3a75a04118b0",
+      "bytes": 190
+    },
+    {
+      "path": "ci-39035730890-linux-node22.log",
+      "sha256": "1886e6b5a2591f2274c56097f75051a53515038b65d1bbea650fec9f1ccd2096",
+      "bytes": 554594
+    },
+    {
+      "path": "ci-39035730890-windows-node22.log",
+      "sha256": "367f5d2e33bf942e84562a6ece62f3758b2f672fd4a4ce2b51efd0097f65f65d",
+      "bytes": 560453
+    },
+    {
+      "path": "ci-39036360842-linux-node22.log",
+      "sha256": "cb8a172772ed68e88e6c3d5f161ee487e7b4b88acaa4cb3a1fc040d070bb6034",
+      "bytes": 556960
+    },
+    {
+      "path": "ci-fix-evidence-manifest.json",
+      "sha256": "419789ab8f2f2ff611c4a31848612c603c326ef6b932f3afb0bdcfb228bdd346",
+      "bytes": 3036
+    },
+    {
+      "path": "ci-fix-source-manifest.json",
+      "sha256": "ed709f6b0cfa69500b716ff32806697d68bb24ffe8873c06ca4088fed9352aef",
+      "bytes": 107725
+    },
+    {
+      "path": "ci-fixes.md",
+      "sha256": "167482b1a5cd18610ca62575b022c7be2861a928aa23ff7439f1f0a79e8cd87e",
+      "bytes": 2524
+    },
+    {
+      "path": "docker-web-build.log",
+      "sha256": "c92c2578ec87745732f28be8e5df392cf32439e59596c0b222cfb0e2b6000b74",
+      "bytes": 521
+    },
+    {
+      "path": "docker-web-npm-ci.log",
+      "sha256": "e97f90d982b2307d2838256e77f1d0664c73e23e50611d17bab11881c444fb67",
+      "bytes": 143
+    },
+    {
+      "path": "ledger-lock-before-fix-linux.log",
+      "sha256": "9f0d8972d15ecc78a61849985dfb4faa57e5f2de1d191684d6c43b75162f64da",
+      "bytes": 1435
+    },
+    {
+      "path": "ledger-lock-before-fix-windows.log",
+      "sha256": "9c553fa14d2919919d4d6dce1727858ba60ebea38db8c4e033f64121c9ccbaf7",
+      "bytes": 493
+    },
+    {
+      "path": "ledger-lock-fix-lint.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "ledger-lock-fix-windows.log",
+      "sha256": "6865946a2616dc549ebb23d9e81379595915232e6b432fd208304b1125ded774",
+      "bytes": 1121
+    },
+    {
+      "path": "ledger-lock-fix.md",
+      "sha256": "42749ec2e6053a015d2ea150077cb6c53443bf7425624c1a3c5ca8ede10c0c14",
+      "bytes": 2117
+    },
+    {
+      "path": "ledger-lock-source-manifest.json",
+      "sha256": "c45cc5e39cff1e91d54599b19f19fa6836e4a4fb7391dcb68ac178f906cd6607",
+      "bytes": 107650
+    },
+    {
+      "path": "ledger-lock-stress-linux-01.log",
+      "sha256": "ee46e94d2e01a3aa62dc143b0358d6f346c6ac9f9421a4065f71ba0d18dc1288",
+      "bytes": 2637
+    },
+    {
+      "path": "ledger-lock-stress-linux-02.log",
+      "sha256": "3ecd952b3fb8c687822f81a4175405bb157bfe5aca5e30fd2c72dfcd3079d89f",
+      "bytes": 2638
+    },
+    {
+      "path": "ledger-lock-stress-linux-03.log",
+      "sha256": "fafe3696215c1b7f37c7d9a8543835a18615161cdbeb738bd33eb5450d263bc3",
+      "bytes": 2638
+    },
+    {
+      "path": "ledger-lock-stress-linux-04.log",
+      "sha256": "348e1680a2cd4b783f392d33925ab32f2a81271a561ab8dc7b889111edec31ed",
+      "bytes": 2638
+    },
+    {
+      "path": "ledger-lock-stress-linux-05.log",
+      "sha256": "512a86d4968bbfd862fa25fd17671e85a49573983b1e57443ffb290be2f5bea8",
+      "bytes": 2638
+    },
+    {
+      "path": "ledger-lock-stress-linux-06.log",
+      "sha256": "0e4093e8a7302dba8cc0c3cfb3109c22d148aa3b9e094f0d1269504e40fd7aad",
+      "bytes": 2636
+    },
+    {
+      "path": "ledger-lock-stress-linux-07.log",
+      "sha256": "1d08ea7c0a420a39435ecda50f16aa734d7299b67133a660f084cee89a58f5fc",
+      "bytes": 2637
+    },
+    {
+      "path": "ledger-lock-stress-linux-08.log",
+      "sha256": "9b9f464a7a0961e62ca1e107eb0bb204a357611d8f3e1a194ccb30a73bf95033",
+      "bytes": 2638
+    },
+    {
+      "path": "ledger-lock-stress-linux-09.log",
+      "sha256": "6b6950e37f804e2d83cb78b92884dceff4e1a0794d6a6176bc3d5d90b5ff4d1f",
+      "bytes": 2639
+    },
+    {
+      "path": "ledger-lock-stress-linux-10.log",
+      "sha256": "276290ae8d723163f85c7fbddcea67be8d8fe20a1b85bc23a5d905e053550952",
+      "bytes": 2638
+    },
+    {
+      "path": "ledger-lock-stress.json",
+      "sha256": "3e4dffe7183efff066d0aa857e19b37b517af689f8c4c7a07b427debba437755",
+      "bytes": 1710
+    },
+    {
+      "path": "lint-ci-fix.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "lint-ci-fixes-final.log",
+      "sha256": "16dc44956930a12599fa74e4e587746fb0e71fcfe44069c815a28dbefb6c2b74",
+      "bytes": 65
+    },
+    {
+      "path": "preflight.json",
+      "sha256": "8ccf996fbb9537aab26fac297e00ee837b6318fc68dfc877686ddf2c3844bb47",
+      "bytes": 949
+    },
+    {
+      "path": "source-delta.json",
+      "sha256": "aafe4d31d102567979592fbbfae98f6090550adbd0a58e100cbafc50d735deeb",
+      "bytes": 360
+    },
+    {
+      "path": "staged-source-manifest.json",
+      "sha256": "cf7edf6fab608d6bc92ea8d4430197eb87de1f8b141e61a1f59e6363a845dd8b",
+      "bytes": 107473
+    },
+    {
+      "path": "wave-b-expiry-before-fix-reproduction.log",
+      "sha256": "a63a98dc9a99ae5fcb96346159a69f7d3a794485e63814448f9937d01bb6d3e4",
+      "bytes": 889
+    },
+    {
+      "path": "wave-b-expiry-fix-node22-linux.log",
+      "sha256": "a73b1942c51b2673020fcc65e377e746bd560b2422d12c8cd857591f39992aa0",
+      "bytes": 4160
+    },
+    {
+      "path": "wave-b-expiry-fix-windows.log",
+      "sha256": "774def16e024bfb4c47de8a837c363c0f0357e7792accb853da070bafab97610",
+      "bytes": 1769
+    }
+  ]
+}

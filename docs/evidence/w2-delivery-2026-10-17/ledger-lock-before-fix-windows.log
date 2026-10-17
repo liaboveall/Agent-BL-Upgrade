@@ -1,0 +1,17 @@
+▶ W2 durable capital ledger
+  ✖ preserves a successor lease while the previous writer cleans up its released directory (10014.1968ms)
+✖ W2 durable capital ledger (10015.3804ms)
+ℹ tests 1
+ℹ suites 1
+ℹ pass 0
+ℹ fail 0
+ℹ cancelled 1
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10106.2992
+
+✖ failing tests:
+
+test at tests\ledger.test.js:109:3
+✖ preserves a successor lease while the previous writer cleans up its released directory (10014.1968ms)
+  'test timed out after 10000ms'

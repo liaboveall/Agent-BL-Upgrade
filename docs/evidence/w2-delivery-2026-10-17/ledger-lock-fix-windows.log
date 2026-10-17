@@ -1,0 +1,19 @@
+▶ W2 durable capital ledger
+  ✔ retains intent terms and refuses a second transaction hash on restart (57.0653ms)
+  ✔ records deposits, zero/partial claims and refunds without mixing wallets or protocol instances (110.0088ms)
+  ✔ deduplicates concurrent same-process writers and rejects conflicting evidence (157.7814ms)
+  ✔ recovers a committed cash entry after a crash before writing its position snapshot (34.4019ms)
+  ✔ keeps orphaned chain facts in the audit history while rebuilding canonical positions (70.6359ms)
+  ✔ preserves a torn tail for audit, recovers the committed prefix, and rejects interior corruption (42.9611ms)
+  ✔ serializes independent processes and recovers a dead writer lease without double counting (253.9316ms)
+  ✔ preserves a successor lease while the previous writer cleans up its released directory (119.0496ms)
+  ✔ records disbursement, recovery and fee without creating fictitious investor positions (49.941ms)
+✔ W2 durable capital ledger (897.3448ms)
+ℹ tests 9
+ℹ suites 1
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 963.3835

@@ -49,8 +49,10 @@ export class LedgerWriter {
         await this.#records('cash-entries.jsonl', true);
         return await task();
       } finally {
-        if (acquired) await fs.rm(lock, { recursive: true, force: true });
-        else await fs.rm(candidate, { recursive: true, force: true });
+        // Retire the entire nonempty lease atomically. Recursive deletion at the shared
+        // name could empty it, admit a successor, then delete that successor's lease.
+        if (acquired) await fs.rename(lock, candidate);
+        await fs.rm(candidate, { recursive: true, force: true });
       }
     });
   }

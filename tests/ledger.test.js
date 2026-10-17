@@ -106,6 +106,57 @@ describe('W2 durable capital ledger', () => {
     assert.equal((await fs.readdir(dir)).filter((file) => file.startsWith('dead-writer-')).length, 1);
   });
 
+  it('preserves a successor lease while the previous writer cleans up its released directory', { timeout: 10_000 }, async (t) => {
+    const { ledger, dir } = await fixture(t);
+    const remove = fs.rm.bind(fs);
+    let ready, resume, paused = false;
+    const cleaning = new Promise((resolve) => { ready = resolve; });
+    const proceed = new Promise((resolve) => { resume = resolve; });
+    t.mock.method(fs, 'rm', async (file, options) => {
+      if (!paused && path.dirname(file) === dir && path.basename(file).startsWith('writer')) {
+        paused = true;
+        // Stop recursive deletion after it empties the old directory, when POSIX rename
+        // would allow another process to replace it with a newly acquired nonempty lease.
+        await fs.unlink(path.join(file, 'owner.json'));
+        ready(); await proceed;
+      }
+      return remove(file, options);
+    });
+    const first = ledger.applyEvent(event());
+    await Promise.race([cleaning, first.then(() => { throw new Error('Expected directory cleanup'); })]);
+    const module = pathToFileURL(path.resolve('src/ledger/ledger.js')).href;
+    const code = `import { Ledger } from ${JSON.stringify(module)};
+      const ledger = new Ledger({ baseDir: process.argv[1] });
+      const write = ledger.writer.writePositions.bind(ledger.writer);
+      ledger.writer.writePositions = async (positions) => {
+        await write(positions); process.send('holding');
+        await new Promise((resolve) => process.once('message', resolve));
+      };
+      await ledger.applyEvent(JSON.parse(process.argv[2])); process.disconnect();`;
+    const next = event({ source: { tx_hash: `0x${'b'.repeat(64)}`, log_index: 0 } });
+    const proc = spawn(process.execPath, ['--input-type=module', '-e', code, dir, JSON.stringify(next)],
+      { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+    let output = '';
+    proc.stderr.on('data', (chunk) => { output += chunk; });
+    const holding = new Promise((resolve) => proc.once('message', resolve));
+    const finished = new Promise((resolve, reject) => {
+      proc.once('error', reject);
+      proc.once('exit', (code) => code === 0 ? resolve() : reject(new Error(output || `Child exited ${code}`)));
+    });
+    try {
+      await Promise.race([holding, finished.then(() => { throw new Error('Writer exited before holding the lease'); })]);
+      resume(); await first;
+      const owner = JSON.parse(await fs.readFile(path.join(dir, 'writer.lock', 'owner.json'), 'utf8'));
+      assert.equal(owner.pid, proc.pid, 'previous cleanup must preserve the active successor lease');
+    } finally {
+      resume();
+      if (proc.connected) proc.send('release');
+      await finished;
+    }
+    assert.equal((await ledger.writer.readCashEntries()).length, 2);
+    assert.equal((await ledger.listPositions())[0].shares, '200');
+  });
+
   it('records disbursement, recovery and fee without creating fictitious investor positions', async (t) => {
     const { ledger } = await fixture(t);
     for (const [index, kind] of ['DISBURSEMENT', 'RECOVERY', 'FEE'].entries()) {

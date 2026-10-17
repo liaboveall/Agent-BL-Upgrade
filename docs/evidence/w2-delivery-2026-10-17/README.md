@@ -15,3 +15,5 @@
 完整本地回归已通过：应用 1333 项、合约 132 项、真实本地 EVM/HTTP 集成 Windows 与 WSL 各 6 项、浏览器 10 项，以及覆盖率门槛、lint、check 和 build。本次提交推送不包含新部署或真实资金操作。
 
 首次提交 `50eedb8` 的远端运行另发现两个问题，后续修复与失败证据见 [CI 修复记录](ci-fixes.md)。上文及原暂存区清单描述首次提交前的检查；后续提交的源码清单见 `ci-fix-source-manifest.json`。
+
+第二次提交 `0445322` 的 CI 发现账本锁释放竞争，追加修复、定点重现与并发验证见 [锁释放修复记录](ledger-lock-fix.md)，对应源码清单为 `ledger-lock-source-manifest.json`。各轮历史清单和失败日志保留原样。
