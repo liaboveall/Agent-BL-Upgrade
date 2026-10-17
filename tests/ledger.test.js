@@ -106,7 +106,6 @@ describe('ChainEventRebuilder', () => {
   const poolAddress = '0x' + '1'.repeat(40);
   const settlementAsset = '0x' + '2'.repeat(40);
   const investor = '0x' + '3'.repeat(40);
-  const pi = { chain_id: 1439, pool_address: poolAddress, protocol_version: 5 };
 
   function providerWithLogs(logsByBlock) {
     return makeProvider({
