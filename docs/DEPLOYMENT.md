@@ -1,5 +1,9 @@
 # 🚀 AgentBL 部署指南
 
+2026-10-17 整改版本包含本地 v3 合约候选，现有链地址仍为 v2。应用升级不等于链上升级；新开盘在旧合约上会失败关闭。部署前先审阅 [候选迁移方案](project-remediation-2026-10-17.md)，不能直接使用 `deploy:all` 覆盖既有生命周期。
+
+私有单证使用 HttpOnly / SameSite 工作区 cookie，Live 仍另需管理员令牌。代理应保留 cookie，并在 HTTPS 终结层设置 Secure；旧上传没有工作区归属时由管理员恢复读取，不自动分配给匿名浏览器。该机制不替代生产身份系统。回款还需 `AGENT_SETTLEMENT_PAYER` 指定核对过的进口商付款地址，不能从任意 Transfer 自动推定。
+
 AgentBL 的后端是一个**常驻的 Node.js HTTP 服务**（[`src/app/server.js`](../src/app/server.js)），同一个进程既提供 `/api/*` 接口，也托管前端页面：React 前端（[`web/`](../web/)）用 `npm run build` 构建到 `dist/`，[`public/`](../public/) 下的静态文件原样发布。没有构建时访问 `/` 会返回 503 提示页。因此它需要部署在能**长期运行进程**的环境里（本机、Docker、VPS、Railway 等）。
 
 > ⚠️ **不支持 Vercel / Netlify 这类纯静态 + Serverless 平台。** 项目没有拆成 serverless 函数，池子状态也保存在进程内存里，部署到这些平台后前端能打开，但 `/api/*` 会全部失效。

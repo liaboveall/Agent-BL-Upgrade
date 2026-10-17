@@ -21,10 +21,10 @@ export function usdCompact(value) {
   return '$' + Math.round(n).toLocaleString('en-US');
 }
 
-/** Issue price to 3 decimals. 0.8712 -> "0.871". */
+/** Preserve the quote's four-decimal unit price on every decision surface. */
 export function price(value) {
   const n = Number(value);
-  return Number.isFinite(n) ? n.toFixed(3) : '—';
+  return Number.isFinite(n) ? n.toFixed(4) : '—';
 }
 
 /** Integer with thousands separators. 6427915 -> "6,427,915". */
@@ -159,7 +159,7 @@ function dimensionFor(key, text) {
     if (t.includes('insur')) return 'insurance';
     return 'docs';
   }
-  return KEY_TO_DIM[key] ?? 'docs';
+  return KEY_TO_DIM[key] ?? null;
 }
 
 /**
@@ -172,8 +172,12 @@ export function rollupRiskDimensions(riskFactors = []) {
     { ...d, label: t(d.labelKey), bps: 0, active: false, factors: [] }
   ]));
   for (const raw of riskFactors) {
-    const { key, bps, text } = parseFactor(raw);
+    const { key, bps, text } = raw && typeof raw === 'object'
+      ? { key: raw.type, bps: raw.bps ?? 0, text: raw.description ?? raw.type }
+      : parseFactor(raw);
+    if (raw?.status === 'resolved') continue;
     const dim = acc[dimensionFor(key, text)];
+    if (!dim) continue;
     dim.active = true;
     dim.bps += bps;
     dim.factors.push(text);

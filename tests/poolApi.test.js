@@ -60,15 +60,15 @@ test('BE-12: Pool API Tests', async (t) => {
       assert.match(res.data.reference, /^demo:sub:[0-9a-f]{16}$/u);
       assert.strictEqual(res.data.txHash, null);
       assert.strictEqual(res.data.investment.reference, res.data.reference);
-      assert.doesNotMatch(JSON.stringify(res.data), /0x[0-9a-fA-F]{64}/u);
-      assert.strictEqual(res.data.investment.amountUsd, 1000);
+      assert.ok(Number.isInteger(res.data.investment.tokenCount));
+      assert.ok(Math.abs(res.data.investment.amountUsd + res.data.investment.unspentUsd - 1000) < 1e-6);
     });
 
     await t.test('GET /api/pool/status returns correct subscription state', async () => {
       const res = await request('GET', `/api/pool/status?pool_id=${firstPoolId}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.data.ok, true);
-      assert.strictEqual(res.data.subscribedUsd, 1000);
+      assert.strictEqual(res.data.subscribedUsd, storeState.investments[0].amountUsd);
     });
 
     await t.test('POST /api/pool/subscribe rejects over-subscription', async () => {

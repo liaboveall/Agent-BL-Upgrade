@@ -75,9 +75,11 @@ export function Waterfall({ quote: current }) {
             ))}
           </div>
         </div>
-        <p className="muted small">{t('wf_axis_foot', { lo: f.price(lo), bc: quote.binding_constraint })}</p>
+        <p className="muted small">{t('wf_axis_foot', { lo: f.price(lo), bc: t(`constraint_${quote.binding_constraint}`) })}</p>
       </div>
-      {quote.exporter_explanation ? <p className="explain">{quote.exporter_explanation}</p> : null}
+      <p className="explain">{t('pricing_exporter_summary', { cash: f.usd(quote.expected_cash_to_exporter_usd), cost: f.usd(quote.financing_cost_usd),
+        share: f.bpsToPct(quote.exporter_profit_share_bps), net: f.usd(quote.exporter_net_profit_usd) })}</p>
+      <p className="muted small">{t(`profit_basis_${quote.profit_basis ?? 'declared'}`)}</p>
     </Card>
   );
 }

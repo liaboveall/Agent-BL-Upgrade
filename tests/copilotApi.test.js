@@ -70,8 +70,7 @@ test('Copilot API: real server routes use latest market pools and positions expo
   storeState.pools.get(initial.poolId).quote.final_issue_price_usd = 0.7;
   const server = await listen(createServer()); t.after(server.close);
   const result = await requestJson(server.base, 'POST', '/api/copilot/query', { message: 'copper' });
-  assert.equal(result.data.recommendations[0].price_usd, 0.7);
-  assert.ok(result.data.recommendations[0].warnings.includes('not_subscribable'));
+  assert.ok(!result.data.recommendations.some((item) => item.pool_id === initial.poolId), 'paused pools cannot be offered as investments');
   const positions = (await requestJson(server.base, 'GET', '/api/investors/portfolio')).data;
   assert.equal(positions.investments[0].current_status, 'Paused');
   assert.equal(positions.investments[0].current_price_usd, 0.7);

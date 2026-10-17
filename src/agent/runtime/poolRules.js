@@ -8,11 +8,11 @@
 /** RWAOfferingPool.OfferingState, in the contract's enum order (index = on-chain value). */
 export const CHAIN_STATE_NAMES = Object.freeze([
   'Created', 'Priced', 'Open', 'Subscribed', 'Funded', 'InTransit', 'Repriced',
-  'Paused', 'Frozen', 'Repaid', 'Redeemed', 'Liquidation', 'Cancelled'
+  'Paused', 'Frozen', 'Repaid', 'Redeemed', 'Liquidation', 'Cancelled', 'Defaulted', 'LossSettled'
 ]);
 
 export const ACTIVE_STATES = Object.freeze(['Open', 'Subscribed', 'Funded', 'InTransit', 'Repriced']);
-export const TERMINAL_STATES = Object.freeze(['Repaid', 'Redeemed', 'Liquidation', 'Cancelled']);
+export const TERMINAL_STATES = Object.freeze(['Repaid', 'Redeemed', 'Liquidation', 'Cancelled', 'LossSettled']);
 
 export function chainStateName(index) {
   const name = CHAIN_STATE_NAMES[Number(index)];
@@ -38,7 +38,7 @@ export function planTransition(action, pool) {
     case 'OPEN_WITH_WARNING':
       return isActive(from) ? ok(from, false) : no('the offering is not active');
     case 'REPRICE':
-      return isActive(from) ? ok('Repriced') : no('the offering is not active');
+      return isActive(from) ? ok(from, false) : no('the offering is not active');
     case 'PAUSE':
       return isActive(from) ? ok('Paused') : no('only an active offering can be paused');
     case 'RESUME':
@@ -64,9 +64,11 @@ export function planTransition(action, pool) {
       if (pool.arrivalProof) return no('an arrival proof is already recorded', 'already_recorded');
       return ok(from, false);
     case 'SETTLE':
-      if (!isActive(from)) return no('the offering is not in a settleable state');
+      if (!isActive(from) && from !== 'Defaulted') return no('the offering is not in a settleable state');
       if (!subscribed) return no('nobody subscribed, so there is nothing to repay', 'no_subscribers');
       if (!pool.paymentProof || !pool.arrivalProof) return no('both the payment proof and the arrival proof are required first', 'proofs_missing');
+      if (pool.repaymentAmountAtomic === undefined || pool.targetRedemptionValueAtomic === undefined) return no('debt and recovery must be reconciled first', 'debt_unverified');
+      if (BigInt(pool.repaymentAmountAtomic) < BigInt(pool.subscribed) * BigInt(pool.targetRedemptionValueAtomic)) return no('partial recovery does not discharge the outstanding debt', 'outstanding_debt');
       return ok('Repaid');
     case 'WARNING':
     case 'HOLD_FOR_REVIEW':

@@ -35,6 +35,7 @@ function fixtureCase(overrides = {}) {
 }
 
 const quote = {
+  case_id: 'CASE-WEB-1',
   payout_speed: 'BALANCED', pricing_action: 'OPEN_OFFERING', risk_level: 'LOW', risk_score_bps: 120,
   final_issue_price_usd: 0.981, base_issue_price_usd: 0.995, indicative_issue_price_usd: 0.981, urgency_discount_bps: 8, risk_discount_bps: 6,
   binding_constraint: 'RISK', implied_gross_yield_bps: 190, annualized_yield_bps: 1250, tenor_days: 30,

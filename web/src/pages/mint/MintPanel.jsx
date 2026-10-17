@@ -16,6 +16,8 @@ export function MintPanel({ quote }) {
   const speed = useApp((s) => s.speed);
   const financingUsd = useApp((s) => s.financingUsd);
   const minting = useApp((s) => s.minting);
+  const busy = useApp((s) => s.busy);
+  const demoMode = useApp((s) => s.demoMode);
   const result = useApp((s) => s.mint);
   const quotes = comparison?.quotes ?? [];
   const recommended = comparison?.recommended_payout_speed;
@@ -80,7 +82,7 @@ export function MintPanel({ quote }) {
         <div className="input-row">
           <input id="mint-financing" className="input" type="number" min="0" step="100000" inputMode="numeric" value={String(financing)} disabled={paused}
             onChange={(event) => setFinancing(event.target.value)} />
-          <Button id="mint-btn" variant="primary" disabled={paused || minting} onClick={mint}>{minting ? t('minting') : t('mint_btn')}</Button>
+          <Button id="mint-btn" variant="primary" disabled={paused || minting || busy} onClick={mint}>{minting ? t('minting') : t(demoMode ? 'mint_demo_btn' : 'mint_lab_btn')}</Button>
         </div>
       </Field>
       {paused ? (
@@ -97,6 +99,7 @@ export function MintPanel({ quote }) {
         </div>
       )}
       <p className="compliance small" id="compliance-note"><RichT k="compliance" /></p>
+      <p className="callout tone-warn">{t(demoMode ? 'mint_demo_scope' : 'mint_lab_scope')}</p>
       <MintResult result={result} quote={quote} />
     </Card>
   );

@@ -2,10 +2,10 @@
 // never from nextEblId/nextPoolId counters or values supplied by a client.
 import { isAddress, ZeroAddress } from 'ethers';
 import fs from 'node:fs/promises';
-import { cargoIdentityHash } from '../../chain/cargoIdentity.js';
+import { cargoIdentityHash, cargoIdentityHashV2, sameTitle } from '../../chain/cargoIdentity.js';
 import { hashSnapshot } from '../decisionLogger.js';
 import { ACTIVE_STATES, chainStateName } from './poolRules.js';
-import { knownLivePool } from './poolRegistry.js';
+import { KNOWN_LIVE_POOLS, knownLivePool } from './poolRegistry.js';
 
 export const OPENING_ACTIONS = Object.freeze(['OPEN', 'OPEN_WITH_WARNING']);
 export const OPENING_SCHEMA = 'agentbl-owner-opening-v1';
@@ -27,8 +27,14 @@ const contains = (source, identity) => tokens(identity).every((token) => tokens(
  * second mint. Pool #2 was committed with short catalog labels; pool #3 with the parsed documents.
  */
 async function identityFor(caseData) {
-  const pool = knownLivePool(caseData.case_id);
-  if (!pool) return caseData;
+  let pool = knownLivePool(caseData.case_id);
+  if (!pool) {
+    for (const candidate of KNOWN_LIVE_POOLS) {
+      const standing = JSON.parse(await fs.readFile(new URL(`../../../${candidate.identity_file}`, import.meta.url), 'utf8'));
+      if (sameTitle(caseData, standing)) { pool = candidate; break; }
+    }
+  }
+  if (!pool) return { caseData, legacy: false };
   const canonical = JSON.parse(await fs.readFile(new URL(`../../../${pool.identity_file}`, import.meta.url), 'utf8'));
   requireThat(canonical.case_id === pool.case_id && same(cargoIdentityHash(canonical), pool.cargo_hash),
     'known_identity_corrupt', 'The recorded identity of the registered eBL no longer reproduces its cargo hash');
@@ -40,7 +46,7 @@ async function identityFor(caseData) {
     && String(caseData.cargo?.hs_code) === String(canonical.cargo.hs_code),
   'known_cargo_identity_mismatch', 'The documents do not match the standing registered eBL; review them instead of minting another cargo identity');
   // Documents that already carry the registered identity (pool #3's own) are used as they are.
-  return same(cargoIdentityHash(caseData), pool.cargo_hash) ? caseData : canonical;
+  return { caseData: same(cargoIdentityHash(caseData), pool.cargo_hash) ? caseData : canonical, legacy: true };
 }
 
 export function positiveChainId(value) {
@@ -104,10 +110,13 @@ export async function buildOpeningPlan({ params, chainConfig, context }) {
   requireThat(caseData?.case_id && quote?.case_id === caseData.case_id
     && ['OPEN_OFFERING', 'OPEN_WITH_WARNING'].includes(quote.pricing_action), 'quote_not_open', 'Only a matching, openable document quote can create an offering');
   requireThat(params.compliance?.status === 'CLEAR', 'compliance_not_clear', 'Live opening requires a CLEAR compliance report');
-  const identityCase = await identityFor(caseData);
-  const cargoHash = cargoIdentityHash(identityCase);
+  const identity = await identityFor(caseData);
+  const identityCase = identity.caseData;
+  const cargoHash = identity.legacy ? cargoIdentityHash(identityCase) : cargoIdentityHashV2(identityCase);
   const base = { schema: OPENING_SCHEMA, network: chainConfig.network, chain_id: 1439,
-    case_id: caseData.case_id, cargo_hash: cargoHash, cargo_identity_version: 'wave-b-v1', quote_hash: quote.quote_hash,
+    case_id: caseData.case_id, cargo_hash: cargoHash, cargo_identity_version: identity.legacy ? 'wave-b-v1' : 'title-v2', quote_hash: quote.quote_hash,
+    analysis_mode: params.analysis_mode ?? 'unspecified', source_freshness: params.source_freshness ?? null,
+    requires_source_review: params.analysis_mode === 'offline-simulation',
     ...(identityCase !== caseData ? { source_cargo_hash: cargoIdentityHash(caseData), identity_source: 'standing-pool-catalog' } : {}),
     bindings: {}, steps: [] };
   const unique = await context.registry.isUnique(cargoHash);
@@ -116,7 +125,9 @@ export async function buildOpeningPlan({ params, chainConfig, context }) {
     const existing = await readRegisteredOpening({ cargoHash, context, chainConfig });
     return { ...base, kind: 'link', existing, bindings: { ebl_id: String(existing.ebl_id), pool_id: String(existing.pool_id) } };
   }
-  requireThat(!knownLivePool(caseData.case_id), 'known_cargo_not_registered', 'The standing eBL could not be found under its original cargo identity; reconcile the registry instead of reminting it');
+  requireThat(!identity.legacy, 'known_cargo_not_registered', 'The standing eBL could not be found under its original cargo identity; reconcile the registry instead of reminting it');
+  const protocolVersion = await context.pool.protocolVersion?.().catch(() => 0) ?? 0;
+  requireThat(Number(protocolVersion) >= 3, 'protocol_migration_required', 'New title-v2 registrations require the reviewed protocol v3 migration; the deployed legacy pools remain read-only/linkable');
   requireThat(!await context.pool.emergencyStopped(), 'emergency_stopped', 'The offering protocol is stopped; no opening is planned');
   const holder = await context.registry.owner();
   requireThat(isAddress(holder) && !same(holder, ZeroAddress) && same(holder, await context.pool.owner()), 'owner_mismatch', 'Mint and offering require the same contract owner');

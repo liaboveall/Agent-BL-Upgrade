@@ -32,7 +32,7 @@ test('BE-4: an in-transit risk shock reprices the pool down', () => {
       { category: 'shipment', type: 'route_deviation', severity: 'warning', description: 'reroute' }
     ]
   });
-  assert.ok(states(offering).includes('Repriced'));
+  assert.ok(offering.steps.some((step) => step.state === 'InTransit' && step.action === 'REPRICE_DOWN'));
   assert.ok(offering.final_quote.final_issue_price_usd < offering.initial_quote.final_issue_price_usd);
 });
 

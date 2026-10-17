@@ -1,0 +1,365 @@
+TAP version 13
+# Subtest: ingest API (Demo)
+    # Subtest: POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step
+    ok 1 - POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step
+      ---
+      duration_ms: 396.845637
+      type: 'test'
+      ...
+    # Subtest: uploading the same documents again is a 200 with the same job, not a second decision
+    ok 2 - uploading the same documents again is a 200 with the same job, not a second decision
+      ---
+      duration_ms: 33.703024
+      type: 'test'
+      ...
+    # Subtest: a document that tries to steer the agent is held, and the answer says so
+    ok 3 - a document that tries to steer the agent is held, and the answer says so
+      ---
+      duration_ms: 29.938338
+      type: 'test'
+      ...
+    # Subtest: bad uploads are refused with a status and a code, and open no job
+    ok 4 - bad uploads are refused with a status and a code, and open no job
+      ---
+      duration_ms: 27.963131
+      type: 'test'
+      ...
+    # Subtest: a document over the size limit is a 413
+    ok 5 - a document over the size limit is a 413
+      ---
+      duration_ms: 12.462786
+      type: 'test'
+      ...
+    # Subtest: exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them
+    ok 6 - exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them
+      ---
+      duration_ms: 36.278308
+      type: 'test'
+      ...
+    # Subtest: scenarios: list, run one over HTTP, and the pool and approvals show the result
+    ok 7 - scenarios: list, run one over HTTP, and the pool and approvals show the result
+      ---
+      duration_ms: 127.357423
+      type: 'test'
+      ...
+    # Subtest: the admin token, once configured, protects scenarios but not Demo uploads
+    ok 8 - the admin token, once configured, protects scenarios but not Demo uploads
+      ---
+      duration_ms: 39.261892
+      type: 'test'
+      ...
+    # Subtest: the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case
+    ok 9 - the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case
+      ---
+      duration_ms: 110.676068
+      type: 'test'
+      ...
+    1..9
+ok 1 - ingest API (Demo)
+  ---
+  duration_ms: 833.367391
+  type: 'test'
+  ...
+# Subtest: ingest API: in Live, uploads and preferences need the admin token
+ok 2 - ingest API: in Live, uploads and preferences need the admin token
+  ---
+  duration_ms: 31.521177
+  type: 'test'
+  ...
+# Subtest: USDC amount conversion is exact and rejects rounding, exponents, zero, overflow and unsafe numbers
+ok 3 - USDC amount conversion is exact and rejects rounding, exponents, zero, overflow and unsafe numbers
+  ---
+  duration_ms: 1.411675
+  type: 'test'
+  ...
+# Subtest: USDC proof binds canonical asset, recipient, payer, amount, block and log with configured confirmations
+ok 4 - USDC proof binds canonical asset, recipient, payer, amount, block and log with configured confirmations
+  ---
+  duration_ms: 5.520998
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects fake hash
+ok 5 - USDC proof rejects fake hash
+  ---
+  duration_ms: 1.95833
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects revert
+ok 6 - USDC proof rejects revert
+  ---
+  duration_ms: 2.169658
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong asset
+ok 7 - USDC proof rejects wrong asset
+  ---
+  duration_ms: 2.485841
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong payee
+ok 8 - USDC proof rejects wrong payee
+  ---
+  duration_ms: 1.91555
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects unrelated payer
+ok 9 - USDC proof rejects unrelated payer
+  ---
+  duration_ms: 2.127036
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong amount
+ok 10 - USDC proof rejects wrong amount
+  ---
+  duration_ms: 2.048775
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects mint
+ok 11 - USDC proof rejects mint
+  ---
+  duration_ms: 2.075115
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects self-transfer
+ok 12 - USDC proof rejects self-transfer
+  ---
+  duration_ms: 2.308417
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong RPC chain
+ok 13 - USDC proof rejects wrong RPC chain
+  ---
+  duration_ms: 1.572457
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong tx chain
+ok 14 - USDC proof rejects wrong tx chain
+  ---
+  duration_ms: 1.428539
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects unconfirmed
+ok 15 - USDC proof rejects unconfirmed
+  ---
+  duration_ms: 1.32223
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects reorg
+ok 16 - USDC proof rejects reorg
+  ---
+  duration_ms: 1.408164
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects hash substitution
+ok 17 - USDC proof rejects hash substitution
+  ---
+  duration_ms: 1.378496
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects removed log
+ok 18 - USDC proof rejects removed log
+  ---
+  duration_ms: 1.41434
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects ambiguous transfer
+ok 19 - USDC proof rejects ambiguous transfer
+  ---
+  duration_ms: 1.709024
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects missing log index
+ok 20 - USDC proof rejects missing log index
+  ---
+  duration_ms: 1.542853
+  type: 'test'
+  ...
+# Subtest: Live payment intake rejects missing recipient, unsupported/manual sources, unmapped or protected pools and forged evidence
+ok 21 - Live payment intake rejects missing recipient, unsupported/manual sources, unmapped or protected pools and forged evidence
+  ---
+  duration_ms: 263.954756
+  type: 'test'
+  ...
+# Subtest: Live lifecycle records payment and arrival only after separate owner receipts, then proposes an approved settlement with exact atomic amount
+ok 22 - Live lifecycle records payment and arrival only after separate owner receipts, then proposes an approved settlement with exact atomic amount
+  ---
+  duration_ms: 29.186241
+  type: 'test'
+  ...
+# Subtest: Arrival first uses actual proofs; paused readiness waits for resume and stale mirrors cannot create settlement
+ok 23 - Arrival first uses actual proofs; paused readiness waits for resume and stale mirrors cannot create settlement
+  ---
+  duration_ms: 16.169733
+  type: 'test'
+  ...
+# Subtest: Receipt claims are idempotent across user event IDs, concurrent submissions, queue failures and restart
+ok 24 - Receipt claims are idempotent across user event IDs, concurrent submissions, queue failures and restart
+  ---
+  duration_ms: 58.760728
+  type: 'test'
+  ...
+# Subtest: A receipt cannot be claimed for another pool and a generation change during verification queues nothing
+ok 25 - A receipt cannot be claimed for another pool and a generation change during verification queues nothing
+  ---
+  duration_ms: 5.527564
+  type: 'test'
+  ...
+# Subtest: Changed, paused, unsubscribed or stopped chain state invalidates a settlement plan without signing
+ok 26 - Changed, paused, unsubscribed or stopped chain state invalidates a settlement plan without signing
+  ---
+  duration_ms: 5.189756
+  type: 'test'
+  ...
+# Subtest: Owner receipt must bind matching pool/proofs/events, confirmations and sender; rejected attempts preserve the approval
+ok 27 - Owner receipt must bind matching pool/proofs/events, confirmations and sender; rejected attempts preserve the approval
+  ---
+  duration_ms: 11.735928
+  type: 'test'
+  ...
+# Subtest: Verified owner checkpoint survives a completion write failure and tick completes without rebroadcast
+ok 28 - Verified owner checkpoint survives a completion write failure and tick completes without rebroadcast
+  ---
+  duration_ms: 8.065751
+  type: 'test'
+  ...
+# Subtest: Live settlement refuses missing verified payment/atomic amount and legacy raw-unit plans
+ok 29 - Live settlement refuses missing verified payment/atomic amount and legacy raw-unit plans
+  ---
+  duration_ms: 1.175312
+  type: 'test'
+  ...
+# Subtest: Optional executor route uses the same exact receipt checks and approval instead of bypassing settlement verification
+ok 30 - Optional executor route uses the same exact receipt checks and approval instead of bypassing settlement verification
+  ---
+  duration_ms: 8.894221
+  type: 'test'
+  ...
+# Subtest: settlement CLI defaults to dry run and sends exactly one approved evidence transaction on confirmation
+ok 31 - settlement CLI defaults to dry run and sends exactly one approved evidence transaction on confirmation
+  ---
+  duration_ms: 306.725521
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses generation changes after preflight and sends nothing
+ok 32 - settlement CLI refuses generation changes after preflight and sends nothing
+  ---
+  duration_ms: 19.40624
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses mode changes after preflight and sends nothing
+ok 33 - settlement CLI refuses mode changes after preflight and sends nothing
+  ---
+  duration_ms: 19.90354
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses emergency stop changes after preflight and sends nothing
+ok 34 - settlement CLI refuses emergency stop changes after preflight and sends nothing
+  ---
+  duration_ms: 19.432065
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses receipt reorg changes after preflight and sends nothing
+ok 35 - settlement CLI refuses receipt reorg changes after preflight and sends nothing
+  ---
+  duration_ms: 19.159194
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses an expired approval before asking for any signer
+ok 36 - settlement CLI refuses an expired approval before asking for any signer
+  ---
+  duration_ms: 16.327905
+  type: 'test'
+  ...
+# Subtest: settlement CLI recovers an attached broadcast without another signer or transaction
+ok 37 - settlement CLI recovers an attached broadcast without another signer or transaction
+  ---
+  duration_ms: 26.322908
+  type: 'test'
+  ...
+# Subtest: settlement CLI retains an uncertain broadcast and refuses an automatic retry
+ok 38 - settlement CLI retains an uncertain broadcast and refuses an automatic retry
+  ---
+  duration_ms: 18.625024
+  type: 'test'
+  ...
+# Subtest: F01: final rounded terms reject the independently reproduced loss, zero profit and negative profit
+ok 39 - F01: final rounded terms reject the independently reproduced loss, zero profit and negative profit
+  ---
+  duration_ms: 10.029115
+  type: 'test'
+  ...
+# Subtest: F01: every openable rounded quote satisfies profit, annual rate, cash and collateral invariants
+ok 40 - F01: every openable rounded quote satisfies profit, annual rate, cash and collateral invariants
+  ---
+  duration_ms: 22.550784
+  type: 'test'
+  ...
+# Subtest: F02: pricing is orthogonal to every active lifecycle, including full funding and in-transit
+ok 41 - F02: pricing is orthogonal to every active lifecycle, including full funding and in-transit
+  ---
+  duration_ms: 0.24993
+  type: 'test'
+  ...
+# Subtest: F03: canonical title identity ignores case IDs, document versions and display formatting; v1 commitments stay reproducible
+ok 42 - F03: canonical title identity ignores case IDs, document versions and display formatting; v1 commitments stay reproducible
+  ---
+  duration_ms: 11.081089
+  type: 'test'
+  ...
+# Subtest: F03: new registrations fail closed against a legacy deployment until reviewed migration
+ok 43 - F03: new registrations fail closed against a legacy deployment until reviewed migration
+  ---
+  duration_ms: 5.083275
+  type: 'test'
+  ...
+# Subtest: F04: partial recovery and missing debt terms cannot discharge an offering
+ok 44 - F04: partial recovery and missing debt terms cannot discharge an offering
+  ---
+  duration_ms: 0.194975
+  type: 'test'
+  ...
+# Subtest: F05: workspace ownership isolates uploads and cross-case identical documents are rejected
+ok 45 - F05: workspace ownership isolates uploads and cross-case identical documents are rejected
+  ---
+  duration_ms: 1.378375
+  type: 'test'
+  ...
+# Subtest: F09: full funding, transit and unknown states are closed through the shared eligibility rule
+ok 46 - F09: full funding, transit and unknown states are closed through the shared eligibility rule
+  ---
+  duration_ms: 0.19665
+  type: 'test'
+  ...
+# Subtest: subscription precision: integer shares conserve six-decimal amounts and leave the unspent budget explicit
+ok 47 - subscription precision: integer shares conserve six-decimal amounts and leave the unspent budget explicit
+  ---
+  duration_ms: 2.254599
+  type: 'test'
+  ...
+# Subtest: F10: null sea heights stay missing and filtering retains the correct observation date
+ok 48 - F10: null sea heights stay missing and filtering retains the correct observation date
+  ---
+  duration_ms: 0.878091
+  type: 'test'
+  ...
+# Subtest: F10: missing prices are rejected; null closes are omitted; old observations stay stale after a successful fetch
+ok 49 - F10: missing prices are rejected; null closes are omitted; old observations stay stale after a successful fetch
+  ---
+  duration_ms: 3.141611
+  type: 'test'
+  ...
+# Subtest: F11: a newer same-source observation can downgrade or resolve risk; empty/stale feeds cannot
+ok 50 - F11: a newer same-source observation can downgrade or resolve risk; empty/stale feeds cannot
+  ---
+  duration_ms: 0.192473
+  type: 'test'
+  ...
+1..50
+# tests 59
+# suites 0
+# pass 59
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6493.083982

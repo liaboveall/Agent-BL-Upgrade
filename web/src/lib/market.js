@@ -2,10 +2,11 @@
 // functions of the app state: every card, sort, summary and the detail panel go through them.
 import * as f from './format.js';
 import { t, tData } from './i18n.js';
+import { subscriptionAvailability } from '../../../src/core/subscription.js';
 
 export const PAUSED_ACTIONS = new Set(['PAUSE_OFFERING', 'FREEZE_POOL', 'TRIGGER_LIQUIDATION']);
 // Pool states in which no new subscription is accepted (contract enum names plus the offchain 'Liquidated').
-export const INACTIVE_POOL_STATES = new Set(['Paused', 'Frozen', 'Liquidation', 'Liquidated', 'Repaid', 'Redeemed', 'Cancelled']);
+export const INACTIVE_POOL_STATES = new Set(['Funded', 'InTransit', 'Paused', 'Frozen', 'Liquidation', 'Liquidated', 'Repaid', 'Redeemed', 'Cancelled', 'Defaulted', 'LossSettled']);
 
 /** Yield per year: what investors compare offerings of different lengths by. Older quotes fall back to gross. */
 export function annualYieldText(quote, unavailable = '--') {
@@ -76,8 +77,11 @@ export function marketView(state, entry) {
   const pool = state.evidencePools.get(entry.case_id) ?? null;
   const quote = pool?.quote ?? recommendedQuote(cachedComparison(state, entry.case_id));
   // A historical pool (kept only for its deployed testnet record) is never open for subscription.
-  const paused = entry.historical === true || (pool ? INACTIVE_POOL_STATES.has(pool.status) : Boolean(quote && PAUSED_ACTIONS.has(quote.pricing_action)));
-  return { pool, quote, paused };
+  const availability = pool ? subscriptionAvailability({ ...pool, historical: entry.historical })
+    : { can_subscribe: Boolean(quote && !entry.historical && !PAUSED_ACTIONS.has(quote.pricing_action)), remaining_usd: null };
+  const canSubscribe = pool?.can_subscribe === false ? false : availability.can_subscribe;
+  const paused = !canSubscribe;
+  return { pool, quote, paused, canSubscribe, remainingUsd: pool?.remaining_usd ?? availability.remaining_usd };
 }
 
 /** Where a case's market price and route risk come from: live, offline snapshot, reference or historical. */
@@ -100,7 +104,8 @@ export function marketFunding(pool) {
   const raised = Number(pool?.subscribed_usd);
   const target = Number(pool?.target_usd);
   if (pool?.subscribed_usd == null || pool?.target_usd == null || !Number.isFinite(raised) || !Number.isFinite(target) || target <= 0) return null;
-  return { raised, target, fill: Math.max(0, Math.min(1, raised / target)) };
+  const fill = pool.token_supply > 0 && pool.subscribed_shares != null ? pool.subscribed_shares / pool.token_supply : raised / target;
+  return { raised, target, fill: Math.max(0, Math.min(1, fill)) };
 }
 
 export const MARKET_SORTS = ['recommended', 'yield_desc', 'risk_asc', 'funding_desc', 'eta_asc'];

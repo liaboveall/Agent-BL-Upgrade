@@ -8,7 +8,7 @@ import { createOwnerJournal } from '../scripts/lib/owner-journal.mjs';
 import { createAgentService } from '../src/agent/runtime/factory.js';
 import { createChainReader } from '../src/agent/runtime/poolRegistry.js';
 import { validateSettlementStep } from '../src/agent/pipelines/settlementPipeline.js';
-import { settlementChain, chainConfig, oil, RECIPIENT, OWNER, paymentHash, blockHash } from './helpers/settlement.js';
+import { settlementChain, chainConfig, oil, RECIPIENT, PAYER, OWNER, paymentHash, blockHash } from './helpers/settlement.js';
 import { createPool, storeState } from '../src/app/store.js';
 import { quoteFromCase } from '../src/core/pricingEngine.js';
 
@@ -16,7 +16,7 @@ async function harness(t) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-settlement-cli-')); t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const chain = settlementChain(), state = { mode: 'live', generation: 1, signerCalls: 0, attachFailure: false, uncertain: false, afterPreflight: null };
   const store = { ...storeState, pools: new Map(), agentActivities: [] }; createPool(oil.case_id, oil, quoteFromCase(oil), { store });
-  const service = createAgentService({ env: { AGENT_SETTLEMENT_RECIPIENT: RECIPIENT, AGENT_VALUATION_LLM: 'false', AGENT_COOLDOWN_SEC: '0' },
+  const service = createAgentService({ env: { AGENT_SETTLEMENT_RECIPIENT: RECIPIENT, AGENT_SETTLEMENT_PAYER: PAYER, AGENT_VALUATION_LLM: 'false', AGENT_COOLDOWN_SEC: '0' },
     store, chainConfig, dir, monitors: false, getChainContext: async () => chain.context, getMode: () => state.mode,
     getGeneration: () => state.generation, now: () => new Date('2099-10-14T00:00:00Z') });
   await service.init(); await service.registry.linkChain({ case_id: oil.case_id, chain_pool_id: 11, ebl_id: 7 }, createChainReader(chain.context));
@@ -41,13 +41,13 @@ async function harness(t) {
     state.signerCalls++;
     return { address: OWNER,
       validateStep: async (_step, plan) => {
-        await validateSettlementStep({ plan, context: chain.context, chainConfig, recipient: RECIPIENT });
+        await validateSettlementStep({ plan, context: chain.context, chainConfig, recipient: RECIPIENT, expectedPayer: PAYER });
         await state.afterPreflight?.();
       },
       contractFor: (step) => ({ owner: async () => OWNER,
         [step.method]: Object.assign(async () => { if (state.uncertain) throw new Error('broadcast outcome unknown'); return chain.send(step); }, { staticCall: async () => {} }) }) };
   };
-  const invoke = (extra = []) => run({ argv: ['--id', approval.approval_id, ...extra], env: { AGENT_SETTLEMENT_RECIPIENT: RECIPIENT },
+  const invoke = (extra = []) => run({ argv: ['--id', approval.approval_id, ...extra], env: { AGENT_SETTLEMENT_RECIPIENT: RECIPIENT, AGENT_SETTLEMENT_PAYER: PAYER },
     fetchFn, createSigner, journal, log: (line) => lines.push(line) });
   return { service, chain, state, approval, journal, invoke, lines };
 }

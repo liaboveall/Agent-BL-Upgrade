@@ -7,7 +7,7 @@ import { quoteFromCase } from '../src/core/pricingEngine.js';
 import { createAgentService } from '../src/agent/runtime/factory.js';
 import { buildOwnerPlan, verifyOwnerTx } from '../src/agent/runtime/ownerTxPlan.js';
 import { openingMetadata, resolveOwnerStep, validateOpeningStep } from '../src/agent/runtime/openingPlan.js';
-import { cargoIdentityHash } from '../src/chain/cargoIdentity.js';
+import { cargoIdentityHash, cargoIdentityHashV2 } from '../src/chain/cargoIdentity.js';
 import { chainConfig, copper, oil, openingChain, uploadedDocuments, OWNER } from './helpers/opening.js';
 
 const params = (caseData = oil) => ({ case_data: caseData, quote: quoteFromCase(caseData), documents: [{ name: 'bill.md', sha256: 'doc-hash' }], compliance: { status: 'CLEAR' } });
@@ -33,7 +33,7 @@ async function attach(service, chain, id, index) {
 
 test('opening: unregistered cargo has exactly three owner steps with receipt-dependent IDs and faithful metadata', async () => {
   const chain = openingChain(), plan = await planFor(chain);
-  assert.equal(plan.kind, 'create'); assert.equal(plan.cargo_hash, cargoIdentityHash(oil));
+  assert.equal(plan.kind, 'create'); assert.equal(plan.cargo_hash, cargoIdentityHashV2(oil));
   assert.deepEqual(plan.steps.map((step) => step.method), ['mintEBLV2', 'pledge', 'createOffering']);
   assert.equal(plan.steps[0].args[3].quantity, '92105'); assert.equal(plan.steps[0].args[3].hsCode, '270900');
   assert.equal(plan.steps[0].args[3].voyage, 'V.41'); assert.equal(plan.steps[0].args[3].dcsa, false);

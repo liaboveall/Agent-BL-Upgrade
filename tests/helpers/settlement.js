@@ -21,7 +21,7 @@ export function settlementChain() {
   chain.context.pool.settlementProofs = async (id) => {
     const pool = chain.pools.get(Number(id)); return [pool?.paymentProof ?? ZeroHash, pool?.arrivalProof ?? ZeroHash];
   };
-  chain.context.chainConfig = chainConfig; chain.context.settlementRecipient = RECIPIENT;
+  chain.context.chainConfig = chainConfig; chain.context.settlementRecipient = RECIPIENT; chain.context.settlementPayer = PAYER;
   const transferIface = new Interface(['event Transfer(address indexed from,address indexed to,uint256 value)']);
   function payment({ txHash = paymentHash, asset = X402_NETWORKS['eip155:1439'].asset, from = PAYER, to = RECIPIENT,
     amount = 1_234_567n, status = 1, block = 100, extraLogs = [] } = {}) {

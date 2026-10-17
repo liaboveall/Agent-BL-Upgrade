@@ -13,7 +13,7 @@ import { agent } from '../lib/agent-api.js';
 import { t } from '../lib/i18n.js';
 import { toast } from '../lib/toast.js';
 import { copilotQuery, resetCopilotSession } from '../lib/copilot-api.js';
-import { defaultMarketSubscription, PAUSED_ACTIONS, visibleCases } from '../lib/market.js';
+import { defaultMarketSubscription, marketView, PAUSED_ACTIONS, visibleCases } from '../lib/market.js';
 import { scrollBehavior } from '../lib/accessibility.js';
 import { agentStore } from '../pages/agent/agent-store.js';
 
@@ -153,9 +153,13 @@ export async function toggleRuntimeMode() {
   try {
     const { response, data } = await postWithAdminToken('/api/demo/mode', { mode: target });
     if (!response.ok) throw new Error(data.error || `Could not switch to ${target}`);
-    set({ demoMode: data.demoMode, liveAvailable: data.liveAvailable, modeGeneration: data.generation });
+    versions.caseVersion++;
+    set({ demoMode: data.demoMode, liveAvailable: data.liveAvailable, modeGeneration: data.generation, comparison: null, marketComparisons: {},
+      preferencesByCase: {}, mint: null, financingUsd: null, marketSubscriptionResult: null });
     resetEvidence();
     resetCopilotUi();
+    await selectCase(get().caseId);
+    warmMarketQuotes();
     toast(t(target === 'live' ? 'mode_switched_live' : 'mode_switched_demo'));
   } catch (error) {
     toast(error.message, true);
@@ -168,6 +172,7 @@ export async function resetDemo() {
     if (!response.ok) throw new Error(data.error || 'Demo reset failed');
     set({
       modeGeneration: data.generation, marketComparisons: {}, marketSubscriptionResult: null,
+      preferencesByCase: {},
       mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: []
     });
     resetEvidence();
@@ -240,43 +245,51 @@ async function persistExporterPreferences() {
 }
 
 /** Show what the agent already holds for a case instead of whatever the previous case left in the form. */
-async function loadExporterPreferences(caseId) {
+async function loadExporterPreferences(caseId, version, generation) {
   try {
     const stored = (await api.getExporterPreferences(caseId))?.preferences ?? {};
-    if (get().caseId !== caseId) return;
-    const current = get().preferences;
-    set({ preferences: {
-      minPrice: Number.isFinite(stored.min_acceptable_issue_price) ? String(stored.min_acceptable_issue_price) : current.minPrice,
+    if (get().caseId !== caseId || version !== versions.caseVersion || generation !== get().modeGeneration) return;
+    const preferences = {
+      minPrice: Number.isFinite(stored.min_acceptable_issue_price) ? String(stored.min_acceptable_issue_price) : '',
       speed: stored.payout_speed_preference ?? ''
-    } });
+    };
+    set((state) => ({ preferences, preferencesError: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
   } catch {
-    // The form keeps its current values; saving will report a real problem.
+    if (version === versions.caseVersion && generation === get().modeGeneration) set({ preferencesError: t('pref_load_failed') });
+    throw new Error(t('pref_load_failed'));
   }
 }
 
 export function setPreferenceDraft(patch) {
-  set((state) => ({ preferences: { ...state.preferences, ...patch } }));
+  if (get().busy || get().preferencesError) return;
+  set((state) => {
+    const preferences = { ...state.preferences, ...patch };
+    return { preferences, preferencesByCase: { ...state.preferencesByCase, [state.caseId]: preferences } };
+  });
 }
 
 /** The price floor was committed (blur / Enter): store it for the agent and reprice. */
 export async function commitMinPrice() {
-  persistExporterPreferences();
+  if (get().busy || get().preferencesError) return;
   const { caseId, cases, preferences } = get();
+  const version = ++versions.caseVersion, generation = get().modeGeneration;
   const entry = cases.find((c) => c.case_id === caseId);
   if (!entry) return;
   set({ busy: true });
   try {
+    await persistExporterPreferences();
     agentLog(t('pref_price_updated', { value: preferences.minPrice }));
     const comparison = await getCaseComparison(entry, true);
-    if (get().caseId === caseId) set({ comparison });
+    if (get().caseId === caseId && version === versions.caseVersion && generation === get().modeGeneration) set({ comparison });
   } catch (error) {
     toast(t('t_reprice_fail', { msg: error.message }), true);
   } finally {
-    set({ busy: false });
+    if (version === versions.caseVersion && generation === get().modeGeneration) set({ busy: false });
   }
 }
 
 export function commitSpeedPreference(value) {
+  if (get().busy || get().preferencesError) return;
   setPreferenceDraft({ speed: value });
   persistExporterPreferences();
   agentLog(t('pref_speed_updated', { value: value ? f.SPEED_META[value]?.label ?? value : t('pref_ai_recommended') }));
@@ -286,14 +299,21 @@ export function commitSpeedPreference(value) {
 export function getCaseComparison(entry, forceUpdate = false) {
   if (!entry?.case_id) return Promise.reject(new Error('Missing case id'));
   const cached = get().marketComparisons[entry.case_id];
-  if (!forceUpdate && cached?.comparison) return Promise.resolve(cached.comparison);
-  if (!forceUpdate && cached?.promise) return cached.promise;
-  const floor = Number(get().preferences.minPrice);
-  const putComparison = (value) => set((state) => ({ marketComparisons: { ...state.marketComparisons, [entry.case_id]: value } }));
+  const generation = get().modeGeneration;
+  const preference = get().preferencesByCase[entry.case_id];
+  const floor = preference?.minPrice === '' || preference?.minPrice === undefined ? NaN : Number(preference.minPrice);
+  const cacheKey = JSON.stringify([generation, preference ?? null]);
+  if (!forceUpdate && cached?.cacheKey === cacheKey && cached?.comparison) return Promise.resolve(cached.comparison);
+  if (!forceUpdate && cached?.cacheKey === cacheKey && cached?.promise) return cached.promise;
+  const requestId = Symbol();
+  const putComparison = (value, initial = false) => {
+    if (generation !== get().modeGeneration || !initial && get().marketComparisons[entry.case_id]?.requestId !== requestId) return;
+    set((state) => ({ marketComparisons: { ...state.marketComparisons, [entry.case_id]: { ...value, cacheKey, requestId } } }));
+  };
   const promise = api.compareSpeeds(entry.case, { min_acceptable_issue_price: Number.isFinite(floor) ? floor : undefined })
     .then((comparison) => { putComparison({ comparison }); return comparison; })
     .catch((error) => { putComparison({ error }); throw error; });
-  putComparison({ promise });
+  putComparison({ promise }, true);
   return promise;
 }
 
@@ -317,16 +337,16 @@ export async function selectCase(caseId) {
   if (!entry) return;
   const version = ++versions.caseVersion, generation = get().modeGeneration;
   if (get().evidenceSelected?.case_id !== caseId) clearEvidenceSelection();
-  set({ caseId });
+  set({ caseId, caseData: entry.case, comparison: null, busy: true, preferences: { minPrice: '', speed: '' }, preferencesError: null,
+    financingUsd: null, mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: [], marketSubscriptionResult: null });
   emit('agentbl:casechange', { case_id: caseId });
-  await loadExporterPreferences(caseId);
-  if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
-  set({ caseData: entry.case, financingUsd: null, mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: [], busy: true });
   subscribeToAgentActivity(caseId);
   try {
+    await loadExporterPreferences(caseId, version, generation);
+    if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
     const comparison = await getCaseComparison(entry);
     if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
-    const speed = comparison.recommended_payout_speed ?? comparison.quotes?.[0]?.payout_speed ?? 'BALANCED';
+    const speed = get().preferences.speed || comparison.recommended_payout_speed || comparison.quotes?.[0]?.payout_speed || 'BALANCED';
     set({ comparison, speed });
     const quote = selectedQuote();
     set({
@@ -441,8 +461,9 @@ export function setSubscriptionAmount(value) {
 
 export async function subscribeSelected() {
   const state = get();
+  const entry = state.cases.find((c) => c.case_id === state.caseId);
   const quote = state.evidencePools.get(state.caseId)?.quote ?? selectedQuote(state);
-  if (!state.demoMode || !quote || PAUSED_ACTIONS.has(quote.pricing_action)) return;
+  if (state.busy || state.marketSubscribing || !state.demoMode || !entry || !marketView(state, entry).canSubscribe || !quote || quote.case_id !== state.caseId) return;
   const amount = Number(state.marketSubscriptionUsd) || 0;
   if (amount <= 0) { toast(t('market_need_amount'), true); return; }
   const caseId = state.caseId, modeGeneration = state.modeGeneration, wallet = walletAddress();
@@ -488,47 +509,50 @@ function userFacingError(error) {
   return key ? t(key) : (error?.message || String(error || ''));
 }
 
-async function fallbackSim(caseId, quote, financing, note) {
-  if (note) toast(note, true);
-  return web3.simulatedMint(caseId, quote, financing);
-}
-
 export async function mint() {
-  const quote = selectedQuote();
-  if (!quote || PAUSED_ACTIONS.has(quote.pricing_action)) return;
-  const financing = Number(get().financingUsd) || 0;
+  const state = get(), quote = selectedQuote(state);
+  if (state.busy || state.minting || state.preferencesError || !quote || quote.case_id !== state.caseId || PAUSED_ACTIONS.has(quote.pricing_action)) return;
+  const financing = Number(state.financingUsd) || 0;
   if (financing <= 0) { toast(t('t_need_financing'), true); return; }
-  const caseId = get().caseId;
+  const caseId = state.caseId, generation = state.modeGeneration, version = versions.caseVersion;
+  const current = () => get().caseId === caseId && get().modeGeneration === generation && versions.caseVersion === version
+    && get().demoMode === state.demoMode && selectedQuote()?.quote_hash === quote.quote_hash && get().networkKey === state.networkKey;
   const record = (result) => set((state) => ({ mint: result, poolId: result.poolId && result.poolId !== 'sim' ? result.poolId : state.poolId }));
   set({ minting: true });
   try {
     let result;
-    if (await web3.isRealChainConfigured()) {
+    if (state.demoMode) {
+      result = await web3.simulatedMint(caseId, quote, financing);
+    } else {
+      if (!await web3.isRealChainConfigured()) throw new Error(t('err_no_contract'));
+      if (!current()) return;
       if (!web3.isWalletConnected()) {
-        try { await connectWallet(); } catch (error) {
-          if (error.code === 'NO_WALLET') result = await fallbackSim(caseId, quote, financing, t('t_no_wallet_detected'));
-          else throw error;
-        }
+        await connectWallet();
       }
-      if (!result) {
+      if (current()) {
+        const wallet = walletAddress();
+        const cfg = await web3.loadChainConfig();
+        if (!current() || !window.confirm(t('mint_lab_confirm', { network: state.networkName, contract: cfg.contracts?.AgentBLRWA ?? cfg.contractAddress,
+          caseId, price: quote.final_issue_price_usd.toFixed(4), financing }))) return;
+        const validateBeforeSend = () => {
+          if (!current() || wallet !== walletAddress()) throw new Error(t('mint_snapshot_changed'));
+        };
         try {
           // Fire: tx sent → pending UI. Confirm: background poll → update UI.
           result = await web3.mintOnChain(quote, financing, (confirmed) => {
-            if (get().caseId !== caseId) return;
+            if (!current() || wallet !== walletAddress()) return;
             record(confirmed);
             if (confirmed.mode === 'chain') toast(t('t_mint_confirmed', { block: confirmed.blockNumber }));
             else if (confirmed.mode === 'chain_failed') toast(t('t_tx_failed', { msg: t('res_execution_failed') }), true);
             else if (confirmed.mode === 'chain_timeout') toast(t('t_confirm_timeout'), true);
-          });
+          }, { validateBeforeSend });
         } catch (error) {
           if (error.code === 'REJECTED') { toast(t('t_cancel_mint'), true); return; }
-          result = await fallbackSim(caseId, quote, financing, t('t_chain_call_failed', { msg: userFacingError(error) }));
+          throw error;
         }
       }
-    } else {
-      result = await web3.simulatedMint(caseId, quote, financing);
     }
-    if (get().caseId !== caseId) return;
+    if (!current() || !result) return;
     record(result);
     if (result.mode === 'chain') toast(t('t_minted_chain', { n: f.int(result.mintedAmount), network: get().networkName }));
     else if (result.mode === 'chain_pending') toast(t('t_tx_submitted'));

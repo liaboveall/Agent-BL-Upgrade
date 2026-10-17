@@ -48,6 +48,7 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
   }, { onStep, forceDeterministic, valuation, worldRisk, now, parser });
 
   const opening = result.action === 'OPEN' || result.action === 'OPEN_WITH_WARNING';
+  if (result.case_data) result.case_data = { ...result.case_data, visibility: job?.visibility === 'public-demo' ? 'public-demo' : 'private' };
   if (opening) await ingest.saveCase(result.case_data);
   if (job) await ingest.updateJob(job.job_id, {
     extraction: result.extraction ?? [], findings: result.findings,
@@ -62,7 +63,8 @@ export async function proposeFromIngest(event, { ingest, orchestrator, preferenc
       quotes: quoteSummary(result.comparison),
       contract_action: result.contract_action,
       documents: result.documents,
-      valuation_provider: result.valuation?.provider ?? null
+      valuation_provider: result.valuation?.provider ?? null,
+      analysis_mode: result.analysis_mode ?? null, source_freshness: result.source_freshness ?? null
     }
     : { documents: result.documents, ...(result.quote ? { quote: result.quote } : {}) };
   if (result.compliance) params.compliance = result.compliance;

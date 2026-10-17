@@ -259,7 +259,7 @@ export class AgentService {
       pending_approvals: this.approvals.pendingCount(),
       awaiting_owner_signature: this.approvals.list({ status: APPROVAL_STATUS.AWAITING_OWNER_SIGNATURE }).length,
       protected_chain_pools: this.config.protectedChainPools,
-      settlement: { recipient_configured: Boolean(this.config.settlementRecipient), confirmations: this.config.chainConfirmations, asset: 'USDC', decimals: 6 },
+      settlement: { recipient_configured: Boolean(this.config.settlementRecipient), payer_configured: Boolean(this.config.settlementPayer), confirmations: this.config.chainConfirmations, asset: 'USDC', decimals: 6 },
       demo_run: this.scenarios?.playbackStatus(),
       scenario: this.scenarios ? (({ loaded, name, next_step: next, total_steps: total, finished }) => ({ loaded, name, next_step: next, total_steps: total, finished }))(this.scenarios.status()) : null,
       last_error: this.lastError,
@@ -296,7 +296,7 @@ export class AgentService {
         if (event.data.proof_source !== 'usdc-transfer') throw new SettlementError('unsupported_payment_source', 'Live payment evidence currently requires proof_source: usdc-transfer');
         const context = await this.getChainContext();
         const verified = await verifyUsdcTransfer({ provider: context?.provider, chainConfig: this.chainConfig,
-          recipient: this.config.settlementRecipient, txHash: event.data.payment_proof,
+          recipient: this.config.settlementRecipient, expectedPayer: this.config.settlementPayer, txHash: event.data.payment_proof,
           amount: event.data.repayment_amount, confirmations: this.config.chainConfirmations });
         const current = await readSettlementState({ context, chainConfig: this.chainConfig, poolId: entry.chain.pool_id });
         if (current.ebl_id !== entry.chain.ebl_id) throw new SettlementError('settlement_pool_mismatch', 'Mapped pool collateral changed');
@@ -346,7 +346,7 @@ export class AgentService {
     let verification = null;
     if (claim && current.paymentProof) {
       verification = await verifyUsdcTransfer({ provider: context.provider, chainConfig: this.chainConfig,
-        recipient: this.config.settlementRecipient, txHash: current.payment_proof, amountAtomic: current.repayment_amount_atomic,
+        recipient: this.config.settlementRecipient, expectedPayer: this.config.settlementPayer, txHash: current.payment_proof, amountAtomic: current.repayment_amount_atomic,
         confirmations: this.config.chainConfirmations });
       if (!samePaymentEvidence(claim.event.data.payment_verification, verification)
         || claim.event.data.repayment_amount_atomic !== current.repayment_amount_atomic) throw new SettlementError('payment_evidence_changed', 'Recorded payment no longer matches its accepted evidence');
@@ -365,11 +365,12 @@ export class AgentService {
    * event that the ingest pipeline answers. Uploading the same bytes for the same case again returns
    * the same job instead of a second decision.
    */
-  async submitDocuments(body, { source = 'ingest', occurredAt, generation = this.getGeneration() } = {}) {
+  async submitDocuments(body, { source = 'ingest', occurredAt, generation = this.getGeneration(), ownerId } = {}) {
     const mode = this.getMode();
     await this.init();
     if (!this.ingest) throw new AgentServiceError('ingest_unavailable', 'This runtime has no document intake', 503);
-    const { job, documents, created } = await this.ingest.accept(body);
+    const { job, documents, created } = await this.ingest.accept(body, { ownerId,
+      visibility: mode === 'demo' && source === 'scenario' ? 'public-demo' : 'private' });
     this.#assertCurrent({ mode, generation });
     if (body.exporter_preferences !== undefined) await this.preferences.put(job.case_id, body.exporter_preferences);
     let accepted = null;
@@ -400,7 +401,7 @@ export class AgentService {
     if (!original) throw new AgentServiceError('job_not_found', 'Unknown ingest job', 404);
     if (original.status !== 'DONE' || !original.review_required) throw new AgentServiceError('review_not_required', 'Only a completed HOLD job can receive corrected documents', 409);
     if (!body || typeof body.note !== 'string' || !body.note.trim() || body.note.length > 500) throw new AgentServiceError('review_note_required', 'A review note (1-500 characters) is required', 400);
-    const result = await this.ingest.accept({ case_id: original.case_id, documents: body.documents }, { reviewOf: jobId });
+    const result = await this.ingest.accept({ case_id: original.case_id, documents: body.documents }, { reviewOf: jobId, ownerId: original.owner_id });
     if (!result.created) return { job: result.job, idempotency_key: `event:review:${result.job.job_id}` };
     await this.ingest.updateJob(result.job.job_id, { reviewed_job_id: jobId });
     const accepted = await this.submitEvent({
@@ -469,7 +470,7 @@ export class AgentService {
           if (!claim || hashSnapshot(claim.event.data) !== hashSnapshot(event.data)) throw new SettlementError('payment_verification_required', 'Queued payment has no matching accepted receipt');
           const context = await this.getChainContext();
           const verified = await verifyUsdcTransfer({ provider: context?.provider, chainConfig: this.chainConfig,
-            recipient: this.config.settlementRecipient, txHash: event.data.payment_proof, amountAtomic: event.data.repayment_amount_atomic,
+            recipient: this.config.settlementRecipient, expectedPayer: this.config.settlementPayer, txHash: event.data.payment_proof, amountAtomic: event.data.repayment_amount_atomic,
             confirmations: this.config.chainConfirmations });
           if (!samePaymentEvidence(verified, event.data.payment_verification)) throw new SettlementError('payment_evidence_changed', 'Payment evidence changed after acceptance');
           if (pool.chain_settlement.paymentProof) {
@@ -920,7 +921,7 @@ export class AgentService {
         const build = async () => buildOwnerPlan({ action: decision.action, chain_pool_id: decision.chain_pool_id,
           params: decision.proposal?.params ?? {}, chainConfig: this.chainConfig,
           context: opening || SETTLEMENT_ACTIONS.includes(decision.action) ? await this.getChainContext() : undefined,
-          recipient: this.config.settlementRecipient, confirmations: this.config.chainConfirmations });
+          recipient: this.config.settlementRecipient, expectedPayer: this.config.settlementPayer, confirmations: this.config.chainConfirmations });
         try { plan = run ? await run.span('execution_plan', build) : await build(); }
         catch (error) {
           if (!opening) throw error;
@@ -969,7 +970,7 @@ export class AgentService {
     if (pending?.plan?.schema === SETTLEMENT_SCHEMA) {
       this.#assertCurrent(await this.logger.get(pending.decision_id));
       await validateSettlementStep({ plan: pending.plan, context: await this.getChainContext(), chainConfig: this.chainConfig,
-        recipient: this.config.settlementRecipient, confirmations: this.config.chainConfirmations });
+        recipient: this.config.settlementRecipient, expectedPayer: this.config.settlementPayer, confirmations: this.config.chainConfirmations });
     }
     const pendingDecision = pending ? await this.logger.get(pending.decision_id) : null;
     if (pendingDecision?.freshness && !assessFreshness(pendingDecision.freshness, this.#evidenceNow(pendingDecision)).fresh) {
@@ -1135,7 +1136,7 @@ export class AgentService {
       }
       if (plan.payment) {
         const current = await verifyUsdcTransfer({ provider: context.provider, chainConfig: this.chainConfig,
-          recipient: this.config.settlementRecipient, txHash: plan.payment.tx_hash, amountAtomic: plan.payment.amount_atomic,
+          recipient: this.config.settlementRecipient, expectedPayer: this.config.settlementPayer, txHash: plan.payment.tx_hash, amountAtomic: plan.payment.amount_atomic,
           confirmations: this.config.chainConfirmations });
         if (!samePaymentEvidence(current, plan.payment)) return { ok: false, errors: ['USDC payment changed after approval'], confirmed_events: [] };
       }
@@ -1346,9 +1347,10 @@ export class AgentService {
 
   // ---------------------------------------------------------------- reads
 
-  async listDecisions({ case_id: caseId, pool_id: poolId, status, action, limit = 50, cursor } = {}) {
+  async listDecisions({ case_id: caseId, pool_id: poolId, status, action, limit = 50, cursor, caseFilter } = {}) {
     const all = await this.logger.list();
     let items = all;
+    if (caseFilter) items = items.filter((record) => caseFilter(record.case_id));
     if (caseId) items = items.filter((record) => record.case_id === caseId);
     if (poolId) items = items.filter((record) => record.pool_id === poolId);
     if (status) items = items.filter((record) => record.status === status);

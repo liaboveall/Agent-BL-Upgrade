@@ -45,7 +45,9 @@ export const appStore = createStore({
   evidenceSelected: null,
 
   // exporter preferences the agent enforces
-  preferences: { minPrice: '0.75', speed: '' },
+  preferences: { minPrice: '', speed: '' },
+  preferencesByCase: {},
+  preferencesError: null,
 
   // mint module
   financingUsd: null,
@@ -81,7 +83,8 @@ export const getAppState = () => appStore.get();
 /** The PricingQuote for the currently selected payout speed (or the first). */
 export function selectedQuote(state = appStore.get()) {
   const quotes = state.comparison?.quotes ?? [];
-  return quotes.find((quote) => quote.payout_speed === state.speed) ?? quotes[0] ?? null;
+  const quote = quotes.find((quote) => quote.payout_speed === state.speed) ?? quotes[0] ?? null;
+  return quote && quote.case_id === state.caseId ? quote : null;
 }
 
 /** The live quote in the voyage panel: the repriced quote if an event was injected, else the selected quote. */

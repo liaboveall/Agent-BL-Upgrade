@@ -273,20 +273,19 @@ function mergeEvents(primary, secondary) {
 async function assessFromPublicSources(caseData, profile, opts) {
   const { env = process.env, forceFallback = false } = opts;
   const sourceEnv = forceFallback ? { ...env, REAL_DATA: 'off' } : env;
-  const sourceOpts = { env: sourceEnv, fetchImpl: opts.fetchImpl };
+  const sourceOpts = { env: sourceEnv, fetchImpl: opts.fetchImpl, ...(opts.now ? { now: opts.now } : {}) };
   const [route, ...newsResults] = await Promise.all([
     routeRiskEvents(caseData, sourceOpts),
     ...profile.newsQueries.map((query) => getNews(query, sourceOpts))
   ]);
   const news = newsResults.flatMap((result) => result.items ?? []).slice(0, 12).map((item) => ({ ...item, snippet: item.snippet ?? '' }));
-  const statuses = [route.status, ...newsResults.map((result) => result.status)].filter((status) => status !== 'unavailable');
+  const statuses = [route.status, ...newsResults.map((result) => result.status)];
   const live = statuses.some((status) => status === 'live' || status === 'stale');
   // A quantitative reading (transits, odds, waves, prices) of a risk type supersedes headlines about it.
   const measured = new Set(route.events.map((event) => event.type));
   const events = mergeEvents(route.events, headlineEvents(news, profile).filter((event) => !measured.has(event.type)));
-  const clockMs = opts.now?.() ?? Date.now();
-  const fetched = newsResults.map((result) => Date.parse(result.fetched_at ?? '')).filter(Number.isFinite);
-  const observedMs = live ? (fetched.length ? Math.min(...fetched) : clockMs) : clockMs;
+  const observations = [route.observed_at, ...news.map((item) => item.date)].map((value) => Date.parse(value ?? '')).filter(Number.isFinite);
+  const observedMs = observations.length ? Math.min(...observations) : Date.parse(loadSnapshot().captured_at ?? '');
   const allLive = statuses.length > 0 && statuses.every((status) => status === 'live');
   const snapshotAt = loadSnapshot().captured_at;
   const signals = {
@@ -300,13 +299,15 @@ async function assessFromPublicSources(caseData, profile, opts) {
   };
   const label = live ? `Live public data (${PUBLIC_SOURCES.join(', ')})` : `Offline snapshot of public data${snapshotAt ? ` captured ${snapshotAt.slice(0, 10)}` : ''}`;
   return {
-    observed_at: new Date(observedMs).toISOString(),
-    expires_at: new Date(observedMs + EVIDENCE_TTL_MS).toISOString(),
+    observed_at: Number.isFinite(observedMs) ? new Date(observedMs).toISOString() : null,
+    expires_at: route.expires_at ?? (Number.isFinite(observedMs) ? new Date(observedMs + EVIDENCE_TTL_MS).toISOString() : null),
     source_status: live ? (allLive ? 'live' : 'stale') : 'fixture',
+    review_required: route.review_required,
+    review_reason: route.review_required ? 'Quantitative route or market observations are missing, delayed or offline' : null,
     events,
     signals,
     sources: { route: route.status, news: newsResults.map((result) => result.status) },
-    summary: buildSummary(events, profile, label),
+    summary: route.review_required && live ? 'Data review required: current observations do not establish that route risk is clear.' : buildSummary(events, profile, label),
     provider: live ? 'public-live' : 'public-snapshot',
     live,
     data_status: live ? (allLive ? 'live' : 'mixed') : 'offline',

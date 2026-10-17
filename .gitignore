@@ -9,6 +9,8 @@ data/runtime/
 
 # Dependencies
 node_modules/
+test-results/
+playwright-report/
 
 # Built dashboard (npm run build)
 dist/

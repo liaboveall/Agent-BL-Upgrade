@@ -170,9 +170,10 @@ export function simulateOffering(caseData, opts = {}) {
       push(endState, 'RiskPricingOracle',
         `Risk escalated to ${reQuote.risk_level}: ${reQuote.pricing_action}. New evidence ${shortHash(reQuote.evidence_hash)}`);
     } else if (reQuote.final_issue_price_usd < initialQuote.final_issue_price_usd - REPRICE_THRESHOLD) {
-      endState = 'Repriced';
-      push('Repriced', 'RiskPricingOracle',
+      endState = 'InTransit';
+      push('InTransit', 'RiskPricingOracle',
         `Risk up to ${reQuote.risk_level}: reprice ${initialQuote.final_issue_price_usd.toFixed(3)} -> ${reQuote.final_issue_price_usd.toFixed(3)} (evidence ${shortHash(reQuote.evidence_hash)})`);
+      steps.at(-1).action = 'REPRICE_DOWN';
     } else {
       push('InTransit', 'RiskPricingOracle', `Risk reassessed (${reQuote.risk_level}); price held at ${reQuote.final_issue_price_usd.toFixed(3)}`);
     }

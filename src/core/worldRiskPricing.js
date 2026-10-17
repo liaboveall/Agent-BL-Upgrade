@@ -18,7 +18,11 @@ function toMacroEvent(event = {}) {
     severity: event.severity,
     description: event.description,
     source: event.source ?? 'xAPI/world-intel',
-    ...(event.data_status ? { data_status: event.data_status } : {})
+    ...(event.data_status ? { data_status: event.data_status } : {}),
+    ...(event.event_id ? { event_id: event.event_id } : {}),
+    ...(event.observed_at ? { observed_at: event.observed_at } : {}),
+    ...(event.status ? { status: event.status } : {}),
+    ...(event.source_status ? { source_status: event.source_status } : {})
   };
 }
 
@@ -31,12 +35,26 @@ export function mergeWorldRiskIntoCase(caseData, events = []) {
   // The same risk on the same region counts once: a curated case already carries the route data
   // (src/realdata), so the world-risk read only adds what is new or more severe.
   const merged = [...(caseData.macro_risk_events ?? [])];
+  const history = [...(caseData.risk_event_history ?? [])];
   for (const event of events.map(toMacroEvent)) {
-    const at = merged.findIndex((item) => item.type === event.type && item.region === event.region);
+    if (['unavailable', 'stale', 'offline'].includes(event.data_status ?? event.source_status)) continue;
+    const at = merged.findIndex((item) => item.type === event.type && item.region === event.region
+      && (item.source ?? 'xAPI/world-intel') === event.source && (!event.event_id || item.event_id === event.event_id));
     if (at < 0) merged.push(event);
-    else if ((SEVERITY_RANK[event.severity] ?? 0) > (SEVERITY_RANK[merged[at].severity] ?? 0)) merged[at] = event;
+    else {
+      const old = merged[at];
+      const observed = Date.parse(event.observed_at ?? event.date), previous = Date.parse(old.observed_at ?? old.date);
+      // A newer observation from the SAME source may downgrade/resolve an alert. Older or
+      // undated observations can only add caution; an empty/unavailable feed never clears it.
+      if (Number.isFinite(observed) && Number.isFinite(previous) && observed < previous) continue;
+      if (Number.isFinite(observed) && (!Number.isFinite(previous) || observed > previous)
+          || (SEVERITY_RANK[event.severity] ?? 0) > (SEVERITY_RANK[old.severity] ?? 0)) {
+        history.push(old);
+        merged[at] = event;
+      }
+    }
   }
-  return { ...caseData, macro_risk_events: merged };
+  return { ...caseData, risk_event_history: history, macro_risk_events: merged.filter((event) => event.status !== 'resolved') };
 }
 
 const SEVERITY_RANK = { info: 0, warning: 1, critical: 2 };

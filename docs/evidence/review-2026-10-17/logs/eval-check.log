@@ -1,0 +1,7 @@
+
+> agentbl-agent-starter@0.1.0 eval:agent
+> node scripts/eval-agent.mjs --check
+
+Agent evaluation: PASS (20/20 gates, 0 retained failed cases)
+44 dialogues / 100 turns; 1350 pricing checks; 26 injection cases; live LLM SKIP
+Source SHA256: 7ee119d74b3d34edb50d84ddf63fbfb7b19f16aad478ddae1810bfedc695d546

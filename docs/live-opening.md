@@ -1,5 +1,7 @@
 # WP2.4：Live 开盘提案与 owner CLI
 
+> 2026-10-17：新发行使用 `title-v2` 的签发主体/原始提单身份，只有合约 `protocolVersion >= 3` 才能生成新开盘步骤；现有 v2 测试网只关联旧货权，不能把迁移缺失当作新资产。内部案件改名仍会检查历史 pool #2/#3 的提单别名；不改写旧哈希。部署和身份迁移待单独批准，见 [迁移审阅方案](project-remediation-2026-10-17.md)。
+
 单证接入在 Live 下生成待审批的开盘方案。新货物包含 `mintEBLV2 → pledge → createOffering` 三步；已登记货物只提出关联已有 eBL 和融资池。服务器不签开盘交易，也不读取 owner 密钥。本地实现与隔离验收使用内存链桩和真实部署 ABI。2026-10-16 在测试网上为新铜案例真实运行了一次，开出 eBL #3 / pool #3，证据见 `docs/evidence/live-opening-pool3.json`。
 
 ## 身份与执行计划

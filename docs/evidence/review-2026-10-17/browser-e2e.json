@@ -1,0 +1,378 @@
+{
+  "errors": [],
+  "steps": [
+    {
+      "page": "market",
+      "lang": "en",
+      "overflow": false
+    },
+    {
+      "page": "mint",
+      "lang": "en",
+      "overflow": false
+    },
+    {
+      "page": "agent",
+      "lang": "en",
+      "overflow": false
+    },
+    {
+      "page": "discover",
+      "lang": "en",
+      "overflow": false
+    }
+  ],
+  "copilot": "Investor Copilot\n\nDescribe what you want in one sentence; the Copilot recommends from the server's latest quotes.\n\nReset preferences\n\nTell me your commodity, risk, yield or budget preferences. I keep context across turns, filter current quotes and explain exclusions.\n\nFind low risk copper with maturity under 60 days\n\n1. Copper Cathodes (LME Grade A, Cu-CATH-1) · Singapore → Shanghai (Yangshan)\nPrice USD 0.9902 · Indicative gross yield 0.99% (about 30 days, 12.0% a year) · LOW risk\n\nRisk ceiling: LOW\nMaximum tenor (days): 60\nCommodities: Copper\n1\nCopper Cathodes (LME Grade A, Cu-CATH-1)\n\nSingapore → Shanghai (Yangshan)\n\nLOW\n\nPrice $0.9902 · Gross yield 0.99% (12.0% a year) · Risk LOW\n\nSource: server offchain mirror; onchain balances were not read here.\n\nView asset\nWatch changes\nRanking and evidence\nWhy these assets were excluded\nSend",
+  "copilotEscapeClosed": true,
+  "x402": "AI Risk Report Catalog\nNetwork: eip155:1439\n○ x402 Demo Mode\nPremium Risk Intelligence\n0.001 USDC\nLive xAPI world-risk signals + RAG deep analysis with full source citations\nPremium Cargo Valuation\n0.002 USDC\nReal-time commodity prices + historical comparables + volatility forecast\nAnti-Fraud Document Review\n0.0015 USDC\nFive-dimension eBL, invoice and insurance consistency review with pricing impact\nMystery Voyage Risk Passport\n0.001 USDC\nCommit-reveal voyage discovery with a verifiable AI risk passport; no automatic RWA subscription\n\nEach report is unlocked with an x402 (HTTP 402) payment; the report hash and payment evidence are auditable.\n\nx402 Pay → AI Report → Pricing Engine\nRun demo\nUnlock with a wallet signature (Demo · 0.001 USDC)\nRequest Report\nInvestor requests AI deep risk report — server returns 402 Payment Required\n402 Returned\nx402 Payment\nInvestor signs EIP-3009, pays USDC via x402 protocol\n✓ Paid\nOn-chain Settlement\nFacilitator settles on-chain, PaymentOracle records payment evidence\n✓ Settled\nReport Unlocked\nAI risk report unlocked, risk data flows directly into the RWA pricing engine\n✓ Report Unlocked\n\nDemo: the wallet only signs the challenge and no funds move; the receipt is simulated and never shown as a chain transaction.\n\n⏳ Running x402 purchase flow…\nRequest AI risk report → HTTP 402 Payment Required returned\nDemo — simulating the investor's EIP-3009 authorization (no real signature)\nDemo — simulating PaymentOracle settlement (no on-chain transaction)\nReport unlocked — 2 risk events, 2 RAG entries\n✓ Payment evidence: 0xe9d7cfe976c420b239422ca3626bd3ce9c835081… [Mock hash, not on chain]\nx402 purchase demo passed ✓\nOn-chain payment evidence\nDEMO\nTransaction hash\nDEMO (simulated, not on-chain) · 0xe9d7cfe976c420b2…\nReport type\npremium-risk\nAmount\n0.001 USDC\nReport hash\n0xffaa5f13c0efea5ca5aa225c8012fc91856a7798\nReport impact on RWA pricing\nBefore (free overview)\n$0.990\nAfter (deep report)\n$0.987\n\n↓ deeper discount (AI report found more risk) — price change: $-0.003\n\nPremium Risk Intelligence\nUnlocked\n\nCASE-EBL-CU-SIN-SHA · 2 risk events, 2 RAG entries\n\nBefore price\n$0.990\nAfter price\n$0.987\nPrice change\n-$0.003\nRisk level\nMEDIUM\nEvidence hash\n0x04eae4f4aef9…64a47257\nAI summary\n\nOffline snapshot of public data captured 2026-10-16 for Copper Cathode on Singapore → Shanghai: commodity volatility (warning), war risk (info). 2 world-risk event(s) folded into the cargo's risk score.\n\nBefore / after pricing decision\nBefore (free overview)\n$0.990\nLOW · OPEN_OFFERING\nAfter (deep report)\n$0.987\nMEDIUM · OPEN_OFFERING\nWorld-risk events\ncommodity_volatility\nwarning\n\nGlobal · Google News\n\nHeadline signal: commodity volatility for Copper Cathode on Global, from 3 headline(s) via Google News (capped at warning without a quantitative source).\n\nwar_risk\ninfo\n\nSingapore → Shanghai · Google News\n\nHeadline signal: war risk for Copper Cathode on Singapore → Shanghai, from 1 headline(s) via Google News (capped at warning without a quantitative source).\n\nRAG evidence\nport_congestion\n8.00\n\nShanghai (Yangshan) · illustrative port-operations note · info\n\nIllustrative: Yangshan discharge berth waiting times sit within the normal seasonal range; no material delay risk is priced for copper-cathode discharge at Shanghai.\n\ncommodity_volatility\n4.90\n\nGlobal · Yahoo Finance COMEX HG=F (snapshot 2026-10-16), news headlines · warning\n\nCopper trades around USD 14,500/MT (COMEX about USD 6.59/lb on 2026-10-16), close to record levels after mine disruptions and US tariff-driven stockpiling. An unwind of the tariff trade could take prices down quickly, so copper collateral keeps a volatility haircut and is re-marked to the live benchmark rather than the contract price.\n\nOn-chain / x402 evidence",
+  "scenario": {
+    "state": "completed",
+    "approvalsClicked": [
+      "approve:appr_f0c8d4af9c18412d"
+    ],
+    "text": "Full workflow demo\nPlayback finished; check pending approvals\n\nDemo mode only. Progress comes from the server; stopping preserves completed steps. Payment and settlement each need approval. Use Reset Demo to restart the full story.\n\nFull copper lifecycle: documents to settlement approval\nCopper cargo: typhoon, pause, recovery, settlement\nInsurance runs out while the offering is open\nScenario: Hormuz escalation on a Fujairah crude cargo\n0.5×\n1×\n2×\n5×\n10×\nStart demo\nStop playback\n\n10 / 10 steps completed\n\nParse and verify the three copper documents\nOPEN\nCalm seas: baseline\nInvestors subscribe 40% of the pool\nCargo departs Singapore\nMARK_IN_TRANSIT\nTyphoon warning near Shanghai\nREPRICE\nTyphoon escalates to severe\nPAUSE\nSkies clear (1 of 2 quiet checks)\nSkies clear (2 of 2): risk cleared\nRESUME\nCargo arrives in Shanghai\nRECORD_ARRIVAL\nImporter payment reported: waits for approval\nRECORD_PAYMENT"
+  },
+  "agentStatus": {
+    "ok": true,
+    "running": true,
+    "enabled": true,
+    "mode": "demo",
+    "generation": 1,
+    "autonomy": {
+      "configured": null,
+      "effective": "auto",
+      "downgraded": false
+    },
+    "emergency_stop": false,
+    "emergency_stop_sources": {
+      "local": false,
+      "chain": false,
+      "chain_unknown": false
+    },
+    "chain_watcher": {
+      "enabled": true,
+      "state": "inactive",
+      "poll_sec": 15,
+      "confirmations": 1,
+      "batch_blocks": 5000,
+      "start_block": null,
+      "next_block": null,
+      "last_block": null,
+      "last_block_hash": null,
+      "latest_block": null,
+      "confirmed_block": null,
+      "lag_blocks": null,
+      "last_poll_at": null,
+      "confirmed_at": null,
+      "max_stale_sec": 50,
+      "stale": false,
+      "retry_at": null,
+      "failures": 0,
+      "reconciliation_required": false,
+      "pools": [],
+      "last_error": null
+    },
+    "anchoring": {
+      "enabled": false,
+      "mode": "demo",
+      "finalized": 6,
+      "batches": 0,
+      "last_seq": 6,
+      "last_batch_status": null,
+      "version": {
+        "policy_hash": "0x1b40316b4d9d745058a83c2e28b8fc1285782401167bb394eb714c686bb6ffa1",
+        "code_commit": "0x57f7122ba3968038e1dbaab58691714f7c786d0458025408a2e82712c6e46ab8",
+        "model_id": "x-test-2",
+        "version_id": "0x6a18d50ba0ab704c4ee5553eb89902b74cd33fe22fee0ce85700c6830d0f3e62"
+      },
+      "last_error": null,
+      "interval_sec": 3600
+    },
+    "scheduler": {
+      "interval_sec": 300,
+      "last_tick_at": null,
+      "next_tick_at": "2026-10-17T01:55:12.600Z"
+    },
+    "queue": {
+      "queued": 0,
+      "processing": 0,
+      "counts": {
+        "DONE": 7
+      },
+      "dead": 0
+    },
+    "executor": "sim",
+    "signers": {
+      "PRICING_UPDATER": {
+        "configured": false
+      },
+      "AGENT_EXECUTOR": {
+        "configured": false
+      }
+    },
+    "pending_approvals": 0,
+    "awaiting_owner_signature": 0,
+    "protected_chain_pools": [
+      2
+    ],
+    "settlement": {
+      "recipient_configured": false,
+      "confirmations": 1,
+      "asset": "USDC",
+      "decimals": 6
+    },
+    "demo_run": {
+      "run_id": "demo-run:e21196bee4ae0c9552101066",
+      "name": "copper-lifecycle",
+      "speed": 10,
+      "generation": 1,
+      "active": false,
+      "state": "completed",
+      "scenario": {
+        "loaded": true,
+        "name": "copper-lifecycle",
+        "case_id": "CASE-EBL-CU-SIN-SHA",
+        "total_steps": 10,
+        "next_step": 10,
+        "finished": true,
+        "virtual_time": "2026-10-23T19:00:00.000Z",
+        "log": [
+          {
+            "index": 0,
+            "kind": "documents",
+            "label": {
+              "en": "Parse and verify the three copper documents",
+              "zh": "解析核验铜货三份单证"
+            },
+            "virtual_time": "2026-10-17T00:00:00.000Z",
+            "events": [
+              {
+                "type": "DOCUMENTS_INGESTED",
+                "status": "DONE",
+                "decisions": [
+                  {
+                    "decision_id": "decision_d3558ba5d7ad2798ec116867",
+                    "action": "OPEN",
+                    "status": "COMPLETED",
+                    "verdict": "AUTO"
+                  }
+                ]
+              }
+            ],
+            "job_id": "job_0654d93f7d51b3582331"
+          },
+          {
+            "index": 1,
+            "kind": "risk_snapshot",
+            "label": {
+              "en": "Calm seas: baseline",
+              "zh": "海况平稳：建立基线"
+            },
+            "virtual_time": "2026-10-17T00:00:00.000Z",
+            "events": [],
+            "change": null
+          },
+          {
+            "index": 2,
+            "kind": "subscribe",
+            "label": {
+              "en": "Investors subscribe 40% of the pool",
+              "zh": "投资者认购 40% 份额"
+            },
+            "virtual_time": "2026-10-17T01:00:00.000Z",
+            "events": [],
+            "subscribed_usd": 2000000
+          },
+          {
+            "index": 3,
+            "kind": "event",
+            "label": {
+              "en": "Cargo departs Singapore",
+              "zh": "货物离开新加坡"
+            },
+            "virtual_time": "2026-10-17T07:00:00.000Z",
+            "events": [
+              {
+                "type": "CARGO_DEPARTED",
+                "event_id": "scn:copper-lifecycle:3",
+                "accepted": true,
+                "duplicate": false,
+                "status": "DONE",
+                "ignored": null,
+                "decisions": [
+                  {
+                    "decision_id": "decision_042f1f33e7fe667c13426e31",
+                    "action": "MARK_IN_TRANSIT",
+                    "status": "COMPLETED",
+                    "verdict": "AUTO"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "index": 4,
+            "kind": "risk_snapshot",
+            "label": {
+              "en": "Typhoon warning near Shanghai",
+              "zh": "上海附近发布台风预警"
+            },
+            "virtual_time": "2026-10-18T07:00:00.000Z",
+            "events": [
+              {
+                "type": "WORLD_RISK_UPDATED",
+                "event_id": "scn:copper-lifecycle:4",
+                "accepted": true,
+                "duplicate": false,
+                "status": "DONE",
+                "ignored": null,
+                "decisions": [
+                  {
+                    "decision_id": "decision_20f1b9dc2482599d6e0683f4",
+                    "action": "REPRICE",
+                    "status": "COMPLETED",
+                    "verdict": "AUTO"
+                  }
+                ]
+              }
+            ],
+            "change": "WORLD_RISK_UPDATED"
+          },
+          {
+            "index": 5,
+            "kind": "risk_snapshot",
+            "label": {
+              "en": "Typhoon escalates to severe",
+              "zh": "台风升级为严重"
+            },
+            "virtual_time": "2026-10-18T19:00:00.000Z",
+            "events": [
+              {
+                "type": "WORLD_RISK_UPDATED",
+                "event_id": "scn:copper-lifecycle:5",
+                "accepted": true,
+                "duplicate": false,
+                "status": "DONE",
+                "ignored": null,
+                "decisions": [
+                  {
+                    "decision_id": "decision_db87ce7f668e7379c87fe587",
+                    "action": "PAUSE",
+                    "status": "COMPLETED",
+                    "verdict": "AUTO"
+                  }
+                ]
+              }
+            ],
+            "change": "WORLD_RISK_UPDATED"
+          },
+          {
+            "index": 6,
+            "kind": "risk_snapshot",
+            "label": {
+              "en": "Skies clear (1 of 2 quiet checks)",
+              "zh": "天气转好（第 1 次平静检查）"
+            },
+            "virtual_time": "2026-10-19T07:00:00.000Z",
+            "events": [],
+            "change": null
+          },
+          {
+            "index": 7,
+            "kind": "risk_snapshot",
+            "label": {
+              "en": "Skies clear (2 of 2): risk cleared",
+              "zh": "天气转好（第 2 次）：风险解除"
+            },
+            "virtual_time": "2026-10-19T19:00:00.000Z",
+            "events": [
+              {
+                "type": "RISK_CLEARED",
+                "event_id": "scn:copper-lifecycle:7",
+                "accepted": true,
+                "duplicate": false,
+                "status": "DONE",
+                "ignored": null,
+                "decisions": [
+                  {
+                    "decision_id": "decision_2cda2b9fc6e0f97aa016aa1e",
+                    "action": "RESUME",
+                    "status": "COMPLETED",
+                    "verdict": "AUTO"
+                  }
+                ]
+              }
+            ],
+            "change": "RISK_CLEARED"
+          },
+          {
+            "index": 8,
+            "kind": "event",
+            "label": {
+              "en": "Cargo arrives in Shanghai",
+              "zh": "货物抵达上海"
+            },
+            "virtual_time": "2026-10-22T19:00:00.000Z",
+            "events": [
+              {
+                "type": "CARGO_ARRIVED",
+                "event_id": "scn:copper-lifecycle:8",
+                "accepted": true,
+                "duplicate": false,
+                "status": "DONE",
+                "ignored": null,
+                "decisions": [
+                  {
+                    "decision_id": "decision_b2d4dda52ab703c3c0d773b2",
+                    "action": "RECORD_ARRIVAL",
+                    "status": "COMPLETED",
+                    "verdict": "AUTO"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "index": 9,
+            "kind": "event",
+            "label": {
+              "en": "Importer payment reported: waits for approval",
+              "zh": "进口商付款已申报：等待批准"
+            },
+            "virtual_time": "2026-10-23T19:00:00.000Z",
+            "events": [
+              {
+                "type": "PAYMENT_RECEIVED",
+                "event_id": "scn:copper-lifecycle:9",
+                "accepted": true,
+                "duplicate": false,
+                "status": "DONE",
+                "ignored": null,
+                "decisions": [
+                  {
+                    "decision_id": "decision_6493f71db96802e12ff1f617",
+                    "action": "RECORD_PAYMENT",
+                    "status": "PENDING_APPROVAL",
+                    "verdict": "NEEDS_APPROVAL"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "scenario": {
+      "loaded": true,
+      "name": "copper-lifecycle",
+      "next_step": 10,
+      "total_steps": 10,
+      "finished": true
+    },
+    "last_error": null,
+    "activity": {
+      "last_seq": 46,
+      "persist_error": null
+    }
+  }
+}

@@ -82,10 +82,10 @@ test('Demo: a world-risk event becomes a decision, an executed simulated reprice
   assert.match(decision.execution.reference, /^demo:/u);
   assert.equal(decision.execution.tx_hash, undefined);
   assert.equal(decision.execution.explorer_url, undefined);
-  assert.equal(decision.execution.effects.state_after, 'Repriced');
+  assert.equal(decision.execution.effects.state_after, 'Open');
 
   // the offchain pool really changed
-  assert.equal(pool().status, 'Repriced');
+  assert.equal(pool().status, 'Open');
   assert.ok(pool().quote.final_issue_price_usd < before);
   assert.equal(pool().quote.final_issue_price_usd, decision.proposal.new_issue_price_usd);
 
@@ -125,11 +125,11 @@ test('Demo: injecting the same event again never produces a second execution', a
 test('Demo: the full risk cycle reprice → pause → resume restores the previous state', async () => {
   const { service, pool } = await demoService();
   await settle(service, ev('WORLD_RISK_UPDATED', { event_id: 'r1', occurred_at: '2026-10-12T10:00:00Z', data: { events: typhoon } }));
-  assert.equal(pool().status, 'Repriced');
+  assert.equal(pool().status, 'Open');
   await settle(service, ev('WORLD_RISK_UPDATED', { event_id: 'r2', occurred_at: '2026-10-12T10:05:00Z', data: { events: warCrisis } }));
   assert.equal(pool().status, 'Paused');
   await settle(service, ev('RISK_CLEARED', { event_id: 'r3', occurred_at: '2026-10-12T10:10:00Z' }));
-  assert.equal(pool().status, 'Repriced', 'RESUME returns the pool to the state before the pause');
+  assert.equal(pool().status, 'Open', 'RESUME returns the pool to the state before the pause');
   const decisions = (await service.listDecisions()).decisions.reverse().map((d) => [d.action, d.status]);
   assert.deepEqual(decisions, [['REPRICE', 'COMPLETED'], ['PAUSE', 'COMPLETED'], ['RESUME', 'COMPLETED']]);
 });
@@ -173,7 +173,7 @@ test('policy: a price move above the cap waits for approval; approving it execut
   assert.equal(approved.approval.status, 'EXECUTED');
   assert.equal(approved.decision.status, 'COMPLETED');
   assert.match(approved.decision.execution.reference, /^demo:/u);
-  assert.equal(pool().status, 'Repriced');
+  assert.equal(pool().status, 'Open');
   assert.ok(pool().quote.final_issue_price_usd < before);
   assert.ok(actions(service).includes('APPROVAL_GRANTED'));
   await assert.rejects(service.approve(approval.approval_id), { code: 'invalid_transition' });

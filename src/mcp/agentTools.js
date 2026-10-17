@@ -60,12 +60,12 @@ async function execute(name, body, context) {
   const service = context.getService();
   if (name === 'get_agent_status') return sanitizeAudit(await service.status());
   if (name === 'list_agent_decisions') {
-    const result = await service.listDecisions(body);
+    const result = await service.listDecisions({ ...body, caseFilter: (caseId) => !service.ingest?.isPrivateCase(caseId) });
     return { ...result, decisions: result.decisions.map(externalDecision) };
   }
   if (name === 'explain_decision') {
     const decision = await service.getDecision(body.decision_id);
-    if (!decision) throw new HttpError(404, 'decision_not_found', 'Unknown agent decision');
+    if (!decision || service.ingest?.isPrivateCase(decision.case_id)) throw new HttpError(404, 'decision_not_found', 'Unknown agent decision');
     return { decision: externalDecision(decision), trace: sanitizeAudit(await service.getTrace(body.decision_id) ?? null),
       explanation_source: 'recorded-decision', recomputed: false };
   }

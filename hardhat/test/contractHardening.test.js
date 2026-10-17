@@ -52,13 +52,13 @@ describe('RWAOfferingPool hardening', () => {
       expect(await ctx.registry.holderOf(eblId)).to.equal(ctx.other.address);
     });
 
-    it('still settles when the registry owner already released the pledge, and reports it', async () => {
+    it('prevents owner bypass of the pledge before settlement', async () => {
       const ctx = await deployProtocol();
       const { eblId, poolId } = await newOffering(ctx, 'released', { supply: 10n });
       await send(ctx.pool.connect(ctx.investor).subscribe(poolId, 2n));
-      await send(ctx.registry.releasePledge(eblId)); // out-of-band release by the registry owner
+      await expect(ctx.registry.releasePledge(eblId)).to.be.revertedWith('not authorized');
       await expect(settleOffering(ctx, poolId, 2_000_000n))
-        .to.emit(ctx.pool, 'CollateralReleaseFailed').withArgs(poolId, eblId);
+        .to.emit(ctx.pool, 'CollateralReleased').withArgs(poolId, eblId);
       expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Repaid);
       expect(await ctx.pool.poolOfEbl(eblId)).to.equal(0n);
     });
@@ -67,8 +67,8 @@ describe('RWAOfferingPool hardening', () => {
       const ctx = await deployProtocol();
       const { eblId, poolId } = await newOffering(ctx, 'unpledged');
       await send(ctx.pool.connect(ctx.investor).subscribe(poolId, 1n));
-      await send(ctx.registry.releasePledge(eblId));
-      await expect(ctx.pool.connect(ctx.investor).subscribe(poolId, 1n)).to.be.revertedWith('ebl not pledged to pool');
+      await expect(ctx.registry.releasePledge(eblId)).to.be.revertedWith('not authorized');
+      expect(await ctx.registry.pledgedTo(eblId)).to.equal(await ctx.pool.getAddress());
       expect(await ctx.token.totalSupply(poolId)).to.equal(1n);
     });
   });
@@ -89,11 +89,11 @@ describe('RWAOfferingPool hardening', () => {
       await expect(applyPricing(ctx, poolId, ISSUE_PRICE + 1n, ACTION.REPRICE_DOWN)).to.be.revertedWith('reprice not down');
       expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Open);
 
-      // Same price: the state still moves to Repriced but no price event is emitted.
+      // A no-op price update cannot change the lifecycle.
       const sameTx = await applyPricing(ctx, poolId, ISSUE_PRICE, ACTION.REPRICE_DOWN);
-      await expect(sameTx).to.emit(ctx.pool, 'OfferingStateChanged');
+      await expect(sameTx).to.not.emit(ctx.pool, 'OfferingStateChanged');
       await expect(sameTx).to.not.emit(ctx.pool, 'OfferingRepriced');
-      expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Repriced);
+      expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Open);
 
       await expect(applyPricing(ctx, poolId, 700_000n, ACTION.REPRICE_DOWN))
         .to.emit(ctx.pool, 'OfferingRepriced').withArgs(poolId, ISSUE_PRICE, 700_000n, anyValue, anyValue);
@@ -106,7 +106,7 @@ describe('RWAOfferingPool hardening', () => {
       await send(applyPricing(ctx, poolId, 700_000n, ACTION.REPRICE_DOWN));
       await send(applyPricing(ctx, poolId, 900_000n, ACTION.OPEN_OFFERING));
       expect(await ctx.pool.issuePriceOf(poolId)).to.equal(900_000n);
-      expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Repriced);
+      expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Open);
     });
 
     it('rejects an out-of-range risk level at the oracle and a zero pool', async () => {
@@ -205,7 +205,7 @@ describe('RWAOfferingPool hardening', () => {
 
       const repriced = await newOffering(ctx, 'c-repriced');
       await send(applyPricing(ctx, repriced.poolId, 700_000n, ACTION.REPRICE_DOWN));
-      expect(await ctx.pool.stateOf(repriced.poolId)).to.equal(STATE.Repriced);
+      expect(await ctx.pool.stateOf(repriced.poolId)).to.equal(STATE.Open);
       await send(ctx.pool.cancelOffering(repriced.poolId, ethers.id('repriced')));
       expect(await ctx.pool.stateOf(repriced.poolId)).to.equal(STATE.Cancelled);
 
@@ -300,7 +300,10 @@ describe('EBLRegistry hardening', () => {
     await expect(registry(ctx.outsider).releasePledge(1n)).to.be.revertedWith('not authorized');
 
     // Once released, the holder moves it and the history records who endorsed what.
-    await send(ctx.registry.releasePledge(1n));
+    await expect(ctx.registry.releasePledge(1n)).to.be.revertedWith('not authorized');
+    // An offering with no investors can cancel and let the pledgee release the eBL.
+    await send(ctx.pool.createOffering(1n, 1n, ISSUE_PRICE, TARGET));
+    await send(ctx.pool.cancelOffering(1n, ethers.id('withdraw-unfunded')));
     const endorsement = ethers.id('endorsement-1');
     await expect(registry(ctx.investor).endorse(1n, ctx.other.address, endorsement))
       .to.emit(ctx.registry, 'EBLEndorsed').withArgs(1n, ctx.investor.address, ctx.other.address, endorsement);

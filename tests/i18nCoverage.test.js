@@ -77,7 +77,7 @@ test('the document language follows the language switch', () => {
 test('Chinese UI keeps navigation and key investor information in Chinese', () => {
   setLang('zh');
   assert.equal(t('nav_market'), '投资市场');
-  assert.equal(t('nav_mint'), '提单上链 · 铸造 RWA');
+  assert.equal(t('nav_mint'), '定价与发行');
   assert.equal(t('portfolio_h'), '我的持仓');
   assert.equal(t('protocol_evidence_h'), '实时协议凭证');
 });

@@ -60,7 +60,8 @@ test('BE-13: Dashboard API Tests', async (t) => {
       assert.strictEqual(res.data.ok, true);
       assert.strictEqual(res.data.wallet, '0xInvestor');
       assert.strictEqual(res.data.investments.length, 1);
-      assert.strictEqual(res.data.summary.totalInvestedUsd, 5000);
+      assert.strictEqual(res.data.summary.totalInvestedUsd, res.data.investments[0].amountUsd);
+      assert.ok(Math.abs(res.data.investments[0].amountUsd + res.data.investments[0].unspentUsd - 5000) < 1e-6);
     });
 
     await t.test('GET /api/exporters/dashboard returns ebl pools', async () => {

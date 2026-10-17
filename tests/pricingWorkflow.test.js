@@ -55,6 +55,6 @@ test('BE-6: an in-transit risk shock is reflected in the merged final_state', ()
     ]
   });
   // It opens healthy, reprices mid-transit, and still settles.
-  assert.ok(wf.offering.steps.some((s) => s.state === 'Repriced'));
+  assert.ok(wf.offering.steps.some((s) => s.state === 'InTransit' && s.action === 'REPRICE_DOWN'));
   assert.equal(wf.final_state, 'Redeemed');
 });

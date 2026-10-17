@@ -50,7 +50,12 @@ async function freshService(env = {}) {
 test('ingest API (Demo)', async (t) => {
   const app = await listen(createServer());
   t.after(async () => { closeActivityStreams(); await app.close(); delete process.env.AGENTBL_ADMIN_TOKEN; });
-  const api = (method, path, body, headers) => requestJson(app.base, method, path, body, headers);
+  let cookie;
+  const api = async (method, path, body, headers) => {
+    const result = await requestJson(app.base, method, path, body, { ...(cookie ? { Cookie: cookie } : {}), ...headers });
+    if (result.headers.get('set-cookie')) cookie = result.headers.get('set-cookie').split(';')[0];
+    return result;
+  };
 
   await t.test('POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step', async () => {
     const service = await freshService();
@@ -78,9 +83,11 @@ test('ingest API (Demo)', async (t) => {
     const jobs = await api('GET', '/api/agent/jobs?case_id=CASE-UP-API-1');
     assert.equal(jobs.data.jobs.length, 1);
 
-    // the market catalog lists the case the documents produced
+    // Uploads remain private; only the owning workspace sees the working case.
     const cases = await api('GET', '/api/cases');
-    assert.ok(cases.data.cases.some((c) => c.case_id === 'CASE-UP-API-1'), JSON.stringify(Object.keys(cases.data)));
+    assert.ok(!cases.data.cases.some((c) => c.case_id === 'CASE-UP-API-1'));
+    assert.ok((await api('GET', '/api/agent/workspace/cases')).data.cases.some((c) => c.case_id === 'CASE-UP-API-1'));
+    assert.equal((await requestJson(app.base, 'GET', `/api/agent/jobs/${res.data.job.job_id}`)).status, 404);
     await service.stop();
   });
 

@@ -35,9 +35,9 @@ export class OwnerPlanError extends Error {
  * @returns {{ network:string, chain_id:number, steps:Array<{index:number, contract:string, address:string, method:string,
  *            args:string[], description:string, expected_events:string[]}> }}
  */
-export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {}, chainConfig, context, recipient, confirmations }) {
+export async function buildOwnerPlan({ action, chain_pool_id: poolId, params = {}, chainConfig, context, recipient, expectedPayer, confirmations }) {
   if (OPENING_ACTIONS.includes(action)) return buildOpeningPlan({ params, chainConfig, context });
-  if (SETTLEMENT_ACTIONS.includes(action)) return buildSettlementPlan({ action, chain_pool_id: poolId, params, chainConfig, context, recipient, confirmations });
+  if (SETTLEMENT_ACTIONS.includes(action)) return buildSettlementPlan({ action, chain_pool_id: poolId, params, chainConfig, context, recipient, expectedPayer, confirmations });
   const spec = METHODS[action];
   if (!spec) throw new OwnerPlanError('unsupported_action', `${action} has no owner-signed plan`);
   if (!Number.isSafeInteger(Number(poolId)) || Number(poolId) < 1) {

@@ -17,6 +17,25 @@ permissions:
   contents: read
 
 jobs:
+  browser:
+    name: Desktop browser regressions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: desktop-browser-evidence
+          path: test-results/
+
   app:
     name: App · Node ${{ matrix.node }} · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

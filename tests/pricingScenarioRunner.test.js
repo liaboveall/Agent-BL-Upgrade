@@ -30,7 +30,7 @@ test('AI-10: an in-transit risk shock reprices the pool but it still settles', (
   const reprice = byName['high-risk-reprice'];
   assert.equal(reprice.pricing_action, 'OPEN_OFFERING'); // opens healthy
   assert.equal(reprice.offering_final_state, 'Redeemed'); // settles after reprice
-  assert.ok(reprice.offering_states.includes('Repriced')); // reprice happened mid-flight
+  assert.ok(reprice.offering_states.includes('InTransit')); // a price update retains the voyage stage
 });
 
 test('AI-10: a critical war-crisis case is paused, never opened', () => {

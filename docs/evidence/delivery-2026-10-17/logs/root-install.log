@@ -1,0 +1,8 @@
+
+> agentbl-agent-starter@0.1.0 postinstall
+> node scripts/install.mjs || echo 'Skipping postinstall'
+
+Runtime dependencies installed (official Injective x402 + Express; versions are lockfile-pinned).
+Next: npm run check && npm run test && npm run demo
+
+added 255 packages in 6s

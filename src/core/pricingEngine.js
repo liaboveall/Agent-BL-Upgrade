@@ -19,7 +19,7 @@
 //     => "很快到账" sacrifices more margin for speed; "正常到账" keeps more margin.
 //   - trade risk (war / volatility / shipment / docs) ADDS to the share, so a
 //     riskier deal is priced lower (investors are paid more to take it).
-//   - AI-verified collateral CAPS the safe redemption exposure: a hard price floor.
+//   - rule-estimated collateral CAPS the safe redemption exposure: a hard price floor.
 //   - if the total share would exceed MAX_PROFIT_SHARE, the offering is paused.
 //
 // 1.00 USD per token is a TARGET redemption value, not a capital guarantee.
@@ -31,6 +31,7 @@ import { checkDocumentConsistency } from '../agent/documentConsistency.js';
 import { retrieveRiskIntel } from '../agent/riskIntel.js';
 import { injectPaidReportEvidence } from '../x402/reportEvidence.js';
 import { PAYOUT_SPEEDS } from './pricingSchema.js';
+import { ValidationError } from './schema.js';
 
 export { PAYOUT_SPEEDS };
 
@@ -150,14 +151,17 @@ function riskLevelFromBps(totalBps) {
  */
 export function scoreRisk(caseData) {
   const factors = [];
+  const components = [];
   let totalBps = 0;
 
   for (const event of caseData.macro_risk_events ?? []) {
+    if (event.status === 'resolved') continue;
     const table = MACRO_RISK_BPS[event.type];
     const points = table?.[event.severity] ?? (event.severity === 'critical' ? 300 : event.severity === 'warning' ? 120 : 30);
     if (points > 0) {
       totalBps += points;
       factors.push(`${event.type}/${event.severity}${event.region ? ` (${event.region})` : ''}: +${points}bps`);
+      components.push({ type: event.type, severity: event.severity, bps: points, status: 'active', source: event.source ?? null });
     }
   }
 
@@ -169,6 +173,7 @@ export function scoreRisk(caseData) {
     if (points > 0) {
       totalBps += points;
       factors.push(`${event.type}: +${points}bps`);
+      components.push({ type: event.type, bps: points, status: 'active' });
     }
   }
 
@@ -182,6 +187,7 @@ export function scoreRisk(caseData) {
     if (points > 0) {
       totalBps += points;
       factors.push(`commodity_price_drop ${Math.round(dropPct * 100)}%: +${points}bps`);
+      components.push({ type: 'commodity_price_drop', bps: points, status: 'active' });
     }
   }
 
@@ -190,6 +196,7 @@ export function scoreRisk(caseData) {
   if (documents.penalty_bps > 0) {
     totalBps += documents.penalty_bps;
     for (const issue of documents.issues) factors.push(`doc: ${issue}`);
+    components.push({ type: 'doc', bps: documents.penalty_bps, status: 'active' });
   }
 
   totalBps = Math.min(MAX_RISK_BPS, totalBps);
@@ -199,12 +206,13 @@ export function scoreRisk(caseData) {
     risk_score_bps: totalBps,
     risk_level: riskLevelFromBps(totalBps),
     risk_factors: factors,
+    risk_components: components,
     document_checks: documents
   };
 }
 
 function priceFromCost(cash, cost) {
-  return cash / (cash + cost);
+  return cash > 0 ? cash / (cash + Math.max(0, cost)) : 1;
 }
 
 function pickPricingAction({ riskLevel, paused, profitShare, payoutSpeed, binding }) {
@@ -232,15 +240,15 @@ function buildInvestorExplanation(q) {
   const yieldPct = (q.implied_gross_yield_bps / 100).toFixed(1);
   const floorNote =
     q.binding_constraint === 'COLLATERAL'
-      ? ` The price is floored by AI-verified collateral: safe redemption exposure is capped at USD ${usd(q.max_safe_redemption_exposure_usd)}, so the discount cannot go deeper without exceeding coverage.`
+      ? ` The price is floored by rule-estimated collateral: safe redemption exposure is capped at USD ${usd(q.max_safe_redemption_exposure_usd)}, so the discount cannot go deeper without exceeding coverage.`
       : '';
   const riskNote = `current ${q.risk_level} trade risk (${q.risk_factors.join('; ') || 'no flagged factors'})`;
   const compensation = q.binding_constraint === 'TENOR_RATE'
     ? `Investor compensation is capped at ${(q.annual_rate_cap_bps / 100).toFixed(1)}% a year for ${q.payout_speed} payout at ` +
-      `${riskNote}, which is below the ${pct(BASE_PROFIT_SHARE[q.payout_speed])}% share of the exporter's verified margin ` +
+      `${riskNote}, which is below the ${pct(BASE_PROFIT_SHARE[q.payout_speed])}% share of the exporter's declared margin ` +
       'that this speed would otherwise cost.'
     : `The exporter chose ${q.payout_speed} payout, which sets a ${pct(BASE_PROFIT_SHARE[q.payout_speed])}% base share ` +
-      `of their verified trade margin as investor compensation; ${riskNote} adds ${q.risk_discount_bps}bps of discount.`;
+      `of their declared trade margin as investor compensation; ${riskNote} adds ${q.risk_discount_bps}bps of discount.`;
   return (
     `This eBL-backed RWA is offered at USD ${q.final_issue_price_usd.toFixed(4)} per token versus a USD 1.00 ` +
     `target redemption value — an implied ${yieldPct}% gross upside over about ${q.tenor_days} days ` +
@@ -281,8 +289,8 @@ export function buildEvidenceGraph(core, collateralFloor, evidence) {
     {
       component: 'base_issue_price',
       price_usd: core.base_issue_price_usd,
-      basis: `Patient-money anchor: LOW_COST gives up ${pct(BASE_PROFIT_SHARE.LOW_COST)}% of verified profit`,
-      evidence: [`verified gross profit USD ${usd(core.exporter_gross_profit_usd)} = invoice - cost_of_goods`]
+      basis: `Patient-money anchor: LOW_COST gives up ${pct(BASE_PROFIT_SHARE.LOW_COST)}% of declared profit`,
+      evidence: [`declared gross profit USD ${usd(core.exporter_gross_profit_usd)} = invoice - cost_of_goods`]
     },
     {
       component: 'urgency_discount',
@@ -307,7 +315,7 @@ export function buildEvidenceGraph(core, collateralFloor, evidence) {
       component: 'collateral_floor',
       price_usd: floorPrice,
       basis: `Safe redemption coverage caps exposure (collateral x ${core.redemption_coverage_limit})`,
-      evidence: [`AI-verified collateral USD ${usd(core.ai_verified_collateral_value_usd)} -> max safe USD ${usd(core.max_safe_redemption_exposure_usd)}`],
+      evidence: [`rule-estimated collateral USD ${usd(core.ai_verified_collateral_value_usd)} -> max safe USD ${usd(core.max_safe_redemption_exposure_usd)}`],
       binding: core.binding_constraint === 'COLLATERAL'
     }
   ];
@@ -330,12 +338,16 @@ export function priceRwaOffering(input) {
   if (!PAYOUT_SPEEDS.includes(speed)) throw new Error(`Unknown payout_speed: ${speed}`);
 
   const cash = Number(input.requested_cash_usd);
-  const profit = Math.max(1, Number(input.gross_profit_usd)); // guard /0
+  const profit = Number(input.gross_profit_usd);
   const collateral = Number(input.ai_verified_collateral_value_usd);
   const coverage = Number(input.redemption_coverage_limit ?? 0.9);
   const target = Number(input.target_redemption_value_usd ?? 1);
   const riskScoreBps = Number(input.risk_score_bps ?? input.risk_discount_bps ?? 0);
   const riskLevel = input.risk_level ?? riskLevelFromBps(riskScoreBps);
+  if (![cash, profit, collateral, coverage, target, riskScoreBps].every(Number.isFinite)
+      || cash < 0 || collateral < 0 || coverage < 0 || coverage > 1 || target !== 1 || riskScoreBps < 0) {
+    throw new ValidationError('Invalid pricing economics', ['Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target']);
+  }
 
   const maxSafeRedemption = round(collateral * coverage, 2);
 
@@ -349,7 +361,7 @@ export function priceRwaOffering(input) {
   // Tenor-aware cap: each cost is the lower of the profit share and the annual rate over the tenor.
   const tenorDays = Math.max(MIN_TENOR_DAYS, Number(input.tenor_days) || DEFAULT_TENOR_DAYS);
   const rateCost = (speedKey, risk) => cash * annualRateCap(speedKey, risk) * tenorDays / 365;
-  const costOf = (share, speedKey, risk) => Math.min(share * profit, rateCost(speedKey, risk));
+  const costOf = (share, speedKey, risk) => Math.min(share * Math.max(0, profit), rateCost(speedKey, risk));
 
   // Additive decomposition (pre-floor) for the AI Pricing Console waterfall.
   const anchorPrice = priceFromCost(cash, costOf(BASE_PROFIT_SHARE.LOW_COST, 'LOW_COST', 0)); // patient-money anchor
@@ -367,7 +379,8 @@ export function priceRwaOffering(input) {
     finalPrice = clamp(finalPrice, MIN_PRICE, MAX_PRICE);
     binding = 'PRICE_CLAMP';
   }
-  finalPrice = round(finalPrice, 4);
+  // Round toward the exporter, so price precision cannot breach the rate cap.
+  finalPrice = Math.ceil((finalPrice - 1e-12) * 10000) / 10000;
 
   // Size the offering. Floor the supply so redemption can never exceed coverage.
   const supplyFromCash = cash / finalPrice;
@@ -375,14 +388,23 @@ export function priceRwaOffering(input) {
   const redemptionExposure = round(tokenSupply * target, 2);
   const expectedCash = round(tokenSupply * finalPrice, 2);
   const financingCost = round(redemptionExposure - expectedCash, 2);
-  const profitShare = financingCost / profit;
+  const profitShare = profit > 0 ? financingCost / profit : 0;
   const netProfit = round(profit - financingCost, 2);
   const impliedYieldBps = bps(target / finalPrice - 1);
 
   const materialShortfall = expectedCash < cash * 0.995;
+  // Re-check the actual terms AFTER the clamps, coverage sizing and integer-share rounding.
+  // A warning is not permission to issue a loss-making or unaffordable offering.
+  const economicFailures = [];
+  if (profit <= 0) economicFailures.push('NON_POSITIVE_PROFIT');
+  if (tokenSupply < 1 || expectedCash <= 0) economicFailures.push('NO_FINANCING');
+  if (financingCost > Math.max(0, profit) * MAX_PROFIT_SHARE + 0.005) economicFailures.push('PROFIT_SHARE_LIMIT');
+  if (netProfit < 0) economicFailures.push('NEGATIVE_NET_PROFIT');
+  if (financingCost > expectedCash * annualRateCap(speed, riskScoreBps) * tenorDays / 365 + 0.005) economicFailures.push('ANNUAL_RATE_LIMIT');
+  if (materialShortfall) economicFailures.push('FINANCING_SHORTFALL');
   let pricingAction = pickPricingAction({
     riskLevel,
-    paused: paused || materialShortfall,
+    paused: paused || economicFailures.length > 0 || input.data_review_required === true,
     profitShare,
     payoutSpeed: speed,
     binding
@@ -428,7 +450,13 @@ export function priceRwaOffering(input) {
     risk_level: riskLevel,
     risk_score_bps: riskScoreBps,
     risk_factors: input.risk_factors ?? [],
+    risk_components: input.risk_components ?? [],
+    data_review_required: input.data_review_required === true,
+    data_quality: input.data_quality ?? null,
     pricing_action: pricingAction,
+    economic_checks: { ok: economicFailures.length === 0, failures: economicFailures, max_profit_share_bps: bps(MAX_PROFIT_SHARE) },
+    profit_basis: input.profit_basis ?? 'declared',
+    execution_scope: 'indicative-terms',
     rejected_by_exporter: rejectedByExporter,
     min_acceptable_issue_price: input.min_acceptable_issue_price
   };
@@ -528,12 +556,13 @@ function profitFromCase(caseData) {
 
   // Always recompute profit/margin from the dollar figures so a stored typo
   // cannot silently mis-price (Plan review R4).
-  const grossProfit = Math.max(0, invoice - costOfGoods);
+  const grossProfit = invoice - costOfGoods;
   return {
     invoice_value_usd: invoice,
     cost_of_goods_usd: costOfGoods,
     gross_profit_usd: grossProfit,
-    gross_margin_pct: invoice > 0 ? grossProfit / invoice : 0
+    gross_margin_pct: invoice > 0 ? grossProfit / invoice : 0,
+    profit_basis: Object.keys(te).some((key) => ['cost_of_goods_usd', 'cost_basis_usd_per_mt', 'cost_basis_usd_per_unit', 'gross_margin_pct'].includes(key)) ? 'declared' : 'estimated_12pct_margin'
   };
 }
 
@@ -558,6 +587,7 @@ export function quoteFromCase(caseData, options = {}) {
     gross_profit_usd: economics.gross_profit_usd,
     cost_of_goods_usd: economics.cost_of_goods_usd,
     invoice_value_usd: economics.invoice_value_usd,
+    profit_basis: economics.profit_basis,
     ai_verified_collateral_value_usd: valuation.ai_verified_collateral_value_usd,
     redemption_coverage_limit: valuation.redemption_coverage_limit,
     target_redemption_value_usd: Number(financing.target_redemption_value_usd ?? 1),
@@ -565,6 +595,9 @@ export function quoteFromCase(caseData, options = {}) {
     risk_score_bps: risk.risk_score_bps,
     risk_level: risk.risk_level,
     risk_factors: risk.risk_factors,
+    risk_components: risk.risk_components,
+    data_review_required: ['stale', 'mixed', 'unavailable'].includes(caseData.real_data?.status),
+    data_quality: caseData.real_data ? { status: caseData.real_data.status, observed_at: caseData.real_data.observed_at ?? null, expires_at: caseData.real_data.expires_at ?? null } : null,
     tenor_days: tenorFromCase(caseData),
     evidence: { documents: risk.document_checks, intel }
   });

@@ -1,5 +1,6 @@
 import { riskLevelRank } from '../core/schema.js';
 import { commodityOf, COMMODITY_TERMS, REGION_TERMS } from './intentRouter.js';
+import { subscriptionAvailability } from '../core/subscription.js';
 
 export function tokenize(text) {
   const aliases = [...COMMODITY_TERMS, ...REGION_TERMS];
@@ -42,11 +43,13 @@ export function poolCandidate(pool, decision, now = Date.now()) {
     commodity: commodityOf(`${data.cargo?.commodity ?? ''} ${bl.cargo ?? ''}`), route,
     // The pricing tenor (payment terms included) when the quote has one; the voyage length otherwise.
     status: pool.status, quote, tenor_days: quote?.tenor_days ?? tenor,
+    ...subscriptionAvailability(pool),
     insurance_coverage: data.insurance?.coverage_ratio ?? null,
     collateral_coverage: quote.ai_verified_collateral_value_usd / Math.max(1, quote.target_redemption_exposure_usd),
-    remaining_usd: Math.max(0, pool.targetUsd - pool.subscribedUsd),
+    remaining_usd: subscriptionAvailability(pool).remaining_usd ?? 0,
     compliance: pool.complianceStatus ?? 'UNKNOWN',
     eligible: pool.investorEligible !== false && !pool.chainOnly && !pool.chainQuoteMismatch, decision,
+    private: data.visibility === 'private',
     stale: !Number.isFinite(age) || age > 3600_000,
     geography: `${routeEvidence} ${countries} ${data.region ?? ''}`.toLowerCase(),
     text: `${bl.cargo ?? ''} ${route} ${bl.carrier ?? ''} ${data.note ?? ''}`, caseData: data
@@ -55,7 +58,8 @@ export function poolCandidate(pool, decision, now = Date.now()) {
 
 export function exclusionReasons(candidate, constraints) {
   const c = candidate, q = c.quote, reasons = [];
-  if (!['Open', 'Repriced', 'Funded', 'Subscribed', 'InTransit', 'Paused'].includes(c.status)) reasons.push('inactive_pool');
+  if (c.private) reasons.push('private_case');
+  if (c.can_subscribe === false || !['Open', 'Repriced', 'Subscribed'].includes(c.status)) reasons.push('inactive_pool');
   if (!c.eligible || c.compliance === 'BLOCKED') reasons.push('compliance_block');
   if (['HOLD_FOR_REVIEW', 'REJECT'].includes(c.document_verdict?.action ?? c.decision?.action)) reasons.push('agent_hold');
   if (riskLevelRank(q.risk_level) < 0) reasons.push('unknown_risk');

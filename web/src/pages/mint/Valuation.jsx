@@ -8,7 +8,7 @@ export function Valuation({ quote }) {
   const caseData = useApp((s) => s.caseData) ?? {};
   const bl = caseData.bill_of_lading ?? {};
   const ins = caseData.insurance ?? {};
-  const dims = f.rollupRiskDimensions(quote.risk_factors);
+  const dims = f.rollupRiskDimensions(quote.risk_components ?? quote.risk_factors);
   const cites = f.intelCitations(quote);
   const sources = f.riskSources(quote, caseData, t);
   return (

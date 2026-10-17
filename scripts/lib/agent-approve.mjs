@@ -127,7 +127,7 @@ export async function createDefaultSigner({ env, plan }) {
     address: wallet.address,
     validateStep: (step, activePlan) => activePlan.schema === SETTLEMENT_SCHEMA
       ? validateSettlementStep({ plan: activePlan, context: { provider, pool }, chainConfig: network,
-        recipient: loadAgentConfig(env).settlementRecipient, confirmations: loadAgentConfig(env).chainConfirmations })
+        recipient: loadAgentConfig(env).settlementRecipient, expectedPayer: loadAgentConfig(env).settlementPayer, confirmations: loadAgentConfig(env).chainConfirmations })
       : validateOpeningStep({ plan: activePlan, step, registry, pool, poolAddress: network.contracts.RWAOfferingPool }),
     contractFor(step) {
       const abi = network.abis?.[step.contract];

@@ -142,7 +142,7 @@ test('quoteFromCase derives the copper headline deterministically', () => {
   assert.equal(fast.tenor_days, 30);
   assert.equal(fast.binding_constraint, 'TENOR_RATE');
   assert.equal(fast.annual_rate_cap_bps, 1200);
-  assert.equal(fast.final_issue_price_usd, 0.9902);
+  assert.equal(fast.final_issue_price_usd, 0.9903);
   assert.ok(Math.abs(fast.annualized_yield_bps - 1200) <= 10, 'the investor earns the capped rate');
 });
 

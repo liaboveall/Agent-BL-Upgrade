@@ -4,6 +4,8 @@ AgentBL 是一个以电子提单（eBL）为底层资产的贸易融资原型：
 
 > 原型项目，不构成投资建议。Demo 模式下的认购、付款和执行都是模拟的；Live 模式只在测试网运行，并且合约没有认购的付款环节（见下文"局限"）。
 
+2026-10-17 已根据全面评估整改定价、生命周期、资产身份、欠款、上传隐私、数据时效及前端状态一致性，详见 [整改记录与测试网迁移方案](docs/project-remediation-2026-10-17.md)。合约源码为本地 v3 候选，现有测试网地址仍是 v2；新开盘在旧版部署上会被迁移闸门阻止。浏览器 Demo 始终只模拟，LIVE 的独立上链实验需逐次确认。
+
 ## 快速开始
 
 ```bash
@@ -52,6 +54,7 @@ npm run test:coverage     # 带覆盖率门槛的测试
 npm run lint              # ESLint
 npm run check             # 仓库完整性（文件、数据结构、前端依赖哈希）
 npm run preflight         # 发布前全部检查；Demo 下 Live 专属项为 SKIP
+npm run test:browser      # 构建后运行桌面中英文交互与对比度回归；先 npx playwright install chromium
 npm run eval:agent        # 实测 Agent 并写入评测报告（-- --check 只检查不覆盖）
 npm run scenarios         # 风险/定价场景回归
 npm run price             # 命令行给案例定价

@@ -32,7 +32,7 @@ test('Copilot rerank: pause drops a rank and resume restores it without another 
   await change('PAUSE');
   assert.equal(events[0].type, 'COPILOT_RERANK');
   assert.equal(events[0].event.result.recommendations[0].pool_id, 'A');
-  assert.deepEqual(events[0].event.changes.find((entry) => entry.pool_id === 'C'), { pool_id: 'C', previous_rank: 1, rank: 2, previous_price_usd: 0.8, price_usd: 0.8 });
+  assert.deepEqual(events[0].event.changes.find((entry) => entry.pool_id === 'C'), { pool_id: 'C', previous_rank: 1, rank: null, previous_price_usd: 0.8, price_usd: null });
   pools[0].status = 'Open'; pools[0].quote.risk_score_bps = 0;
   await change('RESUME');
   assert.equal(events[1].event.result.recommendations[0].pool_id, 'C');
@@ -105,7 +105,7 @@ test('Copilot rerank: two subscribers retain the decision baseline when executio
       const last = stream.at(-1);
       assert.equal(last.phase, 'EXECUTION_CONFIRMED');
       const change = last.changes.find((item) => item.pool_id === 'C');
-      assert.equal(change.previous_rank, 1); assert.equal(change.rank, 2);
+      assert.equal(change.previous_rank, 1); assert.equal(change.rank, null);
       assert.equal(stream.length, completedEarly ? 1 : 2);
     }
   }

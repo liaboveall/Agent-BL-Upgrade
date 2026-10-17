@@ -1,0 +1,14 @@
+
+> agentbl-agent-starter@0.1.0 build
+> vite build --config web/vite.config.js
+
+[36mvite v8.3.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 83 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.50 kB │ gzip:   0.31 kB
+dist/assets/index-BMwwNLU8.css   60.37 kB │ gzip:  12.53 kB
+dist/assets/index-Clq08Zn8.js   622.45 kB │ gzip: 194.96 kB
+
+[32m✓ built in 169ms[39m

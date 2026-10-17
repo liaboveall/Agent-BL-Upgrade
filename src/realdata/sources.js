@@ -10,6 +10,8 @@
 import { fetchJson, fetchText } from './http.js';
 
 const DAY_MS = 86_400_000;
+// Empty cells are missing observations, never measurements of zero.
+const numeric = (value) => typeof value === 'number' || typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
 const PORTWATCH_URL = 'https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0/query';
 
 function isoDay(ms) {
@@ -36,16 +38,18 @@ function mean(values) {
  * @returns {Promise<Record<string, {latest_date, avg7, baseline7, ratio, daily}>>}
  */
 export async function fetchChokepointTransits(names, { now = Date.now(), ...options } = {}) {
+  now = typeof now === 'function' ? now() : now;
   if (names.length === 0) return {};
   const recentFrom = isoDay(now - 30 * DAY_MS);
   const recent = await portwatchRows(`portname IN (${sqlList(names)}) AND date >= '${recentFrom}'`, options);
   const out = {};
   for (const name of names) {
-    const rows = recent.filter((row) => row.portname === name).sort((a, b) => a.date.localeCompare(b.date));
+    const rows = recent.filter((row) => row.portname === name && Number.isFinite(numeric(row.n_total)) && numeric(row.n_total) >= 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
     if (rows.length === 0) continue;
     const last7 = rows.slice(-7);
     const latest = last7.at(-1).date;
-    out[name] = { latest_date: latest, avg7: mean(last7.map((row) => Number(row.n_total) || 0)), daily: last7.map((row) => ({ date: row.date, n_total: row.n_total })) };
+    out[name] = { latest_date: latest, avg7: mean(last7.map((row) => numeric(row.n_total))), daily: last7.map((row) => ({ date: row.date, n_total: numeric(row.n_total) })) };
   }
   // Baseline: the same 7-day window a year before each chokepoint's latest day.
   const windows = Object.entries(out).map(([name, item]) => {
@@ -57,7 +61,8 @@ export async function fetchChokepointTransits(names, { now = Date.now(), ...opti
     const to = windows.reduce((max, w) => (w.to > max ? w.to : max), windows[0].to);
     const base = await portwatchRows(`portname IN (${sqlList(windows.map((w) => w.name))}) AND date >= '${from}' AND date <= '${to}'`, options);
     for (const w of windows) {
-      const baseline = mean(base.filter((row) => row.portname === w.name && row.date >= w.from && row.date <= w.to).map((row) => Number(row.n_total) || 0));
+      const baseline = mean(base.filter((row) => row.portname === w.name && row.date >= w.from && row.date <= w.to)
+        .map((row) => numeric(row.n_total)).filter((value) => Number.isFinite(value) && value >= 0));
       out[w.name].baseline7 = baseline;
       out[w.name].ratio = baseline ? out[w.name].avg7 / baseline : null;
     }
@@ -116,9 +121,9 @@ export async function fetchPredictionMarkets(query, options = {}) {
     for (const market of event.markets ?? []) {
       if (market.closed || market.active === false) continue;
       const outcomes = parseArray(market.outcomes);
-      const prices = parseArray(market.outcomePrices).map(Number);
+      const prices = parseArray(market.outcomePrices).map(numeric);
       const yes = outcomes.findIndex((name) => String(name).toLowerCase() === 'yes');
-      if (yes < 0 || !Number.isFinite(prices[yes])) continue;
+      if (yes < 0 || !Number.isFinite(prices[yes]) || prices[yes] < 0 || prices[yes] > 1) continue;
       out.push({
         question: market.question ?? event.title,
         implied_prob: prices[yes],
@@ -136,19 +141,20 @@ export async function fetchPredictionMarkets(query, options = {}) {
 export async function fetchSeaState({ lat, lon }, { days = 3, ...options } = {}) {
   const params = new URLSearchParams({ latitude: String(lat), longitude: String(lon), daily: 'wave_height_max', forecast_days: String(days), timezone: 'UTC' });
   const json = await fetchJson(`https://marine-api.open-meteo.com/v1/marine?${params}`, options);
-  const heights = (json.daily?.wave_height_max ?? []).map(Number).filter(Number.isFinite);
+  const heights = (json.daily?.wave_height_max ?? []).map((value, index) => ({ value: numeric(value), date: json.daily?.time?.[index] }))
+    .filter((item) => Number.isFinite(item.value) && item.value >= 0 && item.value <= 40 && Number.isFinite(Date.parse(item.date)));
   if (heights.length === 0) throw new Error('Open-Meteo returned no wave heights');
-  const max = Math.max(...heights);
-  return { max_wave_height_m: max, on: json.daily.time?.[heights.indexOf(max)] ?? null };
+  const max = heights.reduce((a, b) => a.value >= b.value ? a : b);
+  return { max_wave_height_m: max.value, on: max.date };
 }
 
 /** Last price and ~1-month change of a Yahoo Finance symbol. */
 export async function fetchFuturesQuote(symbol, options = {}) {
   const json = await fetchJson(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1mo&interval=1d`, options);
   const result = json.chart?.result?.[0];
-  const price = Number(result?.meta?.regularMarketPrice);
-  if (!Number.isFinite(price)) throw new Error(json.chart?.error?.description ?? `no quote for ${symbol}`);
-  const closes = (result.indicators?.quote?.[0]?.close ?? []).map(Number).filter(Number.isFinite);
+  const price = numeric(result?.meta?.regularMarketPrice);
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(result?.meta?.regularMarketTime)) throw new Error(json.chart?.error?.description ?? `no dated positive quote for ${symbol}`);
+  const closes = (result.indicators?.quote?.[0]?.close ?? []).map(numeric).filter((value) => Number.isFinite(value) && value > 0);
   const first = closes[0];
   return {
     symbol,

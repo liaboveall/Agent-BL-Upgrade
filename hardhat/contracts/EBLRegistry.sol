@@ -121,7 +121,8 @@ contract EBLRegistry is Owned {
     function releasePledge(uint256 eblId) external {
         address pool = _pledgedTo[eblId];
         require(pool != address(0), "not pledged");
-        require(msg.sender == pool || msg.sender == owner, "not authorized");
+        // Only the pledgee can discharge the encumbrance under its settlement/cancellation rules.
+        require(msg.sender == pool, "not authorized");
         _pledgedTo[eblId] = address(0);
         emit EBLPledgeReleased(eblId, pool, _holder[eblId]);
     }

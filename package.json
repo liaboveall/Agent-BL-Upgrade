@@ -12,6 +12,7 @@
     "dev:web": "vite --config web/vite.config.js",
     "start": "node src/app/server.js",
     "test": "node --test --test-concurrency=4 tests/*.test.js",
+    "test:browser": "playwright test",
     "test:coverage": "node --test --test-concurrency=4 --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-lines=88 --test-coverage-branches=72 --test-coverage-functions=86 tests/*.test.js",
     "lint": "eslint . --max-warnings=0",
     "check": "node scripts/check.mjs",
@@ -75,7 +76,9 @@
     "ws": "8.21.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.1",
     "@vitejs/plugin-react": "6.1.1",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "7.1.1",

@@ -136,7 +136,7 @@ export async function readMcpResource(uri, context) {
           : (await callAgentBackend('get_agent_policy')).result;
         return content(uri, policy);
       }
-      const result = context ? await context.getService().listDecisions({ limit: 20 })
+      const result = context ? await context.getService().listDecisions({ limit: 20, caseFilter: (caseId) => !context.getService().ingest?.isPrivateCase(caseId) })
         : (await callAgentBackend('list_agent_decisions', { limit: 20 })).result;
       return content(uri, { ...result, decisions: result.decisions.map(externalDecision) });
     } catch (error) {

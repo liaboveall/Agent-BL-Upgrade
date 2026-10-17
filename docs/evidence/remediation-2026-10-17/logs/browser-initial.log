@@ -1,0 +1,15 @@
+[WebServer] (node:9033) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:9260) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/review.spec.js:13:3 › zh: four desktop pages have no overflow, page errors or contrast violations (2.5s)
+  ✓  2 tests/browser/review.spec.js:13:3 › en: four desktop pages have no overflow, page errors or contrast violations (2.1s)
+  ✓  3 tests/browser/review.spec.js:31:1 › F06: Demo mint never connects or sends through a configured wallet (690ms)
+  ✓  4 tests/browser/review.spec.js:46:1 › F07/F08: switching with a delayed preference response removes old terms immediately and isolates preferences (742ms)
+  ✓  5 tests/browser/review.spec.js:64:1 › F05: uploaded working documents are absent from public listings and inaccessible to another browser (1.4s)
+  ✓  6 tests/browser/review.spec.js:79:1 › F09: a funded or in-transit pool cannot show an enabled subscription or OPEN status (706ms)
+
+  6 passed (19.8s)

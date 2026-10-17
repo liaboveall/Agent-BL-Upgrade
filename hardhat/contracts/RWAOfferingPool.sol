@@ -41,7 +41,9 @@ contract RWAOfferingPool is Owned {
         Repaid,
         Redeemed,
         Liquidation,
-        Cancelled
+        Cancelled,
+        Defaulted,
+        LossSettled
     }
 
     enum AccessMode {
@@ -67,6 +69,11 @@ contract RWAOfferingPool is Owned {
     AccessMode public accessMode = AccessMode.Permissionless;
     bool public emergencyStopped;
     uint256 public nextPoolId = 1;
+    uint256 public constant protocolVersion = 3;
+    mapping(uint256 => uint256) public quoteVersion;
+    mapping(uint256 => uint256) public maturityAt;
+    mapping(uint256 => uint256) public realizedLoss;
+    mapping(bytes32 => bool) public usedPaymentProof;
 
     struct Offering {
         uint256 eblId;
@@ -125,6 +132,9 @@ contract RWAOfferingPool is Owned {
     event EmergencyStopSet(bool stopped, address indexed operator, bytes32 reasonHash);
     event AccessModeSet(AccessMode mode);
     event ComplianceGateSet(address indexed gate);
+    event OfferingDefaulted(uint256 indexed poolId, uint256 outstandingAmount);
+    event LossSettlementRecorded(uint256 indexed poolId, uint256 recoveredAmount, uint256 lossAmount, bytes32 resolutionHash);
+    event AdditionalPaymentRecorded(uint256 indexed poolId, bytes32 paymentProof, uint256 amount, uint256 totalRecovered);
 
     modifier onlyExecutor() {
         require(msg.sender == owner || agentExecutor[msg.sender], "not executor");
@@ -210,6 +220,8 @@ contract RWAOfferingPool is Owned {
             state: OfferingState.Open,
             exists: true
         });
+        quoteVersion[poolId] = 1;
+        maturityAt[poolId] = block.timestamp + 60 days;
 
         emit OfferingCreated(poolId, eblId, tokenSupply, issuePrice, targetRedemptionValue);
         emit OfferingStateChanged(poolId, OfferingState.Created, OfferingState.Open, OPEN_OFFERING);
@@ -284,6 +296,8 @@ contract RWAOfferingPool is Owned {
         require(paymentProof != bytes32(0), "paymentProof=0");
         require(repaymentAmount > 0, "repayment=0");
         require(o.paymentProof == bytes32(0), "payment already recorded");
+        require(!usedPaymentProof[paymentProof], "payment proof reused");
+        usedPaymentProof[paymentProof] = true;
         o.paymentProof = paymentProof;
         o.repaymentAmount = repaymentAmount;
         emit SettlementProofRecorded(poolId, o.paymentProof, o.arrivalProof);
@@ -302,6 +316,8 @@ contract RWAOfferingPool is Owned {
         require(o.paymentProof != bytes32(0), "payment not recorded");
         require(paymentProof != bytes32(0), "paymentProof=0");
         require(repaymentAmount > 0, "repayment=0");
+        require(paymentProof == o.paymentProof || !usedPaymentProof[paymentProof], "payment proof reused");
+        usedPaymentProof[paymentProof] = true;
         emit ImporterPaymentCorrected(poolId, o.paymentProof, paymentProof, o.repaymentAmount, repaymentAmount);
         o.paymentProof = paymentProof;
         o.repaymentAmount = repaymentAmount;
@@ -322,8 +338,55 @@ contract RWAOfferingPool is Owned {
         _requireSettleable(o);
         require(o.paymentProof != bytes32(0) && o.arrivalProof != bytes32(0), "settlement proof missing");
         require(repaymentAmount > 0 && repaymentAmount == o.repaymentAmount, "repayment mismatch");
+        require(repaymentAmount >= o.subscribed * o.targetRedemptionValue, "outstanding debt");
         _changeState(poolId, OfferingState.Repaid, SETTLE_OFFERING);
         emit OfferingSettled(poolId, repaymentAmount, o.paymentProof, o.arrivalProof);
+        _releaseCollateral(poolId, o.eblId);
+    }
+
+    /// @notice Terms may be set before investors subscribe; existing rights cannot be extended.
+    function setMaturity(uint256 poolId, uint256 timestamp) external onlyOwner whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.exists && o.subscribed == 0 && o.state == OfferingState.Open, "terms locked");
+        require(timestamp > block.timestamp, "maturity elapsed");
+        maturityAt[poolId] = timestamp;
+    }
+
+    function outstandingDebt(uint256 poolId) public view returns (uint256) {
+        Offering storage o = offerings[poolId];
+        uint256 due = o.subscribed * o.targetRedemptionValue;
+        return o.repaymentAmount >= due ? 0 : due - o.repaymentAmount;
+    }
+
+    /// @notice Partial recovery retains the collateral and the original debt obligation.
+    function recordAdditionalPayment(uint256 poolId, bytes32 proof, uint256 amount) external onlyExecutor whenOperational {
+        Offering storage o = offerings[poolId];
+        _requireSettleable(o);
+        require(o.paymentProof != bytes32(0), "payment not recorded");
+        require(proof != bytes32(0) && !usedPaymentProof[proof], "payment proof reused");
+        require(amount > 0, "repayment=0");
+        usedPaymentProof[proof] = true;
+        o.repaymentAmount += amount;
+        emit AdditionalPaymentRecorded(poolId, proof, amount, o.repaymentAmount);
+    }
+
+    function markDefault(uint256 poolId) external onlyOwner whenOperational {
+        Offering storage o = offerings[poolId];
+        require(_isActive(o.state) || o.state == OfferingState.Paused || o.state == OfferingState.Frozen, "illegal transition");
+        require(o.subscribed > 0 && block.timestamp >= maturityAt[poolId] && outstandingDebt(poolId) > 0, "not overdue");
+        _changeState(poolId, OfferingState.Defaulted, TRIGGER_LIQUIDATION);
+        emit OfferingDefaulted(poolId, outstandingDebt(poolId));
+    }
+
+    /// @notice Explicit human loss resolution, never represented as successful full repayment.
+    ///         The resolution commits to off-chain recovery/allocation evidence; this is not a payout.
+    function settleLoss(uint256 poolId, bytes32 resolutionHash) external onlyOwner whenOperational {
+        Offering storage o = offerings[poolId];
+        require(o.state == OfferingState.Defaulted, "not defaulted");
+        require(resolutionHash != bytes32(0) && outstandingDebt(poolId) > 0, "loss evidence required");
+        realizedLoss[poolId] = outstandingDebt(poolId);
+        _changeState(poolId, OfferingState.LossSettled, SETTLE_OFFERING);
+        emit LossSettlementRecorded(poolId, o.repaymentAmount, realizedLoss[poolId], resolutionHash);
         _releaseCollateral(poolId, o.eblId);
     }
 
@@ -370,11 +433,10 @@ contract RWAOfferingPool is Owned {
             require(action != REPRICE_DOWN || newIssuePrice < o.issuePrice, "reprice not down");
             uint256 oldPrice = o.issuePrice;
             o.issuePrice = newIssuePrice;
+            quoteVersion[poolId] += 1;
             emit OfferingRepriced(poolId, oldPrice, newIssuePrice, evidenceHash, quoteHash);
         }
-        if (action == REPRICE_DOWN && o.state != OfferingState.Repriced) {
-            _changeState(poolId, OfferingState.Repriced, action);
-        }
+        // Price changes apply to unsold shares. Logistics and already-issued claims keep their stage.
     }
 
     function stateOf(uint256 poolId) external view returns (OfferingState) {
@@ -442,7 +504,7 @@ contract RWAOfferingPool is Owned {
     /// @dev Settlement is only meaningful for a live offering that has investors: an
     ///      offering nobody subscribed to has nothing to repay.
     function _requireSettleable(Offering storage o) internal view {
-        require(_isActive(o.state), "bad settlement state");
+        require(_isActive(o.state) || o.state == OfferingState.Defaulted, "bad settlement state");
         require(o.subscribed > 0, "no subscribers");
     }
 }

@@ -1,0 +1,4453 @@
+TAP version 13
+# Subtest: tab keyboard navigation wraps, handles Home/End and skips disabled choices
+ok 1 - tab keyboard navigation wraps, handles Home/End and skips disabled choices
+  ---
+  duration_ms: 0.633874
+  type: 'test'
+  ...
+# Subtest: modifier keys, Tab and keys outside the group are left to the browser
+ok 2 - modifier keys, Tab and keys outside the group are left to the browser
+  ---
+  duration_ms: 0.154267
+  type: 'test'
+  ...
+# Subtest: menu arrow keys only move focus, wrap, and ignore other keys
+ok 3 - menu arrow keys only move focus, wrap, and ignore other keys
+  ---
+  duration_ms: 3.617402
+  type: 'test'
+  ...
+# Subtest: modal Tab and reverse Tab wrap at the edges while ordinary navigation is untouched
+ok 4 - modal Tab and reverse Tab wrap at the edges while ordinary navigation is untouched
+  ---
+  duration_ms: 0.141097
+  type: 'test'
+  ...
+# Subtest: timeline announcements exclude initial history, unchanged polls and removed decisions
+ok 5 - timeline announcements exclude initial history, unchanged polls and removed decisions
+  ---
+  duration_ms: 0.509513
+  type: 'test'
+  ...
+# Subtest: reduced motion selects immediate programmatic scrolling
+ok 6 - reduced motion selects immediate programmatic scrolling
+  ---
+  duration_ms: 0.132203
+  type: 'test'
+  ...
+# Subtest: agent activity feed
+    # Subtest: a priced quote is recorded as PRICING_QUOTE with its price
+    ok 1 - a priced quote is recorded as PRICING_QUOTE with its price
+      ---
+      duration_ms: 353.796557
+      type: 'test'
+      ...
+    # Subtest: a subscription is recorded without publishing the full wallet address
+    not ok 2 - a subscription is recorded without publishing the full wallet address
+      ---
+      duration_ms: 27.815672
+      type: 'test'
+      location: '/mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/activityFeed.test.js:59:11'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        499.1112 !== 500
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 500
+      actual: 499.1112
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/activityFeed.test.js:68:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        async Test.run (node:internal/test_runner/test:1409:7)
+        async TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/activityFeed.test.js:59:3)
+        async Test.run (node:internal/test_runner/test:1409:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+      ...
+    # Subtest: a document upload and a world-risk escalation are recorded
+    ok 3 - a document upload and a world-risk escalation are recorded
+      ---
+      duration_ms: 16.752147
+      type: 'test'
+      ...
+    # Subtest: subscribers receive a connected frame, then live activity, filtered by case
+    ok 4 - subscribers receive a connected frame, then live activity, filtered by case
+      ---
+      duration_ms: 17.729807
+      type: 'test'
+      ...
+    # Subtest: idle streams get heartbeat comments so proxies do not drop them
+    ok 5 - idle streams get heartbeat comments so proxies do not drop them
+      ---
+      duration_ms: 46.919853
+      type: 'test'
+      ...
+# [agentbl] 5bccddb37cf4 503 sse_capacity: Too many live-stream subscribers; retry shortly
+    # Subtest: the number of concurrent subscribers is capped
+    ok 6 - the number of concurrent subscribers is capped
+      ---
+      duration_ms: 3.946542
+      type: 'test'
+      ...
+    # Subtest: closed subscribers are removed from the registry
+    ok 7 - closed subscribers are removed from the registry
+      ---
+      duration_ms: 20.853409
+      type: 'test'
+      ...
+    # Subtest: closeActivityStreams ends every open stream (graceful shutdown)
+    ok 8 - closeActivityStreams ends every open stream (graceful shutdown)
+      ---
+      duration_ms: 2.030322
+      type: 'test'
+      ...
+    1..8
+not ok 7 - agent activity feed
+  ---
+  duration_ms: 508.501112
+  type: 'test'
+  location: '/mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/activityFeed.test.js:44:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# [agentbl] 4731b9d9874e 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: X402_PAY_TO is required in live mode
+# Subtest: runtime mode switching requires the admin token
+    # Subtest: an anonymous caller cannot leave Live mode (the paywall-bypass chain is closed)
+    ok 1 - an anonymous caller cannot leave Live mode (the paywall-bypass chain is closed)
+      ---
+      duration_ms: 26.620332
+      type: 'test'
+      ...
+    # Subtest: the correct token (Bearer or X-Admin-Token) switches the mode
+    ok 2 - the correct token (Bearer or X-Admin-Token) switches the mode
+      ---
+      duration_ms: 1081.414191
+      type: 'test'
+      ...
+    # Subtest: Demo -> Live on a server that is not Live-ready is refused by the controller, token or not
+    ok 3 - Demo -> Live on a server that is not Live-ready is refused by the controller, token or not
+      ---
+      duration_ms: 5.857337
+      type: 'test'
+      ...
+    # Subtest: no-op requests and invalid modes need no token
+    ok 4 - no-op requests and invalid modes need no token
+      ---
+      duration_ms: 8.401405
+      type: 'test'
+      ...
+    # Subtest: once Live is configured, entering Live is protected as well
+    ok 5 - once Live is configured, entering Live is protected as well
+      ---
+      duration_ms: 4.729928
+      type: 'test'
+      ...
+    # Subtest: demo reset is unavailable in Live mode
+    ok 6 - demo reset is unavailable in Live mode
+      ---
+      duration_ms: 4.47326
+      type: 'test'
+      ...
+    # Subtest: in Live the legacy upload needs the token, like POST /api/agent/ingest
+    ok 7 - in Live the legacy upload needs the token, like POST /api/agent/ingest
+      ---
+      duration_ms: 3.598583
+      type: 'test'
+      ...
+    # Subtest: in Live the simulated subscription ledger is closed
+    ok 8 - in Live the simulated subscription ledger is closed
+      ---
+      duration_ms: 2.622555
+      type: 'test'
+      ...
+    # Subtest: without a configured (or with a too-short) token, leaving Live is impossible at runtime
+    ok 9 - without a configured (or with a too-short) token, leaving Live is impossible at runtime
+      ---
+      duration_ms: 4.574378
+      type: 'test'
+      ...
+    1..9
+ok 8 - runtime mode switching requires the admin token
+  ---
+  duration_ms: 1178.342628
+  type: 'test'
+  ...
+# Subtest: a pure demo deployment (nothing Live configured) keeps the toggle open and harmless
+ok 9 - a pure demo deployment (nothing Live configured) keeps the toggle open and harmless
+  ---
+  duration_ms: 104.277201
+  type: 'test'
+  ...
+# Subtest: a Demo server with a configured admin token protects the shared reset
+ok 10 - a Demo server with a configured admin token protects the shared reset
+  ---
+  duration_ms: 115.163568
+  type: 'test'
+  ...
+# Subtest: BE-15: Agent Activity API Tests
+    # Subtest: GET /api/agent/activity returns empty array initially
+    ok 1 - GET /api/agent/activity returns empty array initially
+      ---
+      duration_ms: 1057.332543
+      type: 'test'
+      ...
+    # Subtest: GET /api/agent/activity returns logged activities
+    ok 2 - GET /api/agent/activity returns logged activities
+      ---
+      duration_ms: 2.405639
+      type: 'test'
+      ...
+    # Subtest: GET /api/agent/activity filters by case_id
+    ok 3 - GET /api/agent/activity filters by case_id
+      ---
+      duration_ms: 1.252089
+      type: 'test'
+      ...
+    # Subtest: GET /api/agent/activity filters by pool_id
+    ok 4 - GET /api/agent/activity filters by pool_id
+      ---
+      duration_ms: 1.195367
+      type: 'test'
+      ...
+    # Subtest: GET /api/agent/activity/stream establishes SSE connection
+    ok 5 - GET /api/agent/activity/stream establishes SSE connection
+      ---
+      duration_ms: 102.544672
+      type: 'test'
+      ...
+    # Subtest: Agent activities do not expose internal chain-of-thought
+    ok 6 - Agent activities do not expose internal chain-of-thought
+      ---
+      duration_ms: 2.925321
+      type: 'test'
+      ...
+    1..6
+ok 11 - BE-15: Agent Activity API Tests
+  ---
+  duration_ms: 1204.910643
+  type: 'test'
+  ...
+# Subtest: anchor preflight requires the deployed testnet, exact version, explicit signer role and continuous head
+ok 12 - anchor preflight requires the deployed testnet, exact version, explicit signer role and continuous head
+  ---
+  duration_ms: 14.53413
+  type: 'test'
+  ...
+# Subtest: anchor broadcast shares the signer lock, static-preflights and persists hash before waiting
+ok 13 - anchor broadcast shares the signer lock, static-preflights and persists hash before waiting
+  ---
+  duration_ms: 1.228793
+  type: 'test'
+  ...
+# Subtest: confirmed anchors require exact calldata, sender, receipt event, current canonical block and chain batch
+ok 14 - confirmed anchors require exact calldata, sender, receipt event, current canonical block and chain batch
+  ---
+  duration_ms: 12.563467
+  type: 'test'
+  ...
+# Subtest: pending or underconfirmed anchors are never reported as confirmed; changed deployment bindings fail closed
+ok 15 - pending or underconfirmed anchors are never reported as confirmed; changed deployment bindings fail closed
+  ---
+  duration_ms: 1.299033
+  type: 'test'
+  ...
+# Subtest: broadcast recovery uses one exact event in a bounded scan, with no send or inferred hash
+ok 16 - broadcast recovery uses one exact event in a bounded scan, with no send or inferred hash
+  ---
+  duration_ms: 1.045288
+  type: 'test'
+  ...
+# Subtest: chain verification rechecks finality and inclusion instead of trusting a stored ANCHORED label
+ok 17 - chain verification rechecks finality and inclusion instead of trusting a stored ANCHORED label
+  ---
+  duration_ms: 1.947372
+  type: 'test'
+  ...
+# Subtest: pricing and anchoring serialize by signer and a failed task cannot poison the shared queue
+ok 18 - pricing and anchoring serialize by signer and a failed task cannot poison the shared queue
+  ---
+  duration_ms: 0.39811
+  type: 'test'
+  ...
+# Subtest: deployment plan validation rejects altered commitments and its default does not touch chain or files
+ok 19 - deployment plan validation rejects altered commitments and its default does not touch chain or files
+  ---
+  duration_ms: 0.80549
+  type: 'test'
+  ...
+# Subtest: anchor leaves use canonical JSON, domain separation and explicit terminal fields
+ok 20 - anchor leaves use canonical JSON, domain separation and explicit terminal fields
+  ---
+  duration_ms: 4.40178
+  type: 'test'
+  ...
+# Subtest: approval identity, route, time, outcome and transaction are committed without source text or credentials
+ok 21 - approval identity, route, time, outcome and transaction are committed without source text or credentials
+  ---
+  duration_ms: 2.158941
+  type: 'test'
+  ...
+# Subtest: Merkle tree proves every leaf in a 1-record batch and rejects alterations
+ok 22 - Merkle tree proves every leaf in a 1-record batch and rejects alterations
+  ---
+  duration_ms: 0.386698
+  type: 'test'
+  ...
+# Subtest: Merkle tree proves every leaf in a 2-record batch and rejects alterations
+ok 23 - Merkle tree proves every leaf in a 2-record batch and rejects alterations
+  ---
+  duration_ms: 0.267668
+  type: 'test'
+  ...
+# Subtest: Merkle tree proves every leaf in a 3-record batch and rejects alterations
+ok 24 - Merkle tree proves every leaf in a 3-record batch and rejects alterations
+  ---
+  duration_ms: 0.424828
+  type: 'test'
+  ...
+# Subtest: Merkle tree proves every leaf in a 5-record batch and rejects alterations
+ok 25 - Merkle tree proves every leaf in a 5-record batch and rejects alterations
+  ---
+  duration_ms: 0.665509
+  type: 'test'
+  ...
+# Subtest: Merkle tree proves every leaf in a 16-record batch and rejects alterations
+ok 26 - Merkle tree proves every leaf in a 16-record batch and rejects alterations
+  ---
+  duration_ms: 2.194347
+  type: 'test'
+  ...
+# Subtest: Merkle tree proves every leaf in a 255-record batch and rejects alterations
+ok 27 - Merkle tree proves every leaf in a 255-record batch and rejects alterations
+  ---
+  duration_ms: 33.547335
+  type: 'test'
+  ...
+# Subtest: Merkle tree proves every leaf in a 256-record batch and rejects alterations
+ok 28 - Merkle tree proves every leaf in a 256-record batch and rejects alterations
+  ---
+  duration_ms: 29.089072
+  type: 'test'
+  ...
+# Subtest: invalid or oversized tree/proof inputs fail closed
+ok 29 - invalid or oversized tree/proof inputs fail closed
+  ---
+  duration_ms: 0.232231
+  type: 'test'
+  ...
+# Subtest: enabling anchoring does not change the agent version; policy, model and source changes do
+ok 30 - enabling anchoring does not change the agent version; policy, model and source changes do
+  ---
+  duration_ms: 0.770794
+  type: 'test'
+  ...
+# Subtest: anchor model metadata matches provider normalization for absent, empty, whitespace and explicit model names
+ok 31 - anchor model metadata matches provider normalization for absent, empty, whitespace and explicit model names
+  ---
+  duration_ms: 0.473475
+  type: 'test'
+  ...
+# Subtest: concurrent finalizations allocate a continuous durable sequence; duplicates and restart keep it
+ok 32 - concurrent finalizations allocate a continuous durable sequence; duplicates and restart keep it
+  ---
+  duration_ms: 45.84542
+  type: 'test'
+  ...
+# Subtest: a second OS process cannot take the active anchor sequence lock
+ok 33 - a second OS process cannot take the active anchor sequence lock
+  ---
+  duration_ms: 33.562345
+  type: 'test'
+  ...
+# Subtest: a dead process lock is recovered without resetting sequence
+ok 34 - a dead process lock is recovered without resetting sequence
+  ---
+  duration_ms: 32.87157
+  type: 'test'
+  ...
+# Subtest: failed persistence consumes no finalization sequence and leaves the prior state intact
+ok 35 - failed persistence consumes no finalization sequence and leaves the prior state intact
+  ---
+  duration_ms: 3.605012
+  type: 'test'
+  ...
+# Subtest: tampered terminal data fails verification; finalized entries cannot be silently overwritten
+ok 36 - tampered terminal data fails verification; finalized entries cannot be silently overwritten
+  ---
+  duration_ms: 1.070441
+  type: 'test'
+  ...
+# Subtest: corrupted sequence, leaf, version and batch root are rejected on load
+ok 37 - corrupted sequence, leaf, version and batch root are rejected on load
+  ---
+  duration_ms: 2.656324
+  type: 'test'
+  ...
+# Subtest: legacy journals are explicitly marked with an unrecorded version
+ok 38 - legacy journals are explicitly marked with an unrecorded version
+  ---
+  duration_ms: 0.459339
+  type: 'test'
+  ...
+# Subtest: Demo and disabled Live form local trees without contacting a chain adapter
+ok 39 - Demo and disabled Live form local trees without contacting a chain adapter
+  ---
+  duration_ms: 1.300381
+  type: 'test'
+  ...
+# Subtest: minimum batch, interval and version boundaries keep each batch homogeneous and continuous
+ok 40 - minimum batch, interval and version boundaries keep each batch homogeneous and continuous
+  ---
+  duration_ms: 3.932139
+  type: 'test'
+  ...
+# Subtest: Live batches persist intent and hash before confirmation; repeat ticks do not broadcast twice
+ok 41 - Live batches persist intent and hash before confirmation; repeat ticks do not broadcast twice
+  ---
+  duration_ms: 1.318804
+  type: 'test'
+  ...
+# Subtest: uncertain send survives restart and recovers by observed hash without a repeat broadcast
+ok 42 - uncertain send survives restart and recovers by observed hash without a repeat broadcast
+  ---
+  duration_ms: 5.48665
+  type: 'test'
+  ...
+# Subtest: preflight failure is retryable but a mode change before send never broadcasts
+ok 43 - preflight failure is retryable but a mode change before send never broadcasts
+  ---
+  duration_ms: 0.667514
+  type: 'test'
+  ...
+# Subtest: a failed hash checkpoint after broadcast stays uncertain until read-only recovery and never re-sends
+ok 44 - a failed hash checkpoint after broadcast stays uncertain until read-only recovery and never re-sends
+  ---
+  duration_ms: 4.351212
+  type: 'test'
+  ...
+# Subtest: runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick
+ok 45 - runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick
+  ---
+  duration_ms: 337.5896
+  type: 'test'
+  ...
+# Subtest: approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq
+    # Subtest: EXECUTED
+    ok 1 - EXECUTED
+      ---
+      duration_ms: 17.83927
+      type: 'test'
+      ...
+    # Subtest: REJECTED
+    ok 2 - REJECTED
+      ---
+      duration_ms: 17.366773
+      type: 'test'
+      ...
+    # Subtest: EXPIRED
+    ok 3 - EXPIRED
+      ---
+      duration_ms: 17.36065
+      type: 'test'
+      ...
+    1..3
+ok 46 - approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq
+  ---
+  duration_ms: 53.000357
+  type: 'test'
+  ...
+# Subtest: failed approved execution preserves the operator and terminal failure in its commitment
+ok 47 - failed approved execution preserves the operator and terminal failure in its commitment
+  ---
+  duration_ms: 16.575185
+  type: 'test'
+  ...
+# Subtest: an autonomy override creates a new policy version without relabeling already created decisions
+ok 48 - an autonomy override creates a new policy version without relabeling already created decisions
+  ---
+  duration_ms: 16.285841
+  type: 'test'
+  ...
+# Subtest: retention preserves independent proofs and live sequences; Demo reset discards only Demo proofs
+ok 49 - retention preserves independent proofs and live sequences; Demo reset discards only Demo proofs
+  ---
+  duration_ms: 18.138626
+  type: 'test'
+  ...
+# Subtest: HTTP exposes public proofs and behavioral tamper failures, with missing IDs returning 404
+ok 50 - HTTP exposes public proofs and behavioral tamper failures, with missing IDs returning 404
+  ---
+  duration_ms: 55.194627
+  type: 'test'
+  ...
+# Subtest: CLI rechecks a disk audit without reading keys or mutating journals and exits nonzero for tampering
+ok 51 - CLI rechecks a disk audit without reading keys or mutating journals and exits nonzero for tampering
+  ---
+  duration_ms: 2565.811341
+  type: 'test'
+  ...
+# Subtest: agent API (Demo)
+    # Subtest: GET /api/agent/status is public and reports the runtime without exposing keys
+    ok 1 - GET /api/agent/status is public and reports the runtime without exposing keys
+      ---
+      duration_ms: 336.794342
+      type: 'test'
+      ...
+    # Subtest: an injected world-risk event produces a decision, an executed simulated reprice and a trace
+    ok 2 - an injected world-risk event produces a decision, an executed simulated reprice and a trace
+      ---
+      duration_ms: 37.010798
+      type: 'test'
+      ...
+    # Subtest: the same event again is a duplicate and does not execute twice
+    ok 3 - the same event again is a duplicate and does not execute twice
+      ---
+      duration_ms: 27.031959
+      type: 'test'
+      ...
+    # Subtest: without ?wait the event is accepted (202) and processed in the background
+    ok 4 - without ?wait the event is accepted (202) and processed in the background
+      ---
+      duration_ms: 14.589125
+      type: 'test'
+      ...
+    # Subtest: invalid input is refused with a 4xx and a readable reason
+    ok 5 - invalid input is refused with a 4xx and a readable reason
+      ---
+      duration_ms: 25.99668
+      type: 'test'
+      ...
+    # Subtest: control: autonomy and emergency stop change what the agent does
+    ok 6 - control: autonomy and emergency stop change what the agent does
+      ---
+      duration_ms: 56.643565
+      type: 'test'
+      ...
+    # Subtest: approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx
+    ok 7 - approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx
+      ---
+      duration_ms: 102.222077
+      type: 'test'
+      ...
+    # Subtest: the admin token protects control, events and the approval queue once it is configured
+    ok 8 - the admin token protects control, events and the approval queue once it is configured
+      ---
+      duration_ms: 45.066038
+      type: 'test'
+      ...
+    # Subtest: the activity stream sends an id per event and replays what a reconnecting client missed
+    ok 9 - the activity stream sends an id per event and replays what a reconnecting client missed
+      ---
+      duration_ms: 30.104438
+      type: 'test'
+      ...
+    # Subtest: POST /api/demo/reset clears what the agent recorded in Demo and rebuilds the pools
+    ok 10 - POST /api/demo/reset clears what the agent recorded in Demo and rebuilds the pools
+      ---
+      duration_ms: 51.167399
+      type: 'test'
+      ...
+    1..10
+ok 52 - agent API (Demo)
+  ---
+  duration_ms: 746.209025
+  type: 'test'
+  ...
+# Subtest: agent API: in Live the admin token is mandatory even for actions Demo leaves open
+ok 53 - agent API: in Live the admin token is mandatory even for actions Demo leaves open
+  ---
+  duration_ms: 20.40864
+  type: 'test'
+  ...
+# Subtest: approvals: create is idempotent per open decision and rejects bad input
+ok 54 - approvals: create is idempotent per open decision and rejects bad input
+  ---
+  duration_ms: 1.313264
+  type: 'test'
+  ...
+# Subtest: approvals: approve and reject follow the state machine
+ok 55 - approvals: approve and reject follow the state machine
+  ---
+  duration_ms: 0.86735
+  type: 'test'
+  ...
+# Subtest: approvals: a pending approval expires after its ttl and can no longer be approved
+ok 56 - approvals: a pending approval expires after its ttl and can no longer be approved
+  ---
+  duration_ms: 0.519737
+  type: 'test'
+  ...
+# Subtest: approvals: owner-signed steps are recorded in order and complete the approval
+ok 57 - approvals: owner-signed steps are recorded in order and complete the approval
+  ---
+  duration_ms: 1.133075
+  type: 'test'
+  ...
+# Subtest: approvals: failures keep a bounded reason; an approval awaiting a signature can expire
+ok 58 - approvals: failures keep a bounded reason; an approval awaiting a signature can expire
+  ---
+  duration_ms: 0.365493
+  type: 'test'
+  ...
+# Subtest: approvals: state survives a restart and the record cap never drops open approvals
+ok 59 - approvals: state survives a restart and the record cap never drops open approvals
+  ---
+  duration_ms: 14.556636
+  type: 'test'
+  ...
+# Subtest: owner plan: departure and cancellation encode exact proofs; settlement refuses context-free legacy plans
+ok 60 - owner plan: departure and cancellation encode exact proofs; settlement refuses context-free legacy plans
+  ---
+  duration_ms: 7.816738
+  type: 'test'
+  ...
+# Subtest: owner plan: refuses what it cannot encode instead of guessing
+ok 61 - owner plan: refuses what it cannot encode instead of guessing
+  ---
+  duration_ms: 0.507789
+  type: 'test'
+  ...
+# Subtest: verifyOwnerTx: accepts exactly the planned transaction and reports the confirmed events
+ok 62 - verifyOwnerTx: accepts exactly the planned transaction and reports the confirmed events
+  ---
+  duration_ms: 2.939917
+  type: 'test'
+  ...
+# Subtest: verifyOwnerTx: refuses a made-up hash, an unmined tx and a malformed hash
+ok 63 - verifyOwnerTx: refuses a made-up hash, an unmined tx and a malformed hash
+  ---
+  duration_ms: 0.962741
+  type: 'test'
+  ...
+# Subtest: verifyOwnerTx: wrong contract, method, argument, sender, revert or missing event each fail
+ok 64 - verifyOwnerTx: wrong contract, method, argument, sender, revert or missing event each fail
+  ---
+  duration_ms: 5.459633
+  type: 'test'
+  ...
+# Subtest: verifyOwnerTx: a log from another contract does not satisfy the expected event
+ok 65 - verifyOwnerTx: a log from another contract does not satisfy the expected event
+  ---
+  duration_ms: 0.771002
+  type: 'test'
+  ...
+# Subtest: cli: argument parsing
+ok 66 - cli: argument parsing
+  ---
+  duration_ms: 1.316988
+  type: 'test'
+  ...
+# Subtest: cli: no action prints usage; unknown flags exit 2; --help exits 0
+ok 67 - cli: no action prints usage; unknown flags exit 2; --help exits 0
+  ---
+  duration_ms: 0.728209
+  type: 'test'
+  ...
+# Subtest: cli: --list shows what waits for a signature, with the admin token
+ok 68 - cli: --list shows what waits for a signature, with the admin token
+  ---
+  duration_ms: 2.822728
+  type: 'test'
+  ...
+# Subtest: cli: the default is a dry run that preflights and sends nothing
+ok 69 - cli: the default is a dry run that preflights and sends nothing
+  ---
+  duration_ms: 0.874165
+  type: 'test'
+  ...
+# Subtest: cli: --confirm signs, waits, and reports the hash for the server to verify
+ok 70 - cli: --confirm signs, waits, and reports the hash for the server to verify
+  ---
+  duration_ms: 0.671415
+  type: 'test'
+  ...
+# Subtest: cli: the private key never appears in any output
+ok 71 - cli: the private key never appears in any output
+  ---
+  duration_ms: 0.845307
+  type: 'test'
+  ...
+# Subtest: cli: a step the contract would reject stops everything before sending
+ok 72 - cli: a step the contract would reject stops everything before sending
+  ---
+  duration_ms: 0.334394
+  type: 'test'
+  ...
+# Subtest: cli: a key that is not the contract owner is refused
+ok 73 - cli: a key that is not the contract owner is refused
+  ---
+  duration_ms: 0.288205
+  type: 'test'
+  ...
+# Subtest: cli: without a local owner key it explains instead of failing silently
+ok 74 - cli: without a local owner key it explains instead of failing silently
+  ---
+  duration_ms: 0.340781
+  type: 'test'
+  ...
+# Subtest: cli: only approvals waiting for an owner signature can be signed
+ok 75 - cli: only approvals waiting for an owner signature can be signed
+  ---
+  duration_ms: 0.534147
+  type: 'test'
+  ...
+# Subtest: cli: a terminal action on a protected pool is refused even with --confirm
+ok 76 - cli: a terminal action on a protected pool is refused even with --confirm
+  ---
+  duration_ms: 0.513065
+  type: 'test'
+  ...
+# Subtest: cli: a server rejection of the reported transaction is surfaced and exits non-zero
+ok 77 - cli: a server rejection of the reported transaction is surfaced and exits non-zero
+  ---
+  duration_ms: 0.815893
+  type: 'test'
+  ...
+# Subtest: cli: an unknown approval and a mined-but-reverted step are reported
+ok 78 - cli: an unknown approval and a mined-but-reverted step are reported
+  ---
+  duration_ms: 0.445612
+  type: 'test'
+  ...
+# Subtest: cli: steps the server already recorded are skipped when resuming
+ok 79 - cli: steps the server already recorded are skipped when resuming
+  ---
+  duration_ms: 0.311428
+  type: 'test'
+  ...
+# Subtest: chain configuration: independent polling defaults, interval bounds and opt-out
+ok 80 - chain configuration: independent polling defaults, interval bounds and opt-out
+  ---
+  duration_ms: 1.019634
+  type: 'test'
+  ...
+# Subtest: read-only chain context does not resolve any private key or create a wallet
+ok 81 - read-only chain context does not resolve any private key or create a wallet
+  ---
+  duration_ms: 13.043048
+  type: 'test'
+  ...
+# Subtest: confirmed logs are sorted, decoded, deduplicated, observed and committed after durable delivery
+ok 82 - confirmed logs are sorted, decoded, deduplicated, observed and committed after durable delivery
+  ---
+  duration_ms: 360.414143
+  type: 'test'
+  ...
+# Subtest: confirmations defer recent logs and all snapshot reads use the confirmed batch block
+ok 83 - confirmations defer recent logs and all snapshot reads use the confirmed batch block
+  ---
+  duration_ms: 14.153789
+  type: 'test'
+  ...
+# Subtest: each log request is capped at 5000 blocks, empty batches advance and catching up gates execution
+ok 84 - each log request is capped at 5000 blocks, empty batches advance and catching up gates execution
+  ---
+  duration_ms: 12.794291
+  type: 'test'
+  ...
+# Subtest: restart resumes from the next block and restores a confirmed mirror without reprocessing logs
+ok 85 - restart resumes from the next block and restores a confirmed mirror without reprocessing logs
+  ---
+  duration_ms: 23.954877
+  type: 'test'
+  ...
+# Subtest: RPC failure keeps the cursor, sanitizes errors, backs off and recovers only on a fresh successful poll
+ok 86 - RPC failure keeps the cursor, sanitizes errors, backs off and recovers only on a fresh successful poll
+  ---
+  duration_ms: 9.989999
+  type: 'test'
+  ...
+# Subtest: hung RPC is bounded and cannot fabricate observations or advance a cursor
+ok 87 - hung RPC is bounded and cannot fabricate observations or advance a cursor
+  ---
+  duration_ms: 34.328799
+  type: 'test'
+  ...
+# Subtest: a restart with changed chain addresses preserves the cursor and requires reconciliation
+ok 88 - a restart with changed chain addresses preserves the cursor and requires reconciliation
+  ---
+  duration_ms: 14.686195
+  type: 'test'
+  ...
+# Subtest: v1 cursor migrates exactly before the independent Phase 7 deployment
+ok 89 - v1 cursor migrates exactly before the independent Phase 7 deployment
+  ---
+  duration_ms: 22.969256
+  type: 'test'
+  ...
+# Subtest: v1 cursor migrates exactly after the independent Phase 7 deployment
+ok 90 - v1 cursor migrates exactly after the independent Phase 7 deployment
+  ---
+  duration_ms: 23.6797
+  type: 'test'
+  ...
+# Subtest: v2 cursor ignores unrelated deployment metadata and retains every committed position
+ok 91 - v2 cursor ignores unrelated deployment metadata and retains every committed position
+  ---
+  duration_ms: 15.366755
+  type: 'test'
+  ...
+# Subtest: v2 cursor rejects a changed watched deployment
+ok 92 - v2 cursor rejects a changed watched deployment
+  ---
+  duration_ms: 15.600777
+  type: 'test'
+  ...
+# Subtest: v2 cursor rejects a changed collateral registry address
+ok 93 - v2 cursor rejects a changed collateral registry address
+  ---
+  duration_ms: 16.64245
+  type: 'test'
+  ...
+# Subtest: v2 cursor rejects a changed confirmation depth
+ok 94 - v2 cursor rejects a changed confirmation depth
+  ---
+  duration_ms: 14.086947
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on watched deployment
+ok 95 - v1 migration preserves history on watched deployment
+  ---
+  duration_ms: 21.28828
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on canonical block
+ok 96 - v1 migration preserves history on canonical block
+  ---
+  duration_ms: 24.077525
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on write failure
+ok 97 - v1 migration preserves history on write failure
+  ---
+  duration_ms: 25.615077
+  type: 'test'
+  ...
+# Subtest: v1 migration preserves history on unresolved reconciliation
+ok 98 - v1 migration preserves history on unresolved reconciliation
+  ---
+  duration_ms: 21.870254
+  type: 'test'
+  ...
+# Subtest: wrong RPC chain never accepts logs or changes a mirror
+ok 99 - wrong RPC chain never accepts logs or changes a mirror
+  ---
+  duration_ms: 5.165544
+  type: 'test'
+  ...
+# Subtest: a changed committed block freezes the original cursor and persists the reorg boundary
+ok 100 - a changed committed block freezes the original cursor and persists the reorg boundary
+  ---
+  duration_ms: 13.360062
+  type: 'test'
+  ...
+# Subtest: cursor corruption fails closed without replacing evidence
+ok 101 - cursor corruption fails closed without replacing evidence
+  ---
+  duration_ms: 7.318131
+  type: 'test'
+  ...
+# Subtest: reject removed log without observation or cursor progress
+ok 102 - reject removed log without observation or cursor progress
+  ---
+  duration_ms: 6.427883
+  type: 'test'
+  ...
+# Subtest: reject wrong canonical hash log without observation or cursor progress
+ok 103 - reject wrong canonical hash log without observation or cursor progress
+  ---
+  duration_ms: 6.755948
+  type: 'test'
+  ...
+# Subtest: reject wrong address log without observation or cursor progress
+ok 104 - reject wrong address log without observation or cursor progress
+  ---
+  duration_ms: 6.556017
+  type: 'test'
+  ...
+# Subtest: reject invalid watched payload log without observation or cursor progress
+ok 105 - reject invalid watched payload log without observation or cursor progress
+  ---
+  duration_ms: 6.625759
+  type: 'test'
+  ...
+# Subtest: reject pending index log without observation or cursor progress
+ok 106 - reject pending index log without observation or cursor progress
+  ---
+  duration_ms: 6.148426
+  type: 'test'
+  ...
+# Subtest: conflicting duplicate positions fail instead of arbitrarily choosing one log
+ok 107 - conflicting duplicate positions fail instead of arbitrarily choosing one log
+  ---
+  duration_ms: 8.969301
+  type: 'test'
+  ...
+# Subtest: every promised event ABI is watched and remains informational, including both non-pool contracts
+ok 108 - every promised event ABI is watched and remains informational, including both non-pool contracts
+  ---
+  duration_ms: 26.575363
+  type: 'test'
+  ...
+# Subtest: PaymentAttested correlates its SHA-256 case hash and does not assert trade repayment
+ok 109 - PaymentAttested correlates its SHA-256 case hash and does not assert trade repayment
+  ---
+  duration_ms: 7.951071
+  type: 'test'
+  ...
+# Subtest: unknown cargo is registered for chain monitoring but excluded from risk and investor eligibility
+ok 110 - unknown cargo is registered for chain monitoring but excluded from risk and investor eligibility
+  ---
+  duration_ms: 6.992637
+  type: 'test'
+  ...
+# Subtest: new terminal offerings remain history and existing CLI mappings are not replaced
+ok 111 - new terminal offerings remain history and existing CLI mappings are not replaced
+  ---
+  duration_ms: 9.65663
+  type: 'test'
+  ...
+# Subtest: current stop takes effect before history replay; historical false cannot release a current chain stop
+ok 112 - current stop takes effect before history replay; historical false cannot release a current chain stop
+  ---
+  duration_ms: 6.884699
+  type: 'test'
+  ...
+# Subtest: chain stop release waits for confirmed state and preserves an independent local stop
+ok 113 - chain stop release waits for confirmed state and preserves an independent local stop
+  ---
+  duration_ms: 8.189746
+  type: 'test'
+  ...
+# Subtest: Demo mode makes no RPC calls, restores independent Demo mirrors and preserves the Live cursor
+ok 114 - Demo mode makes no RPC calls, restores independent Demo mirrors and preserves the Live cursor
+  ---
+  duration_ms: 6.28032
+  type: 'test'
+  ...
+# Subtest: a mode switch while an RPC is in flight cannot inject chain logs into Demo or commit a cursor
+ok 115 - a mode switch while an RPC is in flight cannot inject chain logs into Demo or commit a cursor
+  ---
+  duration_ms: 10.699434
+  type: 'test'
+  ...
+# Subtest: overlapping polls share one request and never apply a batch twice
+ok 116 - overlapping polls share one request and never apply a batch twice
+  ---
+  duration_ms: 7.586849
+  type: 'test'
+  ...
+# Subtest: delivery failure keeps the cursor and retries the same log without another observation or decision
+ok 117 - delivery failure keeps the cursor and retries the same log without another observation or decision
+  ---
+  duration_ms: 9.189621
+  type: 'test'
+  ...
+# Subtest: missing deployment block resolves the canonical deployment receipt and never guesses an origin
+ok 118 - missing deployment block resolves the canonical deployment receipt and never guesses an origin
+  ---
+  duration_ms: 11.257313
+  type: 'test'
+  ...
+# Subtest: deployment start override cannot silently skip historical logs
+ok 119 - deployment start override cannot silently skip historical logs
+  ---
+  duration_ms: 6.67745
+  type: 'test'
+  ...
+# Subtest: large atomic amounts remain exact strings and cannot acquire rounded UI prices
+ok 120 - large atomic amounts remain exact strings and cannot acquire rounded UI prices
+  ---
+  duration_ms: 6.227629
+  type: 'test'
+  ...
+# Subtest: confirmed repayment proofs are observations and never fabricate a verified payment or SETTLE approval
+ok 121 - confirmed repayment proofs are observations and never fabricate a verified payment or SETTLE approval
+  ---
+  duration_ms: 8.118827
+  type: 'test'
+  ...
+# Subtest: unavailable chain observation blocks every state-changing proposal, including PAUSE, while records remain available
+ok 122 - unavailable chain observation blocks every state-changing proposal, including PAUSE, while records remain available
+  ---
+  duration_ms: 0.2999
+  type: 'test'
+  ...
+# Subtest: chain price drift is exposed without rewriting a priced quote hash or offering stale investor action cards
+ok 123 - chain price drift is exposed without rewriting a priced quote hash or offering stale investor action cards
+  ---
+  duration_ms: 6.595448
+  type: 'test'
+  ...
+# Subtest: known collateral mismatch requires reconciliation rather than silently relinking a case
+ok 124 - known collateral mismatch requires reconciliation rather than silently relinking a case
+  ---
+  duration_ms: 6.198613
+  type: 'test'
+  ...
+# Subtest: mode-change notification immediately restores Demo scope before the next scheduled poll
+ok 125 - mode-change notification immediately restores Demo scope before the next scheduled poll
+  ---
+  duration_ms: 6.012519
+  type: 'test'
+  ...
+# Subtest: Demo reset discards old backup balances while preserving the Live cursor
+ok 126 - Demo reset discards old backup balances while preserving the Live cursor
+  ---
+  duration_ms: 5.919121
+  type: 'test'
+  ...
+# Subtest: cursor persistence failure retries an already delivered log without losing or duplicating its proof
+ok 127 - cursor persistence failure retries an already delivered log without losing or duplicating its proof
+  ---
+  duration_ms: 26.793258
+  type: 'test'
+  ...
+# Subtest: an approved server action remains pending during a watcher outage and recovers after confirmation
+ok 128 - an approved server action remains pending during a watcher outage and recovers after confirmation
+  ---
+  duration_ms: 16.324362
+  type: 'test'
+  ...
+# Subtest: an owner payment correction removes stale verification and decimal amounts from the Live mirror
+ok 129 - an owner payment correction removes stale verification and decimal amounts from the Live mirror
+  ---
+  duration_ms: 7.187836
+  type: 'test'
+  ...
+# Subtest: a routine poll in flight keeps a caught-up watcher confirmed: Live proposals, approval and broadcast checks proceed
+ok 130 - a routine poll in flight keeps a caught-up watcher confirmed: Live proposals, approval and broadcast checks proceed
+  ---
+  duration_ms: 10.58765
+  type: 'test'
+  ...
+# Subtest: startup stays fail-closed while the first poll is in flight
+ok 131 - startup stays fail-closed while the first poll is in flight
+  ---
+  duration_ms: 8.091549
+  type: 'test'
+  ...
+# Subtest: a poll that finds the watcher behind by more than one batch fails closed before replaying logs
+ok 132 - a poll that finds the watcher behind by more than one batch fails closed before replaying logs
+  ---
+  duration_ms: 9.126071
+  type: 'test'
+  ...
+# Subtest: an emergency stop seen at head applies mid-poll; its release waits for the poll to commit
+ok 133 - an emergency stop seen at head applies mid-poll; its release waits for the poll to commit
+  ---
+  duration_ms: 11.786005
+  type: 'test'
+  ...
+# Subtest: a failed poll and an aged confirmation both fail closed
+ok 134 - a failed poll and an aged confirmation both fail closed
+  ---
+  duration_ms: 15.217787
+  type: 'test'
+  ...
+# (node:8424) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: console: dynamic values never go through HTML injection (decisions carry event and chain data)
+ok 135 - console: dynamic values never go through HTML injection (decisions carry event and chain data)
+  ---
+  duration_ms: 0.670831
+  type: 'test'
+  ...
+# Subtest: console: a link is only ever built from an https explorer_url, never from a hash or a demo reference
+ok 136 - console: a link is only ever built from an https explorer_url, never from a hash or a demo reference
+  ---
+  duration_ms: 0.451196
+  type: 'test'
+  ...
+# Subtest: console: a simulated execution is labelled DEMO and has no link path
+ok 137 - console: a simulated execution is labelled DEMO and has no link path
+  ---
+  duration_ms: 0.098258
+  type: 'test'
+  ...
+# Subtest: console: shortId shortens without repeating the value
+ok 138 - console: shortId shortens without repeating the value
+  ---
+  duration_ms: 0.550264
+  type: 'test'
+  ...
+# Subtest: judge-facing Agent activity does not intercept browser diagnostics
+ok 139 - judge-facing Agent activity does not intercept browser diagnostics
+  ---
+  duration_ms: 0.916828
+  type: 'test'
+  ...
+# Subtest: render code does not emit debug logs (the activity panel shows business events only)
+ok 140 - render code does not emit debug logs (the activity panel shows business events only)
+  ---
+  duration_ms: 0.364464
+  type: 'test'
+  ...
+# Subtest: measured Agent suites meet every frozen deterministic threshold using real components
+ok 141 - measured Agent suites meet every frozen deterministic threshold using real components
+  ---
+  duration_ms: 0.904533
+  type: 'test'
+  ...
+# Subtest: scoring rejects missing and non-finite metrics rather than treating them as success
+ok 142 - scoring rejects missing and non-finite metrics rather than treating them as success
+  ---
+  duration_ms: 0.160418
+  type: 'test'
+  ...
+# Subtest: label boundary rejects leaked labels at any depth and freezes the component input
+ok 143 - label boundary rejects leaked labels at any depth and freezes the component input
+  ---
+  duration_ms: 0.990058
+  type: 'test'
+  ...
+# Subtest: changing gold cannot change subject output, and broken extraction fails the quality gate
+ok 144 - changing gold cannot change subject output, and broken extraction fails the quality gate
+  ---
+  duration_ms: 1296.051712
+  type: 'test'
+  ...
+# Subtest: empty or truncated evaluation suites are rejected, never awarded perfect safety scores
+ok 145 - empty or truncated evaluation suites are rejected, never awarded perfect safety scores
+  ---
+  duration_ms: 0.48627
+  type: 'test'
+  ...
+# Subtest: NDCG penalizes reversed rankings, irrelevant and duplicate results, and empty output
+ok 146 - NDCG penalizes reversed rankings, irrelevant and duplicate results, and empty output
+  ---
+  duration_ms: 0.106892
+  type: 'test'
+  ...
+# Subtest: report shows failures and limits, and never claims an unrun provider evaluation
+ok 147 - report shows failures and limits, and never claims an unrun provider evaluation
+  ---
+  duration_ms: 765.947084
+  type: 'test'
+  ...
+# Subtest: events: normalizeEvent fills defaults and derives a stable event_id
+ok 148 - events: normalizeEvent fills defaults and derives a stable event_id
+  ---
+  duration_ms: 2.560251
+  type: 'test'
+  ...
+# Subtest: events: invalid events are refused with a readable reason
+ok 149 - events: invalid events are refused with a readable reason
+  ---
+  duration_ms: 1.448389
+  type: 'test'
+  ...
+# Subtest: events: payload keys beyond the checked ones are preserved but never trusted blindly
+ok 150 - events: payload keys beyond the checked ones are preserved but never trusted blindly
+  ---
+  duration_ms: 0.794309
+  type: 'test'
+  ...
+# Subtest: bus: an event is processed once; resubmitting it is a duplicate
+ok 151 - bus: an event is processed once; resubmitting it is a duplicate
+  ---
+  duration_ms: 4.108252
+  type: 'test'
+  ...
+# Subtest: bus: events of one case run one at a time in arrival order, other cases run in parallel
+ok 152 - bus: events of one case run one at a time in arrival order, other cases run in parallel
+  ---
+  duration_ms: 46.426677
+  type: 'test'
+  ...
+# Subtest: bus: concurrency is capped
+ok 153 - bus: concurrency is capped
+  ---
+  duration_ms: 45.905452
+  type: 'test'
+  ...
+# Subtest: bus: an event older than the last handled one for the same case and type is STALE and never runs
+ok 154 - bus: an event older than the last handled one for the same case and type is STALE and never runs
+  ---
+  duration_ms: 1.039925
+  type: 'test'
+  ...
+# Subtest: bus: a failing handler is retried, then the event is dead-lettered with its payload
+ok 155 - bus: a failing handler is retried, then the event is dead-lettered with its payload
+  ---
+  duration_ms: 1.48202
+  type: 'test'
+  ...
+# Subtest: bus: a handler that recovers on a later attempt ends DONE; a dead event can be retried
+ok 156 - bus: a handler that recovers on a later attempt ends DONE; a dead event can be retried
+  ---
+  duration_ms: 0.771302
+  type: 'test'
+  ...
+# Subtest: bus: state survives a restart; duplicates stay duplicates and STALE detection persists
+ok 157 - bus: state survives a restart; duplicates stay duplicates and STALE detection persists
+  ---
+  duration_ms: 8.71558
+  type: 'test'
+  ...
+# Subtest: bus: events that were queued or mid-flight when the process stopped are processed after restart
+ok 158 - bus: events that were queued or mid-flight when the process stopped are processed after restart
+  ---
+  duration_ms: 6.215845
+  type: 'test'
+  ...
+# Subtest: bus: a bus that is not started keeps events queued and reports them
+ok 159 - bus: a bus that is not started keeps events queued and reports them
+  ---
+  duration_ms: 0.410434
+  type: 'test'
+  ...
+# Subtest: bus: the index is pruned to its cap without losing unfinished or dead events
+ok 160 - bus: the index is pruned to its cap without losing unfinished or dead events
+  ---
+  duration_ms: 1.136862
+  type: 'test'
+  ...
+# Subtest: bus: the handler receives a copy, so it cannot corrupt the stored event
+ok 161 - bus: the handler receives a copy, so it cannot corrupt the stored event
+  ---
+  duration_ms: 0.419842
+  type: 'test'
+  ...
+# Subtest: bus: submit refuses an event that was not normalised
+ok 162 - bus: submit refuses an event that was not normalised
+  ---
+  duration_ms: 0.233218
+  type: 'test'
+  ...
+# Subtest: poolRules: transitions mirror the contract
+ok 163 - poolRules: transitions mirror the contract
+  ---
+  duration_ms: 1.274679
+  type: 'test'
+  ...
+# Subtest: SimExecutor: REPRICE changes the offchain pool and returns a demo reference, never a hash
+ok 164 - SimExecutor: REPRICE changes the offchain pool and returns a demo reference, never a hash
+  ---
+  duration_ms: 0.594172
+  type: 'test'
+  ...
+# Subtest: SimExecutor: the same idempotency key is applied once
+ok 165 - SimExecutor: the same idempotency key is applied once
+  ---
+  duration_ms: 0.25857
+  type: 'test'
+  ...
+# Subtest: SimExecutor: PAUSE then RESUME restores the previous state; illegal moves are refused
+ok 166 - SimExecutor: PAUSE then RESUME restores the previous state; illegal moves are refused
+  ---
+  duration_ms: 0.440572
+  type: 'test'
+  ...
+# Subtest: SimExecutor: settlement needs subscribers and both proofs, in order
+ok 167 - SimExecutor: settlement needs subscribers and both proofs, in order
+  ---
+  duration_ms: 0.459001
+  type: 'test'
+  ...
+# Subtest: SimExecutor: FREEZE, LIQUIDATE, WARNING and OPEN
+ok 168 - SimExecutor: FREEZE, LIQUIDATE, WARNING and OPEN
+  ---
+  duration_ms: 0.273111
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: a PAUSE is sent once with the exact oracle arguments and confirmed from the receipt
+ok 169 - ChainExecutor: a PAUSE is sent once with the exact oracle arguments and confirmed from the receipt
+  ---
+  duration_ms: 8.406641
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: each pricing action uses its oracle action code (RESUME = 6)
+ok 170 - ChainExecutor: each pricing action uses its oracle action code (RESUME = 6)
+  ---
+  duration_ms: 3.733304
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: REPRICE must lower the price and not exceed the redemption value
+ok 171 - ChainExecutor: REPRICE must lower the price and not exceed the redemption value
+  ---
+  duration_ms: 1.545448
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: a transaction the contract would reject is never sent
+ok 172 - ChainExecutor: a transaction the contract would reject is never sent
+  ---
+  duration_ms: 1.3265
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: emergency stop, illegal states and missing mapping stop before any send
+ok 173 - ChainExecutor: emergency stop, illegal states and missing mapping stop before any send
+  ---
+  duration_ms: 2.775074
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: an action that is already in effect is skipped, not retried
+ok 174 - ChainExecutor: an action that is already in effect is skipped, not retried
+  ---
+  duration_ms: 0.958171
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: a decision the oracle already processed is reconciled by its event, not re-sent
+ok 175 - ChainExecutor: a decision the oracle already processed is reconciled by its event, not re-sent
+  ---
+  duration_ms: 1.741066
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: a confirmation timeout leaves the decision pending with the tx hash
+ok 176 - ChainExecutor: a confirmation timeout leaves the decision pending with the tx hash
+  ---
+  duration_ms: 21.441224
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: a reverted receipt or missing events is a failure, not a success
+ok 177 - ChainExecutor: a reverted receipt or missing events is a failure, not a success
+  ---
+  duration_ms: 2.344678
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: one transaction per signer at a time, so nonces stay in order
+ok 178 - ChainExecutor: one transaction per signer at a time, so nonces stay in order
+  ---
+  duration_ms: 40.851785
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: executor-role actions go to an operator unless the optional AGENT_EXECUTOR key exists
+ok 179 - ChainExecutor: executor-role actions go to an operator unless the optional AGENT_EXECUTOR key exists
+  ---
+  duration_ms: 1.730206
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: findTransaction resolves a submitted hash only once it is mined
+ok 180 - ChainExecutor: findTransaction resolves a submitted hash only once it is mined
+  ---
+  duration_ms: 0.605272
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: recovery waits for canonical confirmation depth without resending
+ok 181 - ChainExecutor: recovery waits for canonical confirmation depth without resending
+  ---
+  duration_ms: 1.713967
+  type: 'test'
+  ...
+# Subtest: ChainExecutor: recovery rejects reorgs and binds the exact approved transaction
+    # Subtest: reorg
+    ok 1 - reorg
+      ---
+      duration_ms: 0.877831
+      type: 'test'
+      ...
+    # Subtest: wrong target
+    ok 2 - wrong target
+      ---
+      duration_ms: 0.596652
+      type: 'test'
+      ...
+    # Subtest: wrong signer
+    ok 3 - wrong signer
+      ---
+      duration_ms: 0.714209
+      type: 'test'
+      ...
+    # Subtest: different calldata
+    ok 4 - different calldata
+      ---
+      duration_ms: 0.617137
+      type: 'test'
+      ...
+    # Subtest: other chain
+    ok 5 - other chain
+      ---
+      duration_ms: 0.571515
+      type: 'test'
+      ...
+    # Subtest: value transfer
+    ok 6 - value transfer
+      ---
+      duration_ms: 0.631039
+      type: 'test'
+      ...
+    # Subtest: foreign event source
+    ok 7 - foreign event source
+      ---
+      duration_ms: 0.84021
+      type: 'test'
+      ...
+    # Subtest: substituted receipt
+    ok 8 - substituted receipt
+      ---
+      duration_ms: 0.772227
+      type: 'test'
+      ...
+    1..8
+ok 182 - ChainExecutor: recovery rejects reorgs and binds the exact approved transaction
+  ---
+  duration_ms: 7.118387
+  type: 'test'
+  ...
+# Subtest: helpers: proofToBytes32 and oracleDecisionId match what the contracts compute
+ok 183 - helpers: proofToBytes32 and oracleDecisionId match what the contracts compute
+  ---
+  duration_ms: 0.555237
+  type: 'test'
+  ...
+# Subtest: ingest API (Demo)
+    # Subtest: POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step
+    ok 1 - POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step
+      ---
+      duration_ms: 467.008601
+      type: 'test'
+      ...
+    # Subtest: uploading the same documents again is a 200 with the same job, not a second decision
+    ok 2 - uploading the same documents again is a 200 with the same job, not a second decision
+      ---
+      duration_ms: 37.008255
+      type: 'test'
+      ...
+    # Subtest: a document that tries to steer the agent is held, and the answer says so
+    ok 3 - a document that tries to steer the agent is held, and the answer says so
+      ---
+      duration_ms: 30.978163
+      type: 'test'
+      ...
+    # Subtest: bad uploads are refused with a status and a code, and open no job
+    ok 4 - bad uploads are refused with a status and a code, and open no job
+      ---
+      duration_ms: 25.547328
+      type: 'test'
+      ...
+    # Subtest: a document over the size limit is a 413
+    ok 5 - a document over the size limit is a 413
+      ---
+      duration_ms: 9.51143
+      type: 'test'
+      ...
+    # Subtest: exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them
+    ok 6 - exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them
+      ---
+      duration_ms: 35.659305
+      type: 'test'
+      ...
+    # Subtest: scenarios: list, run one over HTTP, and the pool and approvals show the result
+    ok 7 - scenarios: list, run one over HTTP, and the pool and approvals show the result
+      ---
+      duration_ms: 124.284946
+      type: 'test'
+      ...
+    # Subtest: the admin token, once configured, protects scenarios but not Demo uploads
+    ok 8 - the admin token, once configured, protects scenarios but not Demo uploads
+      ---
+      duration_ms: 39.520801
+      type: 'test'
+      ...
+    # Subtest: the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case
+    ok 9 - the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case
+      ---
+      duration_ms: 108.428958
+      type: 'test'
+      ...
+    1..9
+ok 184 - ingest API (Demo)
+  ---
+  duration_ms: 896.416263
+  type: 'test'
+  ...
+# Subtest: ingest API: in Live, uploads and preferences need the admin token
+ok 185 - ingest API: in Live, uploads and preferences need the admin token
+  ---
+  duration_ms: 28.788906
+  type: 'test'
+  ...
+# Subtest: document review: corrected bytes re-run all checks, retain the HOLD decision and expose safe field provenance
+ok 186 - document review: corrected bytes re-run all checks, retain the HOLD decision and expose safe field provenance
+  ---
+  duration_ms: 423.873191
+  type: 'test'
+  ...
+# Subtest: document review: acknowledging a new injected document does not waive the injection hold
+ok 187 - document review: acknowledging a new injected document does not waive the injection hold
+  ---
+  duration_ms: 45.941075
+  type: 'test'
+  ...
+# Subtest: document review: restoring previously valid bytes creates a new scoped attempt and repeated submissions are idempotent
+ok 188 - document review: restoring previously valid bytes creates a new scoped attempt and repeated submissions are idempotent
+  ---
+  duration_ms: 71.160383
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: three clean documents become an opened Demo pool, step by step
+ok 189 - ingest pipeline: three clean documents become an opened Demo pool, step by step
+  ---
+  duration_ms: 26.156565
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: the same upload twice makes one decision, not two
+ok 190 - ingest pipeline: the same upload twice makes one decision, not two
+  ---
+  duration_ms: 25.215385
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: a document set without a case id gets a stable one and still opens
+ok 191 - ingest pipeline: a document set without a case id gets a stable one and still opens
+  ---
+  duration_ms: 24.15288
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: the crude case opens too, priced in its own terms
+ok 192 - ingest pipeline: the crude case opens too, priced in its own terms
+  ---
+  duration_ms: 25.423286
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: a failed job runs again when the same documents are uploaded again
+ok 193 - ingest pipeline: a failed job runs again when the same documents are uploaded again
+  ---
+  duration_ms: 48.071765
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: text that tries to steer the agent holds the case and opens nothing
+ok 194 - ingest pipeline: text that tries to steer the agent holds the case and opens nothing
+  ---
+  duration_ms: 26.382297
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: a payment address smuggled into a trade field holds the case
+ok 195 - ingest pipeline: a payment address smuggled into a trade field holds the case
+  ---
+  duration_ms: 24.32479
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: a sanctioned counterparty is rejected, not held
+ok 196 - ingest pipeline: a sanctioned counterparty is rejected, not held
+  ---
+  duration_ms: 26.105261
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: near entity holds, corrected documents rerun screening and retain old evidence
+ok 197 - compliance v2 pipeline: near entity holds, corrected documents rerun screening and retain old evidence
+  ---
+  duration_ms: 47.007177
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: unknown ports and dual-use HS both prevent opening
+ok 198 - compliance v2 pipeline: unknown ports and dual-use HS both prevent opening
+  ---
+  duration_ms: 44.746107
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: a transport port and synthetic IMO block with exact field evidence
+ok 199 - compliance v2 pipeline: a transport port and synthetic IMO block with exact field evidence
+  ---
+  duration_ms: 45.272127
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: eBL HS cannot be overwritten by the clean invoice HS
+ok 200 - compliance v2 pipeline: eBL HS cannot be overwritten by the clean invoice HS
+  ---
+  duration_ms: 35.427425
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: a later clean document of the same type cannot hide a blocked source
+ok 201 - compliance v2 pipeline: a later clean document of the same type cannot hide a blocked source
+  ---
+  duration_ms: 60.381634
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: CNY warehouse and incomplete invoice are screened before pricing exits
+ok 202 - compliance v2 pipeline: CNY warehouse and incomplete invoice are screened before pricing exits
+  ---
+  duration_ms: 109.063191
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: asynchronous provider failure is a review, with no Demo fallback opening
+ok 203 - compliance v2 pipeline: asynchronous provider failure is a review, with no Demo fallback opening
+  ---
+  duration_ms: 28.85902
+  type: 'test'
+  ...
+# Subtest: compliance v2 pipeline: versioned report and matching evidence survive a restart
+ok 204 - compliance v2 pipeline: versioned report and matching evidence survive a restart
+  ---
+  duration_ms: 60.594824
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: documents that disagree on the quantity are held for a person
+ok 205 - ingest pipeline: documents that disagree on the quantity are held for a person
+  ---
+  duration_ms: 28.723557
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: a scanned PDF is stored and held as needing OCR, not guessed at
+ok 206 - ingest pipeline: a scanned PDF is stored and held as needing OCR, not guessed at
+  ---
+  duration_ms: 127.149892
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: text that is not a trade document is held with a reason
+ok 207 - ingest pipeline: text that is not a trade document is held with a reason
+  ---
+  duration_ms: 20.377508
+  type: 'test'
+  ...
+# Subtest: exporter preferences: a floor that no payout speed reaches holds the case; one that some speed reaches switches speed
+ok 208 - exporter preferences: a floor that no payout speed reaches holds the case; one that some speed reaches switches speed
+  ---
+  duration_ms: 34.959577
+  type: 'test'
+  ...
+# Subtest: exporter preferences: stored with the upload, and a later price cut below the floor needs a person
+ok 209 - exporter preferences: stored with the upload, and a later price cut below the floor needs a person
+  ---
+  duration_ms: 47.116873
+  type: 'test'
+  ...
+# Subtest: exporter preferences: the setter validates, records activity and clears with the Demo reset
+ok 210 - exporter preferences: the setter validates, records activity and clears with the Demo reset
+  ---
+  duration_ms: 7.447668
+  type: 'test'
+  ...
+# Subtest: ingest pipeline in Live: an opening is only a proposal, and nothing is faked on-chain
+ok 211 - ingest pipeline in Live: an opening is only a proposal, and nothing is faked on-chain
+  ---
+  duration_ms: 30.551414
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: a failing pipeline marks the job failed and dead-letters the event instead of hanging
+ok 212 - ingest pipeline: a failing pipeline marks the job failed and dead-letters the event instead of hanging
+  ---
+  duration_ms: 39.142961
+  type: 'test'
+  ...
+# Subtest: ingest pipeline: state survives a restart without repeating the decision
+ok 213 - ingest pipeline: state survives a restart without repeating the decision
+  ---
+  duration_ms: 58.660142
+  type: 'test'
+  ...
+# Subtest: delegated quotations match the canonical engine at every payout speed, without touching a runtime
+ok 214 - delegated quotations match the canonical engine at every payout speed, without touching a runtime
+  ---
+  duration_ms: 73.268297
+  type: 'test'
+  ...
+# Subtest: delegation preserves document mismatch and demo compliance blocks instead of granting execution
+ok 215 - delegation preserves document mismatch and demo compliance blocks instead of granting execution
+  ---
+  duration_ms: 6.988976
+  type: 'test'
+  ...
+# Subtest: delegation rejects ambiguous source selection, missing cases, unsupported fields and unsafe numbers
+ok 216 - delegation rejects ambiguous source selection, missing cases, unsupported fields and unsafe numbers
+  ---
+  duration_ms: 1.960799
+  type: 'test'
+  ...
+# Subtest: only unexpired, case-bound server-delivered reports become neutral quote provenance
+ok 217 - only unexpired, case-bound server-delivered reports become neutral quote provenance
+  ---
+  duration_ms: 16.098572
+  type: 'test'
+  ...
+# Subtest: pricing concurrency is bounded and recovers after a failed lookup
+ok 218 - pricing concurrency is bounded and recovers after a failed lookup
+  ---
+  duration_ms: 2.783587
+  type: 'test'
+  ...
+# Subtest: MCP dry-run is side-effect free and invalid approval cannot change the queue
+ok 219 - MCP dry-run is side-effect free and invalid approval cannot change the queue
+  ---
+  duration_ms: 286.574305
+  type: 'test'
+  ...
+# Subtest: MCP operator events retain Live restrictions even with a valid host token
+ok 220 - MCP operator events retain Live restrictions even with a valid host token
+  ---
+  duration_ms: 0.487512
+  type: 'test'
+  ...
+# Subtest: MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots
+ok 221 - MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots
+  ---
+  duration_ms: 19.560225
+  type: 'test'
+  ...
+# Subtest: stateless MCP recommendations preserve hard filters, never create sessions or execute actions
+not ok 222 - stateless MCP recommendations preserve hard filters, never create sessions or execute actions
+  ---
+  duration_ms: 9.793573
+  type: 'test'
+  location: '/mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentInterop.test.js:182:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(result.recommendations.some((item) => item.pool_id === copper.case_id))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentInterop.test.js:189:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: Agent Card uses the verified A2A 1.0 required fields, advertises one implemented skill and no unsupported transports
+ok 223 - Agent Card uses the verified A2A 1.0 required fields, advertises one implemented skill and no unsupported transports
+  ---
+  duration_ms: 43.583184
+  type: 'test'
+  ...
+# Subtest: public origins reject credentials and cleartext remote URLs, and never trust Host or forwarded headers
+ok 224 - public origins reject credentials and cleartext remote URLs, and never trust Host or forwarded headers
+  ---
+  duration_ms: 18.267416
+  type: 'test'
+  ...
+# Subtest: A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation
+ok 225 - A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation
+  ---
+  duration_ms: 28.92128
+  type: 'test'
+  ...
+# Subtest: A2A validates JSON-RPC framing, protocol negotiation, media and structured inputs before pricing
+ok 226 - A2A validates JSON-RPC framing, protocol negotiation, media and structured inputs before pricing
+  ---
+  duration_ms: 40.772389
+  type: 'test'
+  ...
+# Subtest: delegation input errors remain JSON-RPC errors without reflecting internal exception messages
+ok 227 - delegation input errors remain JSON-RPC errors without reflecting internal exception messages
+  ---
+  duration_ms: 25.962032
+  type: 'test'
+  ...
+# Subtest: discovery and card never publish Live payment accepts while the application is Demo
+ok 228 - discovery and card never publish Live payment accepts while the application is Demo
+  ---
+  duration_ms: 22.568359
+  type: 'test'
+  ...
+# Subtest: Live discovery, card and 402 header/body derive identical exact V2 requirements from the catalog
+ok 229 - Live discovery, card and 402 header/body derive identical exact V2 requirements from the catalog
+  ---
+  duration_ms: 0.979941
+  type: 'test'
+  ...
+# Subtest: interoperability rate limits are applied before delegated work
+ok 230 - interoperability rate limits are applied before delegated work
+  ---
+  duration_ms: 17.651097
+  type: 'test'
+  ...
+# Subtest: untrusted JSON rejects reserved keys and complexity before schema traversal
+ok 231 - untrusted JSON rejects reserved keys and complexity before schema traversal
+  ---
+  duration_ms: 5.688505
+  type: 'test'
+  ...
+# Subtest: stdio backend adapter rejects redirects, oversized or invalid replies and reports backend loss without local fallback
+ok 232 - stdio backend adapter rejects redirects, oversized or invalid replies and reports backend loss without local fallback
+  ---
+  duration_ms: 3.344365
+  type: 'test'
+  ...
+# Subtest: MCP runtime tools and resources hide unexpected storage or provider exception details
+ok 233 - MCP runtime tools and resources hide unexpected storage or provider exception details
+  ---
+  duration_ms: 0.287692
+  type: 'test'
+  ...
+# Subtest: default live smoke performs reads only, including when keys happen to exist
+ok 234 - default live smoke performs reads only, including when keys happen to exist
+  ---
+  duration_ms: 1.356221
+  type: 'test'
+  ...
+# Subtest: confirmed smoke approves exactly REPRICE, PAUSE, RESUME on protected pool \#2 and verifies each
+ok 235 - confirmed smoke approves exactly REPRICE, PAUSE, RESUME on protected pool \#2 and verifies each
+  ---
+  duration_ms: 0.758997
+  type: 'test'
+  ...
+# Subtest: uncertain broadcast and mismatched receipt abort without retries or a second proposal
+ok 236 - uncertain broadcast and mismatched receipt abort without retries or a second proposal
+  ---
+  duration_ms: 1.032335
+  type: 'test'
+  ...
+# Subtest: recovery verifies the two saved receipts historically and approves only the remaining RESUME
+ok 237 - recovery verifies the two saved receipts historically and approves only the remaining RESUME
+  ---
+  duration_ms: 0.338978
+  type: 'test'
+  ...
+# Subtest: read-only forecast separates oracle risk quotes from actual PAUSE/RESUME pool prices and states
+ok 238 - read-only forecast separates oracle risk quotes from actual PAUSE/RESUME pool prices and states
+  ---
+  duration_ms: 14.923294
+  type: 'test'
+  ...
+# Subtest: PAUSE verifies a lower oracle quote while the actual offering price stays unchanged
+ok 239 - PAUSE verifies a lower oracle quote while the actual offering price stays unchanged
+  ---
+  duration_ms: 17.345975
+  type: 'test'
+  ...
+# Subtest: RESUME verifies the contract-restored Repriced state and unchanged issue price
+ok 240 - RESUME verifies the contract-restored Repriced state and unchanged issue price
+  ---
+  duration_ms: 7.017014
+  type: 'test'
+  ...
+# Subtest: a saved REPRICE receipt is verified at its block even after a later PAUSE
+ok 241 - a saved REPRICE receipt is verified at its block even after a later PAUSE
+  ---
+  duration_ms: 6.648409
+  type: 'test'
+  ...
+# Subtest: receipt verification rejects a noncanonical block or mismatching transaction calldata/target
+ok 242 - receipt verification rejects a noncanonical block or mismatching transaction calldata/target
+  ---
+  duration_ms: 19.511781
+  type: 'test'
+  ...
+# Subtest: lifecycle mode stops with the separately authorized owner/wallet checklist
+ok 243 - lifecycle mode stops with the separately authorized owner/wallet checklist
+  ---
+  duration_ms: 0.227086
+  type: 'test'
+  ...
+# Subtest: smoke rejects unconfirmed writes, insecure remote URLs and terminal actions
+ok 244 - smoke rejects unconfirmed writes, insecure remote URLs and terminal actions
+  ---
+  duration_ms: 0.358379
+  type: 'test'
+  ...
+# Subtest: server smoke proposals enforce the pool, exact order and reuse the existing decision
+ok 245 - server smoke proposals enforce the pool, exact order and reuse the existing decision
+  ---
+  duration_ms: 1.284055
+  type: 'test'
+  ...
+# Subtest: risk tracker: the first look is a baseline, and an unchanged picture is never an event
+ok 246 - risk tracker: the first look is a baseline, and an unchanged picture is never an event
+  ---
+  duration_ms: 1.030444
+  type: 'test'
+  ...
+# Subtest: risk tracker: a new or worse alert is reported with the alerts that are active now
+ok 247 - risk tracker: a new or worse alert is reported with the alerts that are active now
+  ---
+  duration_ms: 0.623201
+  type: 'test'
+  ...
+# Subtest: risk tracker: risk counts as cleared only after the configured number of quiet looks in a row
+ok 248 - risk tracker: risk counts as cleared only after the configured number of quiet looks in a row
+  ---
+  duration_ms: 0.332523
+  type: 'test'
+  ...
+# Subtest: risk tracker: one alert in the middle of the quiet restarts the count (no flapping)
+ok 249 - risk tracker: one alert in the middle of the quiet restarts the count (no flapping)
+  ---
+  duration_ms: 0.235885
+  type: 'test'
+  ...
+# Subtest: risk tracker: state survives a restart, so a restart does not re-announce or forget
+ok 250 - risk tracker: state survives a restart, so a restart does not re-announce or forget
+  ---
+  duration_ms: 6.281724
+  type: 'test'
+  ...
+# Subtest: insurance: warns inside the window, pauses after expiry, and ignores cases that are not active
+ok 251 - insurance: warns inside the window, pauses after expiry, and ignores cases that are not active
+  ---
+  duration_ms: 0.512253
+  type: 'test'
+  ...
+# Subtest: insurance monitor: Demo stays silent on the real clock; a scenario clock or Live checks the policy
+ok 252 - insurance monitor: Demo stays silent on the real clock; a scenario clock or Live checks the policy
+  ---
+  duration_ms: 0.365983
+  type: 'test'
+  ...
+# Subtest: world-risk monitor: baseline, change, repeat, escalation and clearing, with deterministic event ids
+ok 253 - world-risk monitor: baseline, change, repeat, escalation and clearing, with deterministic event ids
+  ---
+  duration_ms: 0.612172
+  type: 'test'
+  ...
+# Subtest: world-risk monitor: live evidence is labelled live, finished pools and unmapped Live pools are skipped, a failing feed is not fatal
+ok 254 - world-risk monitor: live evidence is labelled live, finished pools and unmapped Live pools are skipped, a failing feed is not fatal
+  ---
+  duration_ms: 0.341715
+  type: 'test'
+  ...
+# Subtest: runtime: a monitor source feeds the tick; the same fixture does not trigger the same decision twice
+ok 255 - runtime: a monitor source feeds the tick; the same fixture does not trigger the same decision twice
+  ---
+  duration_ms: 350.227057
+  type: 'test'
+  ...
+# Subtest: runtime: a throwing source does not stop the other sources or the tick
+ok 256 - runtime: a throwing source does not stop the other sources or the tick
+  ---
+  duration_ms: 1.284548
+  type: 'test'
+  ...
+# Subtest: opening: unregistered cargo has exactly three owner steps with receipt-dependent IDs and faithful metadata
+ok 257 - opening: unregistered cargo has exactly three owner steps with receipt-dependent IDs and faithful metadata
+  ---
+  duration_ms: 19.746653
+  type: 'test'
+  ...
+# Subtest: opening: registered copper proposes only a verified existing association and preserves the legacy cargo hash
+ok 258 - opening: registered copper proposes only a verified existing association and preserves the legacy cargo hash
+  ---
+  duration_ms: 4.748147
+  type: 'test'
+  ...
+# Subtest: opening: unavailable or inconsistent chain, collateral, compliance and quote fail closed
+ok 259 - opening: unavailable or inconsistent chain, collateral, compliance and quote fail closed
+  ---
+  duration_ms: 27.79338
+  type: 'test'
+  ...
+# Subtest: opening receipt: checks the whole tuple and event arguments, and binds IDs from genuine matching logs
+ok 260 - opening receipt: checks the whole tuple and event arguments, and binds IDs from genuine matching logs
+  ---
+  duration_ms: 14.414212
+  type: 'test'
+  ...
+# Subtest: Live ingest: opening waits for approval and all three verified receipts before linking; counter changes are harmless
+ok 261 - Live ingest: opening waits for approval and all three verified receipts before linking; counter changes are harmless
+  ---
+  duration_ms: 531.037606
+  type: 'test'
+  ...
+# Subtest: Live ingest: blocked documents never get an opening approval or uniqueness query
+ok 262 - Live ingest: blocked documents never get an opening approval or uniqueness query
+  ---
+  duration_ms: 24.566218
+  type: 'test'
+  ...
+# Subtest: Live ingest: registered cargo is linked only after approval, with no mint and no price change
+ok 263 - Live ingest: registered cargo is linked only after approval, with no mint and no price change
+  ---
+  duration_ms: 21.885365
+  type: 'test'
+  ...
+# Subtest: Live ingest: a changed existing association fails after approval and never sends a transaction
+ok 264 - Live ingest: a changed existing association fails after approval and never sends a transaction
+  ---
+  duration_ms: 20.903483
+  type: 'test'
+  ...
+# Subtest: opening: interrupted receipt attachment resumes after restart with durable bindings and does not remint
+ok 265 - opening: interrupted receipt attachment resumes after restart with durable bindings and does not remint
+  ---
+  duration_ms: 86.559321
+  type: 'test'
+  ...
+# Subtest: opening: expired approvals and mode changes reject new attachments
+ok 266 - opening: expired approvals and mode changes reject new attachments
+  ---
+  duration_ms: 29.764534
+  type: 'test'
+  ...
+# Subtest: opening: operator state checks refuse newly registered cargo and pledge drift
+ok 267 - opening: operator state checks refuse newly registered cargo and pledge drift
+  ---
+  duration_ms: 10.330614
+  type: 'test'
+  ...
+# Subtest: opening: known cargo identity drift never falls through to another mint
+ok 268 - opening: known cargo identity drift never falls through to another mint
+  ---
+  duration_ms: 18.178052
+  type: 'test'
+  ...
+# Subtest: opening: all verified receipts remain durable through mapping failure and late reconciliation
+ok 269 - opening: all verified receipts remain durable through mapping failure and late reconciliation
+  ---
+  duration_ms: 37.03076
+  type: 'test'
+  ...
+# Subtest: opening: duplicate concurrent attachment is idempotent and a hash cannot satisfy another step
+ok 270 - opening: duplicate concurrent attachment is idempotent and a hash cannot satisfy another step
+  ---
+  duration_ms: 33.423698
+  type: 'test'
+  ...
+# Subtest: Live ingest: the pool \#3 documents re-link eBL \#3 / pool \#3 with their own identity, unprotected, without a mint
+ok 271 - Live ingest: the pool \#3 documents re-link eBL \#3 / pool \#3 with their own identity, unprotected, without a mint
+  ---
+  duration_ms: 22.059466
+  type: 'test'
+  ...
+# Subtest: opening: the archived pool \#2 identity never applies to the pool \#3 case, and differently labelled pool \#3 documents go to review
+ok 272 - opening: the archived pool \#2 identity never applies to the pool \#3 case, and differently labelled pool \#3 documents go to review
+  ---
+  duration_ms: 32.553999
+  type: 'test'
+  ...
+# Subtest: opening CLI: dry run preflights only the ready step and never simulates a future dependency
+ok 273 - opening CLI: dry run preflights only the ready step and never simulates a future dependency
+  ---
+  duration_ms: 447.284023
+  type: 'test'
+  ...
+# Subtest: opening CLI: each explicit --step --confirm sends exactly one transaction and uses verified IDs
+ok 274 - opening CLI: each explicit --step --confirm sends exactly one transaction and uses verified IDs
+  ---
+  duration_ms: 72.255635
+  type: 'test'
+  ...
+# Subtest: opening CLI: a broadcast with failed attachment recovers from the journal without a signer or resend
+ok 275 - opening CLI: a broadcast with failed attachment recovers from the journal without a signer or resend
+  ---
+  duration_ms: 30.361682
+  type: 'test'
+  ...
+# Subtest: opening CLI: an uncertain broadcast blocks retry until explicit hash reconciliation
+ok 276 - opening CLI: an uncertain broadcast blocks retry until explicit hash reconciliation
+  ---
+  duration_ms: 28.850813
+  type: 'test'
+  ...
+# Subtest: opening CLI: stale chain state, runtime mode and local emergency stop prevent sending
+ok 277 - opening CLI: stale chain state, runtime mode and local emergency stop prevent sending
+  ---
+  duration_ms: 28.133745
+  type: 'test'
+  ...
+# Subtest: owner journal: a concurrent or abandoned process lock blocks signing and keeps evidence
+ok 278 - owner journal: a concurrent or abandoned process lock blocks signing and keeps evidence
+  ---
+  duration_ms: 23.460687
+  type: 'test'
+  ...
+# Subtest: opening CLI: a dry run after a previous broadcast reports reconciliation without sending
+ok 279 - opening CLI: a dry run after a previous broadcast reports reconciliation without sending
+  ---
+  duration_ms: 23.45157
+  type: 'test'
+  ...
+# Subtest: redteam corpus is deterministic, covers every planned mutation and leaves source data intact
+ok 280 - redteam corpus is deterministic, covers every planned mutation and leaves source data intact
+  ---
+  duration_ms: 4.643405
+  type: 'test'
+  ...
+# Subtest: generated mutations reach real screening, consistency, uniqueness and freshness subjects
+ok 281 - generated mutations reach real screening, consistency, uniqueness and freshness subjects
+  ---
+  duration_ms: 134.036331
+  type: 'test'
+  ...
+# Subtest: freshness fails closed at expiry, on invalid/future times, unhealthy sources and stale children
+ok 282 - freshness fails closed at expiry, on invalid/future times, unhealthy sources and stale children
+  ---
+  duration_ms: 0.252502
+  type: 'test'
+  ...
+# Subtest: stale evidence creates a review proposal and cannot mutate a pool or be approved
+ok 283 - stale evidence creates a review proposal and cannot mutate a pool or be approved
+  ---
+  duration_ms: 353.794704
+  type: 'test'
+  ...
+# Subtest: fresh proposal expires between proposal and approval without an execution
+ok 284 - fresh proposal expires between proposal and approval without an execution
+  ---
+  duration_ms: 16.780865
+  type: 'test'
+  ...
+# Subtest: uploaded evidence retains its observation time across reuse and cannot reopen after expiry
+ok 285 - uploaded evidence retains its observation time across reuse and cannot reopen after expiry
+  ---
+  duration_ms: 35.201705
+  type: 'test'
+  ...
+# Subtest: stale or fixture fallback does not advance Live risk hysteresis
+ok 286 - stale or fixture fallback does not advance Live risk hysteresis
+  ---
+  duration_ms: 0.571906
+  type: 'test'
+  ...
+# Subtest: monitor replay uses the saved pool and event, even after the current pool changes
+ok 287 - monitor replay uses the saved pool and event, even after the current pool changes
+  ---
+  duration_ms: 20.420052
+  type: 'test'
+  ...
+# Subtest: ingest replay recomputes a quote from saved structured fields, including held injections
+ok 288 - ingest replay recomputes a quote from saved structured fields, including held injections
+  ---
+  duration_ms: 34.459
+  type: 'test'
+  ...
+# Subtest: encrypted persistent snapshots replay after restart and CLI reports failures by exit code
+ok 289 - encrypted persistent snapshots replay after restart and CLI reports failures by exit code
+  ---
+  duration_ms: 6802.673161
+  type: 'test'
+  ...
+# Subtest: replay API is public in Demo, admin-only in Live, and never writes a second decision
+ok 290 - replay API is public in Demo, admin-only in Live, and never writes a second decision
+  ---
+  duration_ms: 55.989953
+  type: 'test'
+  ...
+# Subtest: policy: demo auto: a reversible action runs unattended
+ok 291 - policy: demo auto: a reversible action runs unattended
+  ---
+  duration_ms: 0.930612
+  type: 'test'
+  ...
+# Subtest: policy: demo auto: PAUSE runs unattended
+ok 292 - policy: demo auto: PAUSE runs unattended
+  ---
+  duration_ms: 0.111863
+  type: 'test'
+  ...
+# Subtest: policy: demo propose: needs approval
+ok 293 - policy: demo propose: needs approval
+  ---
+  duration_ms: 0.077486
+  type: 'test'
+  ...
+# Subtest: policy: autonomy off refuses everything
+ok 294 - policy: autonomy off refuses everything
+  ---
+  duration_ms: 0.057003
+  type: 'test'
+  ...
+# Subtest: policy: observe only records
+ok 295 - policy: observe only records
+  ---
+  duration_ms: 0.07941
+  type: 'test'
+  ...
+# Subtest: policy: live: every action needs approval
+ok 296 - policy: live: every action needs approval
+  ---
+  duration_ms: 0.06223
+  type: 'test'
+  ...
+# Subtest: policy: live: even PAUSE needs approval
+ok 297 - policy: live: even PAUSE needs approval
+  ---
+  duration_ms: 0.065055
+  type: 'test'
+  ...
+# Subtest: policy: emergency stop refuses a reprice
+ok 298 - policy: emergency stop refuses a reprice
+  ---
+  duration_ms: 0.052933
+  type: 'test'
+  ...
+# Subtest: policy: emergency stop still lets PAUSE through
+ok 299 - policy: emergency stop still lets PAUSE through
+  ---
+  duration_ms: 0.633205
+  type: 'test'
+  ...
+# Subtest: policy: protected pool: SETTLE refused
+ok 300 - policy: protected pool: SETTLE refused
+  ---
+  duration_ms: 0.131881
+  type: 'test'
+  ...
+# Subtest: policy: protected pool: FREEZE refused
+ok 301 - policy: protected pool: FREEZE refused
+  ---
+  duration_ms: 0.075359
+  type: 'test'
+  ...
+# Subtest: policy: protected pool: LIQUIDATE refused
+ok 302 - policy: protected pool: LIQUIDATE refused
+  ---
+  duration_ms: 0.036242
+  type: 'test'
+  ...
+# Subtest: policy: protected pool: CANCEL refused
+ok 303 - policy: protected pool: CANCEL refused
+  ---
+  duration_ms: 0.023803
+  type: 'test'
+  ...
+# Subtest: policy: protected pool: REPRICE is fine
+ok 304 - policy: protected pool: REPRICE is fine
+  ---
+  duration_ms: 0.027407
+  type: 'test'
+  ...
+# Subtest: policy: protected pool: PAUSE and RESUME are fine
+ok 305 - policy: protected pool: PAUSE and RESUME are fine
+  ---
+  duration_ms: 0.020068
+  type: 'test'
+  ...
+# Subtest: policy: prompt injection → hold for review
+ok 306 - policy: prompt injection → hold for review
+  ---
+  duration_ms: 0.084777
+  type: 'test'
+  ...
+# Subtest: policy: compliance REVIEW → hold for review
+ok 307 - policy: compliance REVIEW → hold for review
+  ---
+  duration_ms: 0.032507
+  type: 'test'
+  ...
+# Subtest: policy: compliance BLOCK → reject
+ok 308 - policy: compliance BLOCK → reject
+  ---
+  duration_ms: 0.018699
+  type: 'test'
+  ...
+# Subtest: policy: an unrelated finding changes nothing
+ok 309 - policy: an unrelated finding changes nothing
+  ---
+  duration_ms: 0.016191
+  type: 'test'
+  ...
+# Subtest: policy: a model-only signal is only observed
+ok 310 - policy: a model-only signal is only observed
+  ---
+  duration_ms: 0.041363
+  type: 'test'
+  ...
+# Subtest: policy: stale evidence needs approval
+ok 311 - policy: stale evidence needs approval
+  ---
+  duration_ms: 0.024678
+  type: 'test'
+  ...
+# Subtest: policy: SETTLE always needs approval
+ok 312 - policy: SETTLE always needs approval
+  ---
+  duration_ms: 0.018787
+  type: 'test'
+  ...
+# Subtest: policy: FREEZE always needs approval
+ok 313 - policy: FREEZE always needs approval
+  ---
+  duration_ms: 0.015926
+  type: 'test'
+  ...
+# Subtest: policy: RECORD_PAYMENT always needs approval
+ok 314 - policy: RECORD_PAYMENT always needs approval
+  ---
+  duration_ms: 0.030063
+  type: 'test'
+  ...
+# Subtest: policy: RECORD_ARRIVAL is reversible enough to run
+ok 315 - policy: RECORD_ARRIVAL is reversible enough to run
+  ---
+  duration_ms: 0.023111
+  type: 'test'
+  ...
+# Subtest: policy: MARK_IN_TRANSIT runs in demo auto
+ok 316 - policy: MARK_IN_TRANSIT runs in demo auto
+  ---
+  duration_ms: 0.016893
+  type: 'test'
+  ...
+# Subtest: policy: a price move above the cap needs approval
+ok 317 - policy: a price move above the cap needs approval
+  ---
+  duration_ms: 0.019519
+  type: 'test'
+  ...
+# Subtest: policy: a price move at the cap is fine
+ok 318 - policy: a price move at the cap is fine
+  ---
+  duration_ms: 0.024769
+  type: 'test'
+  ...
+# Subtest: policy: a price below the exporter floor needs approval
+ok 319 - policy: a price below the exporter floor needs approval
+  ---
+  duration_ms: 0.047906
+  type: 'test'
+  ...
+# Subtest: policy: a price at the exporter floor is fine
+ok 320 - policy: a price at the exporter floor is fine
+  ---
+  duration_ms: 0.021251
+  type: 'test'
+  ...
+# Subtest: policy: the cooldown blocks the same action on the same pool but not a different one
+ok 321 - policy: the cooldown blocks the same action on the same pool but not a different one
+  ---
+  duration_ms: 0.336596
+  type: 'test'
+  ...
+# Subtest: policy: the cooldown is configurable and the daily limit debounces a flapping signal
+ok 322 - policy: the cooldown is configurable and the daily limit debounces a flapping signal
+  ---
+  duration_ms: 0.12265
+  type: 'test'
+  ...
+# Subtest: policy: the cooldown sits before the Live approval rule so a flapping signal never floods the queue
+ok 323 - policy: the cooldown sits before the Live approval rule so a flapping signal never floods the queue
+  ---
+  duration_ms: 0.120029
+  type: 'test'
+  ...
+# Subtest: policy: the first matching rule decides the verdict, every matching rule is listed
+ok 324 - policy: the first matching rule decides the verdict, every matching rule is listed
+  ---
+  duration_ms: 0.487919
+  type: 'test'
+  ...
+# Subtest: policy: the unattended-irreversible exemption works in Demo only
+ok 325 - policy: the unattended-irreversible exemption works in Demo only
+  ---
+  duration_ms: 0.057908
+  type: 'test'
+  ...
+# Subtest: policy: rejects unknown actions, modes and autonomy levels instead of guessing
+ok 326 - policy: rejects unknown actions, modes and autonomy levels instead of guessing
+  ---
+  duration_ms: 0.377315
+  type: 'test'
+  ...
+# Subtest: config: Live never runs above propose, Demo defaults to auto (D1)
+ok 327 - config: Live never runs above propose, Demo defaults to auto (D1)
+  ---
+  duration_ms: 0.34813
+  type: 'test'
+  ...
+# Subtest: config: environment parsing, defaults and bounds
+ok 328 - config: environment parsing, defaults and bounds
+  ---
+  duration_ms: 0.294164
+  type: 'test'
+  ...
+# Subtest: policy: informational actions (WARNING, HOLD_FOR_REVIEW, REJECT) are records and never wait for approval
+ok 329 - policy: informational actions (WARNING, HOLD_FOR_REVIEW, REJECT) are records and never wait for approval
+  ---
+  duration_ms: 0.150401
+  type: 'test'
+  ...
+# Subtest: audit projection scrubs nested secrets, source text and wallets while retaining valid evidence/tx hashes
+ok 330 - audit projection scrubs nested secrets, source text and wallets while retaining valid evidence/tx hashes
+  ---
+  duration_ms: 1.53711
+  type: 'test'
+  ...
+# Subtest: operational journal keeps exact addresses encrypted and authenticates its public audit projection
+ok 331 - operational journal keeps exact addresses encrypted and authenticates its public audit projection
+  ---
+  duration_ms: 7.731132
+  type: 'test'
+  ...
+# Subtest: runtime audit scan covers decisions, events, queue, activities and traces with adversarial values
+ok 332 - runtime audit scan covers decisions, events, queue, activities and traces with adversarial values
+  ---
+  duration_ms: 330.815742
+  type: 'test'
+  ...
+# Subtest: retention bounds decisions, rotated activity and trace files while preserving in-flight decisions
+ok 333 - retention bounds decisions, rotated activity and trace files while preserving in-flight decisions
+  ---
+  duration_ms: 19.257515
+  type: 'test'
+  ...
+# Subtest: periodic retention also runs under the injected service clock
+ok 334 - periodic retention also runs under the injected service clock
+  ---
+  duration_ms: 18.085656
+  type: 'test'
+  ...
+# Subtest: authenticated queue snapshots reject plaintext edits and missing encryption keys
+ok 335 - authenticated queue snapshots reject plaintext edits and missing encryption keys
+  ---
+  duration_ms: 2.692954
+  type: 'test'
+  ...
+# Subtest: legacy plaintext audit records migrate on startup without changing decision IDs or chain evidence
+ok 336 - legacy plaintext audit records migrate on startup without changing decision IDs or chain evidence
+  ---
+  duration_ms: 2.130063
+  type: 'test'
+  ...
+# Subtest: SSE sequence remains monotonic after all activity expires and a restart
+ok 337 - SSE sequence remains monotonic after all activity expires and a restart
+  ---
+  duration_ms: 3.512015
+  type: 'test'
+  ...
+# Subtest: matrix: late clearing cannot undo a newer escalation, including indexes written before the shared stream
+ok 338 - matrix: late clearing cannot undo a newer escalation, including indexes written before the shared stream
+  ---
+  duration_ms: 341.072125
+  type: 'test'
+  ...
+# Subtest: matrix: concurrent duplicate events produce one approval and one execution
+ok 339 - matrix: concurrent duplicate events produce one approval and one execution
+  ---
+  duration_ms: 17.328929
+  type: 'test'
+  ...
+# Subtest: matrix: RPC preflight timeout recovers with bounded retry and one broadcast
+ok 340 - matrix: RPC preflight timeout recovers with bounded retry and one broadcast
+  ---
+  duration_ms: 8.835723
+  type: 'test'
+  ...
+# Subtest: matrix: mined nonce conflict recovers with bounded retry and one broadcast
+ok 341 - matrix: mined nonce conflict recovers with bounded retry and one broadcast
+  ---
+  duration_ms: 9.182672
+  type: 'test'
+  ...
+# Subtest: matrix: persistent RPC outage fails explicitly before any broadcast, never simulates
+ok 342 - matrix: persistent RPC outage fails explicitly before any broadcast, never simulates
+  ---
+  duration_ms: 8.558533
+  type: 'test'
+  ...
+# Subtest: matrix: broadcast timeout survives restart and transient reconciliation outage without resending
+ok 343 - matrix: broadcast timeout survives restart and transient reconciliation outage without resending
+  ---
+  duration_ms: 47.792248
+  type: 'test'
+  ...
+# Subtest: matrix: approval granted just before restart resumes once; an ambiguous broadcast requires operator reconciliation
+ok 344 - matrix: approval granted just before restart resumes once; an ambiguous broadcast requires operator reconciliation
+  ---
+  duration_ms: 18.81631
+  type: 'test'
+  ...
+# Subtest: matrix: known reverted receipt fails decision and approval without retries
+ok 345 - matrix: known reverted receipt fails decision and approval without retries
+  ---
+  duration_ms: 7.309123
+  type: 'test'
+  ...
+# Subtest: matrix: an interrupted pricing broadcast without a hash recovers read-only from exact oracle replay protection
+ok 346 - matrix: an interrupted pricing broadcast without a hash recovers read-only from exact oracle replay protection
+  ---
+  duration_ms: 8.690916
+  type: 'test'
+  ...
+# Subtest: matrix: confirmation after a mode change records the Live fact without mutating Demo pools
+ok 347 - matrix: confirmation after a mode change records the Live fact without mutating Demo pools
+  ---
+  duration_ms: 7.400254
+  type: 'test'
+  ...
+# Subtest: matrix: a completed decision repairs an interrupted approval checkpoint without another broadcast
+ok 348 - matrix: a completed decision repairs an interrupted approval checkpoint without another broadcast
+  ---
+  duration_ms: 8.672388
+  type: 'test'
+  ...
+# Subtest: matrix: injected clock expires approvals and synchronizes their decisions even if approve observed expiry first
+ok 349 - matrix: injected clock expires approvals and synchronizes their decisions even if approve observed expiry first
+  ---
+  duration_ms: 8.647578
+  type: 'test'
+  ...
+# Subtest: matrix: switching away and back invalidates approvals and queued events by generation
+ok 350 - matrix: switching away and back invalidates approvals and queued events by generation
+  ---
+  duration_ms: 8.699767
+  type: 'test'
+  ...
+# Subtest: matrix: mode changes while signer queue waits prevent broadcast
+ok 351 - matrix: mode changes while signer queue waits prevent broadcast
+  ---
+  duration_ms: 1.027255
+  type: 'test'
+  ...
+# Subtest: matrix: unavailable LLM and xAPI use labelled deterministic fallbacks and keep constraints
+ok 352 - matrix: unavailable LLM and xAPI use labelled deterministic fallbacks and keep constraints
+  ---
+  duration_ms: 9.468595
+  type: 'test'
+  ...
+# Subtest: matrix: evidence expiring during RPC preflight blocks the signer before any broadcast
+ok 353 - matrix: evidence expiring during RPC preflight blocks the signer before any broadcast
+  ---
+  duration_ms: 8.288806
+  type: 'test'
+  ...
+# Subtest: activity: append assigns a monotonic seq, stamps the mode and notifies subscribers
+ok 354 - activity: append assigns a monotonic seq, stamps the mode and notifies subscribers
+  ---
+  duration_ms: 2.359304
+  type: 'test'
+  ...
+# Subtest: activity: the in-memory buffer is bounded and filterable
+ok 355 - activity: the in-memory buffer is bounded and filterable
+  ---
+  duration_ms: 0.469396
+  type: 'test'
+  ...
+# Subtest: activity: persisted records survive a restart and the sequence continues
+ok 356 - activity: persisted records survive a restart and the sequence continues
+  ---
+  duration_ms: 9.000417
+  type: 'test'
+  ...
+# Subtest: activity: records appended before persistence is attached are written after the existing ones
+ok 357 - activity: records appended before persistence is attached are written after the existing ones
+  ---
+  duration_ms: 2.498016
+  type: 'test'
+  ...
+# Subtest: activity: since() answers from memory and falls back to the files when the client is far behind
+ok 358 - activity: since() answers from memory and falls back to the files when the client is far behind
+  ---
+  duration_ms: 4.608046
+  type: 'test'
+  ...
+# Subtest: activity: clearMode drops one mode from memory and from the files, never the other
+ok 359 - activity: clearMode drops one mode from memory and from the files, never the other
+  ---
+  duration_ms: 6.689002
+  type: 'test'
+  ...
+# Subtest: activity: a disk failure is reported but never breaks append
+ok 360 - activity: a disk failure is reported but never breaks append
+  ---
+  duration_ms: 1.406558
+  type: 'test'
+  ...
+# Subtest: trace: spans nest, time themselves and record errors
+ok 361 - trace: spans nest, time themselves and record errors
+  ---
+  duration_ms: 0.902221
+  type: 'test'
+  ...
+# Subtest: trace: secrets are redacted and LLM calls keep hashes, never text
+ok 362 - trace: secrets are redacted and LLM calls keep hashes, never text
+  ---
+  duration_ms: 1.062877
+  type: 'test'
+  ...
+# Subtest: trace: traces persist to a JSONL file and are found again by decision id
+ok 363 - trace: traces persist to a JSONL file and are found again by decision id
+  ---
+  duration_ms: 1.689905
+  type: 'test'
+  ...
+# Subtest: trace: bindDecision attaches the id once it is known
+ok 364 - trace: bindDecision attaches the id once it is known
+  ---
+  duration_ms: 0.2118
+  type: 'test'
+  ...
+# Subtest: registry: offchain registration is idempotent; Demo reset keeps chain links
+ok 365 - registry: offchain registration is idempotent; Demo reset keeps chain links
+  ---
+  duration_ms: 0.41328
+  type: 'test'
+  ...
+# Subtest: registry: linking verifies the chain first
+ok 366 - registry: linking verifies the chain first
+  ---
+  duration_ms: 0.309899
+  type: 'test'
+  ...
+# Subtest: registry: protection comes from the flag and from AGENT_PROTECTED_CHAIN_POOLS
+ok 367 - registry: protection comes from the flag and from AGENT_PROTECTED_CHAIN_POOLS
+  ---
+  duration_ms: 0.157377
+  type: 'test'
+  ...
+# Subtest: registry: known Live pools carry their own identity file, cargo hash and protection
+ok 368 - registry: known Live pools carry their own identity file, cargo hash and protection
+  ---
+  duration_ms: 3.261407
+  type: 'test'
+  ...
+# Subtest: registry: a fresh registry links every known Live pool from the chain, not trusted blindly
+ok 369 - registry: a fresh registry links every known Live pool from the chain, not trusted blindly
+  ---
+  duration_ms: 0.535337
+  type: 'test'
+  ...
+# Subtest: registry: state persists across a restart
+ok 370 - registry: state persists across a restart
+  ---
+  duration_ms: 1.048923
+  type: 'test'
+  ...
+# Subtest: registry: createChainReader turns contract reads into a pool description
+ok 371 - registry: createChainReader turns contract reads into a pool description
+  ---
+  duration_ms: 0.237236
+  type: 'test'
+  ...
+# Subtest: scheduler: ticks repeatedly with jitter, never overlaps, and stops cleanly
+ok 372 - scheduler: ticks repeatedly with jitter, never overlaps, and stops cleanly
+  ---
+  duration_ms: 9.914355
+  type: 'test'
+  ...
+# Subtest: scheduler: a failing task is reported and the schedule continues; setInterval reschedules
+ok 373 - scheduler: a failing task is reported and the schedule continues; setInterval reschedules
+  ---
+  duration_ms: 0.303759
+  type: 'test'
+  ...
+# Subtest: scheduler: drain waits for a tick that is in flight
+ok 374 - scheduler: drain waits for a tick that is in flight
+  ---
+  duration_ms: 20.486719
+  type: 'test'
+  ...
+# Subtest: pipeline: world risk that lowers the price proposes a REPRICE with the move in bps
+ok 375 - pipeline: world risk that lowers the price proposes a REPRICE with the move in bps
+  ---
+  duration_ms: 12.963144
+  type: 'test'
+  ...
+# Subtest: pipeline: a critical event pauses; an already paused or non-active pool does not
+ok 376 - pipeline: a critical event pauses; an already paused or non-active pool does not
+  ---
+  duration_ms: 2.342906
+  type: 'test'
+  ...
+# Subtest: pipeline: events that change nothing are ignored with a reason
+ok 377 - pipeline: events that change nothing are ignored with a reason
+  ---
+  duration_ms: 1.070662
+  type: 'test'
+  ...
+# Subtest: pipeline: RESUME needs a paused pool and reuses its last verified quote
+ok 378 - pipeline: RESUME needs a paused pool and reuses its last verified quote
+  ---
+  duration_ms: 0.325456
+  type: 'test'
+  ...
+# Subtest: pipeline: insurance, departure, arrival and payment map to their actions
+ok 379 - pipeline: insurance, departure, arrival and payment map to their actions
+  ---
+  duration_ms: 1.776361
+  type: 'test'
+  ...
+# Subtest: pipeline: the same event on the same pool always yields the same proposal
+ok 380 - pipeline: the same event on the same pool always yields the same proposal
+  ---
+  duration_ms: 0.983127
+  type: 'test'
+  ...
+# Subtest: pipeline: text inside event data cannot change the proposal
+ok 381 - pipeline: text inside event data cannot change the proposal
+  ---
+  duration_ms: 0.805716
+  type: 'test'
+  ...
+# Subtest: scenarios: the catalog lists every shipped scenario with a bilingual title
+ok 382 - scenarios: the catalog lists every shipped scenario with a bilingual title
+  ---
+  duration_ms: 297.47591
+  type: 'test'
+  ...
+# Subtest: copper-typhoon: the whole cargo story runs through the real policy and the simulated executor
+ok 383 - copper-typhoon: the whole cargo story runs through the real policy and the simulated executor
+  ---
+  duration_ms: 103.010465
+  type: 'test'
+  ...
+# Subtest: copper-typhoon: approving the payment makes the agent propose settlement, and settlement needs its own approval
+ok 384 - copper-typhoon: approving the payment makes the agent propose settlement, and settlement needs its own approval
+  ---
+  duration_ms: 106.103307
+  type: 'test'
+  ...
+# Subtest: copper-typhoon: rejecting the payment leaves the pool unsettled and proposes nothing further
+ok 385 - copper-typhoon: rejecting the payment leaves the pool unsettled and proposes nothing further
+  ---
+  duration_ms: 97.234646
+  type: 'test'
+  ...
+# Subtest: copper-typhoon: playing it twice does not duplicate anything; reset gives a clean run
+ok 386 - copper-typhoon: playing it twice does not duplicate anything; reset gives a clean run
+  ---
+  duration_ms: 201.561911
+  type: 'test'
+  ...
+# Subtest: copper-typhoon: can be played one step at a time, and says when it is over
+ok 387 - copper-typhoon: can be played one step at a time, and says when it is over
+  ---
+  duration_ms: 98.301883
+  type: 'test'
+  ...
+# Subtest: warcrisis-hormuz: a crude cargo is repriced down as war risk rises, paused when the strait closes, and stays paused
+ok 388 - warcrisis-hormuz: a crude cargo is repriced down as war risk rises, paused when the strait closes, and stays paused
+  ---
+  duration_ms: 36.000933
+  type: 'test'
+  ...
+# Subtest: scenarios: a case whose pool is already paused ignores a pause, with the reason on record
+ok 389 - scenarios: a case whose pool is already paused ignores a pause, with the reason on record
+  ---
+  duration_ms: 2.210483
+  type: 'test'
+  ...
+# Subtest: insurance-gap: a warning a week ahead, then a pause once cover has lapsed
+ok 390 - insurance-gap: a warning a week ahead, then a pause once cover has lapsed
+  ---
+  duration_ms: 36.294191
+  type: 'test'
+  ...
+# Subtest: scenarios: Demo only, only known names, and the case must be in the market
+ok 391 - scenarios: Demo only, only known names, and the case must be in the market
+  ---
+  duration_ms: 8.480333
+  type: 'test'
+  ...
+# Subtest: Demo: a world-risk event becomes a decision, an executed simulated reprice, activity and a trace
+ok 392 - Demo: a world-risk event becomes a decision, an executed simulated reprice, activity and a trace
+  ---
+  duration_ms: 291.762753
+  type: 'test'
+  ...
+# Subtest: Demo: injecting the same event again never produces a second execution
+ok 393 - Demo: injecting the same event again never produces a second execution
+  ---
+  duration_ms: 9.745558
+  type: 'test'
+  ...
+# Subtest: Demo: the full risk cycle reprice → pause → resume restores the previous state
+ok 394 - Demo: the full risk cycle reprice → pause → resume restores the previous state
+  ---
+  duration_ms: 15.41679
+  type: 'test'
+  ...
+# Subtest: Demo: events that change nothing are ignored with a reason, not turned into decisions
+ok 395 - Demo: events that change nothing are ignored with a reason, not turned into decisions
+  ---
+  duration_ms: 6.273428
+  type: 'test'
+  ...
+# Subtest: invalid events are refused before they are queued
+ok 396 - invalid events are refused before they are queued
+  ---
+  duration_ms: 4.815335
+  type: 'test'
+  ...
+# Subtest: policy: a price move above the cap waits for approval; approving it executes, rejecting does not
+ok 397 - policy: a price move above the cap waits for approval; approving it executes, rejecting does not
+  ---
+  duration_ms: 9.62666
+  type: 'test'
+  ...
+# Subtest: policy: rejecting a pending proposal records it and changes nothing
+ok 398 - policy: rejecting a pending proposal records it and changes nothing
+  ---
+  duration_ms: 5.795968
+  type: 'test'
+  ...
+# Subtest: policy: observe and off modes never execute; set_autonomy changes it at runtime and is logged
+ok 399 - policy: observe and off modes never execute; set_autonomy changes it at runtime and is logged
+  ---
+  duration_ms: 11.728966
+  type: 'test'
+  ...
+# Subtest: policy: an emergency stop blocks a reprice but lets a pause through, and can be lifted
+ok 400 - policy: an emergency stop blocks a reprice but lets a pause through, and can be lifted
+  ---
+  duration_ms: 9.195136
+  type: 'test'
+  ...
+# Subtest: policy: the cooldown stops a flapping signal from acting twice in a row
+ok 401 - policy: the cooldown stops a flapping signal from acting twice in a row
+  ---
+  duration_ms: 8.492848
+  type: 'test'
+  ...
+# Subtest: settlement actions: RECORD_PAYMENT always needs approval, RECORD_ARRIVAL does not
+ok 402 - settlement actions: RECORD_PAYMENT always needs approval, RECORD_ARRIVAL does not
+  ---
+  duration_ms: 11.532656
+  type: 'test'
+  ...
+# Subtest: a failing action is recorded as FAILED with its reason, and the event itself still completes
+ok 403 - a failing action is recorded as FAILED with its reason, and the event itself still completes
+  ---
+  duration_ms: 7.624015
+  type: 'test'
+  ...
+# Subtest: status reports mode, autonomy, signers (booleans only) and queue depth
+ok 404 - status reports mode, autonomy, signers (booleans only) and queue depth
+  ---
+  duration_ms: 3.557488
+  type: 'test'
+  ...
+# Subtest: listDecisions filters and paginates; getDecision returns one
+ok 405 - listDecisions filters and paginates; getDecision returns one
+  ---
+  duration_ms: 11.299196
+  type: 'test'
+  ...
+# Subtest: Demo reset clears the agent state of Demo mode only
+ok 406 - Demo reset clears the agent state of Demo mode only
+  ---
+  duration_ms: 8.128982
+  type: 'test'
+  ...
+# Subtest: decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate
+ok 407 - decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate
+  ---
+  duration_ms: 32.20879
+  type: 'test'
+  ...
+# Subtest: a replayed event whose decision already exists does not decide again
+ok 408 - a replayed event whose decision already exists does not decide again
+  ---
+  duration_ms: 25.259413
+  type: 'test'
+  ...
+# [agentbl] AGENT_AUTONOMY=auto is treated as propose in Live mode: every action needs human approval.
+# Subtest: Live: a mapped pool gets a proposal that waits for approval; approving sends exactly one real-looking transaction and records its hash
+ok 409 - Live: a mapped pool gets a proposal that waits for approval; approving sends exactly one real-looking transaction and records its hash
+  ---
+  duration_ms: 16.030883
+  type: 'test'
+  ...
+# Subtest: Live: AGENT_AUTONOMY=auto is downgraded to propose and the downgrade is visible
+ok 410 - Live: AGENT_AUTONOMY=auto is downgraded to propose and the downgrade is visible
+  ---
+  duration_ms: 9.039743
+  type: 'test'
+  ...
+# Subtest: Live: a pool with no on-chain mapping gets a recorded proposal and nothing is executed
+ok 411 - Live: a pool with no on-chain mapping gets a recorded proposal and nothing is executed
+  ---
+  duration_ms: 5.778171
+  type: 'test'
+  ...
+# Subtest: Live: the protected pool refuses terminal actions outright and never queues them
+ok 412 - Live: the protected pool refuses terminal actions outright and never queues them
+  ---
+  duration_ms: 3.762935
+  type: 'test'
+  ...
+# Subtest: Live: an action only the owner can sign becomes an owner-CLI approval; the reported tx is verified before anything completes
+ok 413 - Live: an action only the owner can sign becomes an owner-CLI approval; the reported tx is verified before anything completes
+  ---
+  duration_ms: 10.739451
+  type: 'test'
+  ...
+# Subtest: Live: an approval is not executed after the runtime mode changed
+ok 414 - Live: an approval is not executed after the runtime mode changed
+  ---
+  duration_ms: 6.922775
+  type: 'test'
+  ...
+# Subtest: Live: only proof-carrying events can be injected by hand
+ok 415 - Live: only proof-carrying events can be injected by hand
+  ---
+  duration_ms: 4.338221
+  type: 'test'
+  ...
+# Subtest: Live: a hand-injected arrival without a proof is rejected before queueing
+ok 416 - Live: a hand-injected arrival without a proof is rejected before queueing
+  ---
+  duration_ms: 4.65883
+  type: 'test'
+  ...
+# Subtest: Live: a broadcast transaction that is not yet confirmed stays EXECUTING and is reconciled on the next tick
+ok 417 - Live: a broadcast transaction that is not yet confirmed stays EXECUTING and is reconciled on the next tick
+  ---
+  duration_ms: 39.482176
+  type: 'test'
+  ...
+# Subtest: Live: an unreachable chain never degrades to a simulated result
+ok 418 - Live: an unreachable chain never degrades to a simulated result
+  ---
+  duration_ms: 7.731143
+  type: 'test'
+  ...
+# Subtest: USDC amount conversion is exact and rejects rounding, exponents, zero, overflow and unsafe numbers
+ok 419 - USDC amount conversion is exact and rejects rounding, exponents, zero, overflow and unsafe numbers
+  ---
+  duration_ms: 1.420453
+  type: 'test'
+  ...
+# Subtest: USDC proof binds canonical asset, recipient, payer, amount, block and log with configured confirmations
+ok 420 - USDC proof binds canonical asset, recipient, payer, amount, block and log with configured confirmations
+  ---
+  duration_ms: 5.677702
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects fake hash
+ok 421 - USDC proof rejects fake hash
+  ---
+  duration_ms: 2.181004
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects revert
+ok 422 - USDC proof rejects revert
+  ---
+  duration_ms: 2.056883
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong asset
+ok 423 - USDC proof rejects wrong asset
+  ---
+  duration_ms: 2.339727
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong payee
+ok 424 - USDC proof rejects wrong payee
+  ---
+  duration_ms: 3.195888
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong amount
+ok 425 - USDC proof rejects wrong amount
+  ---
+  duration_ms: 1.844433
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects mint
+ok 426 - USDC proof rejects mint
+  ---
+  duration_ms: 1.848143
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects self-transfer
+ok 427 - USDC proof rejects self-transfer
+  ---
+  duration_ms: 2.240394
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong RPC chain
+ok 428 - USDC proof rejects wrong RPC chain
+  ---
+  duration_ms: 2.018082
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects wrong tx chain
+ok 429 - USDC proof rejects wrong tx chain
+  ---
+  duration_ms: 1.492625
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects unconfirmed
+ok 430 - USDC proof rejects unconfirmed
+  ---
+  duration_ms: 1.381486
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects reorg
+ok 431 - USDC proof rejects reorg
+  ---
+  duration_ms: 1.509662
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects hash substitution
+ok 432 - USDC proof rejects hash substitution
+  ---
+  duration_ms: 1.286729
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects removed log
+ok 433 - USDC proof rejects removed log
+  ---
+  duration_ms: 1.270576
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects ambiguous transfer
+ok 434 - USDC proof rejects ambiguous transfer
+  ---
+  duration_ms: 1.561498
+  type: 'test'
+  ...
+# Subtest: USDC proof rejects missing log index
+ok 435 - USDC proof rejects missing log index
+  ---
+  duration_ms: 1.534681
+  type: 'test'
+  ...
+# Subtest: Live payment intake rejects missing recipient, unsupported/manual sources, unmapped or protected pools and forged evidence
+ok 436 - Live payment intake rejects missing recipient, unsupported/manual sources, unmapped or protected pools and forged evidence
+  ---
+  duration_ms: 319.115688
+  type: 'test'
+  ...
+# Subtest: Live lifecycle records payment and arrival only after separate owner receipts, then proposes an approved settlement with exact atomic amount
+ok 437 - Live lifecycle records payment and arrival only after separate owner receipts, then proposes an approved settlement with exact atomic amount
+  ---
+  duration_ms: 28.934309
+  type: 'test'
+  ...
+# Subtest: Arrival first uses actual proofs; paused readiness waits for resume and stale mirrors cannot create settlement
+ok 438 - Arrival first uses actual proofs; paused readiness waits for resume and stale mirrors cannot create settlement
+  ---
+  duration_ms: 17.767428
+  type: 'test'
+  ...
+# Subtest: Receipt claims are idempotent across user event IDs, concurrent submissions, queue failures and restart
+ok 439 - Receipt claims are idempotent across user event IDs, concurrent submissions, queue failures and restart
+  ---
+  duration_ms: 56.909143
+  type: 'test'
+  ...
+# Subtest: A receipt cannot be claimed for another pool and a generation change during verification queues nothing
+ok 440 - A receipt cannot be claimed for another pool and a generation change during verification queues nothing
+  ---
+  duration_ms: 4.790087
+  type: 'test'
+  ...
+# Subtest: Changed, paused, unsubscribed or stopped chain state invalidates a settlement plan without signing
+ok 441 - Changed, paused, unsubscribed or stopped chain state invalidates a settlement plan without signing
+  ---
+  duration_ms: 4.322982
+  type: 'test'
+  ...
+# Subtest: Owner receipt must bind matching pool/proofs/events, confirmations and sender; rejected attempts preserve the approval
+ok 442 - Owner receipt must bind matching pool/proofs/events, confirmations and sender; rejected attempts preserve the approval
+  ---
+  duration_ms: 12.278292
+  type: 'test'
+  ...
+# Subtest: Verified owner checkpoint survives a completion write failure and tick completes without rebroadcast
+ok 443 - Verified owner checkpoint survives a completion write failure and tick completes without rebroadcast
+  ---
+  duration_ms: 10.205537
+  type: 'test'
+  ...
+# Subtest: Live settlement refuses missing verified payment/atomic amount and legacy raw-unit plans
+ok 444 - Live settlement refuses missing verified payment/atomic amount and legacy raw-unit plans
+  ---
+  duration_ms: 1.876454
+  type: 'test'
+  ...
+# Subtest: Optional executor route uses the same exact receipt checks and approval instead of bypassing settlement verification
+ok 445 - Optional executor route uses the same exact receipt checks and approval instead of bypassing settlement verification
+  ---
+  duration_ms: 11.132784
+  type: 'test'
+  ...
+# Subtest: settlement CLI defaults to dry run and sends exactly one approved evidence transaction on confirmation
+ok 446 - settlement CLI defaults to dry run and sends exactly one approved evidence transaction on confirmation
+  ---
+  duration_ms: 672.46838
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses generation changes after preflight and sends nothing
+ok 447 - settlement CLI refuses generation changes after preflight and sends nothing
+  ---
+  duration_ms: 22.93979
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses mode changes after preflight and sends nothing
+ok 448 - settlement CLI refuses mode changes after preflight and sends nothing
+  ---
+  duration_ms: 23.506498
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses emergency stop changes after preflight and sends nothing
+ok 449 - settlement CLI refuses emergency stop changes after preflight and sends nothing
+  ---
+  duration_ms: 20.38101
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses receipt reorg changes after preflight and sends nothing
+ok 450 - settlement CLI refuses receipt reorg changes after preflight and sends nothing
+  ---
+  duration_ms: 21.596759
+  type: 'test'
+  ...
+# Subtest: settlement CLI refuses an expired approval before asking for any signer
+ok 451 - settlement CLI refuses an expired approval before asking for any signer
+  ---
+  duration_ms: 24.991129
+  type: 'test'
+  ...
+# Subtest: settlement CLI recovers an attached broadcast without another signer or transaction
+ok 452 - settlement CLI recovers an attached broadcast without another signer or transaction
+  ---
+  duration_ms: 28.512784
+  type: 'test'
+  ...
+# Subtest: settlement CLI retains an uncertain broadcast and refuses an automatic retry
+ok 453 - settlement CLI retains an uncertain broadcast and refuses an automatic retry
+  ---
+  duration_ms: 20.683825
+  type: 'test'
+  ...
+# Subtest: PRD Agent APIs use real steps over HTTP and leave all runtime state untouched
+    # Subtest: extracts real fields with source lines and hashes, without opening a job
+    ok 1 - extracts real fields with source lines and hashes, without opening a job
+      ---
+      duration_ms: 69.805411
+      type: 'test'
+      ...
+    # Subtest: verifies consistency and exposes a real mismatch and its risk penalty
+    ok 2 - verifies consistency and exposes a real mismatch and its risk penalty
+      ---
+      duration_ms: 7.280969
+      type: 'test'
+      ...
+    # Subtest: prices the selected speed with exactly the existing engine numbers and hashes
+    ok 3 - prices the selected speed with exactly the existing engine numbers and hashes
+      ---
+      duration_ms: 31.157131
+      type: 'test'
+      ...
+    # Subtest: brief numbers and risks come from its returned quote, with explicit evidence limits
+    ok 4 - brief numbers and risks come from its returned quote, with explicit evidence limits
+      ---
+      duration_ms: 6.440026
+      type: 'test'
+      ...
+    # Subtest: graph commits pricing, actual documents, verification and versioned compliance
+    ok 5 - graph commits pricing, actual documents, verification and versioned compliance
+      ---
+      duration_ms: 13.046526
+      type: 'test'
+      ...
+    # Subtest: method, MIME, malformed JSON and unknown operations have bounded errors
+    ok 6 - method, MIME, malformed JSON and unknown operations have bounded errors
+      ---
+      duration_ms: 10.24937
+      type: 'test'
+      ...
+    1..6
+ok 454 - PRD Agent APIs use real steps over HTTP and leave all runtime state untouched
+  ---
+  duration_ms: 157.873168
+  type: 'test'
+  ...
+# Subtest: stateless input validation and review boundaries
+    # Subtest: empty source never becomes a clear verification
+    ok 1 - empty source never becomes a clear verification
+      ---
+      duration_ms: 0.559356
+      type: 'test'
+      ...
+    # Subtest: paths, client quotes, forged compliance, unknown keys and malformed document arrays are rejected
+    ok 2 - paths, client quotes, forged compliance, unknown keys and malformed document arrays are rejected
+      ---
+      duration_ms: 1.254093
+      type: 'test'
+      ...
+    # Subtest: wrong numeric types, impossible prices, invalid events, dates and unsafe nesting fail before pricing
+    ok 3 - wrong numeric types, impossible prices, invalid events, dates and unsafe nesting fail before pricing
+      ---
+      duration_ms: 2.224549
+      type: 'test'
+      ...
+    # Subtest: incomplete and CNY trades cannot be converted or priced as USD
+    ok 4 - incomplete and CNY trades cannot be converted or priced as USD
+      ---
+      duration_ms: 1.899414
+      type: 'test'
+      ...
+    # Subtest: binary magic, UTF-8, base64 and document size share the intake validator
+    ok 5 - binary magic, UTF-8, base64 and document size share the intake validator
+      ---
+      duration_ms: 0.734447
+      type: 'test'
+      ...
+    # Subtest: unknown or unparseable documents keep explicit review evidence
+    ok 6 - unknown or unparseable documents keep explicit review evidence
+      ---
+      duration_ms: 0.630141
+      type: 'test'
+      ...
+    # Subtest: conflicting documents retain evidence when merged fields are overwritten
+    ok 7 - conflicting documents retain evidence when merged fields are overwritten
+      ---
+      duration_ms: 3.717358
+      type: 'test'
+      ...
+    # Subtest: demo BLOCK survives a request and never becomes an executable offering
+    ok 8 - demo BLOCK survives a request and never becomes an executable offering
+      ---
+      duration_ms: 2.739783
+      type: 'test'
+      ...
+    # Subtest: injection is data, marks review, and cannot trigger even optional polish
+    ok 9 - injection is data, marks review, and cannot trigger even optional polish
+      ---
+      duration_ms: 2.589828
+      type: 'test'
+      ...
+    1..9
+ok 455 - stateless input validation and review boundaries
+  ---
+  duration_ms: 17.067756
+  type: 'test'
+  ...
+# Subtest: graph hash is canonical, repeatable and binds changed input and document bytes
+ok 456 - graph hash is canonical, repeatable and binds changed input and document bytes
+  ---
+  duration_ms: 41.958652
+  type: 'test'
+  ...
+# Subtest: stateless image extraction honors its vision switch and preserves review boundaries
+    # Subtest: enabled vision extracts actual fields and always requires review
+    ok 1 - enabled vision extracts actual fields and always requires review
+      ---
+      duration_ms: 3.848555
+      type: 'test'
+      ...
+    # Subtest: disabled vision stays offline and requires OCR
+    ok 2 - disabled vision stays offline and requires OCR
+      ---
+      duration_ms: 0.48365
+      type: 'test'
+      ...
+    # Subtest: default vision stays offline and requires OCR
+    ok 3 - default vision stays offline and requires OCR
+      ---
+      duration_ms: 0.243531
+      type: 'test'
+      ...
+    # Subtest: unconfigured vision stays offline and requires OCR
+    ok 4 - unconfigured vision stays offline and requires OCR
+      ---
+      duration_ms: 0.288022
+      type: 'test'
+      ...
+    # Subtest: provider failure remains review evidence without upstream details
+    ok 5 - provider failure remains review evidence without upstream details
+      ---
+      duration_ms: 0.507729
+      type: 'test'
+      ...
+    1..5
+ok 457 - stateless image extraction honors its vision switch and preserves review boundaries
+  ---
+  duration_ms: 5.814395
+  type: 'test'
+  ...
+# Subtest: stateless extraction screens the entire readable bundle before every model path
+    # Subtest: later text injection prevents earlier text completion and image transcription
+    ok 1 - later text injection prevents earlier text completion and image transcription
+      ---
+      duration_ms: 3.397071
+      type: 'test'
+      ...
+    # Subtest: later PDF injection prevents earlier text completion and image transcription
+    ok 2 - later PDF injection prevents earlier text completion and image transcription
+      ---
+      duration_ms: 176.237765
+      type: 'test'
+      ...
+    # Subtest: suspicious image transcription also prevents text completion
+    ok 3 - suspicious image transcription also prevents text completion
+      ---
+      duration_ms: 1.310711
+      type: 'test'
+      ...
+    # Subtest: unsafe supplied case data blocks otherwise clean document models
+    ok 4 - unsafe supplied case data blocks otherwise clean document models
+      ---
+      duration_ms: 2.031356
+      type: 'test'
+      ...
+    1..4
+ok 458 - stateless extraction screens the entire readable bundle before every model path
+  ---
+  duration_ms: 183.888442
+  type: 'test'
+  ...
+# Subtest: optional brief polish accepts only grounded output and falls back on failure or inventions
+    # Subtest: explicit output budget
+    ok 1 - explicit output budget
+      ---
+      duration_ms: 2.448967
+      type: 'test'
+      ...
+    # Subtest: default output budget
+    ok 2 - default output budget
+      ---
+      duration_ms: 1.931268
+      type: 'test'
+      ...
+    # Subtest: explicit unlimited output
+    ok 3 - explicit unlimited output
+      ---
+      duration_ms: 1.84962
+      type: 'test'
+      ...
+    # Subtest: grounded
+    ok 4 - grounded
+      ---
+      duration_ms: 1.992871
+      type: 'test'
+      ...
+    # Subtest: new number
+    ok 5 - new number
+      ---
+      duration_ms: 1.930845
+      type: 'test'
+      ...
+    # Subtest: negative price
+    ok 6 - negative price
+      ---
+      duration_ms: 2.150741
+      type: 'test'
+      ...
+    # Subtest: guarantee
+    ok 7 - guarantee
+      ---
+      duration_ms: 2.790613
+      type: 'test'
+      ...
+    # Subtest: unsupported authority
+    ok 8 - unsupported authority
+      ---
+      duration_ms: 1.871724
+      type: 'test'
+      ...
+    # Subtest: provider failure
+    ok 9 - provider failure
+      ---
+      duration_ms: 1.929748
+      type: 'test'
+      ...
+    # Subtest: empty
+    ok 10 - empty
+      ---
+      duration_ms: 1.799154
+      type: 'test'
+      ...
+    # Subtest: the model disable switch prevents optional public polish
+    ok 11 - the model disable switch prevents optional public polish
+      ---
+      duration_ms: 1.825465
+      type: 'test'
+      ...
+    1..11
+ok 459 - optional brief polish accepts only grounded output and falls back on failure or inventions
+  ---
+  duration_ms: 23.62807
+  type: 'test'
+  ...
+# Subtest: the five operations share one per-client budget including invalid requests
+ok 460 - the five operations share one per-client budget including invalid requests
+  ---
+  duration_ms: 19.713006
+  type: 'test'
+  ...
+# Subtest: concurrency is bounded globally and a failed request releases its slot
+ok 461 - concurrency is bounded globally and a failed request releases its slot
+  ---
+  duration_ms: 21.592664
+  type: 'test'
+  ...
+# Subtest: JSON bodies have a byte cap before parsing or model work
+ok 462 - JSON bodies have a byte cap before parsing or model work
+  ---
+  duration_ms: 14.590717
+  type: 'test'
+  ...
+# Subtest: no route answers a malformed request with a 5xx
+ok 463 - no route answers a malformed request with a 5xx
+  ---
+  duration_ms: 2705.931929
+  type: 'test'
+  ...
+# Subtest: valid input is still accepted after the validation tightening
+ok 464 - valid input is still accepted after the validation tightening
+  ---
+  duration_ms: 48.495897
+  type: 'test'
+  ...
+# Subtest: BE-7: invalid payout_speed is rejected with 400
+ok 465 - BE-7: invalid payout_speed is rejected with 400
+  ---
+  duration_ms: 42.431459
+  type: 'test'
+  ...
+# Subtest: BE-7: a non-positive requested_cash_usd is rejected (price/amount not valid)
+ok 466 - BE-7: a non-positive requested_cash_usd is rejected (price/amount not valid)
+  ---
+  duration_ms: 28.959324
+  type: 'test'
+  ...
+# Subtest: BE-7: a negative subscription_usd is rejected on /api/offering/simulate
+ok 467 - BE-7: a negative subscription_usd is rejected on /api/offering/simulate
+  ---
+  duration_ms: 16.610615
+  type: 'test'
+  ...
+# Subtest: BE-7: a case whose target redemption is not 1.00 is rejected (exceeds the fixed target)
+ok 468 - BE-7: a case whose target redemption is not 1.00 is rejected (exceeds the fixed target)
+  ---
+  duration_ms: 13.818752
+  type: 'test'
+  ...
+# Subtest: BE-7: events must be an array
+ok 469 - BE-7: events must be an array
+  ---
+  duration_ms: 15.064715
+  type: 'test'
+  ...
+# Subtest: BE-7: a well-formed override still succeeds (validation is not over-eager)
+ok 470 - BE-7: a well-formed override still succeeds (validation is not over-eager)
+  ---
+  duration_ms: 28.168513
+  type: 'test'
+  ...
+# Subtest: BE-8: API rejects a 67-character evidence hash before any chain call
+ok 471 - BE-8: API rejects a 67-character evidence hash before any chain call
+  ---
+  duration_ms: 27.890683
+  type: 'test'
+  ...
+# Subtest: AI-14: six event families map to OPEN/REPRICE/PAUSE/RESUME/SETTLE/WARNING
+ok 472 - AI-14: six event families map to OPEN/REPRICE/PAUSE/RESUME/SETTLE/WARNING
+  ---
+  duration_ms: 18.112577
+  type: 'test'
+  ...
+# Subtest: AI-14: cargo arrival settles only after importer payment is verified
+ok 473 - AI-14: cargo arrival settles only after importer payment is verified
+  ---
+  duration_ms: 0.214948
+  type: 'test'
+  ...
+# Subtest: AI-15: bounded retry succeeds and records the real attempt count
+ok 474 - AI-15: bounded retry succeeds and records the real attempt count
+  ---
+  duration_ms: 1.317196
+  type: 'test'
+  ...
+# Subtest: AI-15: concurrent and repeated delivery of one event never creates a duplicate tx
+ok 475 - AI-15: concurrent and repeated delivery of one event never creates a duplicate tx
+  ---
+  duration_ms: 0.458889
+  type: 'test'
+  ...
+# Subtest: AI-15: a completed decision survives process restart and is not resubmitted
+ok 476 - AI-15: a completed decision survives process restart and is not resubmitted
+  ---
+  duration_ms: 7.159455
+  type: 'test'
+  ...
+# Subtest: AI-15: an EXECUTING record reconciles a prior tx before any resubmission
+ok 477 - AI-15: an EXECUTING record reconciles a prior tx before any resubmission
+  ---
+  duration_ms: 0.354589
+  type: 'test'
+  ...
+# Subtest: AI-15: monitoring polls repeatedly while duplicate events remain idempotent
+ok 478 - AI-15: monitoring polls repeatedly while duplicate events remain idempotent
+  ---
+  duration_ms: 0.411178
+  type: 'test'
+  ...
+# (node:9065) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: every cargo picture the frontend can request exists as WebP
+ok 479 - every cargo picture the frontend can request exists as WebP
+  ---
+  duration_ms: 42.851073
+  type: 'test'
+  ...
+# Subtest: each catalog case maps to the picture of its own cargo
+ok 480 - each catalog case maps to the picture of its own cargo
+  ---
+  duration_ms: 25.471658
+  type: 'test'
+  ...
+# Subtest: the cargo pictures stay web-sized
+ok 481 - the cargo pictures stay web-sized
+  ---
+  duration_ms: 12.123149
+  type: 'test'
+  ...
+# Subtest: there are curated cases to check
+ok 482 - there are curated cases to check
+  ---
+  duration_ms: 0.661765
+  type: 'test'
+  ...
+# Subtest: fixture demo-case.json prices, scores and re-prices end to end
+ok 483 - fixture demo-case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 20.948245
+  type: 'test'
+  ...
+# Subtest: fixture cases/alu-dxb-rtm.case.json prices, scores and re-prices end to end
+ok 484 - fixture cases/alu-dxb-rtm.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 6.112036
+  type: 'test'
+  ...
+# Subtest: fixture cases/alu-fs-wh-00013.case.json prices, scores and re-prices end to end
+ok 485 - fixture cases/alu-fs-wh-00013.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 4.081509
+  type: 'test'
+  ...
+# Subtest: fixture cases/alu-fs-wh-00014.case.json prices, scores and re-prices end to end
+ok 486 - fixture cases/alu-fs-wh-00014.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 3.414141
+  type: 'test'
+  ...
+# Subtest: fixture cases/alu-fs-wh-00015.case.json prices, scores and re-prices end to end
+ok 487 - fixture cases/alu-fs-wh-00015.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 4.156393
+  type: 'test'
+  ...
+# Subtest: fixture cases/copper-sg-shanghai.case.json prices, scores and re-prices end to end
+ok 488 - fixture cases/copper-sg-shanghai.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 6.5565
+  type: 'test'
+  ...
+# Subtest: fixture cases/crude-fuj-sin.case.json prices, scores and re-prices end to end
+ok 489 - fixture cases/crude-fuj-sin.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 6.346418
+  type: 'test'
+  ...
+# Subtest: fixture cases/cuconc-anf-lyg.case.json prices, scores and re-prices end to end
+ok 490 - fixture cases/cuconc-anf-lyg.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 6.6878
+  type: 'test'
+  ...
+# Subtest: fixture cases/ironore-au-tj.case.json prices, scores and re-prices end to end
+ok 491 - fixture cases/ironore-au-tj.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 5.096971
+  type: 'test'
+  ...
+# Subtest: fixture cases/refined-sg-jkt.case.json prices, scores and re-prices end to end
+ok 492 - fixture cases/refined-sg-jkt.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 5.507542
+  type: 'test'
+  ...
+# Subtest: fixture cases/rubber-bkk-qd.case.json prices, scores and re-prices end to end
+ok 493 - fixture cases/rubber-bkk-qd.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 5.787611
+  type: 'test'
+  ...
+# Subtest: fixture cases/soybean-ssz-dlc.case.json prices, scores and re-prices end to end
+ok 494 - fixture cases/soybean-ssz-dlc.case.json prices, scores and re-prices end to end
+  ---
+  duration_ms: 4.807094
+  type: 'test'
+  ...
+# Subtest: WEB3-19: resolves address, RPC, explorer and ABI from either configured network
+ok 495 - WEB3-19: resolves address, RPC, explorer and ABI from either configured network
+  ---
+  duration_ms: 4.527891
+  type: 'test'
+  ...
+# Subtest: WEB3-19: deployment merge updates one network without overwriting another
+ok 496 - WEB3-19: deployment merge updates one network without overwriting another
+  ---
+  duration_ms: 0.271829
+  type: 'test'
+  ...
+# Subtest: WEB3-19: legacy flat config migrates without losing deployment data
+ok 497 - WEB3-19: legacy flat config migrates without losing deployment data
+  ---
+  duration_ms: 0.266245
+  type: 'test'
+  ...
+# Subtest: WEB3-19: public config is v2 with testnet default and official mainnet metadata
+ok 498 - WEB3-19: public config is v2 with testnet default and official mainnet metadata
+  ---
+  duration_ms: 7.047042
+  type: 'test'
+  ...
+# Subtest: WEB3-19: rejects mismatched hexadecimal and decimal chain IDs
+ok 499 - WEB3-19: rejects mismatched hexadecimal and decimal chain IDs
+  ---
+  duration_ms: 0.4772
+  type: 'test'
+  ...
+# Subtest: compliance v2: clean facts have versioned, auditable demo evidence and declared standards
+ok 500 - compliance v2: clean facts have versioned, auditable demo evidence and declared standards
+  ---
+  duration_ms: 39.570789
+  type: 'test'
+  ...
+# Subtest: compliance v2: exact names, aliases, punctuation, suffixes and fullwidth characters block
+ok 501 - compliance v2: exact names, aliases, punctuation, suffixes and fullwidth characters block
+  ---
+  duration_ms: 6.156217
+  type: 'test'
+  ...
+# Subtest: compliance v2: near names in 0.85–0.92 require review; unrelated country words do not block
+ok 502 - compliance v2: near names in 0.85–0.92 require review; unrelated country words do not block
+  ---
+  duration_ms: 3.896733
+  type: 'test'
+  ...
+# Subtest: compliance v2: seller, consignee, carrier, notify party, invoice and warehouse parties are screened
+ok 503 - compliance v2: seller, consignee, carrier, notify party, invoice and warehouse parties are screened
+  ---
+  duration_ms: 3.127351
+  type: 'test'
+  ...
+# Subtest: compliance v2: each demo jurisdiction derives from a known port, including transshipment
+ok 504 - compliance v2: each demo jurisdiction derives from a known port, including transshipment
+  ---
+  duration_ms: 2.251583
+  type: 'test'
+  ...
+# Subtest: compliance v2: unknown, malformed and conflicting ports require review without substring matches
+ok 505 - compliance v2: unknown, malformed and conflicting ports require review without substring matches
+  ---
+  duration_ms: 2.558065
+  type: 'test'
+  ...
+# Subtest: compliance v2: bundled lookup covers every shipped transport and warehouse location
+ok 506 - compliance v2: bundled lookup covers every shipped transport and warehouse location
+  ---
+  duration_ms: 139.952769
+  type: 'test'
+  ...
+# Subtest: compliance v2: synthetic IMO and vessel name block; invalid checksums require review
+ok 507 - compliance v2: synthetic IMO and vessel name block; invalid checksums require review
+  ---
+  duration_ms: 2.463586
+  type: 'test'
+  ...
+# Subtest: compliance v2: HS prefix rules screen all sources and cannot be waived by a clean code
+ok 508 - compliance v2: HS prefix rules screen all sources and cannot be waived by a clean code
+  ---
+  duration_ms: 3.643875
+  type: 'test'
+  ...
+# Subtest: compliance v2: military and dual-use cargo declarations are conservative demo rules
+ok 509 - compliance v2: military and dual-use cargo declarations are conservative demo rules
+  ---
+  duration_ms: 1.802097
+  type: 'test'
+  ...
+# Subtest: compliance v2: instructions, hidden characters, wallet fields and oversized names never clear
+ok 510 - compliance v2: instructions, hidden characters, wallet fields and oversized names never clear
+  ---
+  duration_ms: 3.204804
+  type: 'test'
+  ...
+# Subtest: compliance v2: a bare platform name does not prove compliance and warehouse standards are not invented
+ok 511 - compliance v2: a bare platform name does not prove compliance and warehouse standards are not invented
+  ---
+  duration_ms: 2.565422
+  type: 'test'
+  ...
+# Subtest: compliance v2: matcher uses fixed Jaccard/Winkler scores, never a keyword fallback
+ok 512 - compliance v2: matcher uses fixed Jaccard/Winkler scores, never a keyword fallback
+  ---
+  duration_ms: 0.152704
+  type: 'test'
+  ...
+# Subtest: compliance v2: malformed demo data, duplicate IDs and mismatched country codes fail loading
+ok 513 - compliance v2: malformed demo data, duplicate IDs and mismatched country codes fail loading
+  ---
+  duration_ms: 1.988679
+  type: 'test'
+  ...
+# Subtest: compliance external: explicit injection sends only structured facts and validates output
+ok 514 - compliance external: explicit injection sends only structured facts and validates output
+  ---
+  duration_ms: 11.898497
+  type: 'test'
+  ...
+# Subtest: compliance external: CLEAR never overrides local BLOCK or REVIEW; provider may escalate
+ok 515 - compliance external: CLEAR never overrides local BLOCK or REVIEW; provider may escalate
+  ---
+  duration_ms: 2.930665
+  type: 'test'
+  ...
+# Subtest: compliance external: timeout aborts even a transport that ignores AbortSignal
+ok 516 - compliance external: timeout aborts even a transport that ignores AbortSignal
+  ---
+  duration_ms: 5.810578
+  type: 'test'
+  ...
+# Subtest: compliance external: failed, malformed, oversized and contradictory results retain evidence and review
+ok 517 - compliance external: failed, malformed, oversized and contradictory results retain evidence and review
+  ---
+  duration_ms: 4.369692
+  type: 'test'
+  ...
+# Subtest: compliance external: missing transport, URL credentials and invalid timeouts are rejected before a request
+ok 518 - compliance external: missing transport, URL credentials and invalid timeouts are rejected before a request
+  ---
+  duration_ms: 0.232831
+  type: 'test'
+  ...
+# Subtest: contract harness emits pricing oracle evidence for the demo case
+ok 519 - contract harness emits pricing oracle evidence for the demo case
+  ---
+  duration_ms: 3.898442
+  type: 'test'
+  ...
+# Subtest: contract harness aligns event fields with the frozen contract design
+ok 520 - contract harness aligns event fields with the frozen contract design
+  ---
+  duration_ms: 1.959973
+  type: 'test'
+  ...
+# Subtest: contract harness rejects non-permissioned investors
+ok 521 - contract harness rejects non-permissioned investors
+  ---
+  duration_ms: 2.856205
+  type: 'test'
+  ...
+# Subtest: contract harness covers scenario contract actions with oracle events
+ok 522 - contract harness covers scenario contract actions with oracle events
+  ---
+  duration_ms: 25.458121
+  type: 'test'
+  ...
+# Subtest: pool action codes match the JS harness and the AgentBLRWA action enum
+ok 523 - pool action codes match the JS harness and the AgentBLRWA action enum
+  ---
+  duration_ms: 5.65597
+  type: 'test'
+  ...
+# Subtest: risk levels: harness codes, oracle limit and demo-contract limit agree
+ok 524 - risk levels: harness codes, oracle limit and demo-contract limit agree
+  ---
+  duration_ms: 3.64986
+  type: 'test'
+  ...
+# Subtest: every on-chain offering state is a known lifecycle state, and Repaid keeps its code
+not ok 525 - every on-chain offering state is a known lifecycle state, and Repaid keeps its code
+  ---
+  duration_ms: 4.795669
+  type: 'test'
+  location: '/mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:44:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'LossSettled'
+    - 'Cancelled'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Cancelled'
+  actual: 'LossSettled'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:55:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# (node:9120) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Copilot actions: a message creates a priced card, explicit confirmation records one real Demo position, and retries return the same reference
+ok 526 - Copilot actions: a message creates a priced card, explicit confirmation records one real Demo position, and retries return the same reference
+  ---
+  duration_ms: 9.69808
+  type: 'test'
+  ...
+# Subtest: Copilot actions: ambiguity, missing amounts, model amounts and saved budget breaches cannot create executable cards
+ok 527 - Copilot actions: ambiguity, missing amounts, model amounts and saved budget breaches cannot create executable cards
+  ---
+  duration_ms: 4.782248
+  type: 'test'
+  ...
+# Subtest: Copilot actions: cancel, new messages, expiry and runtime changes invalidate old consent
+ok 528 - Copilot actions: cancel, new messages, expiry and runtime changes invalidate old consent
+  ---
+  duration_ms: 4.054807
+  type: 'test'
+  ...
+# Subtest: Copilot actions: changed prices, capacity, pauses and unresolved document holds are checked again before mutation
+ok 529 - Copilot actions: changed prices, capacity, pauses and unresolved document holds are checked again before mutation
+  ---
+  duration_ms: 2.438661
+  type: 'test'
+  ...
+# Subtest: Copilot actions: Demo subscriptions accept repriced pools and snapshots persist without wallets
+ok 530 - Copilot actions: Demo subscriptions accept repriced pools and snapshots persist without wallets
+  ---
+  duration_ms: 9.751674
+  type: 'test'
+  ...
+# Subtest: Copilot actions: Live cards use chain price and integer shares; confirmation only prepares the wallet and cannot run twice
+ok 531 - Copilot actions: Live cards use chain price and integer shares; confirmation only prepares the wallet and cannot run twice
+  ---
+  duration_ms: 1.361452
+  type: 'test'
+  ...
+# Subtest: Copilot actions: unmapped, paused, empty and tiny Live offerings fail closed without a simulated substitute
+ok 532 - Copilot actions: unmapped, paused, empty and tiny Live offerings fail closed without a simulated substitute
+  ---
+  duration_ms: 1.202436
+  type: 'test'
+  ...
+# Subtest: Copilot actions: report cards use the paid-service catalogue, enforce budget and become single-use before any payment
+ok 533 - Copilot actions: report cards use the paid-service catalogue, enforce budget and become single-use before any payment
+  ---
+  duration_ms: 1.542067
+  type: 'test'
+  ...
+# Subtest: Copilot browser actions: generation changes after preparation prevent wallet signing; Demo reports use the existing simulated flow
+ok 534 - Copilot browser actions: generation changes after preparation prevent wallet signing; Demo reports use the existing simulated flow
+  ---
+  duration_ms: 0.385698
+  type: 'test'
+  ...
+# Subtest: Copilot actions: decimal and scientific budgets never round up; legacy Demo report hashes are not rendered as transactions
+ok 535 - Copilot actions: decimal and scientific budgets never round up; legacy Demo report hashes are not rendered as transactions
+  ---
+  duration_ms: 0.175827
+  type: 'test'
+  ...
+# Subtest: Copilot actions API: the real subscribe route accepts a confirmed card, ignores tampered amounts and records Copilot attribution
+ok 536 - Copilot actions API: the real subscribe route accepts a confirmed card, ignores tampered amounts and records Copilot attribution
+  ---
+  duration_ms: 8557.373175
+  type: 'test'
+  ...
+# (node:9133) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Copilot API: create/read/message/delete session lifecycle and privacy
+ok 537 - Copilot API: create/read/message/delete session lifecycle and privacy
+  ---
+  duration_ms: 52.857341
+  type: 'test'
+  ...
+# Subtest: Copilot API: SSE sends structured results then validated narrative and completion
+ok 538 - Copilot API: SSE sends structured results then validated narrative and completion
+  ---
+  duration_ms: 21.954629
+  type: 'test'
+  ...
+# Subtest: Copilot API: malformed, oversized and unknown routes return errors before any stream opens
+ok 539 - Copilot API: malformed, oversized and unknown routes return errors before any stream opens
+  ---
+  duration_ms: 28.175614
+  type: 'test'
+  ...
+# Subtest: Copilot API: real server routes use latest market pools and positions expose current state
+ok 540 - Copilot API: real server routes use latest market pools and positions expose current state
+  ---
+  duration_ms: 8917.270114
+  type: 'test'
+  ...
+# Subtest: Copilot browser SSE parser: split bytes preserve Chinese text; truncated streams are errors
+ok 541 - Copilot browser SSE parser: split bytes preserve Chinese text; truncated streams are errors
+  ---
+  duration_ms: 2.492004
+  type: 'test'
+  ...
+# Subtest: Copilot browser: a result from another mode generation is never rendered or accepted
+ok 542 - Copilot browser: a result from another mode generation is never rendered or accepted
+  ---
+  duration_ms: 0.439052
+  type: 'test'
+  ...
+# Subtest: Copilot: refine, commodity override, negation and reset preserve exactly the intended dimensions
+ok 543 - Copilot: refine, commodity override, negation and reset preserve exactly the intended dimensions
+  ---
+  duration_ms: 7.325618
+  type: 'test'
+  ...
+# Subtest: Copilot: refinement tightens limits; an explicit override can relax a single dimension
+ok 544 - Copilot: refinement tightens limits; an explicit override can relax a single dimension
+  ---
+  duration_ms: 0.572607
+  type: 'test'
+  ...
+# Subtest: Copilot intent: browse investments
+ok 545 - Copilot intent: browse investments
+  ---
+  duration_ms: 1.826113
+  type: 'test'
+  ...
+# Subtest: Copilot intent: 低风险铜
+ok 546 - Copilot intent: 低风险铜
+  ---
+  duration_ms: 0.149098
+  type: 'test'
+  ...
+# Subtest: Copilot intent: actually aluminium
+ok 547 - Copilot intent: actually aluminium
+  ---
+  duration_ms: 0.10314
+  type: 'test'
+  ...
+# Subtest: Copilot intent: compare copper and soybeans
+ok 548 - Copilot intent: compare copper and soybeans
+  ---
+  duration_ms: 0.123316
+  type: 'test'
+  ...
+# Subtest: Copilot intent: 为什么
+ok 549 - Copilot intent: 为什么
+  ---
+  duration_ms: 0.109489
+  type: 'test'
+  ...
+# Subtest: Copilot intent: show my portfolio
+ok 550 - Copilot intent: show my portfolio
+  ---
+  duration_ms: 0.089917
+  type: 'test'
+  ...
+# Subtest: Copilot intent: subscribe USD 1000
+ok 551 - Copilot intent: subscribe USD 1000
+  ---
+  duration_ms: 0.111747
+  type: 'test'
+  ...
+# Subtest: Copilot intent: buy a report
+ok 552 - Copilot intent: buy a report
+  ---
+  duration_ms: 0.127903
+  type: 'test'
+  ...
+# Subtest: Copilot intent: start over
+ok 553 - Copilot intent: start over
+  ---
+  duration_ms: 0.128334
+  type: 'test'
+  ...
+# Subtest: Copilot intent: write code
+ok 554 - Copilot intent: write code
+  ---
+  duration_ms: 0.074754
+  type: 'test'
+  ...
+# Subtest: Copilot intent: 收益至少100001bps
+ok 555 - Copilot intent: 收益至少100001bps
+  ---
+  duration_ms: 0.427857
+  type: 'test'
+  ...
+# Subtest: Copilot: Chinese and English commodities, ports, negative terms, units and payout speeds
+ok 556 - Copilot: Chinese and English commodities, ports, negative terms, units and payout speeds
+  ---
+  duration_ms: 0.573609
+  type: 'test'
+  ...
+# Subtest: Copilot: LLM prose interpretation is validated and deterministic numeric constraints win
+ok 557 - Copilot: LLM prose interpretation is validated and deterministic numeric constraints win
+  ---
+  duration_ms: 0.494989
+  type: 'test'
+  ...
+# Subtest: Copilot: malformed, low-confidence and failing models fall back; a model cannot infer an action or reset
+ok 558 - Copilot: malformed, low-confidence and failing models fall back; a model cannot infer an action or reset
+  ---
+  duration_ms: 0.642308
+  type: 'test'
+  ...
+# Subtest: Copilot: history is bounded, immutable, and contains structured deltas only
+ok 559 - Copilot: history is bounded, immutable, and contains structured deltas only
+  ---
+  duration_ms: 2.560175
+  type: 'test'
+  ...
+# Subtest: softer risk wording reweights the ranking without excluding assets, and a bare 投 sets the ticket
+ok 560 - softer risk wording reweights the ranking without excluding assets, and a bare 投 sets the ticket
+  ---
+  duration_ms: 0.2927
+  type: 'test'
+  ...
+# (node:9157) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: document upload reads actual bytes as base64 and rejects files beyond the intake limit
+ok 561 - document upload reads actual bytes as base64 and rejects files beyond the intake limit
+  ---
+  duration_ms: 0.715166
+  type: 'test'
+  ...
+# Subtest: Copilot surfaces share the server, contain no client ranking, and never inject dynamic HTML
+ok 562 - Copilot surfaces share the server, contain no client ranking, and never inject dynamic HTML
+  ---
+  duration_ms: 4.628195
+  type: 'test'
+  ...
+# Subtest: Copilot rerank: pause drops a rank and resume restores it without another message or LLM call
+ok 563 - Copilot rerank: pause drops a rank and resume restores it without another message or LLM call
+  ---
+  duration_ms: 11.314407
+  type: 'test'
+  ...
+# Subtest: Copilot rerank: hard filters, explicit pool scope, watchlists and removed recommendations remain consistent
+ok 564 - Copilot rerank: hard filters, explicit pool scope, watchlists and removed recommendations remain consistent
+  ---
+  duration_ms: 4.469633
+  type: 'test'
+  ...
+# Subtest: Copilot rerank: recorded proposals retain the actual price, completed actions use the changed price and duplicate notifications are idempotent
+ok 565 - Copilot rerank: recorded proposals retain the actual price, completed actions use the changed price and duplicate notifications are idempotent
+  ---
+  duration_ms: 1.394002
+  type: 'test'
+  ...
+# Subtest: Copilot rerank: deletion, expiry and mode invalidation close streams and cannot resurrect a session
+ok 566 - Copilot rerank: deletion, expiry and mode invalidation close streams and cannot resurrect a session
+  ---
+  duration_ms: 0.996076
+  type: 'test'
+  ...
+# Subtest: Copilot rerank: two subscribers retain the decision baseline when execution beats or follows the first notification
+ok 567 - Copilot rerank: two subscribers retain the decision baseline when execution beats or follows the first notification
+  ---
+  duration_ms: 4.05699
+  type: 'test'
+  ...
+# Subtest: Copilot rerank: messages and notifications serialize; deletion during a snapshot does not restore state
+ok 568 - Copilot rerank: messages and notifications serialize; deletion during a snapshot does not restore state
+  ---
+  duration_ms: 2.240205
+  type: 'test'
+  ...
+# Subtest: Copilot rerank: persisted snapshots resume after restart and store no private query vocabulary
+ok 569 - Copilot rerank: persisted snapshots resume after restart and store no private query vocabulary
+  ---
+  duration_ms: 12.064594
+  type: 'test'
+  ...
+# [agentbl] - 503 sse_capacity: Too many Copilot streams
+# Subtest: Copilot stream: real SSE push, cursor replay, capacity and session deletion have bounded lifecycles
+ok 570 - Copilot stream: real SSE push, cursor replay, capacity and session deletion have bounded lifecycles
+  ---
+  duration_ms: 40.257555
+  type: 'test'
+  ...
+# Subtest: Copilot retrieval: every hard constraint excludes the candidate and gives a specific reason
+ok 571 - Copilot retrieval: every hard constraint excludes the candidate and gives a specific reason
+  ---
+  duration_ms: 2.606851
+  type: 'test'
+  ...
+# Subtest: Copilot retrieval: missing tenor/insurance/risk, closed pools, compliance blocks and Agent holds fail closed
+ok 572 - Copilot retrieval: missing tenor/insurance/risk, closed pools, compliance blocks and Agent holds fail closed
+  ---
+  duration_ms: 0.48352
+  type: 'test'
+  ...
+# Subtest: Copilot retrieval: BM25 handles Chinese synonyms and MMR diversifies commodities and routes
+ok 573 - Copilot retrieval: BM25 handles Chinese synonyms and MMR diversifies commodities and routes
+  ---
+  duration_ms: 2.01846
+  type: 'test'
+  ...
+# Subtest: Copilot ranking: latest quote/state and data quality change scores with auditable breakdowns
+ok 574 - Copilot ranking: latest quote/state and data quality change scores with auditable breakdowns
+  ---
+  duration_ms: 0.642062
+  type: 'test'
+  ...
+# Subtest: Copilot narrative: numbers must be structured facts, never digits borrowed from an identifier
+ok 575 - Copilot narrative: numbers must be structured facts, never digits borrowed from an identifier
+  ---
+  duration_ms: 1.441939
+  type: 'test'
+  ...
+# Subtest: Copilot narrative: ranking ordinals and rounded real figures are allowed, invented ones are not
+ok 576 - Copilot narrative: ranking ordinals and rounded real figures are allowed, invented ones are not
+  ---
+  duration_ms: 0.387529
+  type: 'test'
+  ...
+# Subtest: Copilot service: multiple turns preserve constraints and return current evidence and exclusions
+ok 577 - Copilot service: multiple turns preserve constraints and return current evidence and exclusions
+  ---
+  duration_ms: 12.686819
+  type: 'test'
+  ...
+# Subtest: Copilot service: a decision hold and a changed quote affect the next query, without stale catalogue hints
+ok 578 - Copilot service: a decision hold and a changed quote affect the next query, without stale catalogue hints
+  ---
+  duration_ms: 3.681474
+  type: 'test'
+  ...
+# Subtest: Copilot service: compare/explain/action turns do not silently modify persisted filters or execute
+ok 579 - Copilot service: compare/explain/action turns do not silently modify persisted filters or execute
+  ---
+  duration_ms: 3.945415
+  type: 'test'
+  ...
+# Subtest: Copilot service: sessions persist only bounded structured context, expire and respect capacity
+ok 580 - Copilot service: sessions persist only bounded structured context, expire and respect capacity
+  ---
+  duration_ms: 9.391332
+  type: 'test'
+  ...
+# Subtest: Copilot service: runtime invalidation persists, so restarting generation numbering cannot revive an old session
+ok 581 - Copilot service: runtime invalidation persists, so restarting generation numbering cannot revive an old session
+  ---
+  duration_ms: 1.936064
+  type: 'test'
+  ...
+# Subtest: Copilot service: concurrent messages serialize and cannot lose a preference update
+ok 582 - Copilot service: concurrent messages serialize and cannot lose a preference update
+  ---
+  duration_ms: 1.272364
+  type: 'test'
+  ...
+# Subtest: Copilot service: deletion or runtime change during a model call cannot resurrect stale context
+ok 583 - Copilot service: deletion or runtime change during a model call cannot resurrect stale context
+  ---
+  duration_ms: 1.302835
+  type: 'test'
+  ...
+# Subtest: Copilot service: structured recommendations arrive before slow narrative; invalid queries never call a model
+ok 584 - Copilot service: structured recommendations arrive before slow narrative; invalid queries never call a model
+  ---
+  duration_ms: 1.61238
+  type: 'test'
+  ...
+# Subtest: Copilot service: the LLM disable switch, output cap and bounded concurrency apply to the new endpoints
+ok 585 - Copilot service: the LLM disable switch, output cap and bounded concurrency apply to the new endpoints
+  ---
+  duration_ms: 1.715651
+  type: 'test'
+  ...
+# Subtest: Copilot service: unsupported numeric intervals ask for clarification without weakening saved limits
+ok 586 - Copilot service: unsupported numeric intervals ask for clarification without weakening saved limits
+  ---
+  duration_ms: 0.906376
+  type: 'test'
+  ...
+# Subtest: Copilot service: exceeding a cumulative filter limit is rejected without dropping the new hard constraint silently
+ok 587 - Copilot service: exceeding a cumulative filter limit is rejected without dropping the new hard constraint silently
+  ---
+  duration_ms: 0.353502
+  type: 'test'
+  ...
+# (node:9204) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Copilot wallet: a matching contract receipt is required for a Live subscription result
+ok 588 - Copilot wallet: a matching contract receipt is required for a Live subscription result
+  ---
+  duration_ms: 1.148966
+  type: 'test'
+  ...
+# Subtest: Copilot wallet: deployment, account, network, price, capacity, eligibility and stopped pools refuse before signing
+ok 589 - Copilot wallet: deployment, account, network, price, capacity, eligibility and stopped pools refuse before signing
+  ---
+  duration_ms: 1.176998
+  type: 'test'
+  ...
+# Subtest: Copilot wallet: a wallet or mode change after static simulation prevents broadcast
+ok 590 - Copilot wallet: a wallet or mode change after static simulation prevents broadcast
+  ---
+  duration_ms: 0.380321
+  type: 'test'
+  ...
+# Subtest: Copilot wallet: wrong events, failed receipts and price changes during mining remain unconfirmed without automatic retry
+ok 591 - Copilot wallet: wrong events, failed receipts and price changes during mining remain unconfirmed without automatic retry
+  ---
+  duration_ms: 0.635281
+  type: 'test'
+  ...
+# Subtest: BE-13: Dashboard API Tests
+    # Subtest: GET /api/investors/portfolio returns investments and summary
+    not ok 1 - GET /api/investors/portfolio returns investments and summary
+      ---
+      duration_ms: 2.499466
+      type: 'test'
+      location: '/mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/dashboardApi.test.js:57:13'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 4999.0344
+        - 5000
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 5000
+      actual: 4999.0344
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/dashboardApi.test.js:63:14)
+        process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        async Test.run (node:internal/test_runner/test:1409:7)
+        async TestContext.<anonymous> (file:///mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/dashboardApi.test.js:57:5)
+        async Test.run (node:internal/test_runner/test:1409:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+      ...
+    # Subtest: GET /api/exporters/dashboard returns ebl pools
+    ok 2 - GET /api/exporters/dashboard returns ebl pools
+      ---
+      duration_ms: 1.949897
+      type: 'test'
+      ...
+    1..2
+not ok 592 - BE-13: Dashboard API Tests
+  ---
+  duration_ms: 573.477828
+  type: 'test'
+  location: '/mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/dashboardApi.test.js:37:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AI-16: decision_id and evidence hashes are reproducible under key reordering
+ok 593 - AI-16: decision_id and evidence hashes are reproducible under key reordering
+  ---
+  duration_ms: 1.380977
+  type: 'test'
+  ...
+# Subtest: AI-16: decisions persist across logger restarts and remain queryable by idempotency key
+ok 594 - AI-16: decisions persist across logger restarts and remain queryable by idempotency key
+  ---
+  duration_ms: 8.700124
+  type: 'test'
+  ...
+# Subtest: AI-16: transaction backfill is persisted without changing the deterministic decision_id
+ok 595 - AI-16: transaction backfill is persisted without changing the deterministic decision_id
+  ---
+  duration_ms: 3.710527
+  type: 'test'
+  ...
+# Subtest: AI-16: repeated record calls upsert one audit record rather than duplicating it
+ok 596 - AI-16: repeated record calls upsert one audit record rather than duplicating it
+  ---
+  duration_ms: 0.345334
+  type: 'test'
+  ...
+# Subtest: the README lists exactly the deployed contract addresses from chain-config.json
+ok 597 - the README lists exactly the deployed contract addresses from chain-config.json
+  ---
+  duration_ms: 3.69742
+  type: 'test'
+  ...
+# Subtest: every `npm run <script>` in the README and deployment guide exists
+ok 598 - every `npm run <script>` in the README and deployment guide exists
+  ---
+  duration_ms: 11.415928
+  type: 'test'
+  ...
+# Subtest: the README mentions the commands the release preflight expects
+ok 599 - the README mentions the commands the release preflight expects
+  ---
+  duration_ms: 3.937898
+  type: 'test'
+  ...
+# Subtest: .env.example documents every variable the server reads and never ships a real key
+ok 600 - .env.example documents every variable the server reads and never ships a real key
+  ---
+  duration_ms: 3.936531
+  type: 'test'
+  ...
+# Subtest: every AGENT_* variable the runtime reads is documented in .env.example
+ok 601 - every AGENT_* variable the runtime reads is documented in .env.example
+  ---
+  duration_ms: 10.234011
+  type: 'test'
+  ...
+# Subtest: AI-8: the clean copper fixture passes all consistency checks
+ok 602 - AI-8: the clean copper fixture passes all consistency checks
+  ---
+  duration_ms: 0.745981
+  type: 'test'
+  ...
+# Subtest: AI-8: a quantity mismatch is flagged critical with a penalty
+ok 603 - AI-8: a quantity mismatch is flagged critical with a penalty
+  ---
+  duration_ms: 0.204991
+  type: 'test'
+  ...
+# Subtest: AI-8: an insurance coverage gap and an expired policy are detected
+ok 604 - AI-8: an insurance coverage gap and an expired policy are detected
+  ---
+  duration_ms: 0.161422
+  type: 'test'
+  ...
+# Subtest: AI-8: incoterms and over-invoicing mismatches raise warnings
+ok 605 - AI-8: incoterms and over-invoicing mismatches raise warnings
+  ---
+  duration_ms: 0.147957
+  type: 'test'
+  ...
+# Subtest: AI-8: degrades gracefully when only an eBL is present (legacy case)
+ok 606 - AI-8: degrades gracefully when only an eBL is present (legacy case)
+  ---
+  duration_ms: 0.098125
+  type: 'test'
+  ...
+# Subtest: PDF: real two-page text PDF preserves values and page-local line provenance
+ok 607 - PDF: real two-page text PDF preserves values and page-local line provenance
+  ---
+  duration_ms: 162.613931
+  type: 'test'
+  ...
+# Subtest: PDF: positioned table cells and plain labels parse without Markdown syntax
+ok 608 - PDF: positioned table cells and plain labels parse without Markdown syntax
+  ---
+  duration_ms: 324.721142
+  type: 'test'
+  ...
+# Subtest: PDF: scans, broken PDFs, page limits, text limits and a hard worker timeout are distinct
+ok 609 - PDF: scans, broken PDFs, page limits, text limits and a hard worker timeout are distinct
+  ---
+  duration_ms: 536.197759
+  type: 'test'
+  ...
+# Subtest: PDF: worker core releases resources, and table geometry retains cells in reading order
+ok 610 - PDF: worker core releases resources, and table geometry retains cells in reading order
+  ---
+  duration_ms: 94.12175
+  type: 'test'
+  ...
+# Subtest: PDF: a mixed PDF with an unreadable page is held even when another page has complete fields
+ok 611 - PDF: a mixed PDF with an unreadable page is held even when another page has complete fields
+  ---
+  duration_ms: 868.345238
+  type: 'test'
+  ...
+# Subtest: PDF: the stored binary bundle actually opens once, and its bytes and sources survive reload
+ok 612 - PDF: the stored binary bundle actually opens once, and its bytes and sources survive reload
+  ---
+  duration_ms: 389.900835
+  type: 'test'
+  ...
+# Subtest: vision: defaults are offline, and enabling vision without a provider still requires OCR
+ok 613 - vision: defaults are offline, and enabling vision without a provider still requires OCR
+  ---
+  duration_ms: 12.745106
+  type: 'test'
+  ...
+# Subtest: vision: the actual runtime sends a tool-free image request with strict schema and caps confidence
+ok 614 - vision: the actual runtime sends a tool-free image request with strict schema and caps confidence
+  ---
+  duration_ms: 18.893633
+  type: 'test'
+  ...
+# Subtest: vision: malformed fields, attempted tools, injection and unavailable providers never open
+ok 615 - vision: malformed fields, attempted tools, injection and unavailable providers never open
+  ---
+  duration_ms: 30.536719
+  type: 'test'
+  ...
+# Subtest: model transport: the shared compatible client preserves schema and never sends tools
+ok 616 - model transport: the shared compatible client preserves schema and never sends tools
+  ---
+  duration_ms: 28.784853
+  type: 'test'
+  ...
+# Subtest: text model: typed, grounded completion retains deterministic values and records conflicts
+ok 617 - text model: typed, grounded completion retains deterministic values and records conflicts
+  ---
+  duration_ms: 1.231301
+  type: 'test'
+  ...
+# Subtest: text model: only incomplete text calls it; prompts delimit and sanitize document data
+ok 618 - text model: only incomplete text calls it; prompts delimit and sanitize document data
+  ---
+  duration_ms: 34.659683
+  type: 'test'
+  ...
+# Subtest: injection: screen all later documents before any model sees the bundle
+ok 619 - injection: screen all later documents before any model sees the bundle
+  ---
+  duration_ms: 13.789349
+  type: 'test'
+  ...
+# Subtest: injection: Chinese, zero-width, homoglyphs, wallet fields and payTo are flagged
+ok 620 - injection: Chinese, zero-width, homoglyphs, wallet fields and payTo are flagged
+  ---
+  duration_ms: 0.431847
+  type: 'test'
+  ...
+# Subtest: warehouse: bilingual receipt and CNY invoice retain original units and detect mismatches
+ok 621 - warehouse: bilingual receipt and CNY invoice retain original units and detect mismatches
+  ---
+  duration_ms: 6.900207
+  type: 'test'
+  ...
+# Subtest: warehouse: CNY bundles expose fields and consistency but never infer USD financing
+ok 622 - warehouse: CNY bundles expose fields and consistency but never infer USD financing
+  ---
+  duration_ms: 87.809818
+  type: 'test'
+  ...
+# Subtest: model schema rejects duplicate fields, unknown properties and invalid calendar dates
+ok 623 - model schema rejects duplicate fields, unknown properties and invalid calendar dates
+  ---
+  duration_ms: 0.876705
+  type: 'test'
+  ...
+# Subtest: written calendar dates keep the same day in Singapore, UTC and US timezones
+ok 624 - written calendar dates keep the same day in Singapore, UTC and US timezones
+  ---
+  duration_ms: 3560.402364
+  type: 'test'
+  ...
+# Subtest: AI-17: parses the demo eBL with field-level provenance and confidence
+ok 625 - AI-17: parses the demo eBL with field-level provenance and confidence
+  ---
+  duration_ms: 13.737702
+  type: 'test'
+  ...
+# Subtest: AI-17: parses invoice totals, unit price, parties and shipment references
+ok 626 - AI-17: parses invoice totals, unit price, parties and shipment references
+  ---
+  duration_ms: 5.011357
+  type: 'test'
+  ...
+# Subtest: AI-17: merges a document bundle over a structured template without losing pricing fields
+ok 627 - AI-17: merges a document bundle over a structured template without losing pricing fields
+  ---
+  duration_ms: 8.011309
+  type: 'test'
+  ...
+# Subtest: AI-17: PDF/image extraction is injectable and AI failure falls back deterministically
+ok 628 - AI-17: PDF/image extraction is injectable and AI failure falls back deterministically
+  ---
+  duration_ms: 6.73453
+  type: 'test'
+  ...
+# Subtest: WP2.2: an invalid binary PDF is distinguished from a scan needing OCR
+ok 629 - WP2.2: an invalid binary PDF is distinguished from a scan needing OCR
+  ---
+  duration_ms: 0.507892
+  type: 'test'
+  ...
+# Subtest: WP2.2: a crude cargo quoted in barrels parses completely, using the tonnes the document states
+ok 630 - WP2.2: a crude cargo quoted in barrels parses completely, using the tonnes the document states
+  ---
+  duration_ms: 14.333873
+  type: 'test'
+  ...
+# Subtest: WP2.2: a barrel quantity with no stated tonnes is left unfilled rather than guessed
+ok 631 - WP2.2: a barrel quantity with no stated tonnes is left unfilled rather than guessed
+  ---
+  duration_ms: 3.529919
+  type: 'test'
+  ...
+# Interrupted while running: tests/eblIngestion.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/eblIngestion.test.js:1:1
+# Interrupted while running: tests/env.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/env.test.js:1:1
+# Interrupted while running: tests/httpHardening.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHardening.test.js:1:1
+# Interrupted while running: tests/httpHelpers.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHelpers.test.js:1:1
+# Interrupted while running: tests/i18nCoverage.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/i18nCoverage.test.js:1:1
+# Interrupted while running: tests/ingest.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/ingest.test.js:1:1
+# Interrupted while running: tests/injectiveMcpAdapter.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/injectiveMcpAdapter.test.js:1:1
+# Interrupted while running: tests/injectivePrecompiles.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/injectivePrecompiles.test.js:1:1
+# Interrupted while running: tests/investmentAdvisor.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/investmentAdvisor.test.js:1:1
+# Interrupted while running: tests/jsonStore.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/jsonStore.test.js:1:1
+# Interrupted while running: tests/judgeAssistant.test.js at /mnt/e/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/judgeAssistant.test.js:1:1

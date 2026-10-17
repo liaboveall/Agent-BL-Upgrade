@@ -1,0 +1,34 @@
+
+> agentbl-agent-starter@0.1.0 build
+> vite build --config web/vite.config.js
+
+[36mvite v8.3.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 83 modules transformed.
+[31m✗[39m Build failed in 116ms
+[31merror during build:
+[31mBuild failed with 1 error:
+
+[plugin vite:css-post]
+Error: [lightningcss minify] Cannot find module '../lightningcss.win32-x64-msvc.node'
+Require stack:
+- E:\NUS\BlockChain\Project\Agent-BL-Upgrade\node_modules\lightningcss\node\index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1569:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1123:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1147:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1174:12)
+    at Module._load (node:internal/modules/cjs/loader:1346:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.require (node:internal/modules/cjs/loader:1679:12)
+    at require (node:internal/modules/helpers:196:16)
+    at Object.<anonymous> (E:\NUS\BlockChain\Project\Agent-BL-Upgrade\node_modules\lightningcss\node\index.js:20:12)
+    at Module._compile (node:internal/modules/cjs/loader:1934:14)[31m
+    at aggregateBindingErrorsIntoJsError (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/node_modules/rolldown/dist/shared/error-CBG33oNV.mjs:49:18)
+    at unwrapBindingResult (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/node_modules/rolldown/dist/shared/error-CBG33oNV.mjs:19:128)
+    at #build (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/node_modules/rolldown/dist/shared/rolldown-BYX6bV3R.mjs:146:34)
+    at async buildEnvironment (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/node_modules/vite/dist/node/chunks/node.js:34490:66)
+    at async Object.build (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/node_modules/vite/dist/node/chunks/node.js:34911:19)
+    at async Object.buildApp (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/node_modules/vite/dist/node/chunks/node.js:34908:153)
+    at async CAC.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/node_modules/vite/dist/node/cli.js:780:3) {
+  errors: [Getter/Setter]
+}[39m

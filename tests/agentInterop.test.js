@@ -181,6 +181,8 @@ test('MCP reads, policy and recent resources reflect real decisions without repl
 
 test('stateless MCP recommendations preserve hard filters, never create sessions or execute actions', async (t) => {
   const { service, store } = await phase5Runtime(t);
+  // The archived pool is not investable; this fixture explicitly represents a current test pool.
+  for (const pool of store.pools.values()) pool.caseData.historical = false;
   const copilot = new CopilotService({ getPools: async () => [...store.pools.values()], getDecisions: async () => [], env: {}, llmConfigured: () => false, now: () => at });
   const context = { getService: () => service, recommend: (input) => copilot.query(input) };
   const before = structuredClone([...store.pools]);

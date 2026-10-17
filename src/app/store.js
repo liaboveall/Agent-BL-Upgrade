@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { STATE_BY_PRICING_ACTION } from '../core/pricingSchema.js';
 import { HttpError } from './http.js';
+import { subscriptionAvailability } from '../core/subscription.js';
 
 // In-memory data store for the AgentBL backend.
 // Satisfies hackathon requirements for mock persistence without an external DB.
@@ -28,7 +29,11 @@ export function createPool(poolId, caseData, quote, options = {}) {
     quote,
     status,
     subscribedUsd: 0,
-    targetUsd: quote.requested_cash_usd,
+    subscribedShares: 0,
+    tokenSupply: quote.recommended_token_supply,
+    redemptionValueUsd: quote.target_redemption_value_usd ?? 1,
+    quoteVersion: 1,
+    targetUsd: quote.expected_cash_to_exporter_usd ?? quote.requested_cash_usd,
     createdAt,
     quoteUpdatedAt: options.quoteUpdatedAt ?? createdAt,
     complianceStatus: options.complianceStatus ?? 'CLEARED',
@@ -51,16 +56,27 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
   if (pool.caseData?.historical === true) {
     throw new HttpError(409, 'pool_historical', 'This is a historical demo pool kept for its testnet record; it is not open for subscription');
   }
-  if (!['Open', 'Repriced', 'Subscribed'].includes(pool.status)) {
+  if (!subscriptionAvailability(pool).can_subscribe) {
     throw new HttpError(409, 'pool_not_open', `Cannot subscribe to pool in status: ${pool.status}`);
   }
-  if (pool.subscribedUsd + amountUsd > pool.targetUsd) {
+  const budgetAtomic = Math.round(amountUsd * 1_000_000);
+  const priceAtomic = Math.round(pool.quote.final_issue_price_usd * 1_000_000);
+  if (!Number.isSafeInteger(budgetAtomic) || !Number.isSafeInteger(priceAtomic) || priceAtomic <= 0) {
+    throw new HttpError(400, 'invalid_amount', 'Amount and price must fit six-decimal safe integer units');
+  }
+  const tokenCount = Math.floor(budgetAtomic / priceAtomic);
+  if (tokenCount < 1) throw new HttpError(400, 'amount_too_small', 'The budget must cover at least one whole share');
+  const remaining = subscriptionAvailability(pool).remaining_usd;
+  if (amountUsd > remaining + 0.000001) {
     throw new HttpError(409, 'subscription_exceeds_target', 'Subscription exceeds target amount');
   }
 
-  pool.subscribedUsd += amountUsd;
+  const paidAtomic = tokenCount * priceAtomic;
+  const paidUsd = paidAtomic / 1_000_000;
+  pool.subscribedUsd = Math.round((pool.subscribedUsd + paidUsd) * 1e6) / 1e6;
+  pool.subscribedShares = (pool.subscribedShares ?? 0) + tokenCount;
 
-  if (pool.subscribedUsd >= pool.targetUsd) {
+  if (pool.subscribedShares >= pool.tokenSupply) {
     pool.status = 'Funded';
   }
 
@@ -69,7 +85,6 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
   const reference = `demo:sub:${crypto.createHash('sha256')
     .update([walletAddress, poolId, amountUsd, storeState.investments.length].join('|'))
     .digest('hex').slice(0, 16)}`;
-  const tokenCount = amountUsd / (pool.quote.final_issue_price_usd || 1);
   const normalizedWalletAddress = String(walletAddress ?? '').toLowerCase();
 
   const investment = {
@@ -79,7 +94,13 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
     txHash: null,
     walletAddress: normalizedWalletAddress,
     poolId,
-    amountUsd,
+    amountUsd: paidUsd,
+    requestedBudgetUsd: amountUsd,
+    unspentUsd: (budgetAtomic - paidAtomic) / 1_000_000,
+    paidAmountAtomic: String(paidAtomic),
+    quoteHash: pool.quote.quote_hash,
+    quoteVersion: pool.quoteVersion,
+    redemptionValueUsd: pool.redemptionValueUsd,
     tokenCount,
     price: pool.quote.final_issue_price_usd,
     yieldBps: pool.quote.implied_gross_yield_bps,

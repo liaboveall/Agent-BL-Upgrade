@@ -1,0 +1,95 @@
+
+AgentBL preflight — fixed 71-check release gate
+
+[Environment]
+  ✓ [1/71] Node.js >= 20 — v26.8.1
+  ✓ [2/71] package-lock.json present
+  ✓ [3/71] @injectivelabs/x402 is pinned
+  ✓ [4/71] Demo mode is explicit and labelled — demo
+  ✓ [5/71] x402 config passes fail-fast validation — eip155:1439
+  ✓ [6/71] Four paid report products configured
+  – [7/71] Live mode prerequisites configured — not required or exercised in Demo
+  ✓ [8/71] Deterministic AI fallback remains available — executed locally with no provider
+
+[Files and schemas]
+  ✓ [9/71] HTTP application server — src/app/server.js
+  ✓ [10/71] Four paid-report builders — src/x402/endpoints.js
+  ✓ [11/71] Wallet/CLI x402 client — src/x402/client.js
+  ✓ [12/71] Settlement state machine — src/x402/settlement.js
+  ✓ [13/71] Unified Demo/Live controller — src/demo/mode.js
+  ✓ [14/71] PaidReportEnvelope schema + hash recompute
+  ✓ [15/71] Chain deployment config — public/chain-config.json
+  ✓ [16/71] Dashboard HTML (Vite entry) — web/index.html
+  ✓ [17/71] Dashboard CSS — web/src/styles/index.css
+  ✓ [18/71] x402 integration documentation — docs/x402-integration.md
+
+[Executable suites]
+(node:27888) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ✓ [19/71] Repository integrity check — check passed: files, scripts, seed data, chain registry, schemas, knowledge base, MCP manifest and scenario harness are valid.
+  ✓ [20/71] Full Node unit/integration suite — ℹ duration_ms 28644.8574
+  ✓ [21/71] Solidity contract suite — 92 passing (92 mocha)
+  ✓ [22/71] Main API smoke flow — smoke passed: health, demo data, risk, workflow, scenarios, pricing quote, offering, merged workflow, oracle update, MCP, RAG and Skill harness work.
+  ✓ [23/71] Risk/pricing scenario regression — 6 legacy + 11 pricing scenarios passed.
+  ✓ [24/71] One-minute offline demo — ╚══════════════════════════════════════════════════════════╝
+  ✓ [25/71] Critical JavaScript modules imported — server/client/endpoints/preflight
+
+[MCP tools]
+  ✓ [26/71] MCP manifest exposes exactly 15 tools + 5 resources
+  ✓ [27/71] MCP get_trade_case
+  ✓ [28/71] MCP generate_pricing_quote
+  ✓ [29/71] MCP search_knowledge_base
+  ✓ [30/71] MCP simulate_offering
+  ✓ [31/71] MCP push_pricing_to_oracle
+
+[HTTP and x402]
+  ✓ [32/71] Health endpoint
+  ✓ [33/71] Runtime mode endpoint
+  ✓ [34/71] One-click demo reset
+  ✓ [35/71] x402 catalog returns four reports
+  ✓ [36/71] MCP runtime adapter reads status and defaults events to a side-effect-free dry-run
+  ✓ [37/71] A2A 1.0 Agent Card and compatibility alias advertise only the implemented interface
+  ✓ [38/71] Bazaar declarations cover the four services with mode-correct payment requirements
+  ✓ [39/71] HTTP and A2A delegation return the same canonical quote without payment or execution
+  ✓ [40/71] premium-risk enforces the mode-safe unpaid boundary — HTTP 402
+  ✓ [41/71] premium-valuation enforces the mode-safe unpaid boundary — HTTP 402
+  ✓ [42/71] fraud-review enforces the mode-safe unpaid boundary — HTTP 402
+  ✓ [43/71] mystery-voyage enforces the mode-safe unpaid boundary — HTTP 402
+  ✓ [44/71] premium-risk signed demo unlock
+  ✓ [45/71] premium-valuation signed demo unlock
+  ✓ [46/71] fraud-review signed demo unlock
+  ✓ [47/71] mystery-voyage signed demo unlock
+  ✓ [48/71] Paid reports contain distinct business outputs
+  ✓ [49/71] 402→sign→settle→unlock smoke flow
+  ✓ [50/71] Standalone x402 smoke command — ✅ x402 smoke passed: 402 challenge → payment → settlement → intel unlocked → config verified.
+
+[Agent release gates]
+  ✓ [51/71] Agent runtime starts and stops without pending work
+  ✓ [52/71] Agent reliability fault matrix — ℹ duration_ms 631.9494
+  ✓ [53/71] Three Demo Agent stories including approved settlement — Demo Agent: 3 complete scenarios PASS; no duplicate execution; approvals enforced; runtime stopped
+  ✓ [54/71] Measured deterministic Agent quality thresholds — Source SHA256: ae3eee92867cbdbd2c97bbd01f95ae71dd9a5dbef17f5fae7bd8043da9354597
+  ✓ [55/71] No fabricated transactions, activity or capabilities — ℹ duration_ms 600.5913
+  ✓ [56/71] Decision anchor proofs, terminal approvals, durable sequences and restart recovery — ℹ duration_ms 1396.1483
+  ✓ [57/71] Anchor chain reconciliation, shared signer queue and deployment dry-run safety — ℹ duration_ms 199.181
+
+[UI acceptance]
+  ✓ [58/71] Persistent DEMO MODE banner
+  ✓ [59/71] Explicit Live toggle and demo reset
+  ✓ [60/71] Paid report market tab and pipeline
+  ✓ [61/71] priceFlash/riskPulse/paymentFlow hooks
+  ✓ [62/71] Reduced-motion safety rule
+  ✓ [63/71] Generated redteam corpus detects all seeded mutations — }
+  ✓ [64/71] Evidence freshness and read-only decision replay — ℹ duration_ms 1424.5074
+  ✓ [65/71] Audit privacy, encrypted recovery and retention — ℹ duration_ms 603.3333
+  ✓ [66/71] Live smoke is read-only by default and fails closed — ℹ duration_ms 478.1869
+
+[Live readiness]
+  – [67/71] Facilitator /supported is reachable — Demo Mode
+  – [68/71] Injective RPC reports the pinned chain — Demo Mode
+  – [69/71] Live wallet has readable INJ gas balance — Demo Mode
+  – [70/71] Wave B live payment, five-contract protocol, pricing, and official MCP evidence are valid — Demo Mode; historical evidence is not a current Live check
+  ✓ [71/71] README documents x402, Wave B, stdio MCP, and mode boundary
+
+============================================================
+Preflight: 66 PASS / 0 WARN / 5 SKIP / 0 FAIL (71 total)
+============================================================

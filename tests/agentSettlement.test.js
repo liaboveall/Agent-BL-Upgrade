@@ -12,14 +12,14 @@ import { buildSettlementPlan, repaymentAtomic, verifyUsdcTransfer, validateSettl
 import { settlementChain, oil, chainConfig, RECIPIENT, PAYER, paymentHash, blockHash } from './helpers/settlement.js';
 
 const verify = (chain, options = {}) => verifyUsdcTransfer({ provider: chain.context.provider, chainConfig,
-  recipient: RECIPIENT, txHash: paymentHash, amount: '1.234567', confirmations: 2, ...options });
+  recipient: RECIPIENT, expectedPayer: PAYER, txHash: paymentHash, amount: '1.234567', confirmations: 2, ...options });
 
 async function runtime(t, { chain = settlementChain(), dir, store, env = {}, clock = () => new Date() } = {}) {
   store ??= { ...storeState, pools: new Map(), agentActivities: [] };
   if (!store.pools.has(oil.case_id)) createPool(oil.case_id, oil, quoteFromCase(oil), { store });
   const mode = { mode: 'live', generation: 1 };
   const service = createAgentService({ dir, env: { AGENT_VALUATION_LLM: 'false', AGENT_COOLDOWN_SEC: '0',
-    AGENT_MONITOR_INTERVAL_SEC: '3600', AGENT_SETTLEMENT_RECIPIENT: RECIPIENT, ...env }, store, chainConfig,
+    AGENT_MONITOR_INTERVAL_SEC: '3600', AGENT_SETTLEMENT_RECIPIENT: RECIPIENT, AGENT_SETTLEMENT_PAYER: PAYER, ...env }, store, chainConfig,
     getMode: () => mode.mode, getGeneration: () => mode.generation, getChainContext: async () => chain.context, monitors: false, now: clock });
   await service.init();
   await service.registry.linkChain({ case_id: oil.case_id, chain_pool_id: 11, ebl_id: 7 }, createChainReader(chain.context));
@@ -60,6 +60,7 @@ for (const [name, mutate, code] of [
   ['revert', (chain) => chain.payment({ status: 0 }), 'payment_reverted'],
   ['wrong asset', (chain) => chain.payment({ asset: PAYER }), 'payment_transfer_mismatch'],
   ['wrong payee', (chain) => chain.payment({ to: PAYER }), 'payment_transfer_mismatch'],
+  ['unrelated payer', (chain) => chain.payment({ from: '0x4444444444444444444444444444444444444444' }), 'payment_payer_mismatch'],
   ['wrong amount', (chain) => chain.payment({ amount: 1n }), 'payment_transfer_mismatch'],
   ['mint', (chain) => chain.payment({ from: ZeroAddress }), 'invalid_payment_sender'],
   ['self-transfer', (chain) => chain.payment({ from: RECIPIENT }), 'invalid_payment_sender'],
@@ -84,6 +85,8 @@ test('Live payment intake rejects missing recipient, unsupported/manual sources,
   await assert.rejects(submit(service, paymentEvent()), { code: 'protected_pool' }); service.registry.protectedChainPools.delete(11);
   service.config.settlementRecipient = '';
   await assert.rejects(submit(service, paymentEvent()), { code: 'settlement_recipient_required' }); service.config.settlementRecipient = RECIPIENT;
+  service.config.settlementPayer = '';
+  await assert.rejects(submit(service, paymentEvent()), { code: 'settlement_payer_required' }); service.config.settlementPayer = PAYER;
   const accepted = await submit(service, paymentEvent({ recipient: PAYER, repayment_amount_atomic: '1', payment_verification: { source: 'confirmed-usdc-transfer' } }));
   assert.ok(service.bus.get(accepted.idempotency_key));
   const queued = service.settlementEvidence.list()[0].event;
@@ -160,7 +163,7 @@ test('Changed, paused, unsubscribed or stopped chain state invalidates a settlem
     Object.assign(chain.pools.get(11), { state: 5, subscribed: 1n }); chain.state.stopped = false;
   }
   chain.state.blocks.set(100, blockHash(99));
-  await assert.rejects(validateSettlementStep({ plan, context: chain.context, chainConfig, recipient: RECIPIENT }), { code: 'payment_reorged' });
+  await assert.rejects(validateSettlementStep({ plan, context: chain.context, chainConfig, recipient: RECIPIENT, expectedPayer: PAYER }), { code: 'payment_reorged' });
   assert.equal(chain.state.sent.length, 0); assert.equal(service.approvals.get(approval.approval_id).status, 'PENDING');
 });
 
@@ -192,7 +195,7 @@ test('Verified owner checkpoint survives a completion write failure and tick com
 test('Live settlement refuses missing verified payment/atomic amount and legacy raw-unit plans', async () => {
   const chain = settlementChain(); chain.payment();
   await assert.rejects(buildSettlementPlan({ action: 'RECORD_PAYMENT', chain_pool_id: 11,
-    params: { payment_proof: paymentHash, repayment_amount: '1.234567' }, chainConfig, context: chain.context, recipient: RECIPIENT }), { code: 'payment_verification_required' });
+    params: { payment_proof: paymentHash, repayment_amount: '1.234567' }, chainConfig, context: chain.context, recipient: RECIPIENT, expectedPayer: PAYER }), { code: 'payment_verification_required' });
 });
 
 test('Optional executor route uses the same exact receipt checks and approval instead of bypassing settlement verification', async (t) => {

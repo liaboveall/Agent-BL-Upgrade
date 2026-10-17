@@ -42,7 +42,7 @@
 .activity-log { display: grid; gap: var(--s-2); }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
 .terminal { max-height: 260px; overflow: auto; padding: var(--s-3); border-radius: var(--r); background: #0f172a; color: #cbd5e1; font: 12px/1.6 var(--mono); }
-.terminal .muted { color: #64748b; }
+.terminal .muted { color: #a5b4c8; }
 .terminal .tone-text-ok { color: #6ee7b7; }
 .terminal .tone-text-warn { color: #fcd34d; }
 .terminal .tone-text-accent, .terminal .tone-text-info { color: #93b4ff; }

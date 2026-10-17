@@ -106,9 +106,9 @@
       "kind": "event",
       "after_hours": 24,
       "type": "PAYMENT_RECEIVED",
+      "repayment_basis": "subscribed_target",
       "data": {
         "payment_proof": "demo:payment:copper-typhoon",
-        "repayment_amount": 1380000,
         "proof_source": "demo-scenario"
       },
       "label": {

@@ -110,7 +110,9 @@ describe('RWAOfferingPool autonomous state machine (WEB3-15/16)', () => {
       /payment already recorded/u
     );
     await (await ctx.pool.connect(ctx.agent).recordCargoArrival(poolId, ethers.id('arrival'))).wait();
-    await (await ctx.pool.connect(ctx.agent).settle(poolId, 100n)).wait();
+    await expectRevert(ctx.pool.connect(ctx.agent).settle(poolId, 100n), /outstanding debt/u);
+    await (await ctx.pool.correctImporterPayment(poolId, ethers.id('full-payment'), 1_000_000n)).wait();
+    await (await ctx.pool.connect(ctx.agent).settle(poolId, 1_000_000n)).wait();
     expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Repaid);
     await expectRevert(ctx.pool.connect(ctx.agent).settle(poolId, 100n), /bad settlement state/u);
   });
@@ -164,7 +166,7 @@ describe('RWAOfferingPool autonomous state machine (WEB3-15/16)', () => {
     const poolId = await createOffering(ctx);
     const args = [poolId, 750_000n, 2, ACTION.REPRICE, ethers.id('replay-e'), ethers.id('replay-q')];
     await (await ctx.oracle.updatePricing(...args)).wait();
-    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Repriced);
+    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Open);
     const decisionId = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(
       ['uint256', 'uint256', 'uint8', 'bytes32', 'bytes32'], [args[0], args[1], args[3], args[4], args[5]]
     ));

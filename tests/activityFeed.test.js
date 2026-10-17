@@ -65,7 +65,7 @@ test('agent activity feed', async (t) => {
 
     const [entry] = await activities(app.base, `?pool_id=${encodeURIComponent(pool.poolId)}`);
     assert.equal(entry.action, 'SUBSCRIPTION');
-    assert.equal(entry.details.amountUsd, 500);
+    assert.equal(entry.details.amountUsd, res.data.investment.amountUsd);
     assert.equal(entry.details.wallet, '0x1234…5678');
     assert.ok(!JSON.stringify(entry).includes(wallet), 'the feed is public; do not leak the whole address');
   });

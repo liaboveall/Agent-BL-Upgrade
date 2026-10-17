@@ -16,7 +16,7 @@ import { hashSnapshot } from '../../decisionLogger.js';
 
 const RANK = { info: 0, low: 0, medium: 1, warning: 1, high: 2, critical: 3 };
 const rankOf = (event) => RANK[String(event?.severity ?? 'info').toLowerCase()] ?? 0;
-const keyOf = (event) => `${event.type ?? 'unknown'}|${event.region ?? ''}`;
+const keyOf = (event) => `${event.source ?? 'unknown'}|${event.event_id ?? event.type ?? 'unknown'}|${event.region ?? ''}`;
 const isAlert = (event) => rankOf(event) >= 1;
 
 export class RiskTracker {
@@ -60,16 +60,17 @@ export class RiskTracker {
     const known = this.cases.get(caseId);
 
     if (!known) {
-      this.cases.set(caseId, { alerts: Object.fromEntries(alerts.map((e) => [keyOf(e), rankOf(e)])), quiet: 0, active: false, emitted: 0 });
+      this.cases.set(caseId, { alerts: Object.fromEntries(alerts.map((e) => [keyOf(e), rankOf(e)])), quiet: 0, active: alerts.length > 0, emitted: 0 });
       await this.#save();
       return null;
     }
 
     if (alerts.length > 0) {
-      const raised = alerts.some((e) => rankOf(e) > (known.alerts[keyOf(e)] ?? -1));
+      const nextAlerts = Object.fromEntries(alerts.map((e) => [keyOf(e), rankOf(e)]));
+      const changed = hashSnapshot(nextAlerts) !== hashSnapshot(known.alerts);
       known.alerts = Object.fromEntries(alerts.map((e) => [keyOf(e), rankOf(e)]));
       known.quiet = 0;
-      if (!raised) {
+      if (!changed) {
         await this.#save();
         return null;
       }

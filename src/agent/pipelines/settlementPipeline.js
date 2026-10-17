@@ -48,8 +48,10 @@ export async function assertSettlementChain(provider, chainConfig) {
 }
 
 /** Only receipt logs from the locally pinned USDC asset may prove payment. Payload addresses are ignored. */
-export async function verifyUsdcTransfer({ provider, chainConfig, recipient, txHash, amount, amountAtomic, confirmations = 1 }) {
+export async function verifyUsdcTransfer({ provider, chainConfig, recipient, expectedPayer, txHash, amount, amountAtomic, confirmations = 1 }) {
   requireThat(isAddress(recipient ?? '') && !same(recipient, ZeroAddress), 'settlement_recipient_required', 'Configure AGENT_SETTLEMENT_RECIPIENT before submitting Live payment evidence');
+  requireThat(isAddress(expectedPayer ?? '') && !same(expectedPayer, ZeroAddress) && !same(expectedPayer, recipient),
+    'settlement_payer_required', 'Configure the independently agreed importer payer before accepting Live recovery evidence');
   requireThat(hash(txHash), 'invalid_payment_hash', 'USDC payment_proof must be a nonzero 32-byte transaction hash');
   const atomic = amountAtomic === undefined ? repaymentAtomic(amount) : atomicRepayment(amountAtomic);
   await assertSettlementChain(provider, chainConfig);
@@ -78,6 +80,7 @@ export async function verifyUsdcTransfer({ provider, chainConfig, recipient, txH
     matches.push({ from: parsed.args.from, log_index: index });
   }
   requireThat(matches.length === 1, 'payment_transfer_mismatch', 'Receipt must contain exactly one matching USDC transfer to the configured recipient for the exact amount');
+  requireThat(same(matches[0].from, expectedPayer), 'payment_payer_mismatch', 'The verified transfer is not from the agreed importer payer');
   return { source: 'confirmed-usdc-transfer', chain_id: 1439, asset, decimals: 6,
     tx_hash: txHash.toLowerCase(), payer: matches[0].from, recipient, amount_atomic: atomic,
     amount_usdc: repaymentDisplay(atomic), block_number: receipt.blockNumber, block_hash: receipt.blockHash,
@@ -97,7 +100,10 @@ export async function readSettlementState({ context, chainConfig, poolId }) {
   requireThat(/^0x[0-9a-f]{64}$/iu.test(paymentProof) && /^0x[0-9a-f]{64}$/iu.test(arrivalProof), 'invalid_pool_proofs', 'The pool returned invalid settlement proofs');
   return { state: chainStateName(offering.state), emergencyStopped: Boolean(stopped), subscribed: String(offering.subscribed),
     ebl_id: Number(offering.eblId), payment_proof: paymentProof.toLowerCase(), arrival_proof: arrivalProof.toLowerCase(),
-    repayment_amount_atomic: String(offering.repaymentAmount ?? 0), paymentProof: hash(paymentProof), arrivalProof: hash(arrivalProof), block_number: blockTag };
+    repayment_amount_atomic: String(offering.repaymentAmount ?? 0),
+    repaymentAmountAtomic: offering.repaymentAmount === undefined ? undefined : String(offering.repaymentAmount),
+    targetRedemptionValueAtomic: offering.targetRedemptionValue === undefined ? undefined : String(offering.targetRedemptionValue),
+    paymentProof: hash(paymentProof), arrivalProof: hash(arrivalProof), block_number: blockTag };
 }
 
 function proofBytes32(value) {
@@ -107,7 +113,7 @@ function proofBytes32(value) {
 }
 
 /** A contextual plan is checked again by the CLI immediately before signing. */
-export async function buildSettlementPlan({ action, chain_pool_id: poolId, params = {}, chainConfig, context, recipient, confirmations = 1 }) {
+export async function buildSettlementPlan({ action, chain_pool_id: poolId, params = {}, chainConfig, context, recipient, expectedPayer, confirmations = 1 }) {
   const address = chainConfig?.contracts?.RWAOfferingPool;
   requireThat(isAddress(address ?? ''), 'contract_missing', 'RWAOfferingPool deployment is required');
   const state = await readSettlementState({ context, chainConfig, poolId });
@@ -120,7 +126,7 @@ export async function buildSettlementPlan({ action, chain_pool_id: poolId, param
     requireThat(params.payment_verification?.source === 'confirmed-usdc-transfer', 'payment_verification_required', 'Verified USDC evidence is required before recording payment or settling');
     const atomic = atomicRepayment(params.repayment_amount_atomic);
     requireThat(repaymentAtomic(params.repayment_amount) === atomic, 'repayment_amount_mismatch', 'Display and atomic repayment amounts disagree');
-    payment = await verifyUsdcTransfer({ provider: context.provider, chainConfig, recipient, txHash: params.payment_proof, amountAtomic: atomic, confirmations });
+    payment = await verifyUsdcTransfer({ provider: context.provider, chainConfig, recipient, expectedPayer, txHash: params.payment_proof, amountAtomic: atomic, confirmations });
     requireThat(samePaymentEvidence(payment, params.payment_verification),
       'payment_evidence_changed', 'Payment evidence changed since it was accepted');
     if (action === 'RECORD_PAYMENT') {
@@ -144,10 +150,10 @@ export async function buildSettlementPlan({ action, chain_pool_id: poolId, param
       expected_events: [expected], event_checks: [{ name: expected, args: eventArgs }] }] };
 }
 
-export async function validateSettlementStep({ plan, context, chainConfig, recipient, confirmations = 1 }) {
+export async function validateSettlementStep({ plan, context, chainConfig, recipient, expectedPayer, confirmations = 1 }) {
   requireThat(plan?.schema === SETTLEMENT_SCHEMA, 'settlement_plan_required', 'Settlement requires a current verified settlement plan');
   const fresh = await buildSettlementPlan({ action: plan.action, chain_pool_id: plan.chain_pool_id, params: plan.params,
-    context, chainConfig, recipient, confirmations });
+    context, chainConfig, recipient, expectedPayer, confirmations });
   requireThat(JSON.stringify(fresh.steps) === JSON.stringify(plan.steps), 'settlement_plan_changed', 'Current chain proofs no longer match the approved transaction plan');
   return fresh;
 }

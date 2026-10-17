@@ -232,9 +232,14 @@ export class ScenarioPlayer {
         if (change) await submit({ type: change.type, data: change.data });
         break;
       }
-      case 'event':
-        await submit({ type: step.type, data: step.data ?? {} });
+      case 'event': {
+        const data = { ...step.data };
+        if (step.type === 'PAYMENT_RECEIVED' && step.repayment_basis === 'subscribed_target') {
+          data.repayment_amount = (pool.subscribedShares || Math.ceil(pool.subscribedUsd / pool.quote.final_issue_price_usd)) * (pool.redemptionValueUsd ?? 1);
+        }
+        await submit({ type: step.type, data });
         break;
+      }
       case 'subscribe': {
         // Only an open pool takes subscriptions; replaying a scenario on a pool that has moved on skips this step.
         if (pool.status !== 'Open') {

@@ -1,0 +1,29 @@
+import {chromium} from './browser/node_modules/playwright/index.mjs';
+import fs from 'node:fs/promises';
+const browser=await chromium.launch({executablePath:'/home/mars/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome',args:['--no-sandbox']});
+const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'zh-CN'});
+await context.addInitScript(()=>{
+ const address='0x1111111111111111111111111111111111111111',hash='0x'+'11'.repeat(32);
+ window.__reviewRpc=[];
+ window.ethereum={isMetaMask:true,on(){},removeListener(){},request:async({method,params})=>{
+  window.__reviewRpc.push({method,...(method==='eth_sendTransaction'?{to:params?.[0]?.to,selector:params?.[0]?.data?.slice(0,10)}:{})});
+  if(['eth_requestAccounts','eth_accounts'].includes(method))return [address];
+  if(method==='eth_chainId')return '0x59f';
+  if(method==='wallet_switchEthereumChain')return null;
+  if(['eth_gasPrice','eth_maxPriorityFeePerGas'].includes(method))return '0x3b9aca00';
+  if(method==='eth_getBalance')return '0x8ac7230489e80000';
+  if(method==='eth_blockNumber')return '0x1';
+  if(method==='eth_getTransactionCount')return '0x0';
+  if(method==='eth_getCode')return '0x6000';
+  if(method==='eth_getBlockByNumber')return {number:'0x1',hash,parentHash:hash,timestamp:'0x60000000',nonce:'0x0000000000000000',difficulty:'0x0',gasLimit:'0x1c9c380',gasUsed:'0x0',miner:address,extraData:'0x',transactions:[],baseFeePerGas:'0x1'};
+  if(method==='eth_sendTransaction')throw Object.assign(new Error('Review stub refuses every transaction; nothing broadcast'),{code:4001});
+  throw new Error('Review stub: unsupported '+method);
+ }};
+});
+const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto('http://127.0.0.1:4178/#/mint',{waitUntil:'networkidle'});
+await page.locator('#mint-btn').click();
+await page.waitForFunction(()=>window.__reviewRpc.some(x=>x.method==='eth_sendTransaction'),{timeout:12000});
+const data={mode:await page.locator('.mode-pill').innerText(),rpc:await page.evaluate(()=>window.__reviewRpc),errors,txBroadcast:false};
+await fs.writeFile('/tmp/agentbl-review-20261017/browser-wallet.json',JSON.stringify(data,null,2));console.log(JSON.stringify(data,null,2));
+await browser.close();

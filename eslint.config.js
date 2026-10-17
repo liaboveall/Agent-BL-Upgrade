@@ -51,6 +51,7 @@ export default [
     ]
   },
   js.configs.recommended,
+  { files: ['tests/browser/**/*.js'], languageOptions: { globals: { ...globals.browser } } },
   {
     // Server code, scripts and tests: Node, ES modules.
     files: ['**/*.js', '**/*.mjs'],

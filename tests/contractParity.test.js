@@ -52,5 +52,6 @@ test('every on-chain offering state is a known lifecycle state, and Repaid keeps
   assert.equal(states.indexOf('Repaid'), 9);
   // Order is part of the ABI (stateOf returns the index): pin the values clients rely on.
   assert.deepEqual(states.slice(0, 6), ['Created', 'Priced', 'Open', 'Subscribed', 'Funded', 'InTransit']);
-  assert.equal(states.at(-1), 'Cancelled');
+  assert.equal(states[12], 'Cancelled');
+  assert.deepEqual(states.slice(13), ['Defaulted', 'LossSettled']);
 });

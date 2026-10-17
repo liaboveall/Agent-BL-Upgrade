@@ -113,7 +113,7 @@ test('BE-3/BE-4: pricing quote and offering simulate endpoints work end to end',
         ]
       })
     }).then((r) => r.json());
-    assert.ok(repriced.steps.some((s) => s.state === 'Repriced'));
+    assert.ok(repriced.steps.some((s) => s.state === 'InTransit' && s.action === 'REPRICE_DOWN'));
     assert.equal(repriced.final_state, 'Redeemed');
   } finally {
     server.close();

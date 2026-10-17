@@ -95,6 +95,9 @@ export function runPricingScenario({ fixture, caseData, name }) {
         errors.push(`offering lifecycle expected to include ${wanted}, got [${lifecycle.join(', ')}]`);
       }
     }
+    for (const wanted of offExp.includes_actions ?? []) {
+      if (!offering.steps.some((step) => step.action === wanted)) errors.push(`offering must include ${wanted} without changing its lifecycle stage`);
+    }
   }
 
   if (errors.length > 0) throw new Error(`Pricing scenario "${name}" failed: ${errors.join('; ')}`);

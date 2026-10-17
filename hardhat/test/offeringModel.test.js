@@ -122,7 +122,7 @@ function planOperation(kind, ctx, model, rng) {
       const live = model.pools.filter((q) => [S.Open, S.Repriced, S.Subscribed].includes(q.state) && q.subscribed < q.supply && model.ebls[q.e].pledged);
       const e = live.length && rng.chance(0.8) ? live[rng.int(live.length)].e : rng.int(model.ebls.length);
       return {
-        kind, args: { eblId: e + 1 }, ok: model.ebls[e].pledged,
+        kind, args: { eblId: e + 1 }, ok: false,
         run: () => ctx.registry.releasePledge(e + 1),
         apply: () => { model.ebls[e].pledged = false; }
       };
@@ -204,13 +204,13 @@ function planOperation(kind, ctx, model, rng) {
           else if (action === ACTION.TRIGGER_LIQUIDATION) p.state = S.Liquidation;
           else {
             p.price = price;
-            if (action === ACTION.REPRICE_DOWN) p.state = S.Repriced;
+
           }
         }
       };
     }
     case 'recordPayment': {
-      const amount = 1 + rng.int(3);
+      const amount = rng.chance(0.5) ? Math.max(1, p.subscribed * target) : 1 + rng.int(3);
       return {
         kind, pool: p, args: { amount }, ok: settleable(p) && !p.payment,
         run: () => agent.recordImporterPayment(p.id, uniqueHash('payment'), amount),
@@ -218,7 +218,7 @@ function planOperation(kind, ctx, model, rng) {
       };
     }
     case 'correctPayment': {
-      const amount = 1 + rng.int(3);
+      const amount = rng.chance(0.5) ? Math.max(1, p.subscribed * target) : 1 + rng.int(3);
       return {
         kind, pool: p, args: { amount }, ok: settleable(p) && p.payment !== null,
         run: () => poolContract.correctImporterPayment(p.id, uniqueHash('corrected-payment'), amount),
@@ -235,7 +235,7 @@ function planOperation(kind, ctx, model, rng) {
       const amount = p.payment !== null && rng.chance(0.75) ? p.payment : 1 + rng.int(3);
       return {
         kind, pool: p, args: { amount },
-        ok: settleable(p) && p.payment !== null && p.arrival && amount === p.payment,
+        ok: settleable(p) && p.payment !== null && p.arrival && amount === p.payment && amount >= p.subscribed * target,
         run: () => agent.settle(p.id, amount),
         apply: () => { p.state = S.Repaid; releaseCollateral(p); }
       };
@@ -334,10 +334,10 @@ describe('RWAOfferingPool vs. reference model (randomised)', function () {
 
   it('the random walks actually reached the interesting states and rejections', () => {
     console.log(`      states reached: ${[...visited.states].sort().join(', ')}`);
-    for (const state of ['Open', 'Subscribed', 'Funded', 'InTransit', 'Repriced', 'Paused', 'Frozen', 'Liquidation', 'Repaid', 'Cancelled']) {
+    for (const state of ['Open', 'Subscribed', 'Funded', 'InTransit', 'Paused', 'Frozen', 'Liquidation', 'Repaid', 'Cancelled']) {
       expect(visited.states.has(state), `state ${state} was never reached`).to.equal(true);
     }
-    for (const operation of ['settle:ok', 'settle:revert', 'cancel:ok', 'cancel:revert', 'pricing:ok', 'pricing:revert', 'subscribe:revert', 'subscribe:revert-unpledged', 'createOffering:revert', 'correctPayment:ok', 'registryRelease:ok']) {
+    for (const operation of ['settle:ok', 'settle:revert', 'cancel:ok', 'cancel:revert', 'pricing:ok', 'pricing:revert', 'subscribe:revert', 'createOffering:revert', 'correctPayment:ok', 'registryRelease:revert']) {
       expect(visited.operations.has(operation), `operation ${operation} never happened`).to.equal(true);
     }
   });

@@ -16,8 +16,8 @@
   },
   "offering_expectations": {
     "final_state": "Redeemed",
-    "includes_states": [
-      "Repriced"
+    "includes_actions": [
+      "REPRICE_DOWN"
     ],
     "events": [
       {

@@ -6,6 +6,8 @@
 
 | 文档 | 内容 |
 |---|---|
+| [project-review-2026-10-17.md](./project-review-2026-10-17.md) | 基线独立评估与反例，保留历史事实 |
+| [project-remediation-2026-10-17.md](./project-remediation-2026-10-17.md) | F01–F11 整改、验证边界与 v3 候选迁移方案 |
 | [PRD.md](./PRD.md) | 产品需求（v0.2：AI 动态定价的 eBL-backed RWA 折价发行） |
 | [background.md](./background.md) | 贸易金融、电子提单与 RWA 的背景入门 |
 | [agent-implementation-plan.md](./agent-implementation-plan.md) | Agent 的架构、设计原则与决策记录（已实施完成；代码注释中的 § 编号指向这里） |
@@ -51,10 +53,11 @@
 
 ## 证据文件
 
-[evidence/](./evidence/) 只保留真实链上交易和评测的关键记录，部分被 `npm run check` / `npm run preflight` 读取：
+[evidence/](./evidence/) 保留实链回执、评测，以及注明验证范围的本地评估与回归记录，部分被 `npm run check` / `npm run preflight` 读取：
 
 | 文件 | 内容 |
 |---|---|
+| `review-2026-10-17/`、`remediation-2026-10-17/`、`delivery-2026-10-17/` | 基线反例、整改前后本地验证及提交前干净目录回归；不表示候选合约已部署 |
 | `wave-b-gate.json`、`wave-b-protocol.json`、`x402-live-smoke.json` | 测试网付费定价闭环、协议部署与 x402 实链付款 |
 | `injective-mcp-smoke.json` | 官方 Injective MCP 适配的冒烟记录 |
 | `agent-live-smoke.json` | 三笔经授权的 Agent 定价交易（REPRICE / PAUSE / RESUME） |

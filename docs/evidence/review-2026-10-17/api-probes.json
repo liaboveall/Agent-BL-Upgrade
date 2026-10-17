@@ -1,0 +1,20 @@
+{
+  "pricing": {
+    "httpStatus": 200,
+    "quote": {
+      "pricing_action": "OPEN_WITH_WARNING",
+      "final_issue_price_usd": 0.995,
+      "financing_cost_usd": 25125.62,
+      "exporter_gross_profit_usd": 100,
+      "exporter_net_profit_usd": -25025.62,
+      "exporter_profit_share_bps": 2512562
+    }
+  },
+  "privacy": {
+    "uploadStatus": 202,
+    "jobStatus": "DONE",
+    "anonymousCatalogStatus": 200,
+    "markerVisible": true,
+    "marker": "ReviewConfidentialExporterLtd"
+  }
+}

@@ -81,7 +81,7 @@ try {
       ]
     })
   }).then((r) => r.json());
-  assert.ok(repriced.steps.some((s) => s.state === 'Repriced'), 'offering reprices on risk shock');
+  assert.ok(repriced.steps.some((s) => s.state === 'InTransit' && s.action === 'REPRICE_DOWN'), 'repricing preserves the voyage lifecycle');
   assert.equal(repriced.final_state, 'Redeemed');
 
   // BE-6: merged pricing + risk + offering workflow simulation.

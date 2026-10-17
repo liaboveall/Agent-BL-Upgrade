@@ -1,0 +1,375 @@
+
+> agentbl-agent-starter@0.1.0 test:contracts
+> npm --prefix hardhat test
+
+
+> agentbl-contracts@0.1.0 test
+> hardhat test
+
+
+Compiled 2 Solidity files with solc 0.8.24 (evm target: paris)
+
+Running Solidity tests
+
+
+Running Mocha tests
+
+
+  AgentBLRWA (browser demo contract)
+    [32m√[39m tokenizes an eBL, mints RWA = floor(financing*1e6/price) to the caller (70ms)
+    [32m√[39m caps minted RWA at tokenSupply when financing exceeds it
+    [32m√[39m increments poolId per tokenize call
+    [32m√[39m reprices an offering on an in-transit event and emits Repriced
+    [32m√[39m rejects price=0 / supply=0 and reprice on a missing pool
+
+  AgentDecisionLog append-only decision commitments
+    [32m√[39m only the owner registers immutable versions and role permissions
+    [32m√[39m rejects empty version metadata, zero role addresses and unknown versions
+    [32m√[39m requires the explicit anchorer role, including for the owner, and permits revocation
+    [32m√[39m commits exact continuous ranges and events without duplicate or skipped sequences
+    [32m√[39m rejects empty roots, mismatched counts, reversed ranges and batches over 256 (59ms)
+    [32m√[39m verifies JavaScript-generated proofs on the real local contract (1 leaves)
+    [32m√[39m verifies JavaScript-generated proofs on the real local contract (3 leaves)
+    [32m√[39m verifies JavaScript-generated proofs on the real local contract (256 leaves) (40ms)
+    [32m√[39m ownership transfer preserves batch history and does not implicitly grant the new owner an anchorer role
+    [32m√[39m deployment defaults to zero broadcasts and needs no signer, network, keys or filesystem
+    [32m√[39m deploys and initializes locally, merges only the new contract, verifies bytecode and resumes without retransmission (52ms)
+
+  RWAOfferingPool hardening
+    collateral: one eBL backs one live offering
+      [32m√[39m refuses a second offering on an eBL that already backs a live one
+      [32m√[39m frees the eBL when an unsubscribed offering is cancelled, so it can be offered again (47ms)
+      [32m√[39m releases the pledge when an offering is repaid, so the eBL can move again
+      1) still settles when the registry owner already released the pledge, and reports it
+      2) stops selling shares once the eBL is no longer pledged to the pool
+    pricing bounds
+      [32m√[39m never lets the oracle price an offering above its target redemption value
+      3) REPRICE_DOWN has to lower the price
+      4) allows a recovery: an OPEN action may raise a repriced offering again, up to the target
+      [32m√[39m rejects an out-of-range risk level at the oracle and a zero pool
+    settlement
+      [32m√[39m refuses proofs and settlement for an offering nobody subscribed to
+      [32m√[39m lets only the owner correct a mistaken importer payment, and keeps the audit trail
+      [32m√[39m validates a correction
+      [32m√[39m records the departure proof and the oracle / token wiring in the event log
+    cancelOffering
+      [32m√[39m is owner-only and needs an existing offering
+      [32m√[39m cannot cancel an offering that already has subscribers
+      5) works from Open, Repriced and Paused, also during a global emergency stop
+      [32m√[39m rejects a second cancel and any state that is not cancellable
+    documented limitation
+      [32m√[39m subscribe records an amount owed but holds no funds (no payment leg yet)
+
+  EBLRegistry hardening
+    [32m√[39m registers a legacy document only once, whoever holds it
+    [32m√[39m only the owner can register eBLs, and a V2 cargo hash can never be registered twice
+    6) only the holder can transfer or endorse, never while pledged, and never to a bad recipient
+
+  PaymentOracle ownership
+    [32m√[39m hands the contract over in two steps and moves the attestor role with it
+    [32m√[39m keeps an explicitly authorised attestor across an ownership transfer
+
+  two-step ownership of the protocol contracts
+    [32m√[39m registry: a transfer completes only when the nominee accepts
+    [32m√[39m token: a transfer completes only when the nominee accepts (38ms)
+    [32m√[39m pool: a transfer completes only when the nominee accepts (46ms)
+    [32m√[39m oracle: a transfer completes only when the nominee accepts
+    [32m√[39m gate: a transfer completes only when the nominee accepts (41ms)
+    [32m√[39m a nomination can be replaced before it is accepted (41ms)
+    [32m√[39m the new pool owner takes over the administrative powers
+    [32m√[39m the oracle updater role moves with ownership, like the deployer role it started as (48ms)
+
+  AgentBLRWA hardening
+    [32m√[39m only the wallet that tokenized an offering can reprice it
+    [32m√[39m rejects out-of-range actions, risk levels and scores when repricing
+    [32m√[39m rejects out-of-range risk inputs when tokenizing
+
+  AgentBL contracts
+    [32m√[39m creates an offering and opens it
+    [32m√[39m lets an arbitrary testnet investor subscribe and mints RWA shares (46ms)
+    [32m√[39m keeps testnet access permissionless by default
+    7) writes evidence and quote hash on PricingUpdated and reprices the pool
+    [32m√[39m drives the pool into liquidation on a critical action
+    [32m√[39m rejects pricing updates from non-updaters
+
+  deploy-protocol.js smoke sequence
+    8) testnet smoke keeps the repriced offering price when PAUSE commits a lower risk quote
+    9) create -> subscribe -> reprice -> pause -> resume -> settle ends Repaid at the repriced issue price
+
+  EBLRegistry V2
+    [32m√[39m registers one unique cargo with structured trade metadata
+    [32m√[39m rejects duplicate cargoHash while accepting a distinct cargo
+    [32m√[39m records ordered transfer and endorsement history
+    [32m√[39m locks transfers while pledged and releases custody safely
+    [32m√[39m prevents an offering from opening before the eBL is pledged to that pool
+
+  RWAOfferingPool vs. reference model (randomised)
+    10) agrees with the model on seed 11
+    11) agrees with the model on seed 22
+    12) agrees with the model on seed 33
+    13) agrees with the model on seed 44
+    14) agrees with the model on seed 55
+    15) agrees with the model on seed 66
+      states reached: Cancelled, Frozen, Funded, InTransit, Liquidation, Open, Paused, Repriced, Subscribed
+    16) the random walks actually reached the interesting states and rejections
+
+  RWAOfferingPool autonomous state machine (WEB3-15/16)
+    [32m√[39m allows permissionless testnet subscriptions but enforces a pluggable production gate (43ms)
+    [32m√[39m lets only an authorized executor pause and resume the exact prior state
+    [32m√[39m resumes a paused offering through the oracle RESUME_OFFERING action
+    17) requires payment and arrival proofs before settlement and rejects duplicates
+    [32m√[39m settles a fully funded offering and records an ordered legal lifecycle (49ms)
+    [32m√[39m global emergency stop blocks autonomous and investor actions while preserving human pause
+    [32m√[39m rejects executor impersonation, illegal transitions and repayment mismatch
+    18) rejects replaying one oracle decision
+
+  PaymentOracle
+    [32m√[39m binds report, case, original payment transaction, payer, asset and amount
+    [32m√[39m rejects a duplicate receipt id
+    [32m√[39m rejects replaying an original payment tx under a different receipt
+    [32m√[39m rejects zero receipt, report, case and payment transaction hashes
+    [32m√[39m rejects zero payer and asset addresses
+    [32m√[39m rejects a zero payment amount
+    [32m√[39m rejects unauthorised callers and supports owner-managed attestors
+    [32m√[39m only lets the owner manage attestors and exposes unknown-receipt failure
+
+
+  68 passing (2s)
+  18 failing
+
+  1) RWAOfferingPool hardening
+       collateral: one eBL backs one live offering
+         still settles when the registry owner already released the pledge, and reports it:
+     SolidityError: VM Exception while processing transaction: reverted with reason string 'not authorized'
+      at EBLRegistry.releasePledge (contracts/EBLRegistry.sol:121)
+      at EBLRegistry.releasePledge (contracts/EBLRegistry.sol:125)
+      at EdrProvider.#handleEdrResponse (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:214:25)
+      at EdrProvider.#handleRequest (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:295:45)
+      at async <anonymous> (node_modules\hardhat\src\internal\builtin-plugins\network-manager\network-manager.ts:278:49)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:208:13)
+      at async Array.onRequest (node_modules\hardhat\src\internal\builtin-plugins\network-manager\hook-handlers\network.ts:81:14)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:207:13)
+      at async HookManagerImplementation.runHandlerChain (node_modules\hardhat\src\internal\core\hook-manager.ts:213:12)
+      at async EdrProvider.request (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:140:31)
+      at async AutomaticGasHandler.getMultipliedGasEstimation (node_modules\hardhat\src\internal\builtin-plugins\network-manager\request-handlers\handlers\gas\multiplied-gas-estimation.ts:50:30)
+
+  2) RWAOfferingPool hardening
+       collateral: one eBL backs one live offering
+         stops selling shares once the eBL is no longer pledged to the pool:
+     SolidityError: VM Exception while processing transaction: reverted with reason string 'not authorized'
+      at EBLRegistry.releasePledge (contracts/EBLRegistry.sol:121)
+      at EBLRegistry.releasePledge (contracts/EBLRegistry.sol:125)
+      at EdrProvider.#handleEdrResponse (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:214:25)
+      at EdrProvider.#handleRequest (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:295:45)
+      at async <anonymous> (node_modules\hardhat\src\internal\builtin-plugins\network-manager\network-manager.ts:278:49)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:208:13)
+      at async Array.onRequest (node_modules\hardhat\src\internal\builtin-plugins\network-manager\hook-handlers\network.ts:81:14)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:207:13)
+      at async HookManagerImplementation.runHandlerChain (node_modules\hardhat\src\internal\core\hook-manager.ts:213:12)
+      at async EdrProvider.request (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:140:31)
+      at async AutomaticGasHandler.getMultipliedGasEstimation (node_modules\hardhat\src\internal\builtin-plugins\network-manager\request-handlers\handlers\gas\multiplied-gas-estimation.ts:50:30)
+
+Test run failed
+  3) RWAOfferingPool hardening
+       pricing bounds
+         REPRICE_DOWN has to lower the price:
+     AssertionError: Expected event "OfferingStateChanged" to be emitted, but it wasn't
+      at <anonymous> (node_modules\@nomicfoundation\hardhat-ethers-chai-matchers\src\internal\matchers\emit.ts:150:20)
+      at async Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/contractHardening.test.js:94:7)
+
+  4) RWAOfferingPool hardening
+       pricing bounds
+         allows a recovery: an OPEN action may raise a repriced offering again, up to the target:
+
+      AssertionError: expected 2 to equal 6.
+      + expected - actual
+
+      -2
+      +6
+      
+      at Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/contractHardening.test.js:109:49)
+
+  5) RWAOfferingPool hardening
+       cancelOffering
+         works from Open, Repriced and Paused, also during a global emergency stop:
+
+      AssertionError: expected 2 to equal 6.
+      + expected - actual
+
+      -2
+      +6
+      
+      at Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/contractHardening.test.js:208:58)
+
+  6) EBLRegistry hardening
+       only the holder can transfer or endorse, never while pledged, and never to a bad recipient:
+     SolidityError: VM Exception while processing transaction: reverted with reason string 'not authorized'
+      at EBLRegistry.releasePledge (contracts/EBLRegistry.sol:121)
+      at EBLRegistry.releasePledge (contracts/EBLRegistry.sol:125)
+      at EdrProvider.#handleEdrResponse (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:214:25)
+      at EdrProvider.#handleRequest (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:295:45)
+      at async <anonymous> (node_modules\hardhat\src\internal\builtin-plugins\network-manager\network-manager.ts:278:49)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:208:13)
+      at async Array.onRequest (node_modules\hardhat\src\internal\builtin-plugins\network-manager\hook-handlers\network.ts:81:14)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:207:13)
+      at async HookManagerImplementation.runHandlerChain (node_modules\hardhat\src\internal\core\hook-manager.ts:213:12)
+      at async EdrProvider.request (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:140:31)
+      at async AutomaticGasHandler.getMultipliedGasEstimation (node_modules\hardhat\src\internal\builtin-plugins\network-manager\request-handlers\handlers\gas\multiplied-gas-estimation.ts:50:30)
+
+  7) AgentBL contracts
+       writes evidence and quote hash on PricingUpdated and reprices the pool:
+
+      AssertionError: expected 2 to equal 6.
+      + expected - actual
+
+      -2
+      +6
+      
+      at Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/contracts.test.js:128:47)
+
+  8) deploy-protocol.js smoke sequence
+       testnet smoke keeps the repriced offering price when PAUSE commits a lower risk quote:
+
+      AssertionError: expected 2 to equal 6.
+      + expected - actual
+
+      -2
+      +6
+      
+      at Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/deploySmoke.test.js:16:47)
+
+  9) deploy-protocol.js smoke sequence
+       create -> subscribe -> reprice -> pause -> resume -> settle ends Repaid at the repriced issue price:
+
+      AssertionError: expected 3 to equal 6.
+      + expected - actual
+
+      -3
+      +6
+      
+      at Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/deploySmoke.test.js:50:43)
+
+  10) RWAOfferingPool vs. reference model (randomised)
+       agrees with the model on seed 11:
+
+      AssertionError: seed 11 step 22 [registryRelease {"eblId":1}]: the model expects success but the contract reverted: expected false to equal true
+      + expected - actual
+
+      -false
+      +true
+      
+      at runSequence (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:302:166)
+      at async Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:331:7)
+
+  11) RWAOfferingPool vs. reference model (randomised)
+       agrees with the model on seed 22:
+
+      AssertionError: seed 22 step 23 [pricing pool#3(Subscribed) {"action":2,"price":240773,"riskLevel":3}]: state on pool #3: expected 3 to equal 6
+      + expected - actual
+
+      -3
+      +6
+      
+      at verifyPool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:257:49)
+      at async runSequence (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:312:7)
+      at async Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:331:7)
+
+  12) RWAOfferingPool vs. reference model (randomised)
+       agrees with the model on seed 33:
+
+      AssertionError: seed 33 step 92 [registryRelease {"eblId":4}]: the model expects success but the contract reverted: expected false to equal true
+      + expected - actual
+
+      -false
+      +true
+      
+      at runSequence (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:302:166)
+      at async Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:331:7)
+
+  13) RWAOfferingPool vs. reference model (randomised)
+       agrees with the model on seed 44:
+
+      AssertionError: seed 44 step 46 [registryRelease {"eblId":7}]: the model expects success but the contract reverted: expected false to equal true
+      + expected - actual
+
+      -false
+      +true
+      
+      at runSequence (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:302:166)
+      at async Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:331:7)
+
+  14) RWAOfferingPool vs. reference model (randomised)
+       agrees with the model on seed 55:
+
+      AssertionError: seed 55 step 40 [registryRelease {"eblId":3}]: the model expects success but the contract reverted: expected false to equal true
+      + expected - actual
+
+      -false
+      +true
+      
+      at runSequence (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:302:166)
+      at async Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:331:7)
+
+  15) RWAOfferingPool vs. reference model (randomised)
+       agrees with the model on seed 66:
+
+      AssertionError: seed 66 step 44 [settle pool#4(Funded) {"amount":1}]: the model expects success but the contract reverted: expected false to equal true
+      + expected - actual
+
+      -false
+      +true
+      
+      at runSequence (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:302:166)
+      at async Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:331:7)
+
+  16) RWAOfferingPool vs. reference model (randomised)
+       the random walks actually reached the interesting states and rejections:
+
+      state Repaid was never reached
+      + expected - actual
+
+      -false
+      +true
+      
+      at Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringModel.test.js:338:80)
+      at callFn (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runnable.js:360:23)
+      at Test.run (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runnable.js:348:7)
+      at Runner.runTest (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runner.js:809:10)
+      at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runner.js:949:12
+      at next (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runner.js:724:14)
+      at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runner.js:734:7
+      at next (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runner.js:595:14)
+      at Immediate._onImmediate (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/node_modules/mocha/lib/runner.js:702:5)
+      at process.processImmediate (node:internal/timers:574:21)
+
+  17) RWAOfferingPool autonomous state machine (WEB3-15/16)
+       requires payment and arrival proofs before settlement and rejects duplicates:
+     SolidityError: VM Exception while processing transaction: reverted with reason string 'outstanding debt'
+      at RWAOfferingPool.settle (contracts/RWAOfferingPool.sol:336)
+      at EdrProvider.#handleEdrResponse (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:214:25)
+      at EdrProvider.#handleRequest (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:295:45)
+      at async <anonymous> (node_modules\hardhat\src\internal\builtin-plugins\network-manager\network-manager.ts:278:49)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:208:13)
+      at async Array.onRequest (node_modules\hardhat\src\internal\builtin-plugins\network-manager\hook-handlers\network.ts:81:14)
+      at async next (node_modules\hardhat\src\internal\core\hook-manager.ts:207:13)
+      at async HookManagerImplementation.runHandlerChain (node_modules\hardhat\src\internal\core\hook-manager.ts:213:12)
+      at async EdrProvider.request (node_modules\hardhat\dist\src\internal\builtin-plugins\network-manager\edr\edr-provider.js:140:31)
+      at async AutomaticGasHandler.getMultipliedGasEstimation (node_modules\hardhat\src\internal\builtin-plugins\network-manager\request-handlers\handlers\gas\multiplied-gas-estimation.ts:50:30)
+
+  18) RWAOfferingPool autonomous state machine (WEB3-15/16)
+       rejects replaying one oracle decision:
+
+      AssertionError: expected 2 to equal 6.
+      + expected - actual
+
+      -2
+      +6
+      
+      at Context.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/hardhat/test/offeringStateMachineV2.test.js:167:47)
+
+
+
+
+68 passing (68 mocha)
+18 failing (18 mocha)
+

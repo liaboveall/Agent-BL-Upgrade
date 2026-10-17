@@ -24,7 +24,9 @@ function stateOf(pool) {
     // The offchain store keeps `Open` until the pool is full; the contract reports `Subscribed` as
     // soon as anyone has subscribed, and the transition rules are written against the contract.
     state: pool.status === 'Open' && pool.subscribedUsd > 0 ? 'Subscribed' : pool.status,
-    subscribed: pool.subscribedUsd,
+    subscribed: pool.subscribedShares > 0 ? pool.subscribedShares : Math.ceil(pool.subscribedUsd / (pool.quote?.final_issue_price_usd || 1)),
+    targetRedemptionValueAtomic: String(Math.round((pool.redemptionValueUsd ?? pool.quote?.target_redemption_value_usd ?? 1) * 1_000_000)),
+    repaymentAmountAtomic: String(Math.round((pool.settlement?.repayment_amount ?? 0) * 1_000_000)),
     paymentProof: Boolean(pool.settlement?.payment_proof),
     arrivalProof: Boolean(pool.settlement?.arrival_proof),
     stateBeforePause: pool.statusBeforePause
@@ -56,6 +58,10 @@ export class SimExecutor {
     let pool = this.store.pools.get(poolId);
     const at = this.now().toISOString();
     const params = cmd.params ?? {};
+    if (['OPEN', 'OPEN_WITH_WARNING', 'REPRICE'].includes(cmd.action)
+        && (params.quote?.economic_checks?.ok === false || params.quote?.data_review_required)) {
+      throw new SimExecutionError('terms_not_openable', 'The final economic or data-quality constraints require review');
+    }
 
     if (!pool && (cmd.action === 'OPEN' || cmd.action === 'OPEN_WITH_WARNING') && params.case_data && params.quote) {
       pool = createPool(poolId, params.case_data, params.quote, { createdAt: at, store: this.store });
@@ -90,6 +96,7 @@ export class SimExecutor {
         if (!params.quote) throw new SimExecutionError('quote_required', 'REPRICE needs the re-priced quote');
         pool.quote = params.quote;
         pool.quoteUpdatedAt = at;
+        pool.quoteVersion = (pool.quoteVersion ?? 1) + 1;
         break;
       case 'PAUSE':
         pool.statusBeforePause = pool.status;

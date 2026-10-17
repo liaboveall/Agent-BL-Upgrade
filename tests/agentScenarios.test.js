@@ -85,7 +85,7 @@ test('copper-typhoon: the whole cargo story runs through the real policy and the
   assert.ok(result.entries[1].subscribed_usd > 0);
 
   const pool = storeState.pools.get(copper.case_id);
-  assert.equal(pool.status, 'Repriced', 'paused by the storm, resumed to where it was');
+  assert.equal(pool.status, 'InTransit', 'paused by the storm, resumed to where it was');
   assert.ok(pool.subscribedUsd > 0 && pool.subscribedUsd < pool.targetUsd);
   assert.match(pool.settlement.arrival_proof, /^demo:/u);
   assert.equal(pool.settlement.payment_proof, undefined, 'the payment proof waits for a human');
@@ -114,14 +114,14 @@ test('copper-typhoon: approving the payment makes the agent propose settlement, 
 
   const pool = storeState.pools.get(copper.case_id);
   assert.match(pool.settlement.payment_proof, /^demo:/u);
-  assert.equal(pool.settlement.repayment_amount, 1_380_000);
+  assert.equal(pool.settlement.repayment_amount, pool.subscribedShares);
 
   const decisions = await chronological(service);
   const settle = decisions.at(-1);
   assert.equal(settle.action, 'SETTLE');
   assert.equal(settle.status, 'PENDING_APPROVAL', 'settlement is irreversible: never automatic');
   assert.ok(settle.policy.reasons.some((r) => r.rule === 'IRREVERSIBLE'));
-  assert.equal(settle.proposal.params.repayment_amount, 1_380_000);
+  assert.equal(settle.proposal.params.repayment_amount, pool.subscribedShares);
   assert.match(settle.reasoning_summary, /does not distribute funds/u, 'the contract only records the repayment');
   assert.notEqual(pool.status, 'Repaid');
 

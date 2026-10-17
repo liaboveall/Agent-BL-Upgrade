@@ -21,6 +21,7 @@ import {
 } from '../core/pricingSchema.js';
 import { X402_SERVICES } from '../x402/config.js';
 import { chainStateName } from '../agent/runtime/poolRules.js';
+import { subscriptionAvailability } from '../core/subscription.js';
 import { demoModeController, LiveModeUnavailableError } from '../demo/mode.js';
 import { DEFAULT_MYSTERY_QUOTE_MAX_AGE_SECONDS } from '../mystery/policy.js';
 import { storeState, createPool, resetStore, subscribeToPool } from './store.js';
@@ -68,6 +69,7 @@ import { createX402ServiceDefinitions } from './x402Services.js';
 import { createLiveGateway } from '../x402/liveGateway.js';
 import { createPricingDelegate } from '../interop/delegation.js';
 import { createInteropRoutes } from './interopRoutes.js';
+import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase } from './workspaceAccess.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -175,10 +177,7 @@ async function loadCaseCatalog() {
   // Archived cases stay listed only because a deployed testnet pool still points at them (pool #2).
   await readDir(archivedCasesDir, { historical: true });
 
-  // Cases the agent built from uploaded documents (they survive a restart in the runtime directory).
-  try {
-    for (const data of await getAgentService().ingest?.listCases() ?? []) add(data);
-  } catch { /* the catalog never fails because of the upload store */ }
+  // Only curated, explicitly public examples belong here. Uploads remain private working papers.
 
   const cases = [...files.values()].map((data) => {
     const bl = data.bill_of_lading ?? {};
@@ -413,6 +412,7 @@ function sseMessage(activity) {
 }
 
 function clientWants(client, activity) {
+  if (!canReadWorkspaceCase(getAgentService(), client.request, activity.caseId)) return false;
   if (client.caseId && activity.caseId !== client.caseId) return false;
   if (client.poolId && activity.poolId !== client.poolId) return false;
   return true;
@@ -435,6 +435,7 @@ function openActivityStream(request, response, url) {
   response.write('data: ' + JSON.stringify({ type: 'connected', timestamp: new Date().toISOString(), last_seq: activityLog.seq }) + '\n\n');
 
   const client = {
+    request,
     response,
     caseId: boundedParam(url.searchParams.get('case_id')),
     poolId: boundedParam(url.searchParams.get('pool_id')),
@@ -880,7 +881,7 @@ async function routeRequest(request, response, url) {
     await ensureMockPools({ refreshStaleDemoQuotes: true });
     const { previewMysteryVoyage } = await mysteryService();
     try {
-      sendJson(response, 201, await previewMysteryVoyage(body ?? {}, { pools: storeState.pools }));
+      sendJson(response, 201, await previewMysteryVoyage(body ?? {}, { pools: new Map([...storeState.pools].filter(([, pool]) => pool.caseData?.visibility !== 'private')) }));
     } catch (error) {
       await sendMysteryError(response, error, 'mystery_preview_failed');
     }
@@ -957,7 +958,7 @@ async function routeRequest(request, response, url) {
   if (method === 'GET' && pathname === '/api/market/listings') {
     await ensureMockPools();
     const activePools = Array.from(storeState.pools.values())
-      .filter((pool) => ['Open', 'Repriced'].includes(pool.status) && pool.investorEligible !== false);
+      .filter((pool) => pool.caseData?.visibility !== 'private' && subscriptionAvailability(pool).can_subscribe);
     sendJson(response, 200, { ok: true, count: activePools.length, pools: activePools });
     return;
   }
@@ -968,7 +969,7 @@ async function routeRequest(request, response, url) {
     await ensureMockPools();
 
     const availableCases = Array.from(storeState.pools.values())
-      .filter((pool) => ['Open', 'Repriced'].includes(pool.status) && pool.investorEligible !== false)
+      .filter((pool) => pool.caseData?.visibility !== 'private' && subscriptionAvailability(pool).can_subscribe)
       .map(poolToAdvisorCase);
 
     const preference = typeof body?.preference === 'string' ? body.preference.slice(0, 500) : undefined;
@@ -1014,6 +1015,7 @@ async function routeRequest(request, response, url) {
       throw new HttpError(400, 'invalid_wallet', 'wallet_address must look like 0x followed by up to 64 letters or digits');
     }
     const walletAddress = body.wallet_address || '0xDemoWallet';
+    requireWorkspaceCase(getAgentService(), request, body.pool_id);
     try {
       const { validateMysterySubscriptionSource } = await mysteryService();
       const source = await validateMysterySubscriptionSource({
@@ -1050,10 +1052,12 @@ async function routeRequest(request, response, url) {
     await ensureMockPools();
     const pool = storeState.pools.get(poolId);
     if (!pool) throw new HttpError(404, 'pool_not_found', 'Pool not found');
+    requireWorkspaceCase(getAgentService(), request, pool.caseData?.case_id ?? poolId);
     sendJson(response, 200, {
       ok: true,
       poolId,
       status: pool.status,
+      ...subscriptionAvailability(pool),
       subscribedUsd: pool.subscribedUsd,
       targetUsd: pool.targetUsd,
       // Offchain mirror only: pools here live in server memory, they are not contract reads.
@@ -1077,6 +1081,7 @@ async function routeRequest(request, response, url) {
     const normalizedWalletAddress = walletAddress.toLowerCase();
     const recorded = storeState.investments.filter(
       (investment) => String(investment.walletAddress).toLowerCase() === normalizedWalletAddress
+        && canReadWorkspaceCase(getAgentService(), request, investment.poolId)
     );
     const decisions = (await getAgentService().listDecisions({ limit: 5000 })).decisions;
     const myInvestments = recorded.map((investment) => {
@@ -1118,7 +1123,7 @@ async function routeRequest(request, response, url) {
   if (method === 'GET' && pathname === '/api/exporters/dashboard') {
     await ensureMockPools();
     // Since exporter identity isn't strictly passed in demo, we return all active pools representing eBLs
-    const myPools = Array.from(storeState.pools.values());
+    const myPools = Array.from(storeState.pools.values()).filter((pool) => canReadWorkspaceCase(getAgentService(), request, pool.caseData?.case_id ?? pool.poolId));
     sendJson(response, 200, {
       ok: true,
       total_ebl_submitted: myPools.length,
@@ -1461,6 +1466,7 @@ async function routeRequest(request, response, url) {
     if (caseId && typeof body.file.content === 'string' && body.file.content.length > 0) {
       const textual = ['text/markdown', 'text/plain'].includes(body.file.type);
       try {
+        requireWorkspaceCase(getAgentService(), request, caseId);
         const submitted = await getAgentService().submitDocuments({
           case_id: caseId,
           documents: [{
@@ -1468,7 +1474,7 @@ async function routeRequest(request, response, url) {
             mime_type: body.file.type,
             ...(textual ? { text: body.file.content } : { content_base64: body.file.content })
           }]
-        });
+        }, { ownerId: workspaceOwner(request, response) });
         ingest = { accepted: true, job_id: submitted.job.job_id, status: submitted.job.status, created: submitted.created };
       } catch (error) {
         ingest = { accepted: false, error: String(error?.message ?? error).slice(0, 200), code: error?.code ?? null };
@@ -1525,8 +1531,8 @@ async function routeRequest(request, response, url) {
 
     sendJson(response, 200, {
       ok: true,
-      activities,
-      count: activityLog.count(filters),
+      activities: activities.filter((activity) => canReadWorkspaceCase(getAgentService(), request, activity.caseId)),
+      count: activities.filter((activity) => canReadWorkspaceCase(getAgentService(), request, activity.caseId)).length,
       last_seq: activityLog.seq
     });
     return;

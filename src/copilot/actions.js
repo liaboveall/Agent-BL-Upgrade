@@ -90,7 +90,7 @@ export async function validateAction({ action, context, pools, decisions, servic
   if (pool.quote.quote_hash !== action.quote_hash || pool.quote.risk_level !== action.risk_level) throw new HttpError(409, 'quote_changed', 'Quote changed; request a new card');
   if (context.mode === 'demo') {
     if (pool.quote.final_issue_price_usd !== action.price_usd) throw new HttpError(409, 'quote_changed', 'Price changed; request a new card');
-    if (pool.subscribedUsd + action.amount_usd > pool.targetUsd) throw new HttpError(409, 'capacity_exceeded', 'Pool has insufficient capacity');
+    if (action.amount_usd > candidate.remaining_usd) throw new HttpError(409, 'capacity_exceeded', 'Pool has insufficient capacity');
   } else {
     const live = await getLiveOffering(action.pool_id);
     if (!live || !live.exists || live.emergency_stopped || !['Open', 'Repriced', 'Subscribed'].includes(live.status)) throw new HttpError(409, 'pool_unavailable', 'Live pool is unavailable');

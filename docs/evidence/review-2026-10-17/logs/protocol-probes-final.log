@@ -1,0 +1,34 @@
+Running Mocha tests
+
+
+  Independent review: protocol lifecycle probes
+    [32m√[39m records whether repricing reopens an in-transit pool (47ms)
+    [32m√[39m records whether REPRICE prevents a fully funded pool from departing
+    [32m√[39m records whether repayment below target is marked repaid and releases collateral
+[
+  {
+    "scenario": "in_transit_reopens",
+    "beforeRejected": true,
+    "repriced": "6",
+    "afterSubscription": "3",
+    "subscribed": "30"
+  },
+  {
+    "scenario": "funded_dead_end",
+    "state": "6",
+    "departureError": "VM Exception while processing transaction: reverted with reason string 'not funded'",
+    "subscribeError": "VM Exception while processing transaction: reverted with reason string 'exceeds supply'"
+  },
+  {
+    "scenario": "underpayment",
+    "state": "9",
+    "repaymentAtomic": "1",
+    "targetAtomic": "100000000",
+    "pledgedTo": "0x0000000000000000000000000000000000000000"
+  }
+]
+
+
+  3 passing (104ms)
+
+

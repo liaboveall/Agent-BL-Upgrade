@@ -23,7 +23,7 @@ const cmd = (action, extra = {}) => ({
 
 test('poolRules: transitions mirror the contract', () => {
   const open = { state: 'Open', subscribed: 0 };
-  assert.deepEqual(planTransition('REPRICE', open), { ok: true, from: 'Open', to: 'Repriced', changesState: true });
+  assert.deepEqual(planTransition('REPRICE', open), { ok: true, from: 'Open', to: 'Open', changesState: false });
   assert.equal(planTransition('PAUSE', open).to, 'Paused');
   assert.equal(planTransition('PAUSE', { state: 'Paused' }).ok, false);
   assert.equal(planTransition('RESUME', { state: 'Open' }).code, 'not_paused');
@@ -35,7 +35,7 @@ test('poolRules: transitions mirror the contract', () => {
   assert.equal(planTransition('CANCEL', open).to, 'Cancelled');
   assert.equal(planTransition('RECORD_PAYMENT', open).code, 'no_subscribers');
   assert.equal(planTransition('SETTLE', { state: 'InTransit', subscribed: 1 }).code, 'proofs_missing');
-  assert.equal(planTransition('SETTLE', { state: 'InTransit', subscribed: 1, paymentProof: true, arrivalProof: true }).to, 'Repaid');
+  assert.equal(planTransition('SETTLE', { state: 'InTransit', subscribed: 1, paymentProof: true, arrivalProof: true, repaymentAmountAtomic: '1000000', targetRedemptionValueAtomic: '1000000' }).to, 'Repaid');
   assert.equal(planTransition('REPRICE', { state: 'Repaid' }).ok, false);
   assert.equal(planTransition('WARNING', { state: 'Repaid' }).changesState, false);
   assert.equal(planTransition('NONSENSE', open).code, 'unknown_action');
@@ -62,10 +62,10 @@ test('SimExecutor: REPRICE changes the offchain pool and returns a demo referenc
   assert.equal(result.mode, 'demo');
   assert.match(result.reference, /^demo:[0-9a-z]{1,12}$/u);
   assert.equal(result.signer_role, null);
-  assert.equal(pool.status, 'Repriced');
+  assert.equal(pool.status, 'Open');
   assert.equal(pool.quote.final_issue_price_usd, lower.final_issue_price_usd);
   assert.equal(result.effects.state_before, 'Open');
-  assert.equal(result.effects.state_after, 'Repriced');
+  assert.equal(result.effects.state_after, 'Open');
   assert.equal(result.effects.issue_price_before_usd, baseQuote.final_issue_price_usd);
   assert.equal('tx_hash' in result, false);
   assert.doesNotMatch(JSON.stringify(result), /0x[0-9a-fA-F]{64}/u);
@@ -91,12 +91,12 @@ test('SimExecutor: the same idempotency key is applied once', async () => {
 test('SimExecutor: PAUSE then RESUME restores the previous state; illegal moves are refused', async () => {
   const { executor, pool } = simSetup();
   await executor.execute(cmd('REPRICE', { params: { quote: baseQuote } }));
-  assert.equal(pool.status, 'Repriced');
+  assert.equal(pool.status, 'Open');
   await executor.execute(cmd('PAUSE'));
   assert.equal(pool.status, 'Paused');
   await assert.rejects(executor.execute(cmd('PAUSE')), (error) => error instanceof SimExecutionError && error.code === 'illegal_transition');
   await executor.execute(cmd('RESUME'));
-  assert.equal(pool.status, 'Repriced');
+  assert.equal(pool.status, 'Open');
   await assert.rejects(executor.execute(cmd('RESUME')), { code: 'not_paused' });
   await assert.rejects(executor.execute(cmd('REPRICE')), { code: 'quote_required' });
   resetStore();
@@ -110,8 +110,8 @@ test('SimExecutor: settlement needs subscribers and both proofs, in order', asyn
   await assert.rejects(executor.execute(cmd('RECORD_PAYMENT', { params: { repayment_amount: 10 } })), { code: 'proof_required' });
   await executor.execute(cmd('MARK_IN_TRANSIT', { params: { departure_proof: 'dep-1' } }));
   assert.equal(pool.status, 'InTransit');
-  await executor.execute(cmd('RECORD_PAYMENT', { params: { payment_proof: 'pay-1', repayment_amount: 1100 } }));
-  await assert.rejects(executor.execute(cmd('RECORD_PAYMENT', { params: { payment_proof: 'pay-2', repayment_amount: 1100 } })), { code: 'already_recorded' });
+  await executor.execute(cmd('RECORD_PAYMENT', { params: { payment_proof: 'pay-1', repayment_amount: 2000 } }));
+  await assert.rejects(executor.execute(cmd('RECORD_PAYMENT', { params: { payment_proof: 'pay-2', repayment_amount: 2000 } })), { code: 'already_recorded' });
   await assert.rejects(executor.execute(cmd('SETTLE')), { code: 'proofs_missing' });
   await executor.execute(cmd('RECORD_ARRIVAL', { params: { arrival_proof: 'bol-9' } }));
   const settled = await executor.execute(cmd('SETTLE'));

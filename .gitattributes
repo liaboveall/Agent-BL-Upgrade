@@ -16,6 +16,9 @@ Makefile text eol=lf
 # holds their SHA-256) and must never be converted.
 public/vendor/** -text
 
+# Review receipts are hashed as captured; preserve their bytes across platforms.
+docs/evidence/** -text
+
 # Binary assets.
 *.png binary
 *.jpg binary

@@ -28,6 +28,20 @@ const MINUTE = 60_000;
 const LB_PER_MT = 2204.62262;
 const BU_PER_MT_SOY = 36.7437;
 const GAL_PER_BBL = 42;
+const DAY = 86_400_000;
+const clock = (options) => typeof options.now === 'function' ? options.now() : options.now ?? Date.now();
+
+// Observation freshness is separate from cache/retrieval freshness. Quotes tolerate weekends;
+// daily PortWatch releases tolerate 72h, forecasts one hour, odds/news their retrieval window.
+function observation(got, observedAt, maxAgeMs, options) {
+  const at = Date.parse(observedAt ?? '');
+  const valid = Number.isFinite(at) && at <= clock(options) + 5 * MINUTE;
+  const expires = valid ? at + maxAgeMs : NaN;
+  return { observed_at: valid ? new Date(at).toISOString() : null,
+    expires_at: Number.isFinite(expires) ? new Date(expires).toISOString() : null,
+    fetched_at: got.fetched_at,
+    status: got.status === 'offline' ? 'offline' : !valid ? 'unavailable' : expires <= clock(options) || got.status === 'stale' ? 'stale' : 'live' };
+}
 
 /** Futures used to mark curated cargoes to market. Conversions give USD per metric tonne or per barrel. */
 export const BENCHMARKS = Object.freeze({
@@ -97,7 +111,7 @@ export async function getMarketQuote(key, options = {}) {
   const snap = loadSnapshot().prices?.[key];
   const got = await liveOrSnapshot(`price:${key}`, 30 * MINUTE, () => fetchFuturesQuote(spec.symbol, options), snap, options);
   if (!got) return null;
-  return { ...quoteFrom(key, got.value), status: got.status, fetched_at: got.fetched_at, source: `Yahoo Finance · ${spec.label}` };
+  return { ...quoteFrom(key, got.value), ...observation(got, got.value.as_of, 3 * DAY, options), source: `Yahoo Finance · ${spec.label}` };
 }
 
 async function getChokepoints(names, options) {
@@ -109,7 +123,7 @@ async function getChokepoints(names, options) {
     () => fetchChokepointTransits(names, options), Object.keys(snapshotPart).length ? snapshotPart : null, options);
   for (const name of names) {
     const item = got?.value?.[name];
-    if (item) out[name] = { ...item, status: got.status, fetched_at: got.fetched_at };
+    if (item) out[name] = { ...item, ...observation(got, item.latest_date, 3 * DAY, options) };
   }
   return out;
 }
@@ -119,7 +133,8 @@ async function getSeaStates(points, options) {
   const results = await Promise.all(points.map(async (point) => {
     const id = `${point.lat},${point.lon}`;
     const got = await liveOrSnapshot(`sea:${id}`, 60 * MINUTE, () => fetchSeaState(point, options), snap[id], options);
-    return got ? { ...point, ...got.value, status: got.status, fetched_at: got.fetched_at } : null;
+    return got ? { ...point, ...got.value, ...observation(got, got.fetched_at, 60 * MINUTE, options) }
+      : { ...point, status: 'unavailable', observed_at: null, expires_at: null, max_wave_height_m: null, on: null };
   }));
   return results.filter(Boolean);
 }
@@ -209,12 +224,12 @@ export async function routeRiskEvents(caseData, options = {}) {
   const chokepoints = await getChokepoints([...transit, ...nearby], options);
   for (const name of [...transit, ...nearby]) {
     const item = chokepoints[name];
-    if (!item) continue;
+    if (!item) { statuses.add('unavailable'); evidence.chokepoints.push({ name, status: 'unavailable', observed_at: null }); continue; }
     statuses.add(item.status);
     const adjacent = !transit.includes(name);
     let severity = chokepointSeverity(item.ratio);
     if (severity && adjacent) severity = DOWNGRADE[severity];
-    evidence.chokepoints.push({ name, adjacent, latest_date: item.latest_date, avg7: round(item.avg7, 1), baseline7: item.baseline7 === null || item.baseline7 === undefined ? null : round(item.baseline7, 1), ratio: item.ratio === null || item.ratio === undefined ? null : round(item.ratio, 3), status: item.status });
+    evidence.chokepoints.push({ name, adjacent, latest_date: item.latest_date, observed_at: item.observed_at, expires_at: item.expires_at, fetched_at: item.fetched_at, avg7: round(item.avg7, 1), baseline7: item.baseline7 === null || item.baseline7 === undefined ? null : round(item.baseline7, 1), ratio: item.ratio === null || item.ratio === undefined ? null : round(item.ratio, 3), status: item.status });
     if (!severity) continue;
     events.push({
       date: item.latest_date,
@@ -230,15 +245,16 @@ export async function routeRiskEvents(caseData, options = {}) {
 
   for (const spec of profile.disruption_markets ?? []) {
     const markets = await getPredictionMarkets(spec.query, options);
-    if (markets.status === 'unavailable') continue;
     statuses.add(markets.status);
+    if (markets.status === 'unavailable') continue;
     const horizon = day(caseData?.bill_of_lading?.eta) ?? day(new Date().toISOString());
     const chosen = pickDisruptionMarket(markets.items, spec, horizon);
-    if (!chosen) continue;
+    if (!chosen) { statuses.add('unavailable'); continue; }
     const adjacent = spec.adjacent === true;
     let severity = disruptionSeverity(chosen.disruption_prob);
     if (severity && adjacent) severity = DOWNGRADE[severity];
-    evidence.markets.push({ question: chosen.question, implied_prob: chosen.implied_prob, disruption_prob: chosen.disruption_prob, end_date: chosen.end_date, url: chosen.url, status: markets.status });
+    evidence.markets.push({ question: chosen.question, implied_prob: chosen.implied_prob, disruption_prob: chosen.disruption_prob, end_date: chosen.end_date, url: chosen.url,
+      ...observation(markets, markets.fetched_at, 30 * MINUTE, options) });
     if (!severity) continue;
     events.push({
       date: day(markets.fetched_at) ?? horizon,
@@ -254,7 +270,7 @@ export async function routeRiskEvents(caseData, options = {}) {
 
   for (const point of await getSeaStates(profile.waypoints ?? [], options)) {
     statuses.add(point.status);
-    evidence.sea_state.push({ name: point.name, max_wave_height_m: point.max_wave_height_m, on: point.on, status: point.status });
+    evidence.sea_state.push({ name: point.name, max_wave_height_m: point.max_wave_height_m, on: point.on, status: point.status, observed_at: point.observed_at, expires_at: point.expires_at, fetched_at: point.fetched_at });
     const severity = waveSeverity(point.max_wave_height_m);
     if (!severity) continue;
     events.push({
@@ -272,6 +288,7 @@ export async function routeRiskEvents(caseData, options = {}) {
   const key = caseData?.market?.benchmark_key;
   if (key) {
     const quote = await getMarketQuote(key, options);
+    if (!quote) statuses.add('unavailable');
     if (quote) {
       statuses.add(quote.status);
       evidence.price = quote;
@@ -292,7 +309,12 @@ export async function routeRiskEvents(caseData, options = {}) {
   }
 
   const status = statuses.size === 0 ? 'unavailable' : statuses.size === 1 ? [...statuses][0] : 'mixed';
-  return { events, evidence, status };
+  const items = [...evidence.chokepoints, ...evidence.sea_state, ...evidence.markets, ...(evidence.price ? [evidence.price] : [])];
+  const times = (field) => items.map((item) => Date.parse(item[field] ?? '')).filter(Number.isFinite);
+  const observed = times('observed_at'), expires = times('expires_at');
+  return { events, evidence, status, review_required: status !== 'live',
+    observed_at: observed.length ? new Date(Math.min(...observed)).toISOString() : null,
+    expires_at: expires.length ? new Date(Math.min(...expires)).toISOString() : null };
 }
 
 /** Mark a case's market block to a benchmark quote. Invoice, contract price and premiums are untouched. */
@@ -344,6 +366,9 @@ export async function enrichCaseWithRealData(caseData, options = {}) {
     macro_risk_events: [...kept, ...risk.events.map((event) => ({ ...event, source_kind: 'real-data' }))],
     real_data: {
       status: risk.status === 'unavailable' && quote ? quote.status : risk.status,
+      review_required: risk.review_required ?? quote?.status !== 'live',
+      observed_at: risk.observed_at ?? quote?.observed_at ?? null,
+      expires_at: risk.expires_at ?? quote?.expires_at ?? null,
       snapshot_captured_at: loadSnapshot().captured_at,
       market: quote ? { benchmark: quote.benchmark, status: quote.status, as_of: quote.as_of, price_usd_per_mt: quote.price_usd_per_mt ?? null, price_usd_per_bbl: quote.price_usd_per_bbl ?? null, change_1m: quote.change_1m } : null,
       chokepoints: risk.evidence.chokepoints ?? [],

@@ -117,7 +117,7 @@ test('agent API (Demo)', async (t) => {
     assert.equal(trace.status, 200);
     assert.deepEqual(trace.data.trace.spans.map((s) => s.name).sort(), ['execute', 'monitor_pipeline', 'policy']);
 
-    assert.equal(storeState.pools.get(iron.case_id).status, 'Repriced');
+    assert.equal(storeState.pools.get(iron.case_id).status, 'Open');
     await service.stop();
   });
 
@@ -190,7 +190,7 @@ test('agent API (Demo)', async (t) => {
     assert.equal(approved.status, 200);
     assert.equal(approved.data.approval.status, 'EXECUTED');
     assert.equal(approved.data.decision.status, 'COMPLETED');
-    assert.equal(storeState.pools.get(iron.case_id).status, 'Repriced');
+    assert.equal(storeState.pools.get(iron.case_id).status, 'Open');
 
     const twice = await api('POST', `/api/agent/approvals/${approval.approval_id}/approve`, {});
     assert.equal(twice.status, 409);

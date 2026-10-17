@@ -45,8 +45,8 @@ test('risk tracker: a new or worse alert is reported with the alerts that are ac
   const another = await tracker.observe('C1', [storm('critical'), war('warning')]);
   assert.deepEqual(another.data.events.map((e) => e.type).sort(), ['severe_weather', 'war_risk']);
 
-  // easing off without clearing is not reported: the pool was priced for the worse picture
-  assert.equal(await tracker.observe('C1', [storm('warning'), war('warning')]), null);
+  // A downgrade is a new observation, while retaining the earlier episode in the audit.
+  assert.equal((await tracker.observe('C1', [storm('warning'), war('warning')])).type, 'WORLD_RISK_UPDATED');
   // but it can get worse again from there
   assert.equal((await tracker.observe('C1', [storm('critical'), war('warning')])).type, 'WORLD_RISK_UPDATED');
 });
@@ -249,7 +249,7 @@ test('runtime: a monitor source feeds the tick; the same fixture does not trigge
   assert.deepEqual(await decisions(), ['REPRICE', 'PAUSE'], 'one quiet poll is not enough to resume');
   await tick();
   assert.deepEqual(await decisions(), ['REPRICE', 'PAUSE', 'RESUME']);
-  assert.equal(storeState.pools.get(copper.case_id).status, 'Repriced');
+  assert.equal(storeState.pools.get(copper.case_id).status, 'Open');
 
   const records = service.activity.list({ limit: 1000 });
   for (const record of records) assert.equal(record.tx_hash, undefined);

@@ -190,6 +190,11 @@ export class ChainExecutor {
     const pricingAction = PRICING_ACTION_FOR[cmd.action];
     const quote = cmd.params?.quote;
     if (!quote) throw new ChainExecutionError('quote_required', `${cmd.action} needs the quote it is based on`);
+    if (['OPEN', 'OPEN_WITH_WARNING', 'REPRICE'].includes(cmd.action)
+        && (quote.economic_checks?.ok === false || quote.data_review_required
+          || quote.data_quality?.status === 'live' && Date.parse(quote.data_quality.expires_at) <= Date.now())) {
+      throw new ChainExecutionError('terms_not_openable', 'Current economic and data-quality constraints do not permit new issuance terms');
+    }
     const args = toChainPricingArgs({ ...quote, pricing_action: pricingAction }, { pool_id: chainPoolId });
 
     // Check replay protection before state preconditions: a mined PAUSE/REPRICE changed those already.
@@ -207,6 +212,10 @@ export class ChainExecutor {
       throw new ChainExecutionError(plan.code, plan.message);
     }
     if (cmd.action === 'REPRICE') {
+      const version = await ctx.pool.protocolVersion?.().catch(() => 0) ?? 0;
+      if (Number(version) < 3 && (state.subscribed > 0 || !['Open', 'Repriced'].includes(state.state))) {
+        throw new ChainExecutionError('protocol_migration_required', 'The legacy pool cannot preserve this lifecycle during repricing; review the v3 migration');
+      }
       if (args.issue_price_e6 >= state.issuePriceE6) {
         throw new ChainExecutionError('reprice_not_down', `REPRICE_DOWN must lower the price (on-chain ${state.issuePriceE6}, proposed ${args.issue_price_e6})`);
       }
@@ -264,7 +273,7 @@ export class ChainExecutor {
     if (cmd.action === 'MARK_IN_TRANSIT') args.push(await proofToBytes32(params.departure_proof));
     const settlementPlan = async () => {
       const planned = await buildSettlementPlan({ action: cmd.action, chain_pool_id: chainPoolId, params,
-        chainConfig: ctx.chainConfig, context: ctx, recipient: ctx.settlementRecipient, confirmations: this.confirmations });
+        chainConfig: ctx.chainConfig, context: ctx, recipient: ctx.settlementRecipient, expectedPayer: ctx.settlementPayer, confirmations: this.confirmations });
       if (cmd.settlement_plan && JSON.stringify(planned.steps) !== JSON.stringify(cmd.settlement_plan.steps)) {
         throw new ChainExecutionError('settlement_plan_changed', 'Current settlement proofs differ from the approved plan');
       }
@@ -300,6 +309,8 @@ export class ChainExecutor {
       subscribed: Number(offering?.subscribed ?? 0),
       issuePriceE6: Number(offering?.issuePrice ?? 0),
       targetRedemptionE6: Number(offering?.targetRedemptionValue ?? 0),
+      targetRedemptionValueAtomic: offering?.targetRedemptionValue === undefined ? undefined : String(offering.targetRedemptionValue),
+      repaymentAmountAtomic: offering?.repaymentAmount === undefined ? undefined : String(offering.repaymentAmount),
       paymentProof,
       arrivalProof,
       stateBeforePause: undefined
@@ -465,10 +476,11 @@ export async function createChainContext({ chainConfig, env = process.env, resol
   };
 
   const oracleRead = new ethers.Contract(addr('RiskPricingOracle'), abi('RiskPricingOracle'), provider);
-  const pool = new ethers.Contract(addr('RWAOfferingPool'), abi('RWAOfferingPool'), provider);
+  const pool = new ethers.Contract(addr('RWAOfferingPool'), [...abi('RWAOfferingPool'), 'function protocolVersion() view returns (uint256)'], provider);
   const registry = new ethers.Contract(addr('EBLRegistry'), abi('EBLRegistry'), provider);
   const context = { provider, pool, registry, explorerBase: network.explorerBase, signers: {}, oracle: oracleRead,
-    chainConfig: network, settlementRecipient: String(env.AGENT_SETTLEMENT_RECIPIENT ?? '').trim() };
+    chainConfig: network, settlementPayer: String(env.AGENT_SETTLEMENT_PAYER ?? '').trim(),
+    settlementRecipient: String(env.AGENT_SETTLEMENT_RECIPIENT ?? '').trim() };
 
   // The watcher has its own provider-only context. Do not even resolve signer keys on this path.
   if (readOnly) return context;

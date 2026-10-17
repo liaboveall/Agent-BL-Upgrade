@@ -62,6 +62,7 @@ export function loadAgentConfig(env = process.env) {
     chainPollSec: int(env.AGENT_CHAIN_POLL_SEC, 15, { min: 1, max: 3600 }),
     chainStartBlock: env.AGENT_CHAIN_START_BLOCK?.trim() ? Number(env.AGENT_CHAIN_START_BLOCK) : null,
     settlementRecipient: String(env.AGENT_SETTLEMENT_RECIPIENT ?? '').trim(),
+    settlementPayer: String(env.AGENT_SETTLEMENT_PAYER ?? '').trim(),
     maxDecisions: int(env.AGENT_MAX_DECISIONS, 5000, { min: 100 }),
     retentionDays: int(env.AGENT_RETENTION_DAYS, 90, { min: 1 }),
     anchorEnabled: bool(env.AGENT_ANCHOR_ENABLED, false),

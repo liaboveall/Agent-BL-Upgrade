@@ -72,7 +72,8 @@ test('uploaded evidence retains its observation time across reuse and cannot reo
   const observed = first.documents[0].observed_at;
   assert.ok(first.documents.every((document) => document.expires_at && document.source_status === 'fixture'));
   advance(2 * 86400000);
-  const next = await service.submitDocuments({ case_id: 'PHASE5-DOC-EXPIRED', documents: input });
+  await assert.rejects(service.submitDocuments({ case_id: 'PHASE5-DOC-EXPIRED', documents: input }), { code: 'duplicate_asset_documents' });
+  const next = await service.submitDocuments({ case_id: 'PHASE5-DOC-FRESH', documents: [...input, { name: 'update.txt', mime_type: 'text/plain', text: 'Review attached existing evidence for expiry' }] });
   await service.waitFor(next.idempotency_key);
   const [id] = service.ingest.getJob(next.job.job_id).decision_ids;
   const held = await service.getDecision(id);

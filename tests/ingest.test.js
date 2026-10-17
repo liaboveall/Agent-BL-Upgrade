@@ -47,10 +47,8 @@ test('ingest: the same content for the same case is idempotent and returns the s
   assert.equal(second.created, false);
   assert.equal(second.job.job_id, first.job.job_id);
   assert.equal(ingest.listJobs().length, 1);
-  // a different case with the same bytes is its own job
-  const other = await ingest.accept({ case_id: 'CASE-UP-0003', documents: body.documents });
-  assert.notEqual(other.job.job_id, first.job.job_id);
-  assert.equal(other.documents[0].document_id, first.documents[0].document_id, 'the stored bytes are shared by content');
+  await assert.rejects(ingest.accept({ case_id: 'CASE-UP-0003', documents: body.documents }), { code: 'duplicate_asset_documents' });
+  assert.equal(ingest.listJobs().length, 1, 'renaming the case cannot register the same documents twice');
 });
 
 test('ingest: without a case_id one is derived from the content, so the same upload lands on the same case', async () => {

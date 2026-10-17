@@ -1,0 +1,21 @@
+import { chromium } from './browser/node_modules/playwright/index.mjs';
+import AxeBuilder from './browser/node_modules/@axe-core/playwright/dist/index.mjs';
+import fs from 'node:fs/promises';
+const dir='/tmp/agentbl-review-20261017';
+const browser=await chromium.launch({headless:true,executablePath:'/home/mars/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome',args:['--no-sandbox']});
+const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'zh-CN'});
+const page=await context.newPage();
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const findings={errors,pages:[]};
+await page.goto('http://127.0.0.1:4177',{waitUntil:'networkidle'});
+await page.waitForSelector('.deal-card');
+for(const view of ['market','mint','agent','discover']){
+ await page.goto('http://127.0.0.1:4177/#/'+view,{waitUntil:'networkidle'});
+ await page.waitForTimeout(750);
+ await page.screenshot({path:dir+'/'+view+'-zh-1440.png',fullPage:true});
+ const violations=(await new AxeBuilder({page}).analyze()).violations.map(v=>({id:v.id,impact:v.impact,description:v.description,nodes:v.nodes.map(n=>({target:n.target,summary:n.failureSummary})).slice(0,12)}));
+ findings.pages.push({view,text:await page.locator('body').innerText(),geometry:await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth})),violations});
+}
+await fs.writeFile(dir+'/browser-baseline.json',JSON.stringify(findings,null,2));
+console.log(JSON.stringify({pages:findings.pages.map(p=>({view:p.view,geometry:p.geometry,violations:p.violations})),errors},null,2));
+await browser.close();

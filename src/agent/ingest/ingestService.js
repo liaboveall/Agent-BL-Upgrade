@@ -13,6 +13,7 @@ import { evidenceMetadata } from '../runtime/freshness.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createWriteQueue, readJson, writeFileAtomic, writeJsonAtomic } from '../../lib/jsonStore.js';
+import { cargoIdentityHashV2 } from '../../chain/cargoIdentity.js';
 
 export const ALLOWED_MIME_TYPES = Object.freeze({
   'text/markdown': { ext: 'md', kind: 'text' },
@@ -161,7 +162,7 @@ export class IngestService {
    * @param {{case_id?: string, documents: object[], exporter_preferences?: object}} body
    * @returns {Promise<{job: object, documents: object[], created: boolean}>}
    */
-  async accept(body, { reviewOf } = {}) {
+  async accept(body, { reviewOf, ownerId = 'local-operator', visibility = 'private' } = {}) {
     await this.init();
     if (!body || typeof body !== 'object' || Array.isArray(body)) throw new IngestError('invalid_request', 'Body must be an object');
     const inputs = body.documents;
@@ -172,10 +173,16 @@ export class IngestService {
     }
 
     const stored = [];
-    for (const input of inputs) stored.push(await this.#store(input));
+    for (const input of inputs) stored.push(await this.#store(input, ownerId));
     const unique = [...new Map(stored.map((record) => [record.document_id, record])).values()];
 
     const ids = unique.map((record) => record.sha256).sort();
+    if (body.case_id && this.isPrivateCase(body.case_id) && this.caseOwner(body.case_id) !== ownerId) {
+      throw new IngestError('case_owner_conflict', 'This case identifier belongs to another workspace', 409);
+    }
+    const duplicate = [...this.jobs.values()].find((job) => (body.case_id && job.case_id !== body.case_id || job.owner_id !== ownerId)
+      && JSON.stringify(job.document_ids.map((id) => this.documents.get(id)?.sha256).sort()) === JSON.stringify(ids));
+    if (duplicate && !reviewOf) throw new IngestError('duplicate_asset_documents', 'These documents already belong to an existing case; review that case instead of creating another asset', 409);
     if (reviewOf) {
       const original = this.jobs.get(reviewOf);
       const originalIds = original?.document_ids.map((id) => this.documents.get(id)?.sha256).sort();
@@ -185,7 +192,7 @@ export class IngestService {
     }
     // A review is a new, narrowly scoped attempt even when its corrected bytes occurred in an
     // older successful upload. Ordinary upload fingerprints remain unchanged.
-    const fingerprint = sha256(JSON.stringify({ case_id: body.case_id ?? null, ids, ...(reviewOf ? { review_of: reviewOf } : {}) }));
+    const fingerprint = sha256(JSON.stringify({ owner_id: ownerId, case_id: body.case_id ?? null, ids, ...(reviewOf ? { review_of: reviewOf } : {}) }));
     const jobId = `job_${fingerprint.slice(0, 20)}`;
     const caseId = body.case_id ? String(body.case_id) : `CASE-UP-${fingerprint.slice(0, 12).toUpperCase()}`;
     const existing = this.jobs.get(jobId);
@@ -199,6 +206,8 @@ export class IngestService {
     const attempt = existing ? (existing.attempt ?? 1) + 1 : 1;
     const job = {
       job_id: jobId,
+      owner_id: ownerId,
+      visibility,
       case_id: caseId,
       status: 'QUEUED',
       document_ids: unique.map((record) => record.document_id),
@@ -215,11 +224,11 @@ export class IngestService {
     return { job: structuredClone(job), documents: unique.map((record) => structuredClone(record)), created: true };
   }
 
-  async #store(input) {
+  async #store(input, ownerId) {
     const { name, mime, allowed, buffer } = validateDocumentInput(input, this.maxBytes);
 
     const digest = sha256(buffer);
-    const documentId = `doc_${digest.slice(0, 16)}`;
+    const documentId = `doc_${sha256(`${ownerId}:${digest}`).slice(0, 16)}`;
     const existing = this.documents.get(documentId);
     if (existing) {
       this.blobs.set(documentId, buffer);
@@ -249,6 +258,12 @@ export class IngestService {
     const job = this.jobs.get(id);
     return job ? structuredClone(job) : null;
   }
+
+  isPrivateCase(caseId) {
+    const jobs = [...this.jobs.values()].filter((job) => job.case_id === caseId);
+    return jobs.some((job) => job.visibility !== 'public-demo') || this.cases.has(caseId) && this.cases.get(caseId).visibility !== 'public-demo';
+  }
+  caseOwner(caseId) { return [...this.jobs.values()].find((job) => job.case_id === caseId)?.owner_id ?? this.cases.get(caseId)?.workspace_owner_id ?? null; }
 
   listJobs({ case_id: caseId, limit = 50 } = {}) {
     return [...this.jobs.values()]
@@ -305,8 +320,21 @@ export class IngestService {
   /** Persist a case an upload produced, so the market catalog can list it after a restart. */
   async saveCase(caseData) {
     if (!caseData?.case_id || !CASE_ID_PATTERN.test(caseData.case_id)) return null;
-    this.cases.set(caseData.case_id, structuredClone(caseData));
-    if (this.dir) await writeJsonAtomic(path.join(this.dir, 'cases', `${caseData.case_id}.case.json`), caseData);
+    let titleHash;
+    try { titleHash = cargoIdentityHashV2(caseData); } catch { /* incomplete/non-marine documents remain subject to intake review */ }
+    if (titleHash) {
+      for (const other of await this.listCases()) {
+        if (other.case_id === caseData.case_id) continue;
+        let otherHash;
+        try { otherHash = cargoIdentityHashV2(other); } catch { continue; }
+        if (otherHash === titleHash) throw new IngestError('duplicate_asset_identity', 'This bill already belongs to another case; amendments must be reviewed under its original asset identity', 409);
+      }
+    }
+    const caseJobs = [...this.jobs.values()].filter((job) => job.case_id === caseData.case_id);
+    const visibility = caseJobs.length > 0 && caseJobs.every((job) => job.visibility === 'public-demo') ? 'public-demo' : 'private';
+    const privateCase = { ...caseData, visibility, title_identity_hash: titleHash ?? null, workspace_owner_id: this.caseOwner(caseData.case_id) };
+    this.cases.set(caseData.case_id, structuredClone(privateCase));
+    if (this.dir) await writeJsonAtomic(path.join(this.dir, 'cases', `${caseData.case_id}.case.json`), privateCase);
     return caseData.case_id;
   }
 

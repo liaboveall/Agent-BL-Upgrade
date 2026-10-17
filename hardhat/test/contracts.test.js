@@ -125,7 +125,7 @@ describe('AgentBL contracts', () => {
     expect(await ctx.oracle.latestQuoteHash(poolId)).to.equal(quoteHash);
 
     // pool repriced
-    expect(await ctx.pool.stateOf(poolId)).to.equal(BigInt(STATE.Repriced));
+    expect(await ctx.pool.stateOf(poolId)).to.equal(BigInt(STATE.Open));
     expect(await ctx.pool.issuePriceOf(poolId)).to.equal(800_000n);
 
     const repriced = await ctx.pool.queryFilter(ctx.pool.filters.OfferingRepriced());

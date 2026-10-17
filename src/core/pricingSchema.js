@@ -42,7 +42,8 @@ export const RWA_OFFERING_STATES = [
   'Redeemed',
   'Liquidation',
   'Defaulted',
-  'Cancelled'
+  'Cancelled',
+  'LossSettled'
 ];
 
 // pricing_action -> the offering state it drives.
@@ -140,8 +141,8 @@ export function assertPricingQuote(quote, caseData) {
   // Exporter economics.
   requireNumber(quote.requested_cash_usd, 'requested_cash_usd', errors, { min: 0 });
   requireNumber(quote.exporter_cost_of_goods_usd, 'exporter_cost_of_goods_usd', errors, { min: 0 });
-  requireNumber(quote.exporter_gross_profit_usd, 'exporter_gross_profit_usd', errors, { min: 0 });
-  requireNumber(quote.exporter_gross_margin_pct, 'exporter_gross_margin_pct', errors, { min: 0, max: 1 });
+  requireNumber(quote.exporter_gross_profit_usd, 'exporter_gross_profit_usd', errors);
+  requireNumber(quote.exporter_gross_margin_pct, 'exporter_gross_margin_pct', errors, { max: 1 });
 
   // Pricing decomposition. Issue prices are a discount to the 1.00 target.
   requireNumber(quote.base_issue_price_usd, 'base_issue_price_usd', errors, { min: 0, max: 1 });
@@ -191,6 +192,13 @@ export function assertPricingQuote(quote, caseData) {
 
   // --- structural invariants (the heart of a defensible AI price) ---
   if (errors.length === 0) {
+    if (['OPEN_OFFERING', 'OPEN_WITH_WARNING', 'REPRICE_DOWN'].includes(quote.pricing_action)
+        && (quote.exporter_gross_profit_usd <= 0 || quote.exporter_net_profit_usd < 0
+          || quote.financing_cost_usd > quote.exporter_gross_profit_usd * 0.85 + 0.005
+          || quote.recommended_token_supply < 1
+          || quote.economic_checks?.ok === false)) {
+      errors.push('Openable terms must satisfy final exporter affordability and financing constraints');
+    }
     // AI-5 collateral guardrail: redemption exposure must never exceed safe coverage.
     if (quote.target_redemption_exposure_usd > quote.max_safe_redemption_exposure_usd + 1) {
       errors.push('target_redemption_exposure_usd must be <= max_safe_redemption_exposure_usd');

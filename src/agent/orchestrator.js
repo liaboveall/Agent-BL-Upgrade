@@ -508,7 +508,12 @@ export class AgentOrchestrator {
     return summaryOf(decision.action, reasoning, {
       case_data: caseForStorage,
       replay,
-      freshness: documentFreshness.fresh ? worldRisk.assessment.freshness : documentFreshness,
+      // An explicitly offline analysis is a simulation of THESE documents, not a fresh
+      // observation of the world. Preserve the source's real clock independently; do not
+      // manufacture today's observed_at just to keep a deterministic Demo executable.
+      freshness: documentFreshness.fresh && worldRisk.assessment.live ? worldRisk.assessment.freshness : documentFreshness,
+      source_freshness: worldRisk.assessment.freshness,
+      analysis_mode: worldRisk.assessment.live ? 'sourced' : 'offline-simulation',
       valuation: aiValuation,
       quote: recommended,
       comparison,

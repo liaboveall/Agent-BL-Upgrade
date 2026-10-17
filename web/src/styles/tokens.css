@@ -12,8 +12,8 @@
   /* text */
   --text: #0f172a;
   --text-2: #334155;
-  --muted: #64748b;
-  --faint: #94a3b8;
+  --muted: #526174;
+  --faint: #59677b;
 
   /* lines */
   --line: #e4e7ec;
@@ -27,7 +27,7 @@
   --on-accent: #ffffff;
 
   /* status */
-  --ok: #0e7a52;
+  --ok: #096441;
   --ok-soft: #e4f5ec;
   --warn: #9a5a00;
   --warn-soft: #fdf1d9;
@@ -35,7 +35,7 @@
   --crit-soft: #fbe8e8;
   --info: #1d5bbf;
   --info-soft: #e8f0fd;
-  --gain: #0e7a52;
+  --gain: #096441;
   --cost: #b42323;
 
   /* type */

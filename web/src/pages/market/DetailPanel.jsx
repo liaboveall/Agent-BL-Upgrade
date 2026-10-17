@@ -16,7 +16,7 @@ export function DetailPanel({ now }) {
   const state = useApp((s) => s);
   const entry = state.cases.find((c) => c.case_id === state.caseId);
   const view = entry ? marketView(state, entry) : null;
-  const quote = view?.pool?.quote ?? selectedQuote(state);
+  const quote = state.busy ? null : view?.quote ?? selectedQuote(state);
   if (!entry || !quote) {
     return <div className="detail-panel card is-loading"><p className="muted">{t('market_detail_loading')}</p></div>;
   }
@@ -79,7 +79,7 @@ export function DetailPanel({ now }) {
               disabled={paused}
               onChange={(event) => setSubscriptionAmount(event.target.value)}
             />
-            <Button id="market-subscribe-btn" variant="primary" disabled={paused || !state.demoMode || state.marketSubscribing} onClick={subscribeSelected}>
+            <Button id="market-subscribe-btn" variant="primary" disabled={state.busy || !view.canSubscribe || !state.demoMode || state.marketSubscribing} onClick={subscribeSelected}>
               {buttonLabel}
             </Button>
           </div>
@@ -101,6 +101,8 @@ export function DetailPanel({ now }) {
       </div>
 
       <p className={`source-line tone-text-${source.tone}`}><Icon name="info" size={14} />{source.text}</p>
+      <p className="muted small">{t('market_terms_scope', { speed: f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed, version: view.pool?.quote_version ?? 1 })}</p>
+      <p className="callout tone-warn">{t('investment_risk_note')}</p>
 
       <div className="detail-actions">
         <Button variant="secondary" onClick={() => openDeal(state.caseId)}><Icon name="ship" size={15} />{t('market_open_voyage')}</Button>

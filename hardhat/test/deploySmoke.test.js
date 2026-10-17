@@ -13,7 +13,7 @@ describe('deploy-protocol.js smoke sequence', () => {
     expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Paused);
     expect(await ctx.pool.issuePriceOf(poolId)).to.equal(791_000n);
     await send(applyPricing(ctx, poolId, 791_000n, ACTION.RESUME_OFFERING));
-    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Repriced);
+    expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Open);
     expect(await ctx.pool.issuePriceOf(poolId)).to.equal(791_000n);
   });
 
@@ -47,7 +47,7 @@ describe('deploy-protocol.js smoke sequence', () => {
     await decide(850_000n, 3, ACTION.PAUSE_OFFERING, 'pause');
     expect(await pool.stateOf(poolId)).to.equal(STATE.Paused);
     await decide(850_000n, 1, ACTION.RESUME_OFFERING, 'resume');
-    expect(await pool.stateOf(poolId)).to.equal(STATE.Repriced);
+    expect(await pool.stateOf(poolId)).to.equal(STATE.Subscribed);
 
     const repaymentAmount = 10_000n * 1_000_000n;
     await send(pool.recordImporterPayment(poolId, ethers.id('wave-b:importer-payment'), repaymentAmount));

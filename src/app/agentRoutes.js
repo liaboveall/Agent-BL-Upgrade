@@ -14,6 +14,8 @@ import { createChainReader } from '../agent/runtime/poolRegistry.js';
 import { isRecord } from './shapes.js';
 import { withReferences } from '../agent/runtime/references.js';
 import { publicAgentPolicy } from '../mcp/agentTools.js';
+import { subscriptionAvailability } from '../core/subscription.js';
+import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase } from './workspaceAccess.js';
 
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
 
@@ -66,6 +68,14 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     const method = request.method;
     if (!pathname.startsWith('/api/agent/')) return false;
     const service = getService();
+    const caseFilter = (caseId) => canReadWorkspaceCase(service, request, caseId);
+
+    if (method === 'GET' && pathname === '/api/agent/workspace/cases') {
+      await service.ingest?.init?.();
+      const cases = (await service.ingest?.listCases() ?? []).filter((data) => caseFilter(data.case_id));
+      sendJson(response, 200, { ok: true, visibility: 'private', cases });
+      return true;
+    }
 
     if (method === 'GET' && pathname === '/api/agent/policy') {
       sendJson(response, 200, { ok: true, policy: await publicAgentPolicy(service) });
@@ -97,6 +107,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       authorizeAdmin(request);
       const body = await readJsonBody(request);
       if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an agent event object');
+      if (body.case_id) requireWorkspaceCase(service, request, body.case_id);
       // The caller names the event; where it came from is not up to the caller.
       const accepted = await service.submitEvent({ ...body, source: 'admin' }, { origin: 'api' });
       const wait = ['1', 'true'].includes(url.searchParams.get('wait') ?? '');
@@ -113,13 +124,14 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         action: url.searchParams.get('action') ?? undefined,
         limit: intParam(url, 'limit', { fallback: 50 }),
         cursor: url.searchParams.get('cursor') ?? undefined
+        , caseFilter
       });
       sendJson(response, 200, { ok: true, ...result, decisions: result.decisions.map(withReferences) });
       return true;
     }
 
     if (method === 'GET' && pathname === '/api/agent/references') {
-      const { decisions } = await service.listDecisions({ limit: service.config.maxDecisions });
+      const { decisions } = await service.listDecisions({ limit: service.config.maxDecisions, caseFilter });
       const seen = new Set();
       const current = decisions.filter((decision) => {
         if (decision.mode !== service.getMode() || decision.generation !== undefined && decision.generation !== service.getGeneration() || seen.has(decision.case_id)) return false;
@@ -127,8 +139,11 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       });
       sendJson(response, 200, { ok: true, mode: service.getMode(), generation: service.getGeneration(), decisions: current.map(withReferences),
         pools: [...service.store.pools.values()]
+          .filter((pool) => caseFilter(pool.caseData?.case_id ?? pool.poolId))
           .filter((pool) => service.getMode() === 'demo' || service.registry.get(pool.caseData?.case_id ?? pool.poolId)?.chain)
           .map((pool) => ({ case_id: pool.caseData?.case_id ?? pool.poolId, status: pool.status, quote: pool.quote,
+            ...subscriptionAvailability(pool),
+            quote_version: pool.quoteVersion ?? 1, subscribed_shares: pool.subscribedShares ?? null, token_supply: pool.tokenSupply ?? null,
             // The recorded subscription totals; the market shows these, never an estimate.
             subscribed_usd: Number.isFinite(pool.subscribedUsd) ? pool.subscribedUsd : null,
             target_usd: Number.isFinite(pool.targetUsd) ? pool.targetUsd : null,
@@ -139,6 +154,8 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     const decisionMatch = /^\/api\/agent\/decisions\/([^/]+)(?:\/(trace|replay|anchor))?$/u.exec(pathname);
     if (method === 'GET' && decisionMatch) {
       const id = pathId(decisionMatch[1]);
+      const privateDecision = await service.getDecision(id);
+      if (privateDecision) requireWorkspaceCase(service, request, privateDecision.case_id);
       if (decisionMatch[2] === 'anchor') {
         sendJson(response, 200, { ok: true, anchor: await service.getDecisionAnchor(id) });
         return true;
@@ -174,7 +191,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
           status: url.searchParams.get('status') ?? undefined,
           case_id: url.searchParams.get('case_id') ?? undefined,
           limit: intParam(url, 'limit', { fallback: 100 })
-        })
+        }).filter((approval) => caseFilter(approval.case_id))
       });
       return true;
     }
@@ -183,6 +200,8 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     if (approvalMatch) {
       authorizeAdmin(request);
       const id = pathId(approvalMatch[1]);
+      const scopedApproval = service.approvals.get(id);
+      if (scopedApproval) requireWorkspaceCase(service, request, scopedApproval.case_id);
       const verb = approvalMatch[2];
       if (method === 'GET' && !verb) {
         const approval = service.approvals.get(id);
@@ -214,7 +233,8 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       const limit = Math.ceil(service.config.uploadMaxBytes * (4 / 3) * 3) + 65_536;
       const body = await readJsonBody(request, { limit });
       if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object with a documents array');
-      const result = await service.submitDocuments(body);
+      if (body.case_id) requireWorkspaceCase(service, request, body.case_id);
+      const result = await service.submitDocuments(body, { ownerId: workspaceOwner(request, response) });
       const wait = ['1', 'true'].includes(url.searchParams.get('wait') ?? '');
       if (wait && result.idempotency_key) await service.waitFor(result.idempotency_key, 30_000);
       const job = service.ingest.getJob(result.job.job_id);
@@ -233,6 +253,8 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     const reviewMatch = /^\/api\/agent\/jobs\/([^/]+)\/review$/u.exec(pathname);
     if (method === 'POST' && reviewMatch) {
       authorizeIntake(request);
+      const previous = service.ingest?.getJob(pathId(reviewMatch[1]));
+      if (previous) requireWorkspaceCase(service, request, previous.case_id);
       const body = await readJsonBody(request, { limit: Math.ceil(service.config.uploadMaxBytes * 4) + 65_536 });
       sendJson(response, 202, { ok: true, ...(await service.reviewDocuments(pathId(reviewMatch[1]), body)) });
       return true;
@@ -241,17 +263,19 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     if (method === 'GET' && jobMatch) {
       const job = service.ingest?.getJob(pathId(jobMatch[1]));
       if (!job) throw new HttpError(404, 'job_not_found', 'Unknown ingest job');
+      requireWorkspaceCase(service, request, job.case_id);
       sendJson(response, 200, { ok: true, job });
       return true;
     }
     if (method === 'GET' && pathname === '/api/agent/jobs') {
-      sendJson(response, 200, { ok: true, jobs: service.ingest?.listJobs({ case_id: url.searchParams.get('case_id') ?? undefined, limit: intParam(url, 'limit', { fallback: 50 }) }) ?? [] });
+      sendJson(response, 200, { ok: true, jobs: (service.ingest?.listJobs({ case_id: url.searchParams.get('case_id') ?? undefined, limit: intParam(url, 'limit', { fallback: 50 }) }) ?? []).filter((job) => caseFilter(job.case_id)) });
       return true;
     }
 
     const caseMatch = CASE_PATH.exec(pathname);
     if (caseMatch) {
       const caseId = pathId(caseMatch[1]);
+      requireWorkspaceCase(service, request, caseId);
       if (method === 'GET') {
         sendJson(response, 200, { ok: true, case_id: caseId, ...(service.preferences.describe(caseId) ?? { preferences: {}, updated_at: null }) });
         return true;

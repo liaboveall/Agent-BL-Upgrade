@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import { Interface, ZeroAddress } from 'ethers';
 import { loadChainConfig } from '../../src/agent/runtime/factory.js';
-import { cargoIdentityHash } from '../../src/chain/cargoIdentity.js';
+import { cargoIdentityHash, cargoIdentityHashV2 } from '../../src/chain/cargoIdentity.js';
+import { knownLivePool } from '../../src/agent/runtime/poolRegistry.js';
 
 export const OWNER = '0x1111111111111111111111111111111111111111';
 export const chainConfig = loadChainConfig();
@@ -23,6 +24,7 @@ export function openingChain() {
     pledgedTo: async (id) => bills.get(Number(id))?.pledgedTo ?? ZeroAddress
   };
   const pool = {
+    protocolVersion: async () => 3,
     target: chainConfig.contracts.RWAOfferingPool,
     interface: interfaces.RWAOfferingPool,
     owner: async () => state.poolOwner,
@@ -59,8 +61,8 @@ export function openingChain() {
     return emit(step, [poolId, id, ...step.args.slice(1)], options);
   }
   function seed(caseData = copper, { eblId = 2, poolId = 2, poolState = 2, metadataHash = `0x${'ab'.repeat(32)}` } = {}) {
-    bills.set(eblId, { cargoHash: cargoIdentityHash(caseData), metadataHash, holder: OWNER, pledgedTo: poolId ? chainConfig.contracts.RWAOfferingPool : ZeroAddress });
-    if (poolId) pools.set(poolId, { eblId, exists: true, state: poolState, issuePrice: 900000n, subscribed: 0 });
+    bills.set(eblId, { cargoHash: knownLivePool(caseData.case_id) ? cargoIdentityHash(caseData) : cargoIdentityHashV2(caseData), metadataHash, holder: OWNER, pledgedTo: poolId ? chainConfig.contracts.RWAOfferingPool : ZeroAddress });
+    if (poolId) pools.set(poolId, { eblId, exists: true, state: poolState, issuePrice: 900000n, targetRedemptionValue: 1000000n, subscribed: 0 });
   }
   return { context: { registry, pool, provider, signers: {} }, state, bills, pools, transactions, receipts, interfaces, seed, send, emit };
 }
