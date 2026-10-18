@@ -9,6 +9,7 @@
 // produces. Backend, frontend and the controlled terms all consume this shape.
 
 import { RISK_LEVELS, ValidationError } from './schema.js';
+import { researchConstraints } from './researchConstraints.js';
 
 export const PAYOUT_SPEEDS = ['FAST', 'BALANCED', 'LOW_COST'];
 
@@ -191,7 +192,22 @@ export function assertPricingQuote(quote, caseData) {
   }
 
   // --- structural invariants (the heart of a defensible AI price) ---
-  if (errors.length === 0) {
+  const numericFieldsValid = errors.length === 0;
+  if (quote.research_feasibility) {
+    try {
+      const r = quote.research_feasibility, { version: _version, ...parameters } = r.policy;
+      const policy = researchConstraints(parameters);
+      const floorBps = policy.funding_rate_bps + policy.operations_rate_bps + policy.loss_buffer_bps;
+      if (r.annual_floor_bps !== floorBps || r.policy.version !== policy.version) errors.push('Research compensation policy does not match its parameters');
+      if (['OPEN_OFFERING', 'OPEN_WITH_WARNING', 'REPRICE_DOWN'].includes(quote.pricing_action)) {
+        const cash = quote.recommended_token_supply * quote.final_issue_price_usd;
+        const cost = quote.recommended_token_supply * (1 - quote.final_issue_price_usd);
+        if (r.status !== 'FEASIBLE_RESEARCH_ONLY' || cost + 0.005 < cash * floorBps / 10000 * quote.tenor_days / 365
+          || cost > cash * quote.annual_rate_cap_bps / 10000 * quote.tenor_days / 365 + 0.005) errors.push('Openable quote violates research compensation interval');
+      }
+    } catch { errors.push('Invalid research compensation policy'); }
+  }
+  if (numericFieldsValid) {
     if (['OPEN_OFFERING', 'OPEN_WITH_WARNING', 'REPRICE_DOWN'].includes(quote.pricing_action)
         && (quote.exporter_gross_profit_usd <= 0 || quote.exporter_net_profit_usd < 0
           || quote.financing_cost_usd > quote.exporter_gross_profit_usd * 0.85 + 0.005

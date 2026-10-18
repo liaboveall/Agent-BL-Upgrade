@@ -19,10 +19,10 @@ export function buildPositionView({ wallet, demoInvestments = [], ledgerPosition
     result.push({ ...pos, mode: 'live', shares: String(balance ?? pos.shares), ledger_shares: pos.shares,
       claimable_atomic: reconciled && snapshot?.claimable_atomic != null ? String(snapshot.claimable_atomic) : null,
       chain_state: snapshot?.state ?? null, confirmed_block: snapshot?.block_number ?? null,
-      reconciled, status: reconciled ? pos.status : 'reconciling' });
+      reconciled, status: !reconciled ? 'reconciling' : BigInt(snapshot?.claimable_atomic ?? 0) > 0n && BigInt(balance) === 0n ? 'recovery_claimable' : pos.status });
   }
   for (const [key, snapshot] of chainPositions) {
-    if (known.has(key) || BigInt(snapshot.shares ?? 0) === 0n) continue;
+    if (known.has(key) || (BigInt(snapshot.shares ?? 0) === 0n && BigInt(snapshot.claimable_atomic ?? 0) === 0n)) continue;
     result.push({ ...snapshot, mode: 'live', investor: normalized, shares: String(snapshot.shares),
       cost_atomic: null, claimed_atomic: null, claimable_atomic: null, reconciled: false, status: 'reconciling' });
   }

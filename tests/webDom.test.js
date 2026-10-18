@@ -9,7 +9,7 @@ import { loadWebSsr } from './helpers/web-ssr.js';
 const ssr = await loadWebSsr();
 test.after(() => ssr.cleanup());
 
-const VIEWS = ['market', 'mint', 'agent', 'discover'];
+const VIEWS = ['finance', 'market', 'mint', 'agent', 'discover'];
 
 function fixtureCase(overrides = {}) {
   return {

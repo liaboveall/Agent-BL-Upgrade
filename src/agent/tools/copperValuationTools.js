@@ -87,9 +87,9 @@ export async function getLiveCommodityPrice(args = {}, env = process.env) {
         return { commodity, price_usd_per_mt: round(Number(latest.value), 2), currency: 'USD', as_of: latest.date, source: 'alphavantage.co COPPER (global monthly)' };
       }
     }
-  } catch (error) {
+  } catch {
     // fall through to the public quote, then mock, with a note
-    return await publicLivePrice(commodity, env) ?? mockLivePrice(commodity, `mock-fallback (live API error: ${error.message})`);
+    return await publicLivePrice(commodity, env) ?? mockLivePrice(commodity, 'mock-fallback (commodity source unavailable)');
   }
 
   if (provider !== 'mock') {
@@ -156,8 +156,8 @@ export async function getHistoricalComparableTrades(args = {}, env = process.env
       if (comparables.length) {
         return { hs_code: hsCode, reporter_code: reporter, comparables, source: 'comtradeapi.un.org' };
       }
-    } catch (error) {
-      return mockComparables(hsCode, reporter, `mock-fallback (Comtrade error: ${error.message})`);
+    } catch {
+      return mockComparables(hsCode, reporter, 'mock-fallback (historical source unavailable)');
     }
   }
 

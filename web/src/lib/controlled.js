@@ -1,18 +1,21 @@
 import { currentWalletSession, subscribeOffering, claimPosition, loadEthers } from './web3.js';
+import { rightsSessionToken } from './rights-session.js';
 export async function controlledRequest(route, body) {
-  const response = await fetch(`/api/controlled/${route}`, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const token = rightsSessionToken();
+  const response = await fetch(`/api/controlled/${route}`, { ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
+    headers: { 'content-type': 'application/json', ...(token ? { 'x-rights-session': token } : {}) } });
   const value = await response.json();
   if (!response.ok) throw Object.assign(new Error(value.error ?? value.message ?? 'Controlled financing unavailable'), { code: value.code });
   return value;
 }
-export function controlledIntentOptions(config, onIntent, assertCurrent) {
-  const prepare = (route) => async (body) => { const { intent } = await controlledRequest(route, body); onIntent(intent); return intent; };
+export function controlledIntentOptions(config, onIntent, assertCurrent, disclosureHash) {
+  const prepare = (route) => async (body) => { const { intent } = await controlledRequest(route, { ...body, ...(route === 'subscription-intents' ? { reviewed_disclosure_hash: disclosureHash } : {}) }); onIntent(intent); return intent; };
   return { getConfig: async () => config, getSession: currentWalletSession, assertCurrent,
     prepareIntent: prepare('subscription-intents'), prepareClaim: prepare('claim-intents'),
     attachIntent: async (id, txHash) => (await controlledRequest(`intents/${id}/transaction`, { tx_hash: txHash })).intent,
     beforeBroadcast: async (intent) => { const { intent: checkpoint } = await controlledRequest(`intents/${intent.intent_id}/broadcast`, {}); onIntent(checkpoint); return checkpoint; } };
 }
-export async function acknowledgeControlledTerms(offer, status, assertCurrent) {
+export async function acknowledgeControlledTerms(offer, status, assertCurrent, revalidate = async () => {}) {
   const session = currentWalletSession(); if (!session?.signer) throw new Error('Connect an EVM wallet');
   const { Contract } = await loadEthers();
   const controller = new Contract(status.controller, ['function capitalPool() view returns (address)', 'function acknowledgeTerms(uint256,bytes32,uint256,uint64)'], session.signer);
@@ -20,7 +23,7 @@ export async function acknowledgeControlledTerms(offer, status, assertCurrent) {
   if (Number(network.chainId) !== status.config.chainIdDecimal || (await controller.capitalPool()).toLowerCase() !== status.config.contracts.RWAOfferingPool.toLowerCase()) throw new Error('Controlled deployment or wallet network changed');
   assertCurrent();
   const args = [offer.pool_id, offer.terms_hash, offer.quote_version, offer.subscription_deadline];
-  await controller.acknowledgeTerms.staticCall(...args); assertCurrent();
+  await controller.acknowledgeTerms.staticCall(...args); await revalidate(); assertCurrent();
   const tx = await controller.acknowledgeTerms(...args); await tx.wait(status.config.confirmations ?? 1);
   return { txHash: tx.hash };
 }

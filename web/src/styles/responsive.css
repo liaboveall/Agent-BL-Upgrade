@@ -1,0 +1,95 @@
+/* Fluid shell; only data regions scroll horizontally. */
+.app, .page, .view, .topbar-inner, .mode-strip-inner { min-width: 0; }
+.finance-intro { display: grid; gap: 12px; margin-bottom: 24px; max-width: 1100px; }
+.finance-intro h1 { font-size: var(--fs-28); }
+.finance-journey { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.finance-journey li { display: grid; gap: 6px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.finance-journey span { color: var(--text-2); }
+.controlled-panel { width: 100%; min-width: 0; margin-top: 24px; padding: 0; }
+.controlled-panel p { margin-block: 10px; overflow-wrap: anywhere; }
+.controlled-panel input { min-width: 0; max-width: 100%; }
+.controlled-panel > details { min-width: 0; }
+.controlled-table-wrap { max-width: 100%; overscroll-behavior-x: contain; }
+.controlled-panel table { min-width: 720px; }
+.controlled-panel td:last-child { max-width: 350px; }
+.pool-next { max-width: 36em; }
+.funding-detail { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; overflow-wrap: anywhere; }
+.funding-detail h2, .positions-heading { font-size: var(--fs-18); }
+.funding-detail dl > div { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr); gap: 12px; padding: 8px 0; }
+.funding-detail dt { font-weight: 600; }
+.research-tools { margin-top: 24px; }
+.research-tools > summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+.research-tools > aside { width: 100%; padding-inline: 0; }
+.topbar-inner { gap: 16px; }
+.nav-tab { padding-inline: 10px; }
+.readable-terms .research-constraints { max-width: 100%; }
+.readable-terms table { min-width: 0; }
+
+@media (max-width: 1199px) {
+  .topbar-inner { height: auto; min-height: 60px; flex-wrap: wrap; padding-block: 12px; gap: 10px; }
+  .nav { order: 3; flex-basis: 100%; flex-wrap: wrap; }
+  .market-layout, .mint-layout, .mint-secondary, .agent-layout { grid-template-columns: minmax(0, 1fr); }
+  .market-aside, .mint-aside { position: static; }
+  .page-head { flex-wrap: wrap; gap: 20px; }
+  .page-head-stats { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
+  .mode-strip-inner { flex-wrap: wrap; padding-block: 8px; }
+  .mode-chain { margin-left: 0; }
+  .toolbar { flex-wrap: wrap; }
+  .search { min-width: 220px; }
+  .valuation-grid { grid-template-columns: minmax(0, 1fr); }
+  .agent-top { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  :root { --page-pad: 16px; }
+  html { scroll-padding-top: 24px; }
+  .app-header { position: static; }
+  .topbar-inner { gap: 12px; }
+  .topbar-right { flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 100%; }
+  .network-select { max-width: 145px; }
+  .wallet-btn { min-width: 0; }
+  .nav { gap: 4px; }
+  .nav-tab { height: auto; min-height: 40px; font-size: 13px; padding: 8px; white-space: normal; }
+  .mode-actions { flex-wrap: wrap; gap: 12px; }
+  .mode-strip-inner > * { min-width: 0; max-width: 100%; }
+  .mode-copy { flex: 1 1 220px; }
+  .page { padding-top: 24px; }
+  .page-foot { flex-direction: column; gap: 8px; }
+  .page-head-stats { gap: 16px; }
+  .section-head, .section-head-side, .card-head { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+  .section-head-side { gap: 12px; }
+  .finance-journey, .two-col, .form-grid, .voyage-grid, .intel-grid, .signals,
+  .x402-evidence-grid, .reports-layout, .mystery-entry, .mystery-finance,
+  .mint-secondary, .risk-dims ul, .job-steps, .approval-grid { grid-template-columns: minmax(0, 1fr); }
+  .case-picker { width: 100%; }
+  .deal-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .deal-grid { grid-template-columns: minmax(0, 1fr); }
+  .chip-group { flex-wrap: wrap; }
+  .search { flex-basis: 100%; max-width: none; margin-left: 0; }
+  .toolbar > .select { max-width: 100%; }
+  .kv-grid-3, .kv-grid-4, .readout-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .controlled-panel > details, .role-workspace, .controlled-confirm, .controlled-position { padding: 12px; }
+  .controlled-actions > label { width: 100%; }
+  .controlled-actions button { min-height: 40px; }
+  .controlled-actions input { width: 100%; }
+  .controlled-confirm button { margin-block: 6px; }
+  .readable-terms dl > div, .funding-detail dl > div, .operations-panel dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .controlled-snapshot { font-size: 12px; }
+  .research-tools > aside { max-width: 100%; }
+  .dialog-wide, .dialog-center { width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  .dialog-head, .dialog-body { padding: 16px; }
+  .tabs { padding-inline: 12px; flex-wrap: wrap; }
+  .dialog-body > *, .dialog-body section { min-width: 0; }
+  .voyage { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .voyage-track { min-height: 30px; }
+  .report-catalog { position: static; }
+  .x402-flow, .mystery-stepper.x402-flow { grid-template-columns: minmax(0, 1fr); }
+  .ai-results .cp-cards { grid-template-columns: minmax(0, 1fr); }
+  .ac-table { overflow-x: auto; }
+  .ac-row { min-width: 740px; }
+  .span-row { grid-template-columns: 90px minmax(0, 1fr) 40px; }
+  .wf-val { font-size: 10px; overflow-wrap: anywhere; }
+  .wf-cols, .wf-labels { gap: 4px; }
+  .cp-launcher { position: static; align-self: flex-end; margin: 0 16px 24px; }
+  .passport-grid, .mystery-reveal, .mystery-map-route { grid-template-columns: minmax(0, 1fr); }
+}

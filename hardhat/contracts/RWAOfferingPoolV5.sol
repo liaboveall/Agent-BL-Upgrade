@@ -7,6 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {RecoveryEntitlements} from "./RecoveryEntitlements.sol";
 
 interface IEBLRegistry {
     function holderOf(uint256 eblId) external view returns (address);
@@ -205,6 +206,10 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
     mapping(uint256 => uint256) public recoveredAtomic;
     mapping(uint256 => bool) public fundingFinalized;
     mapping(uint256 => bool) public claimsStarted;
+    bool public cumulativeClaims;
+    uint256 public executorCount;
+    mapping(uint256 => uint256) public disbursementDeadline;
+    RecoveryEntitlements public immutable recoveryRights;
 
     // Track pool investors so refundAllOnFailure can refund every subscriber.
     mapping(uint256 => address[]) private _investors;
@@ -330,6 +335,7 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!(eblRegistry_.code.length > 0 && rwaToken_.code.length > 0)) revert DependencyNotAContract();
         eblRegistry = IEBLRegistry(eblRegistry_);
         rwaToken = IRWATokenV5Mintable(rwaToken_);
+        recoveryRights = new RecoveryEntitlements();
     }
 
     function setOracle(address oracle_) external onlyOwner {
@@ -340,18 +346,24 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
 
     function setAgentExecutor(address executor, bool allowed) external onlyOwner {
         if (!(executor != address(0))) revert ExecutorIsZero();
+        if (agentExecutor[executor] != allowed) { if (allowed) executorCount++; else executorCount--; }
         agentExecutor[executor] = allowed;
         emit AgentExecutorSet(executor, allowed);
+    }
+
+    function enableCumulativeClaims() external onlyOwner {
+        if (nextPoolId != 1 || cumulativeClaims || executorCount != 0) revert TermsLocked();
+        cumulativeClaims = true;
+    }
+    function setDisbursementDeadline(uint256 poolId, uint256 timestamp) external onlyOwner {
+        if (offerings[poolId].subscribed != 0 || timestamp <= subscriptionDeadline[poolId] || timestamp >= maturityAt[poolId]) revert TermsLocked();
+        disbursementDeadline[poolId] = timestamp;
     }
 
     function setEmergencyStop(bool stopped, bytes32 reasonHash) external onlyOwner {
         if (!(emergencyStopped != stopped)) revert Unchanged();
         emergencyStopped = stopped;
         emit EmergencyStopSet(stopped, msg.sender, reasonHash);
-    }
-
-    function emergencyPause(uint256 poolId, bytes32 reasonHash) external onlyOwner {
-        _pause(poolId, reasonHash, EMERGENCY_PAUSE);
     }
 
     function setComplianceGate(address gate) external onlyOwner {
@@ -369,18 +381,6 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
     function isInvestorEligible(address investor, uint256 poolId) public view returns (bool) {
         if (accessMode == AccessMode.Permissionless) return investor != address(0);
         return address(complianceGate) != address(0) && complianceGate.isEligible(investor, poolId);
-    }
-
-    /// @notice Legacy creation entry point. Kept for API compatibility; it does not bind
-    ///         funding terms, so subscriptions on legacy offerings will revert.
-    function createOffering(
-        uint256 eblId,
-        uint256 tokenSupply,
-        uint256 issuePrice,
-        uint256 targetRedemptionValue
-    ) external onlyOwner whenOperational returns (uint256 poolId) {
-        uint256 maturity = block.timestamp + 60 days;
-        return _createOffering(eblId, tokenSupply, issuePrice, targetRedemptionValue, maturity, maturity);
     }
 
     /// @notice Create an offering with the approved maturity, subscription deadline and
@@ -446,6 +446,7 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         quoteVersion[poolId] = 1;
         maturityAt[poolId] = maturity;
         subscriptionDeadline[poolId] = subscribeUntil;
+        disbursementDeadline[poolId] = maturity;
 
         emit OfferingCreated(poolId, eblId, tokenSupply, issuePrice, targetRedemptionValue);
         emit OfferingTermsSet(poolId, maturity, subscribeUntil);
@@ -488,6 +489,9 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         asset.safeTransferFrom(msg.sender, address(this), cost);
         if (!(asset.balanceOf(address(this)) - balanceBefore == cost)) revert TransferTaxNotSupported();
 
+        if (cumulativeClaims) {
+            recoveryRights.record(poolId, msg.sender, o.subscribed, amount);
+        }
         o.subscribed += amount;
         o.raisedAtomic += cost;
         escrowed[poolId][o.settlementAsset] += cost;
@@ -530,6 +534,7 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         Offering storage o = offerings[poolId];
         if (!(o.exists)) revert PoolMissing();
         if (!(o.state == OfferingState.Funded || o.state == OfferingState.InTransit)) revert NotFunded();
+        if (block.timestamp >= maturityAt[poolId] || block.timestamp >= disbursementDeadline[poolId]) revert DeadlineElapsed();
         uint256 available = o.raisedAtomic - disbursedAtomic[poolId];
         if (!(amountAtomic > 0 && amountAtomic <= available)) revert AmountAboveAvailable();
         disbursedAtomic[poolId] += amountAtomic;
@@ -546,13 +551,19 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!(amountAtomic > 0)) revert AmountIsZero();
         if (!(fundingFinalized[poolId] && (o.state == OfferingState.Funded || o.state == OfferingState.InTransit
                 || o.state == OfferingState.Defaulted || o.state == OfferingState.Paused
-                || o.state == OfferingState.Frozen || o.state == OfferingState.Liquidation))) revert NotRepayable();
+                || o.state == OfferingState.Frozen || o.state == OfferingState.Liquidation
+                || (cumulativeClaims && (o.state == OfferingState.Repaid || o.state == OfferingState.LossSettled))))) revert NotRepayable();
         IERC20 asset = IERC20(o.settlementAsset);
         uint256 balanceBefore = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), amountAtomic);
         if (!(asset.balanceOf(address(this)) - balanceBefore == amountAtomic)) revert TransferTaxNotSupported();
         escrowed[poolId][o.settlementAsset] += amountAtomic;
         recoveredAtomic[poolId] += amountAtomic;
+        if (cumulativeClaims && (o.state == OfferingState.Repaid || o.state == OfferingState.LossSettled)) {
+            o.repaymentAmount += amountAtomic;
+            uint256 due = targetDistribution(poolId);
+            realizedLoss[poolId] = due > o.repaymentAmount ? due - o.repaymentAmount : 0;
+        }
         emit RepaymentReceived(poolId, o.settlementAsset, msg.sender, amountAtomic);
     }
 
@@ -632,6 +643,12 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
     function claimable(uint256 poolId, address investor) public view returns (uint256) {
         Offering storage o = offerings[poolId];
         if (o.state != OfferingState.Repaid && o.state != OfferingState.LossSettled) return 0;
+        if (cumulativeClaims) {
+            // Atomic units traverse immutable subscription slots in round-robin order.
+            // Every prefix is monotonic; the sum is exact and independent of claim order.
+            uint256 entitlement = recoveryRights.entitlement(poolId, investor, o.repaymentAmount, o.subscribed);
+            return entitlement - investorClaimed[poolId][o.settlementAsset][investor];
+        }
         uint256 balance = rwaToken.balanceOf(poolId, investor);
         if (balance == 0) return 0;
         return Math.mulDiv(o.repaymentAmount - feesDeducted[poolId] - totalClaimed[poolId], balance, rwaToken.totalSupply(poolId));
@@ -642,21 +659,22 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!(o.exists)) revert PoolMissing();
         if (!(o.state == OfferingState.Repaid || o.state == OfferingState.LossSettled)) revert NotClaimable();
         uint256 balance = rwaToken.balanceOf(poolId, msg.sender);
-        if (!(balance > 0)) revert NoShares();
         uint256 already = investorClaimed[poolId][o.settlementAsset][msg.sender];
         uint256 owed = claimable(poolId, msg.sender);
+        if (!(balance > 0 || (cumulativeClaims && owed > 0))) revert NoShares();
         if (!(escrowed[poolId][o.settlementAsset] >= owed)) revert InsufficientEscrow();
         claimsStarted[poolId] = true;
         investorClaimed[poolId][o.settlementAsset][msg.sender] = already + owed;
         totalClaimed[poolId] += owed;
         escrowed[poolId][o.settlementAsset] -= owed;
-        rwaToken.burn(poolId, msg.sender, balance);
+        if (balance > 0) rwaToken.burn(poolId, msg.sender, balance);
         if (owed > 0) IERC20(o.settlementAsset).safeTransfer(msg.sender, owed);
         emit Claimed(poolId, msg.sender, o.settlementAsset, owed, balance);
     }
 
     function deductFee(uint256 poolId, uint256 amountAtomic, address feeRecipient, bytes32 feeEvidenceHash)
         external onlyOwner whenOperational nonReentrant {
+        if (cumulativeClaims) revert TermsLocked();
         if (!(feeRecipient != address(0))) revert RecipientIsZero();
         if (!(feeEvidenceHash != bytes32(0))) revert EvidenceIsZero();
         Offering storage o = offerings[poolId];
@@ -689,15 +707,6 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!(o.state == OfferingState.Funded && fundingFinalized[poolId])) revert NotFunded();
         _changeState(poolId, OfferingState.InTransit, OPEN_OFFERING);
         emit DepartureRecorded(poolId, departureProof);
-    }
-
-    function pauseOffering(uint256 poolId, bytes32 evidenceHash) external whenOperational {
-        if (!(msg.sender == owner || msg.sender == oracle || agentExecutor[msg.sender])) revert NotAuthorized();
-        _pause(poolId, evidenceHash, PAUSE_OFFERING);
-    }
-
-    function resumeOffering(uint256 poolId, bytes32 evidenceHash) external onlyExecutor whenOperational {
-        _resume(poolId, evidenceHash);
     }
 
     function cancelOffering(uint256 poolId, bytes32 reasonHash) external onlyOwner {
@@ -763,31 +772,10 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!(o.paymentProof != bytes32(0) && o.arrivalProof != bytes32(0))) revert SettlementProofMissing();
         if (!(repaymentAmount > 0 && repaymentAmount == o.repaymentAmount)) revert RepaymentMismatch();
         _sealRecovery(poolId, o);
-        if (!(o.repaymentAmount >= o.subscribed * o.targetRedemptionValue)) revert OutstandingDebt();
+        if (!(o.repaymentAmount >= targetDistribution(poolId))) revert OutstandingDebt();
         _changeState(poolId, OfferingState.Repaid, SETTLE_OFFERING);
         emit OfferingSettled(poolId, o.repaymentAmount, o.paymentProof, o.arrivalProof);
         _releaseCollateral(poolId, o.eblId);
-    }
-
-    function setMaturity(uint256 poolId, uint256 timestamp) external onlyOwner whenOperational {
-        Offering storage o = offerings[poolId];
-        if (!(o.exists && o.subscribed == 0 && o.state == OfferingState.Open)) revert TermsLocked();
-        if (!(timestamp > block.timestamp)) revert MaturityElapsed();
-        maturityAt[poolId] = timestamp;
-        if (subscriptionDeadline[poolId] > timestamp) {
-            subscriptionDeadline[poolId] = timestamp;
-            emit SubscriptionDeadlineSet(poolId, timestamp);
-        }
-        emit OfferingTermsSet(poolId, timestamp, subscriptionDeadline[poolId]);
-    }
-
-    function setSubscriptionDeadline(uint256 poolId, uint256 timestamp) external onlyOwner whenOperational {
-        Offering storage o = offerings[poolId];
-        if (!(o.exists && o.subscribed == 0 && o.state == OfferingState.Open)) revert TermsLocked();
-        if (!(timestamp > block.timestamp)) revert DeadlineElapsed();
-        if (!(timestamp <= maturityAt[poolId])) revert DeadlineAboveMaturity();
-        subscriptionDeadline[poolId] = timestamp;
-        emit SubscriptionDeadlineSet(poolId, timestamp);
     }
 
     function unfreezeOffering(uint256 poolId, bytes32 evidenceHash) external onlyOwner whenOperational {
@@ -802,12 +790,27 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
 
     function outstandingDebt(uint256 poolId) public view returns (uint256) {
         Offering storage o = offerings[poolId];
-        uint256 due = o.subscribed * o.targetRedemptionValue;
-        uint256 recovered = o.repaymentAmount;
-        if (o.state != OfferingState.Repaid && o.state != OfferingState.LossSettled) {
-            recovered += o.raisedAtomic - disbursedAtomic[poolId];
-        }
+        uint256 due = targetDistribution(poolId);
+        uint256 recovered = cumulativeClaims ? recoveredAtomic[poolId] + o.raisedAtomic - disbursedAtomic[poolId] : o.repaymentAmount;
+        if (!cumulativeClaims && o.state != OfferingState.Repaid && o.state != OfferingState.LossSettled) recovered += o.raisedAtomic - disbursedAtomic[poolId];
         return recovered >= due ? 0 : due - recovered;
+    }
+
+    function targetDistribution(uint256 poolId) public view returns (uint256) {
+        Offering storage o = offerings[poolId];
+        uint256 gross = o.subscribed * o.targetRedemptionValue;
+        if (!cumulativeClaims || o.raisedAtomic == 0) return gross;
+        return o.raisedAtomic + Math.mulDiv(gross - o.raisedAtomic, disbursedAtomic[poolId], o.raisedAtomic, Math.Rounding.Ceil);
+    }
+    function closeUndisbursed(uint256 poolId) external nonReentrant {
+        Offering storage o = offerings[poolId];
+        if (!cumulativeClaims || !o.exists || o.subscribed == 0 || disbursedAtomic[poolId] != 0
+            || block.timestamp < disbursementDeadline[poolId] || o.raisedAtomic < o.minRaise
+            || o.state == OfferingState.Repaid || o.state == OfferingState.LossSettled || o.state == OfferingState.Cancelled) revert BadState();
+        fundingFinalized[poolId] = true;
+        _sealRecovery(poolId, o);
+        _changeState(poolId, OfferingState.Repaid, SETTLE_OFFERING);
+        _releaseCollateral(poolId, o.eblId);
     }
 
     function recordAdditionalPayment(uint256 poolId, bytes32 proof, uint256 amount) external onlyExecutor whenOperational {
@@ -826,7 +829,7 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         Offering storage o = offerings[poolId];
         if (!(_isActive(o.state) || o.state == OfferingState.Paused || o.state == OfferingState.Frozen)) revert IllegalTransition();
         if (!(fundingFinalized[poolId])) revert FundingNotFinalized();
-        if (!(o.subscribed > 0 && block.timestamp >= maturityAt[poolId] && outstandingDebt(poolId) > 0)) revert NotOverdue();
+        if (!(o.subscribed > 0 && block.timestamp >= maturityAt[poolId] && (cumulativeClaims || outstandingDebt(poolId) > 0))) revert NotOverdue();
         _changeState(poolId, OfferingState.Defaulted, TRIGGER_LIQUIDATION);
         emit OfferingDefaulted(poolId, outstandingDebt(poolId));
     }
@@ -836,7 +839,8 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!(o.state == OfferingState.Defaulted)) revert NotDefaulted();
         if (!(resolutionHash != bytes32(0) && outstandingDebt(poolId) > 0)) revert LossEvidenceRequired();
         _sealRecovery(poolId, o);
-        realizedLoss[poolId] = o.subscribed * o.targetRedemptionValue - o.repaymentAmount;
+        uint256 due = targetDistribution(poolId);
+        realizedLoss[poolId] = due > o.repaymentAmount ? due - o.repaymentAmount : 0;
         _changeState(poolId, OfferingState.LossSettled, SETTLE_OFFERING);
         emit LossSettlementRecorded(poolId, o.repaymentAmount, realizedLoss[poolId], resolutionHash);
         _releaseCollateral(poolId, o.eblId);
@@ -848,7 +852,7 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         uint256 amount
     ) external onlyExecutor whenOperational {
         Offering storage o = offerings[poolId];
-        if (!(o.state == OfferingState.Liquidation)) revert NotLiquidating();
+        if (!(o.state == OfferingState.Liquidation || (cumulativeClaims && o.state == OfferingState.Defaulted))) revert NotLiquidating();
         if (!(o.subscribed > 0)) revert NoSubscribers();
         if (!(fundingFinalized[poolId])) revert FundingNotFinalized();
         if (!(paymentProof != bytes32(0) && !usedPaymentProof[paymentProof])) revert PaymentProofReused();
@@ -861,7 +865,7 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
 
     function resolveLiquidation(uint256 poolId, bytes32 resolutionHash) external onlyOwner whenOperational {
         Offering storage o = offerings[poolId];
-        if (!(o.state == OfferingState.Liquidation)) revert NotLiquidating();
+        if (!(o.state == OfferingState.Liquidation || (cumulativeClaims && o.state == OfferingState.Defaulted))) revert NotLiquidating();
         if (!(resolutionHash != bytes32(0))) revert ResolutionRequired();
 
         if (o.subscribed == 0) {
@@ -881,7 +885,7 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         }
 
         _sealRecovery(poolId, o);
-        uint256 due = o.subscribed * o.targetRedemptionValue;
+        uint256 due = targetDistribution(poolId);
         uint256 recovered = o.repaymentAmount;
         if (recovered >= due) {
             _changeState(poolId, OfferingState.Repaid, SETTLE_OFFERING);
@@ -1003,8 +1007,8 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
     ///      Proof metadata alone cannot release collateral or create claimable money.
     function _sealRecovery(uint256 poolId, Offering storage o) internal {
         if (!(fundingFinalized[poolId])) revert FundingNotFinalized();
-        if (!(o.repaymentAmount == recoveredAtomic[poolId])) revert RecoveryMismatch();
-        o.repaymentAmount += o.raisedAtomic - disbursedAtomic[poolId];
+        if (!cumulativeClaims && o.repaymentAmount != recoveredAtomic[poolId]) revert RecoveryMismatch();
+        o.repaymentAmount = recoveredAtomic[poolId] + o.raisedAtomic - disbursedAtomic[poolId];
         if (!(o.repaymentAmount <= escrowed[poolId][o.settlementAsset])) revert InsufficientEscrow();
     }
 

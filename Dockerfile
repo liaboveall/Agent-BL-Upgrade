@@ -25,11 +25,14 @@ COPY public ./public
 # The dashboard imports shared subscription rules and the wallet's protocol ABI.
 COPY src/core ./src/core
 COPY src/chain ./src/chain
+COPY src/rights/financePolicy.js ./src/rights/financePolicy.js
 RUN npm run build
 
 FROM node:22-alpine
 ARG RELEASE_REVISION=UNRECORDED
+ARG RELEASE_SOURCE_SHA256=UNRECORDED
 LABEL org.opencontainers.image.revision=${RELEASE_REVISION}
+LABEL io.agentbl.source-sha256=${RELEASE_SOURCE_SHA256}
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
@@ -45,6 +48,8 @@ COPY --from=web /app/dist ./dist
 COPY data ./data
 # Shared loopback-port and transaction recovery helpers are runtime dependencies.
 COPY scripts/lib ./scripts/lib
+# Retain the ABI/runtime inventory needed to read and exit deployed v1 instances.
+COPY scripts/config/rights-v1-artifacts.json ./scripts/config/rights-v1-artifacts.json
 COPY --from=contracts /contracts/artifacts/contracts ./hardhat/artifacts/contracts
 
 # x402 receipts, cached paid reports, decision logs and Mystery reveals live here:

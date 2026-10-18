@@ -1,6 +1,6 @@
 /** Execute only a durable server plan after the UI's explicit wallet confirmation.
  * Any uncertain send is left for receipt reconciliation; this adapter never retries. */
-export async function sendRightsPlan(plan, { session, attachTransaction, ethersFn = () => import('ethers') } = {}) {
+export async function sendRightsPlan(plan, { session, attachTransaction, beforeBroadcast, assertCurrent = () => {}, ethersFn = () => import('ethers') } = {}) {
   const fail = (code) => { throw Object.assign(new Error(code), { code }); };
   if (plan?.scope !== 'research_test_assets_only' || plan.execution !== 'unsigned_dry_run'
     || !session?.signer || String(plan.from).toLowerCase() !== String(session.address).toLowerCase() || plan.tx_hash) fail('RIGHTS_PLAN_MISMATCH');
@@ -10,9 +10,15 @@ export async function sendRightsPlan(plan, { session, attachTransaction, ethersF
   if (String(network.chainId) !== String(plan.chain_id) || address.toLowerCase() !== plan.from.toLowerCase() || nonce !== plan.nonce) fail('RIGHTS_WALLET_CHANGED');
   const controller = new Contract(plan.controller, ['function capitalPool() view returns (address)', 'function registry() view returns (address)'], provider);
   const [pool, registry] = await Promise.all([controller.capitalPool(), controller.registry()]);
-  if (pool.toLowerCase() !== plan.pool.toLowerCase() || ![plan.controller, registry].some((allowed) => allowed.toLowerCase() === plan.to.toLowerCase())) fail('RIGHTS_PROTOCOL_CHANGED');
+  if (pool.toLowerCase() !== plan.pool.toLowerCase() || ![plan.controller, registry, ...(plan.operation === 'repay' ? [pool] : [])].some((allowed) => allowed.toLowerCase() === plan.to.toLowerCase())) fail('RIGHTS_PROTOCOL_CHANGED');
   const transaction = { from: plan.from, to: plan.to, data: plan.calldata, value: 0n, nonce: plan.nonce, chainId: BigInt(plan.chain_id) };
   await provider.call(transaction);
+  assertCurrent();
+  if (beforeBroadcast) {
+    const checked = await beforeBroadcast(plan);
+    if (checked.calldata !== plan.calldata || checked.to !== plan.to || checked.nonce !== plan.nonce) fail('RIGHTS_PLAN_MISMATCH');
+  }
+  assertCurrent();
   let sent;
   try { sent = await session.signer.sendTransaction(transaction); }
   catch (error) {

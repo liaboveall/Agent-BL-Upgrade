@@ -7,14 +7,18 @@ import { LedgerWriter } from '../ledger/writer.js';
 import { readJson, writeJsonAtomic } from '../lib/jsonStore.js';
 import { runtimePath } from '../runtimePaths.js';
 import { canonicalJson } from '../mystery/fairness.js';
-import { privateCommitment, publicSummary, SESSION_TYPES } from './typedData.js';
+import { privateCommitment, publicSummary, SESSION_TYPES, ISSUANCE_TYPES, VALUATION_TYPES, rightsDomain, titleDomain } from './typedData.js';
 import { rightsKey, seal, unseal } from './vault.js';
 import { createEvidence, evidenceHash, evidenceProjection, verifyEvidencePackage } from '../evidence/schema.js';
 import { createAgentVersion } from '../agent/runtime/agentVersion.js';
 import { loadAgentConfig } from '../agent/runtime/config.js';
+import { createDisclosure, verifyDisclosure } from './disclosure.js';
+import { financingReview } from './financingReview.js';
+import { materialWorkflow } from './workflow.js';
+import { RpcReadPool } from './reads.js';
 
 const VAULT_AAD = 'agentbl-rights-vault-v1';
-const ROLES = ['issuer', 'holder', 'investor', 'reviewer', 'custodian', 'compliance', 'governance'];
+const ROLES = ['issuer', 'holder', 'investor', 'reviewer', 'custodian', 'compliance', 'governance', 'valuer', 'operator', 'attestor', 'disposer'];
 const subjectSchema = z.object({ organization: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/u),
   wallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/u), roles: z.array(z.enum(ROLES)).min(1).max(ROLES.length) }).strict();
 const digest = (value) => createHash('sha256').update(value).digest('hex');
@@ -28,9 +32,9 @@ function emptyState() { return { schema: VAULT_AAD, revision: 0, subjects: {}, c
 /** Durable, encrypted research identity and disclosure service. Every operation re-resolves
  * the current subject/session; no caller-supplied organization or role is trusted. */
 export class RightsService {
-  constructor({ directory = runtimePath('rights'), env = process.env, clock = () => Date.now(), chain = null, getVersion = null } = {}) {
+  constructor({ env = process.env, directory = runtimePath('rights', env), clock = () => Date.now(), chain = null, getVersion = null, getMode = null, getGeneration = () => 0, readPool = chain?.readPool ?? new RpcReadPool() } = {}) {
     this.directory = directory; this.env = env; this.clock = clock; this.chain = chain;
-    this.getVersion = getVersion;
+    this.getVersion = getVersion; this.getMode = getMode; this.getGeneration = getGeneration; this.readPool = readPool;
     this.writer = new LedgerWriter(directory);
   }
   async status() {
@@ -61,15 +65,15 @@ export class RightsService {
       return result;
     });
   }
-  #principal(state, token, now) {
+  #principal(state, token, now, { allowExitOnly = false } = {}) {
     const session = /^[a-f0-9]{64}$/u.test(token ?? '') ? state.sessions[digest(token)] : null;
     const subject = session && state.subjects[session.subject_id];
-    if (!session || session.revoked || session.expires_at <= now || !subject || subject.revoked) throw new HttpError(401, 'rights_session_required', 'A valid business session is required');
-    return { ...subject, session_id: session.session_id, expires_at: session.expires_at };
+    if (!session || session.revoked || session.expires_at <= now || !subject || (subject.revoked || session.exit_only) && !allowExitOnly) throw new HttpError(401, 'rights_session_required', 'A valid business session is required');
+    return { ...subject, roles: subject.revoked || session.exit_only ? [] : subject.roles, exit_only: Boolean(subject.revoked || session.exit_only), session_id: session.session_id, expires_at: session.expires_at };
   }
   #material(state, principal, materialId, now) {
     const record = state.materials[materialId];
-    if (!record || record.organization !== principal.organization || !principal.roles.some((role) => ['issuer', 'holder', 'reviewer', 'custodian', 'compliance'].includes(role))) {
+    if (!record || record.organization !== principal.organization || !principal.roles.some((role) => ['issuer', 'holder', 'reviewer', 'custodian', 'compliance', 'valuer', 'operator', 'attestor', 'disposer'].includes(role))) {
       throw new HttpError(404, 'rights_material_not_found', 'Material not found');
     }
     if (record.retention_until <= now) throw new HttpError(410, 'rights_material_expired', 'Material retention period has ended');
@@ -93,30 +97,35 @@ export class RightsService {
       state.subjects[subjectId].revoked = true; ctx.dirty = true; return { revoked: true };
     });
   }
-  createChallenge(subjectId) {
+  createChallenge(subjectId, { selfService = false, exitOnly = false } = {}) {
     return this.#transaction((state, ctx) => {
       const subject = state.subjects[subjectId];
-      if (!subject || subject.revoked) throw new HttpError(404, 'rights_subject_not_found', 'Subject not found');
+      if (!subject || subject.revoked && !exitOnly) throw new HttpError(404, 'rights_subject_not_found', 'Subject not found');
+      if (selfService && exitOnly) {
+        const existing = Object.values(state.challenges).find((c) => c.subject_id === subjectId && c.exit_only && !c.used && c.message.validUntil * 1000 > ctx.now);
+        if (existing) return { challenge_id: existing.challenge_id, domain: existing.domain, types: SESSION_TYPES, message: existing.message, exit_only: true };
+      }
+      if (selfService && Object.values(state.challenges).filter((c) => c.subject_id === subjectId && Boolean(c.exit_only) === exitOnly && !c.used && c.message.validUntil * 1000 > ctx.now).length >= 3) throw new HttpError(429, 'rights_challenge_rate_limited', 'Use an existing challenge or retry after five minutes');
       const challenge_id = randomUUID(), nonce = `0x${randomBytes(32).toString('hex')}`;
       const domain = { name: 'AgentBL Business Session', version: '1', salt: `0x${createHmac('sha256', ctx.key).update('business-session-domain-v1').digest('hex')}` };
       const message = { subject: id(subjectId), organization: id(subject.organization), wallet: subject.wallet, nonce, validUntil: Math.floor(ctx.now / 1000) + 300 };
-      const challenge = { challenge_id, subject_id: subjectId, domain, types: SESSION_TYPES, message, used: false };
+      const challenge = { challenge_id, subject_id: subjectId, domain, types: SESSION_TYPES, message, used: false, exit_only: exitOnly };
       state.challenges[challenge_id] = challenge; ctx.dirty = true;
-      return { challenge_id, domain, types: SESSION_TYPES, message };
+      return { challenge_id, domain, types: SESSION_TYPES, message, exit_only: exitOnly };
     });
   }
   openSession(input) {
     const { challenge_id, signature } = checked(z.object({ challenge_id: z.string().uuid(), signature: z.string().regex(/^0x[a-fA-F0-9]{130}$/u) }).strict(), input);
     return this.#transaction((state, ctx) => {
       const challenge = state.challenges[challenge_id], subject = challenge && state.subjects[challenge.subject_id];
-      if (!challenge || challenge.used || challenge.message.validUntil * 1000 <= ctx.now || !subject || subject.revoked) throw new HttpError(401, 'rights_challenge_invalid', 'Session challenge is unavailable');
+      if (!challenge || challenge.used || challenge.message.validUntil * 1000 <= ctx.now || !subject || subject.revoked && !challenge.exit_only) throw new HttpError(401, 'rights_challenge_invalid', 'Session challenge is unavailable');
       let signer;
       try { signer = verifyTypedData(challenge.domain, challenge.types, challenge.message, signature); } catch {}
       if (signer?.toLowerCase() !== subject.wallet) throw new HttpError(401, 'rights_signature_invalid', 'Wallet signature does not match the business subject');
       const token = randomBytes(32).toString('hex'), session_id = randomUUID(), expires_at = ctx.now + 60 * 60 * 1000;
-      state.sessions[digest(token)] = { session_id, subject_id: subject.subject_id, expires_at, revoked: false };
+      state.sessions[digest(token)] = { session_id, subject_id: subject.subject_id, expires_at, revoked: false, exit_only: Boolean(challenge.exit_only) };
       challenge.used = true; ctx.dirty = true;
-      return { token, session_id, expires_at, subject_id: subject.subject_id, organization: subject.organization, scope: 'research_test_assets_only' };
+      return { token, session_id, expires_at, subject_id: subject.subject_id, organization: subject.organization, exit_only: Boolean(challenge.exit_only), scope: 'research_test_assets_only' };
     });
   }
   revokeSession(sessionId) {
@@ -126,13 +135,43 @@ export class RightsService {
       session.revoked = true; ctx.dirty = true; return { revoked: true };
     });
   }
-  principal(token) { return this.#transaction((state, ctx) => this.#principal(state, token, ctx.now)); }
+  principal(token, options) { return this.#transaction((state, ctx) => this.#principal(state, token, ctx.now, options)); }
+  createFinancingDisclosure(token, materialId, input, { save = true } = {}) {
+    let pack;
+    try { pack = createDisclosure(input); } catch { throw new HttpError(400, 'financing_disclosure_invalid', 'Complete valid research financing terms are required'); }
+    return this.#transaction((state, ctx) => {
+      const subject = this.#principal(state, token, ctx.now), material = this.#material(state, subject, materialId, ctx.now);
+      if (material.owner_id !== subject.subject_id || !subject.roles.includes('issuer')
+        || material.public_summary.asset_class !== pack.document.scenario.asset_class
+        || pack.document.parties.issuer.toLowerCase() !== subject.wallet
+        || pack.terms.documentHash !== material.document_hash) throw new HttpError(403, 'rights_publisher_required', 'Issuer and title material must match the disclosure');
+      if (!save) return pack;
+      state.financing_disclosures ??= {};
+      const prior = Object.values(state.financing_disclosures).filter((entry) => entry.material_id === materialId);
+      if (prior.some((entry) => entry.pack.document.revision === pack.document.revision && entry.pack.disclosure_hash !== pack.disclosure_hash)) {
+        throw new HttpError(409, 'disclosure_revision_used', 'Use a new revision; published terms are immutable');
+      }
+      state.financing_disclosures[pack.disclosure_hash] = { material_id: materialId, pack };
+      ctx.dirty = true; return pack;
+    });
+  }
+  financingDisclosure(disclosureHash) {
+    return this.#transaction((state) => {
+      const entry = state.financing_disclosures?.[disclosureHash];
+      if (!entry) throw new HttpError(409, 'financing_disclosure_missing', 'Readable financing terms are unavailable; do not sign');
+      const approved = [...Object.values(state.publications), ...(state.publication_history ?? [])].some((publication) =>
+        publication.publication_id === entry.material_id && publication.summary.terms_hash === entry.pack.terms_hash
+        && publication.document_hash === entry.pack.terms.documentHash);
+      if (!approved || !verifyDisclosure(entry.pack)) throw new HttpError(409, 'financing_disclosure_unverified', 'Terms must match an approved publication and intact commitments');
+      return entry.pack;
+    });
+  }
   createEvidence(token, input) {
     const body = checked(z.object({ material_id: z.string().uuid(), kind: z.string(), source: z.unknown(),
       data: z.record(z.string(), z.unknown()).optional(), references: z.array(z.string().uuid()).max(99).default([]) }).strict(), input);
     return this.#transaction((state, ctx) => {
       const principal = this.#principal(state, token, ctx.now), material = this.#material(state, principal, body.material_id, ctx.now);
-      if (!principal.roles.some((role) => ['issuer', 'holder', 'reviewer', 'custodian', 'compliance'].includes(role))) throw new HttpError(403, 'rights_role_required', 'Evidence permission required');
+      if (!principal.roles.some((role) => ['issuer', 'holder', 'reviewer', 'custodian', 'compliance', 'valuer', 'operator', 'attestor', 'disposer'].includes(role))) throw new HttpError(403, 'rights_role_required', 'Evidence permission required');
       state.evidence ??= {};
       const references = body.references.map((id) => {
         const entry = state.evidence[id];
@@ -280,13 +319,103 @@ export class RightsService {
     if (operation === 'read_publication') return this.publication(materialId);
     throw new HttpError(404, 'rights_operation_unknown', 'Unknown rights operation');
   }
+  async signingRequest(token, materialId, input) {
+    const principal = await this.principal(token);
+    if (!this.chain) throw new HttpError(503, 'rights_chain_not_configured', 'Verified chain unavailable');
+    const binding = await this.chain.verify({ read: this.readPool.budget(100).read });
+    if (binding.exit_only || this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'live_mode_required', 'An active v2 Live instance is required');
+    const material = await this.readMaterial(token, materialId), registryAddress = await this.chain.registry.getAddress();
+    const kind = input?.kind, value = input?.value;
+    const fields = kind === 'issuance' ? ISSUANCE_TYPES.Issuance : kind === 'valuation' ? VALUATION_TYPES.Valuation : [];
+    if (!value || !fields.length || Object.keys(value).some((key) => !fields.some((field) => field.name === key))) throw new HttpError(400, 'rights_signing_input_invalid', 'Only the defined typed signature fields are allowed');
+    const result = await this.#transaction((state, ctx) => {
+      const current = this.#principal(state, token, ctx.now), record = this.#material(state, current, materialId, ctx.now);
+      const pack = Object.values(state.financing_disclosures ?? {}).find((entry) => entry.material_id === materialId && entry.pack.terms_hash === record.public_summary.terms_hash)?.pack;
+      if (kind === 'valuation' && current.roles.includes('valuer') && pack && value?.termsHash === pack.terms_hash && value?.assetKey === pack.terms.assetKey
+        && value?.settlementAsset?.toLowerCase() === pack.terms.settlementAsset.toLowerCase()) {
+        return { domain: rightsDomain(Number(this.chain.chainId), binding.controller), types: VALUATION_TYPES, value, kind, terms: pack };
+      }
+      if (kind === 'issuance' && current.roles.includes('issuer') && record.owner_id === current.subject_id && value?.documentHash === material.document_hash) {
+        return { domain: titleDomain(Number(this.chain.chainId), registryAddress), types: ISSUANCE_TYPES, value, kind };
+      }
+      throw new HttpError(403, 'rights_signing_scope_invalid', 'Role, material and exact terms must match the signature request');
+    });
+    const { TypedDataEncoder } = await import('ethers');
+    try { TypedDataEncoder.hash(result.domain, result.types, result.value); } catch { throw new HttpError(400, 'rights_signing_input_invalid', 'Signature fields are invalid'); }
+    if (kind === 'valuation' && !await this.chain.controller.roles(id('VALUER'), principal.wallet)
+      || kind === 'issuance' && (await this.chain.registry.issuerForOrg(value.issuerOrg)).toLowerCase() !== principal.wallet) throw new HttpError(403, 'rights_onchain_role_required', 'Current on-chain signer permission is required');
+    return result;
+  }
+  listMaterials(token) {
+    return this.#transaction((state, ctx) => {
+      const principal = this.#principal(state, token, ctx.now);
+      return { materials: Object.values(state.materials).filter((record) => record.organization === principal.organization && record.retention_until > ctx.now
+        && principal.roles.some((role) => ['issuer', 'holder', 'reviewer', 'custodian', 'compliance', 'valuer', 'operator', 'attestor', 'disposer'].includes(role)))
+        .map((record) => ({ material_id: record.material_id, revision: record.revision, document_hash: record.document_hash, public_summary: record.public_summary })) };
+    });
+  }
+  async workflow(token, materialId) {
+    const principal = await this.principal(token);
+    const input = await this.#transaction((state, ctx) => {
+      const current = this.#principal(state, token, ctx.now), record = this.#material(state, current, materialId, ctx.now);
+      const pack = Object.values(state.financing_disclosures ?? {}).find((entry) => entry.material_id === materialId && entry.pack.terms_hash === record.public_summary.terms_hash)?.pack;
+      const approvals = record.reviews.filter((review) => !state.subjects[review.subject_id]?.revoked && review.revision === record.revision && review.terms_hash === record.public_summary.terms_hash).length;
+      return { record: structuredClone(record), pack, approvals, published: state.publications[materialId]?.revision === record.revision };
+    });
+    return materialWorkflow(this.chain, principal, input.record, input.pack, input.published, input.approvals, this.readPool);
+  }
+  async checkpointPlan(token, planId) {
+    const draft = await this.#transaction((state, ctx) => {
+      const principal = this.#principal(state, token, ctx.now), plan = state.plans[planId];
+      if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
+      return structuredClone(plan);
+    });
+    if (draft.operation === 'acknowledge_terms') {
+      const reviewed = await financingReview(this.chain, this, draft.plan_input.pool_id);
+      if (draft.plan_input.reviewed_disclosure_hash !== reviewed.disclosure_hash || String(draft.plan_input.quote_version) !== reviewed.quote_version) throw new HttpError(409, 'financing_review_required', 'Review current complete terms before wallet submission');
+    }
+    return this.#transaction(async (state, ctx) => {
+      const principal = this.#principal(state, token, ctx.now), plan = state.plans[planId];
+      if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
+      if (plan.status !== 'draft') throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the original operation before another wallet send');
+      if (this.getMode && this.getMode() !== 'live' || plan.execution_generation !== this.getGeneration() || plan.session_id !== principal.session_id
+        || plan.material_id && plan.material_revision !== state.materials[plan.material_id]?.revision) throw new HttpError(409, 'execution_context_changed', 'Session, mode or material changed; prepare a new review');
+      if (!this.chain) throw new HttpError(503, 'rights_chain_not_configured', 'Verified chain unavailable');
+      const fresh = await this.chain.prepare(principal, plan.plan_input);
+      if (plan.execution_generation !== this.getGeneration() || this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'execution_context_changed', 'Execution context changed before broadcast');
+      if (fresh.chain_id !== plan.chain_id || fresh.pool !== plan.pool || fresh.controller !== plan.controller || fresh.calldata !== plan.calldata
+        || fresh.nonce !== plan.nonce) throw new HttpError(409, 'rights_plan_changed', 'Chain, nonce or transaction changed; prepare a new review');
+      if (plan.material_id) {
+        const material = this.#material(state, principal, plan.material_id, ctx.now);
+        if (plan.operation === 'create_offering') {
+          const valid = material.reviews.filter((review) => !state.subjects[review.subject_id]?.revoked && review.revision === material.revision);
+          if (valid.length < 2 || state.publications[plan.material_id]?.revision !== material.revision) throw new HttpError(409, 'rights_approved_disclosure_required', 'Current independent reviews are required');
+        }
+      }
+      if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
+        && !['draft', 'confirmed', 'reverted'].includes(other.status))) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send');
+      plan.status = 'broadcast_prepared'; plan.checkpoint_at = ctx.now; ctx.dirty = true; return plan;
+    });
+  }
   async prepareTransaction(token, input) {
     const principal = await this.principal(token);
+    if (this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'live_mode_required', 'Switch to Live before preparing a wallet action');
+    const generation = this.getGeneration();
     if (!this.chain) throw new HttpError(409, 'rights_chain_not_configured', 'No verified W3 protocol instance is configured');
     const plan = await this.chain.prepare(principal, input);
+    if (input.operation === 'acknowledge_terms') {
+      const reviewed = await financingReview(this.chain, this, input.pool_id);
+      if (input.reviewed_disclosure_hash !== reviewed.disclosure_hash || String(input.quote_version) !== reviewed.quote_version) throw new HttpError(409, 'financing_review_required', 'Review current complete terms before accepting');
+    }
     return this.#transaction((state, ctx) => {
       const current = this.#principal(state, token, ctx.now);
       if (current.subject_id !== principal.subject_id) throw new HttpError(401, 'rights_session_required', 'Business session changed');
+      if (input.material_id) {
+        const material = this.#material(state, current, input.material_id, ctx.now);
+        if (input.operation === 'register_title' && input.payload?.issuance?.documentHash !== material.document_hash
+          || input.operation === 'pledge' && input.terms_hash !== material.public_summary.terms_hash) throw new HttpError(409, 'rights_material_changed', 'Material commitment and operation must match');
+      }
+      if (generation !== this.getGeneration() || this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'execution_context_changed', 'Mode changed while preparing the action');
       if (input.operation === 'create_offering') {
         const record = this.#material(state, current, input.material_id, ctx.now), published = state.publications[input.material_id];
         const reviews = record.reviews.filter((review) => !state.subjects[review.subject_id]?.revoked && state.subjects[review.subject_id]?.roles.includes('reviewer')
@@ -295,10 +424,16 @@ export class RightsService {
           || published.document_hash !== plan.document_hash || published.summary.terms_hash !== plan.terms_hash || record.public_summary.terms_hash !== plan.terms_hash) {
           throw new HttpError(409, 'rights_approved_disclosure_required', 'Issuance requires this subject\'s reviewed document and exact published terms');
         }
+        const pack = state.financing_disclosures?.[input.payload?.terms?.disclosureHash]?.pack;
+        if (!pack || !verifyDisclosure(pack) || pack.terms_hash !== plan.terms_hash
+          || String(pack.document.instance.chain_id) !== plan.chain_id
+          || pack.document.instance.controller.toLowerCase() !== plan.controller.toLowerCase()
+          || pack.document.instance.pool.toLowerCase() !== plan.pool.toLowerCase()) throw new HttpError(409, 'financing_disclosure_missing', 'Issuance requires complete immutable readable terms for this instance');
       }
       const plan_id = randomUUID();
       const saved = { ...plan, plan_id, subject_id: principal.subject_id, organization: principal.organization, prepared_at: ctx.now,
-        plan_hash: digest(canonicalJson(plan)), execution: 'unsigned_dry_run' };
+        plan_hash: digest(canonicalJson(plan)), execution: 'unsigned_dry_run', status: 'draft', execution_generation: generation, session_id: current.session_id, plan_input: structuredClone(input),
+        ...(input.material_id ? { material_revision: state.materials[input.material_id]?.revision } : {}) };
       state.plans[plan_id] = saved; ctx.dirty = true; return saved;
     });
   }

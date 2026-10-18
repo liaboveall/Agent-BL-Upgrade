@@ -8,7 +8,7 @@ function requireAdmin(request, env) {
   const admin = checkAdminToken(request, env);
   if (!admin.configured || !admin.authorized) throw new HttpError(401, 'admin_token_required', 'Configured administrator authorization is required');
 }
-export function createRightsRoutes({ env = process.env, getVersion = null, service = new RightsService({ env, getVersion }), streamInterval = 1000 } = {}) {
+export function createRightsRoutes({ env = process.env, getVersion = null, getMode = null, getGeneration = () => 0, service = new RightsService({ env, getVersion, getMode, getGeneration }), streamInterval = 1000 } = {}) {
   let chainLoading;
   return async (request, response, url) => {
     if (!url.pathname.startsWith('/api/rights/')) return false;
@@ -17,20 +17,22 @@ export function createRightsRoutes({ env = process.env, getVersion = null, servi
     const path = url.pathname.slice('/api/rights/'.length), method = request.method;
     const body = () => readJsonBody(request, { limit: 1_048_576 });
     const token = tokenFor(request);
-    const match = /^materials\/([a-f0-9-]{36})(?:\/(download|review|publish|events|terms))?$/u.exec(path);
-    if (!service.chain && env.AGENTBL_RIGHTS_CONFIG && (path === 'status' || path.startsWith('transaction-plans'))) {
+    const match = /^materials\/([a-f0-9-]{36})(?:\/(download|review|publish|events|terms|financing-disclosure|financing-disclosure-preview|workflow|signing-request))?$/u.exec(path);
+    if (!service.chain && env.AGENTBL_RIGHTS_CONFIG && (path === 'status' || path.startsWith('transaction-plans') || path.endsWith('/workflow') || path.endsWith('/signing-request'))) {
       if (path !== 'status') await service.principal(token);
       chainLoading ??= loadRightsChain(env.AGENTBL_RIGHTS_CONFIG).catch(() => { chainLoading = null; throw new HttpError(503, 'rights_chain_unavailable', 'W3 instance verification failed'); });
-      service.chain = await chainLoading;
+      service.chain = await chainLoading; service.readPool = service.chain.readPool;
     }
     let result;
     if (path === 'status' && method === 'GET') result = await service.status();
     else if (path === 'subjects' && method === 'POST') { requireAdmin(request, env); result = await service.createSubject(await body()); }
     else if (/^subjects\/[a-f0-9-]{36}$/u.test(path) && method === 'DELETE') { requireAdmin(request, env); result = await service.revokeSubject(path.split('/')[1]); }
     else if (path === 'session-challenges' && method === 'POST') { requireAdmin(request, env); result = await service.createChallenge((await body())?.subject_id); }
+    else if (path === 'wallet-challenges' && method === 'POST') { const input = await body(); result = await service.createChallenge(input?.subject_id, { selfService: true, exitOnly: input?.exit_only === true }); }
     else if (path === 'sessions' && method === 'POST') result = await service.openSession(await body());
     else if (/^sessions\/[a-f0-9-]{36}$/u.test(path) && method === 'DELETE') { requireAdmin(request, env); result = await service.revokeSession(path.split('/')[1]); }
-    else if (path === 'me' && method === 'GET') result = await service.principal(token);
+    else if (path === 'me' && method === 'GET') result = await service.principal(token, { allowExitOnly: url.searchParams.get('exit_only') === '1' });
+    else if (path === 'materials' && method === 'GET') result = await service.listMaterials(token);
     else if (path === 'materials' && method === 'POST') result = await service.createMaterial(token, await body());
     else if (path === 'evidence' && method === 'POST') result = await service.createEvidence(token, await body());
     else if (/^evidence\/[a-f0-9-]{36}\/download$/u.test(path) && method === 'GET') {
@@ -40,6 +42,7 @@ export function createRightsRoutes({ env = process.env, getVersion = null, servi
     else if (/^evidence\/[a-f0-9-]{36}\/review$/u.test(path) && method === 'POST') result = await service.requestEvidenceReview(token, path.split('/')[1], await body());
     else if (/^evidence-reviews\/[a-f0-9-]{36}\/resolve$/u.test(path) && method === 'POST') result = await service.resolveEvidenceReview(token, path.split('/')[1], await body());
     else if (/^transaction-plans\/[a-f0-9-]{36}$/u.test(path) && method === 'GET') result = await service.getPlan(token, path.split('/')[1]);
+    else if (/^transaction-plans\/[a-f0-9-]{36}\/broadcast$/u.test(path) && method === 'POST') result = await service.checkpointPlan(token, path.split('/')[1]);
     else if (/^transaction-plans\/[a-f0-9-]{36}\/transaction$/u.test(path) && method === 'POST') result = await service.attachTransaction(token, path.split('/')[1], (await body())?.tx_hash);
     else if (/^publications\/[a-f0-9-]{36}$/u.test(path) && method === 'GET') result = await service.publication(path.split('/')[1]);
     else if (path === 'transaction-plans' && method === 'POST') {
@@ -51,6 +54,7 @@ export function createRightsRoutes({ env = process.env, getVersion = null, servi
       result = await service.prepareTransaction(token, input);
     } else if (match) {
       const [, materialId, action] = match;
+      if (method === 'GET' && action === 'workflow') { sendJson(response, 200, await service.workflow(token, materialId)); return true; }
       if (method === 'GET' && action === 'events') {
         const first = await service.invoke(token, 'read_material', materialId, 'sse');
         response.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
@@ -70,7 +74,10 @@ export function createRightsRoutes({ env = process.env, getVersion = null, servi
         result = await service.invoke(token, 'read_material', materialId, action === 'download' ? 'download' : 'http');
         if (action === 'download') response.setHeader('Content-Disposition', `attachment; filename="${materialId}.json"`);
       } else if (method === 'POST' && action === 'review') result = await service.reviewMaterial(token, materialId, await body());
+      else if (method === 'POST' && action === 'signing-request') result = await service.signingRequest(token, materialId, await body());
       else if (method === 'POST' && action === 'terms') result = await service.bindTerms(token, materialId, (await body())?.terms_hash);
+      else if (method === 'POST' && action === 'financing-disclosure-preview') result = await service.createFinancingDisclosure(token, materialId, await body(), { save: false });
+      else if (method === 'POST' && action === 'financing-disclosure') result = await service.createFinancingDisclosure(token, materialId, await body());
       else if (method === 'POST' && action === 'publish') result = await service.publishMaterial(token, materialId);
       else throw new HttpError(405, 'method_not_allowed', 'Unsupported rights material operation');
     } else if (['mcp', 'a2a'].includes(path) && method === 'POST') {

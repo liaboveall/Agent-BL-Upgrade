@@ -7,6 +7,7 @@ for (const language of ['zh', 'en']) {
   test(`W3 ${language}: research rights state and unavailable controls are explicit on desktop`, async ({ page }, testInfo) => {
     await page.addInitScript((lang) => localStorage.setItem('ts_lang', lang), language);
     await page.goto('/');
+    await page.locator('.research-tools > summary').click();
     const panel = page.locator('.rights-panel'); await panel.locator('summary').click();
     await panel.locator('summary').focus(); await page.keyboard.press('Enter');
     await expect(panel.locator('details')).not.toHaveAttribute('open');
@@ -20,7 +21,7 @@ for (const language of ['zh', 'en']) {
     }
     await panel.screenshot({ path: testInfo.outputPath(`rights-${language}.png`) });
     await page.route('**/api/rights/status', (route) => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
-    await page.reload(); await page.locator('.rights-panel summary').click();
+    await page.reload(); await page.locator('.research-tools > summary').click(); await page.locator('.rights-panel summary').click();
     await expect(page.locator('.rights-panel')).toContainText(language === 'zh' ? '暂不可核对' : 'unavailable');
   });
 }

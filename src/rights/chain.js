@@ -2,6 +2,7 @@ import path from 'node:path';
 import { Contract, Interface, JsonRpcProvider, FetchRequest, id } from 'ethers';
 import { readJson } from '../lib/jsonStore.js';
 import { HttpError } from '../app/http.js';
+import { RpcReadPool } from './reads.js';
 
 export const RIGHTS_CONTROLLER_ABI = [
   'function governance() view returns (address)', 'function registry() view returns (address)', 'function token() view returns (address)',
@@ -9,7 +10,8 @@ export const RIGHTS_CONTROLLER_ABI = [
   'function termsHash(uint256) view returns (bytes32)', 'function intakeStopped() view returns (bool)',
   'function acknowledgeTerms(uint256,bytes32,uint256,uint64)', 'function disburse(uint256,uint256,bytes32)',
   'function executeLifecycle(bytes)', 'function notifyResolution(uint256,bytes32,bytes32,uint256)',
-  'function reviewResolution(uint256,bytes32)', 'function finalizeResolution(uint256)'
+  'function reviewResolution(uint256,bytes32)', 'function finalizeResolution(uint256)',
+  'function startExit(uint256)', 'function disputeResolution(uint256,bytes32)', 'function resolutionId(uint256) view returns (bytes32)'
 ];
 const equal = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 const requireThat = (condition, code) => { if (!condition) throw new HttpError(409, code, 'W3 protocol binding or transaction precondition failed'); };
@@ -28,18 +30,19 @@ export function maskImmutableBytecode(bytecode, artifact) {
 
 /** Read-only planner. Caller signs in their wallet; the server has no private key. */
 export class RightsChainService {
-  constructor({ provider, controller, registry, pool, token, chainId, governance, artifacts }) {
-    Object.assign(this, { provider, controller, registry, pool, token, chainId, governance, artifacts });
+  constructor({ provider, controller, registry, pool, token, chainId, governance, artifacts, readPool = new RpcReadPool() }) {
+    Object.assign(this, { provider, controller, registry, pool, token, chainId, governance, artifacts, readPool });
   }
-  async verify() {
+  async verify({ read = this.readPool.budget(100).read, readAt } = {}) {
+    const view = (contract, method, ...args) => read(() => contract[method](...args, ...(readAt ? [readAt] : [])));
     const [network, owner, actualPool, actualRegistry, actualToken, gov, version, gate, mode, minter, boundController, count, delay, scope, capitalVersion, registryGovernance, hubAddress,
       oracle, capitalRegistry, capitalToken, controllerDomain, registryDomain] = await Promise.all([
-      this.provider.getNetwork(), this.pool.owner(), this.controller.capitalPool(), this.controller.registry(), this.controller.token(),
-      this.controller.governance(), this.controller.controlVersion(), this.pool.complianceGate(), this.pool.accessMode(), this.token.pool(), this.registry.controller(),
-      this.governance.memberCount(), this.governance.delay(), this.controller.scope(), this.pool.protocolVersion(), this.registry.governance(), this.registry.hub(),
-      this.pool.oracle(), this.pool.eblRegistry(), this.pool.rwaToken(), this.controller.eip712Domain(), this.registry.eip712Domain()
+      read(() => this.provider.getNetwork()), view(this.pool, 'owner'), view(this.controller, 'capitalPool'), view(this.controller, 'registry'), view(this.controller, 'token'),
+      view(this.controller, 'governance'), view(this.controller, 'controlVersion'), view(this.pool, 'complianceGate'), view(this.pool, 'accessMode'), view(this.token, 'pool'), view(this.registry, 'controller'),
+      view(this.governance, 'memberCount'), view(this.governance, 'delay'), view(this.controller, 'scope'), view(this.pool, 'protocolVersion'), view(this.registry, 'governance'), view(this.registry, 'hub'),
+      view(this.pool, 'oracle'), view(this.pool, 'eblRegistry'), view(this.pool, 'rwaToken'), view(this.controller, 'eip712Domain'), view(this.registry, 'eip712Domain')
     ]);
-    requireThat(BigInt(network.chainId) === BigInt(this.chainId) && BigInt(version) === 1n && BigInt(capitalVersion) === 5n
+    requireThat(BigInt(network.chainId) === BigInt(this.chainId) && [1n, 2n].includes(BigInt(version)) && BigInt(capitalVersion) === 5n
       && [1439n, 31337n].includes(BigInt(network.chainId)) && scope === id('RESEARCH_TEST_ASSETS_ONLY'), 'rights_network_mismatch');
     requireThat(equal(owner, await this.controller.getAddress()) && equal(actualPool, await this.pool.getAddress())
       && equal(actualRegistry, await this.registry.getAddress()) && equal(actualToken, await this.token.getAddress())
@@ -48,33 +51,53 @@ export class RightsChainService {
       && equal(gov, await this.governance.getAddress()) && equal(registryGovernance, gov)
       && BigInt(mode) === 1n && BigInt(count) >= 3n && BigInt(delay) >= 3600n, 'rights_controls_mismatch');
     requireThat(controllerDomain.name === 'AgentBL Rights' && registryDomain.name === 'AgentBL Title'
-      && controllerDomain.version === '1' && registryDomain.version === '1'
+      && controllerDomain.version === String(version) && registryDomain.version === '1'
       && equal(controllerDomain.verifyingContract, owner) && equal(registryDomain.verifyingContract, actualRegistry)
       && BigInt(controllerDomain.chainId) === BigInt(this.chainId) && BigInt(registryDomain.chainId) === BigInt(this.chainId), 'rights_signature_domain_mismatch');
     const hub = new Contract(hubAddress, ['function registry(address) view returns (bool)', 'function governance() view returns (address)'], this.provider);
-    requireThat(await hub.registry(actualRegistry) && equal(await hub.governance(), gov), 'rights_registry_not_enrolled');
+    requireThat(await view(hub, 'registry', actualRegistry) && equal(await view(hub, 'governance'), gov), 'rights_registry_not_enrolled');
     const addresses = { RightsGovernance: gov, AssetIdentityHub: hubAddress, CommittedEBLRegistry: actualRegistry,
       RightsController: owner, ControlledRWAToken: actualToken, RWAOfferingPoolV5: actualPool };
     for (const name of CONTRACTS) {
       const a = this.artifacts?.[name] ?? await readJson(path.join(ARTIFACTS, `${name}.sol`, `${name}.json`));
       requireThat(a?.deployedBytecode, 'rights_artifact_missing');
-      const code = await this.provider.getCode(addresses[name]);
+      const code = await read(() => this.provider.getCode(addresses[name], readAt?.blockTag));
       requireThat(maskImmutableBytecode(code, a) === maskImmutableBytecode(a.deployedBytecode, a), 'rights_bytecode_mismatch');
     }
-    return { chain_id: String(network.chainId), controller: owner, pool: actualPool, governance: gov, control_version: 1 };
+    if (BigInt(version) === 2n) {
+      const rightsAddress = await view(this.pool, 'recoveryRights');
+      const rights = new Contract(rightsAddress, ['function pool() view returns (address)'], this.provider);
+      requireThat(await view(this.pool, 'cumulativeClaims') && BigInt(await view(this.pool, 'executorCount')) === 0n
+        && equal(await view(rights, 'pool'), actualPool), 'rights_controls_mismatch');
+      const a = this.artifacts?.RecoveryEntitlements ?? await readJson(path.join(ARTIFACTS, 'RecoveryEntitlements.sol', 'RecoveryEntitlements.json'));
+      requireThat(a?.deployedBytecode && maskImmutableBytecode(await read(() => this.provider.getCode(rightsAddress, readAt?.blockTag)), a)
+        === maskImmutableBytecode(a.deployedBytecode, a), 'rights_bytecode_mismatch');
+    }
+    return { chain_id: String(network.chainId), controller: owner, pool: actualPool, governance: gov, control_version: Number(version), exit_only: BigInt(version) === 1n };
   }
   async prepare(principal, input) {
     const binding = await this.verify();
-    requireThat(input && Object.keys(input).every((key) => ['operation', 'pool_id', 'terms_hash', 'quote_version', 'valid_until', 'amount_atomic', 'evidence_hash', 'distribution_hash', 'payload', 'material_id'].includes(key)), 'rights_plan_invalid');
+    requireThat(!binding.exit_only || ['notify_resolution', 'review_resolution', 'finalize_resolution'].includes(input?.operation), 'rights_legacy_exit_only');
+    requireThat(input && Object.keys(input).every((key) => ['operation', 'pool_id', 'terms_hash', 'quote_version', 'valid_until', 'amount_atomic', 'evidence_hash', 'distribution_hash', 'payload', 'material_id', 'reviewed_disclosure_hash'].includes(key)), 'rights_plan_invalid');
     const operations = {
       register_title: { roles: ['issuer'], contract: this.registry, method: 'registerTitle', args: () => [input.payload?.issuance, input.payload?.signature] },
       pledge: { roles: ['holder'], contract: this.registry, method: 'pledge', args: () => [uint(input.payload?.ebl_id), binding.pool, input.terms_hash, uint(input.valid_until), input.payload?.signature ?? '0x'] },
       create_offering: { roles: ['issuer'], method: 'createControlledOffering', args: () => [input.payload?.terms, input.payload?.valuation, input.payload?.valuer, input.payload?.signature] },
+      repay: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator'], contract: this.pool, method: 'repay', args: () => [uint(input.pool_id), uint(input.amount_atomic)] },
+      set_eligibility: { roles: ['compliance'], method: 'setEligibility', args: () => [input.payload?.wallet, input.payload?.subject_hash, input.evidence_hash, uint(input.valid_until)] },
+      refresh_screening: { roles: ['compliance'], method: 'refreshScreening', args: () => [uint(input.valid_until), input.evidence_hash] },
+      mark_in_transit: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('markInTransit', [uint(input.pool_id), input.evidence_hash])] },
+      mark_default: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('markDefault', [uint(input.pool_id)])] },
+      record_arrival: { roles: ['attestor'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('recordCargoArrival', [uint(input.pool_id), input.evidence_hash])] },
+      record_payment: { roles: ['attestor'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('recordImporterPayment', [uint(input.pool_id), input.evidence_hash, uint(input.amount_atomic)])] },
+      settle: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('settle', [uint(input.pool_id), uint(input.amount_atomic)])] },
       acknowledge_terms: { roles: ['investor'], method: 'acknowledgeTerms', args: () => [uint(input.pool_id), input.terms_hash, uint(input.quote_version), uint(input.valid_until)] },
-      disburse: { roles: ['issuer', 'custodian'], method: 'disburse', args: () => [uint(input.pool_id), uint(input.amount_atomic), input.evidence_hash] },
-      notify_resolution: { roles: ['custodian'], method: 'notifyResolution', args: () => [uint(input.pool_id), input.evidence_hash, input.distribution_hash, uint(input.amount_atomic)] },
+      disburse: { roles: ['issuer', 'custodian', 'operator'], method: 'disburse', args: () => [uint(input.pool_id), uint(input.amount_atomic), input.evidence_hash] },
+      notify_resolution: { roles: ['custodian', 'disposer'], method: 'notifyResolution', args: () => [uint(input.pool_id), input.evidence_hash, input.distribution_hash, uint(input.amount_atomic)] },
       review_resolution: { roles: ['reviewer'], method: 'reviewResolution', args: () => [uint(input.pool_id), input.evidence_hash] },
-      finalize_resolution: { roles: ['custodian'], method: 'finalizeResolution', args: () => [uint(input.pool_id)] }
+      finalize_resolution: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'finalizeResolution', args: () => [uint(input.pool_id)] },
+      start_exit: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'startExit', args: () => [uint(input.pool_id)] },
+      dispute_resolution: { roles: ['holder', 'investor', 'reviewer'], method: 'disputeResolution', args: () => [uint(input.pool_id), input.evidence_hash] }
     };
     const operation = operations[input.operation];
     if (!operation) throw new HttpError(400, 'rights_plan_operation_unknown', 'Unsupported rights transaction plan');
@@ -86,9 +109,18 @@ export class RightsChainService {
     const transaction = { from: principal.wallet, to: await target.getAddress(), data };
     try { await this.provider.call(transaction); }
     catch { throw new HttpError(409, 'rights_preflight_failed', 'Current chain state or on-chain permissions reject this plan'); }
+    const terms = ['disburse', 'repay'].includes(input.operation) ? await this.controller.terms(input.pool_id) : null;
+    const previewFields = input.operation === 'register_title' ? { ...input.payload.issuance }
+      : input.operation === 'create_offering' ? { ...input.payload.terms, terms_hash: await this.controller.hashTerms(input.payload.terms), valuer: input.payload.valuer }
+      : input.operation === 'set_eligibility' ? { investor_wallet: input.payload.wallet, subjectHash: input.payload.subject_hash, validUntil: input.valid_until }
+      : input.operation === 'refresh_screening' ? { validUntil: input.valid_until }
+      : input.operation === 'pledge' ? { eblId: input.payload.ebl_id, validUntil: input.valid_until }
+      : input.operation === 'acknowledge_terms' ? { quote_version: input.quote_version, validUntil: input.valid_until } : {};
     const block = await this.provider.getBlockNumber();
     const nonce = await this.provider.getTransactionCount(principal.wallet, 'pending');
     return { ...binding, operation: input.operation, from: principal.wallet, to: transaction.to, calldata: data, value: '0',
+      ...(input.material_id ? { material_id: input.material_id } : {}),
+      preview: { operation: input.operation, ...previewFields, ...(input.distribution_hash ? { distribution_hash: input.distribution_hash } : {}), pool_id: input.pool_id ?? null, amount_atomic: input.amount_atomic ?? null, terms_hash: input.terms_hash ?? previewFields.terms_hash ?? null, evidence_hash: input.evidence_hash ?? null, ...(terms ? { recipient: input.operation === 'disburse' ? terms.exporter : binding.pool, settlement_asset: terms.settlementAsset } : {}), wallet: principal.wallet, destination: transaction.to, chain_id: String(this.chainId) },
       nonce, prepared_block: block, scope: 'research_test_assets_only', ...(input.operation === 'create_offering'
         ? { material_id: input.material_id, terms_hash: await this.controller.hashTerms(input.payload.terms), document_hash: input.payload.terms.documentHash } : {}) };
   }
@@ -109,14 +141,15 @@ export class RightsChainService {
       block_number: receipt.blockNumber, block_hash: receipt.blockHash };
   }
   async recoverTransaction(plan) {
-    const latest = await this.provider.getBlockNumber();
+    const { read } = this.readPool.budget(2000);
+    const latest = await read(() => this.provider.getBlockNumber());
     if (latest - plan.prepared_block > 500) throw new HttpError(409, 'rights_manual_reconciliation_required', 'Saved broadcast is outside the bounded scan; reconcile its wallet hash explicitly');
     for (let number = plan.prepared_block; number <= latest; number++) {
-      const block = await this.provider.getBlock(number, true);
+      const block = await read(() => this.provider.getBlock(number, true));
       requireThat(block, 'rights_recovery_block_missing');
       // Some providers ignore prefetch; fetch each transaction without guessing a hash.
       for (const hash of block.transactions) {
-        const tx = await this.provider.getTransaction(hash);
+        const tx = await read(() => this.provider.getTransaction(hash));
         requireThat(tx, 'rights_recovery_transaction_missing');
         if (equal(tx.from, plan.from) && Number(tx.nonce) === plan.nonce) {
           if (!equal(tx.to, plan.to) || !equal(tx.data, plan.calldata) || tx.value !== 0n) {
@@ -135,12 +168,18 @@ export async function loadRightsChain(file) {
   const cfg = await readJson(file);
   requireThat(cfg?.schema === 'agentbl-rights-instance-v1' && cfg.scope === 'research_test_assets_only'
     && cfg.rpc_url && cfg.chain_id && cfg.contracts, 'rights_config_invalid');
-  const artifacts = Object.fromEntries(await Promise.all(CONTRACTS.map(async (name) => [name, await readJson(path.join(ARTIFACTS, `${name}.sol`, `${name}.json`))])));
-  requireThat(CONTRACTS.every((name) => artifacts[name]?.abi), 'rights_artifact_missing');
   const rpc = new FetchRequest(cfg.rpc_url); rpc.timeout = 10000;
   const provider = new JsonRpcProvider(rpc, undefined, { cacheTimeout: -1 });
+  try {
+  const version = Number(await new Contract(cfg.contracts.RightsController, RIGHTS_CONTROLLER_ABI, provider).controlVersion());
+  requireThat([1, 2].includes(version) && (cfg.control_version == null || cfg.control_version === version), 'rights_signature_domain_mismatch');
+  const artifacts = version === 1
+    ? (await readJson(path.resolve(import.meta.dirname, '../../scripts/config/rights-v1-artifacts.json')))?.contracts
+    : Object.fromEntries(await Promise.all([...CONTRACTS, 'RecoveryEntitlements'].map(async (name) => [name, await readJson(path.join(ARTIFACTS, `${name}.sol`, `${name}.json`))])));
+  requireThat(CONTRACTS.every((name) => artifacts?.[name]?.abi), 'rights_artifact_missing');
   const contract = (name) => new Contract(cfg.contracts[name], new Interface(artifacts[name].abi), provider);
   const service = new RightsChainService({ provider, chainId: cfg.chain_id, controller: contract('RightsController'), registry: contract('CommittedEBLRegistry'),
     token: contract('ControlledRWAToken'), pool: contract('RWAOfferingPoolV5'), governance: contract('RightsGovernance'), artifacts });
-  try { await service.verify(); return service; } catch (error) { await provider.destroy(); throw error; }
+  await service.verify(); return service;
+  } catch (error) { await provider.destroy(); throw error; }
 }

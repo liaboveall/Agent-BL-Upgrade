@@ -33,12 +33,21 @@ npm run test:w2
 npm run test:w3
 npm run test:w4
 npm run test:w5
+npm run test:n1
+npm run test:n2
+npm run test:n3
+npm run test:n4
+npm run test:n5
 npm run test:browser
 npm run eval:agent -- --check
 npm run preflight
 ```
 
 W2～W5 是既有资金、权利、证据/支付、运营恢复的集成入口。普通 Node 套件明确跳过的本地 EVM 场景须在对应独立入口实际执行，跳过不算通过。浏览器需安装 Playwright Chromium，或用 `AGENTBL_CHROMIUM_PATH` 指向实际可用的系统 Edge/Chrome。离线浏览器服务不启动正式运营监控，其 ready 状态不能替代实际容器的就绪核验。
+
+`test:n1` 是第一阶段统一本地回归，隔离 runtime，不读取开发者 `.env`，记录源码摘要、每条退出码及原始日志到 `artifacts/n1/<时间>/`。应用测试主进程必须清除 `NODE_TEST_CONTEXT` 后由 Node 创建测试子进程；否则可能退出 0 却零执行，不能算通过。该入口不包含测试网广播、人工钱包或同提交 CI。
+
+`test:n2` 采用同样隔离规则，串行完成12项命令，固定本次技术源码摘要、退出码、失败/跳过与环境到 `artifacts/n2/<时间>/`，并复制浏览器截图/JSON。Hardhat 集成入口共享编译缓存，禁止同时对同一 checkout 编译。N2 的初始失败日志不会被最后结果覆盖。
 
 `npm run validate` 是完整验收：lint/check/build、应用及覆盖率、合约、W2～W5、浏览器、Agent、preflight、依赖审计、两次干净构建、容量及连续运行。新 checkout 和同提交 CI 都需完成，不能把旧报告的数量沿用为新结果。
 
@@ -67,6 +76,39 @@ Remove-Item Env:NODE_TEST_CONTEXT, Env:AGENTBL_RUNTIME_DIR
 
 如需部署就绪核验，使用独立的实际状态入口；本地套件应与实际受控实例配置隔离。
 
+## 完整条款的创建、取回与复算
+
+1. 签发主体在已有业务会话中，通过 `POST /api/rights/materials/:id/financing-disclosure` 创建公共研究条款；输入结构见 `src/rights/disclosure.js`。只放经批准的公开责任地址和来源说明，私有提单仍在加密材料中。
+2. 将返回的 `terms_hash` 通过原材料 `/terms` 绑定，收集两个独立审查地址对当前 document/terms 的审核，再 `/publish`。新 revision 不覆盖旧条款；修改后须重新审核。`disclosureFromPricingQuote` 可从可开放的确定性报价产生精确原子金额；研究固定金额场景与自动报价验收分别记录。
+3. holder/valuer 的签名和发行使用返回的同一 `terms`。受控实例提供 `GET /api/controlled/offerings/:id/terms?download=1` 下载；只有当前规范链与条款一致时才成功。
+4. 用户在确认面板阅读完整条款、责任地址与截止后勾选审阅。前端独立复算，认购 API 与广播检查再次核对；缺材料或报价变更均阻断新增确认。既有退款、领取继续使用原退出路径。
+5. 下载的 JSON 可在离线机器独立运行：
+
+```powershell
+npm run terms:verify -- C:\path\financing-terms-1.json
+```
+
+离线命令仅验证公开文档、政策及 EIP-712，输出精确总本金/目标金额；不读取 `.env`、不请求 RPC 或钱包。其 `chain_state_verified:false` 表示没有据此核验当前规范链，不能用离线 PASS 替代测试网或人工/业务验收。
+
+## 角色工作台与分页读取
+
+管理员通过现有 `POST /api/rights/subjects` 登记组织、钱包和业务角色，向参与者提供返回的身份编号；角色登记仍须配合当前链上权限。用户在资金池面板连接钱包、选择 Live 后，在“融资角色工作台”填身份编号并逐次钱包签名。`POST /api/rights/wallet-challenges` 只为已登记主体生成限量挑战，不接受角色或组织自报；管理员原有挑战入口仍保留。
+
+工作台支持保存虚构铜单证、导入完整研究条款、独立审查及发布、holder 同意、资格和来源更新、发行、放款、回款证明和有界处置。签发/估值输入使用已审研究包中的相应字段；服务器构建受限 EIP-712 请求，用户签名后导出文件交接。登记使用 `{issuance,signature}`，发行使用 `{valuation,valuer,signature}`，完整条款由当前材料绑定；不得手改承诺后沿用旧审核。导入文件限1MiB。新条款使用 `POST /api/rights/materials/:id/financing-disclosure-preview` 进行授权后的无写入预览，确认后再保存并绑定；签发/资格/条款同意预览显示对应对象和截止。角色界面已完成N4的导航与布局本地验收；JSON文件交接不等于N5人工业务流程已经验收。
+
+资金认购、退款、领取和原意图恢复使用 `x-rights-session`；会话钱包及主体须与意图一致。前端会话只存在内存，刷新/钱包/模式变化后重新验证角色，非敏感意图定位符保留。业务会话恢复不替代交易签名。业务主体撤销后可点击“仅验证既有退款与领取”，或以 `exit_only:true` 请求钱包挑战；该会话只能查询/恢复自己的资金意图、退款与领取，不能读取私有材料、认购或发起权利新风险。材料权限、资格撤销与既有退出分开处理。权利操作先 `POST /api/rights/transaction-plans` 准备，审阅后 `POST .../:id/broadcast` 保存一次发送checkpoint，再由本钱包发送；服务从不代签。未知结果用 `GET .../:id` 或 `POST .../:id/transaction` 查原交易，不能自动再发一笔。资金意图也按相同原则保存模式代次、创建区块和nonce；其他主体不能操作。
+
+```text
+GET /api/controlled/offerings?from=1&limit=10
+GET /api/controlled/offerings?from=11&limit=10&block_number=<上页区块>&block_hash=<上页哈希>
+GET /api/controlled/offerings/25
+GET /api/controlled/positions?wallet=<钱包>&from=1&limit=10
+```
+
+`complete` 仅说明本页是否完整；仍须按 `next_cursor` 读完所有页。`failures` 指明未读到的池，`snapshot` 记录规范块、时间与观察时间；刷新开始新快照，不能混合不同快照的页。指定池同样返回页形响应，未知池404。重组拒绝旧快照；拥塞和超时不返回伪造的空成功。部分持仓失败保留对账提示和未知金额。默认每页十条，最大二十条；页面按同块聚合持仓。
+
+`npm run test:n3` 串行执行13项统一本地检查，包括新增 `test:n3:evm` 的真实本地25池/角色/资金验收、所有既有资金集成、浏览器、Agent和预检。源码摘要覆盖技术文件，docs叙述单独记录。结果、命令原日志、初始失败、EVM余额轨迹及RPC读数进入 `artifacts/n3/<时间>/`。最终结论要求 `source_unchanged:true`、实质执行及全部命令退出0；中途修改源码的绿色运行仍是中间证据。单元故障注入、浏览器HTTP/钱包桩、本地EVM、公共测试网RPC、人工钱包分别报告。
+
 ## 部署与续跑
 
 ```powershell
@@ -75,9 +117,11 @@ npm run deploy:w5 -- --status
 
 status 核验链上实例，不广播交易，但会保存本次核验结果和续跑状态。CLI 优先读取 `data/runtime/w5-deployment/deployment-state.json`，其次读取显式选择的收据目录，最后读取 `scripts/config/testnet-deployment-baseline.json` 的冻结基线。基线是当前研究实例的公开部署历史，不含私钥；没有原加密签名材料时不能冒充新实例继续部署。checkpoint 损坏、artifact 改变或 custody 不匹配时必须停止。
 
-`AGENTBL_DEPLOYMENT_EVIDENCE_DIR` 可显式指定新产物目录。当前 `--prepare`/`--activate` 是既有部署编排，`--smoke` 执行测试资金生命周期，`--anchor` 注册并锚定版本；这些操作涉及外部测试网交易。此前用户已授权本轮必要测试与部署，目标限本机 Docker 与受控测试网；不扩大到公网服务或真实商业资金。
+`AGENTBL_DEPLOYMENT_EVIDENCE_DIR` 可显式指定 status 产物目录。控制版本 1 已转为应用侧仅退出，旧 CLI 的 `--prepare`/`--activate`/`--smoke`/`--anchor` 被拒绝，避免在旧 checkpoint 上混入新代码或增加风险。直接调用旧链上合约仍受旧代码约束，应用侧关闭入口不能热修旧实例。
 
-合约修复后的新实例发布属于 N1.6/N5.2。不要改 artifact 后强行续跑旧 checkpoint，不要重置历史、复用旧交易编号或覆盖旧地址。新旧签名域、账本和 Hub 占用关系需有迁移方案。
+合约修复后的新实例使用离线入口 `npm run rights:candidate -- <public-input.json>`。输入包含唯一 `instance_id`、`chain_id` 1439/31337、已有 `governance`/`hub`、待用 `deployer` 和其未使用 `nonce`。1439 必须使用现有公共配置的治理/Hub，以保留历史资产占用；输出为 `artifacts/candidates/<instance_id>/candidate.json`，已存在目录拒绝覆盖。它包含源码/产物摘要、预测地址、七笔未签名部署/绑定事务、治理调用及切换前提，不请求私钥、不广播、不改公共配置。
+
+N5.2 实际发布前必须核验规范链、原 nonce、每份 runtime（含池创建的 RecoveryEntitlements）、绑定和治理延时；未知事务先找原 hash，不能自动重发。新配置记录 `control_version:2` 和真实部署块。新 Registry 共用 Hub，新 Pool 地址形成独立账本目录；通过测试网验收后成对切换两份公共配置。旧 ABI、地址、checkpoint、加密材料、持仓及退出入口保留，不复用历史交易编号。
 
 容器镜像由同源码编译合约和前端，携带所需 runtime artifacts。运行使用非 root、只读根、tmpfs、cap-drop ALL、no-new-privileges，持久挂载实际 runtime。镜像和配置绑定提交/源码摘要；`/api/ready` 与 `/api/controlled/status` 均通过后再接收新操作。
 
@@ -119,3 +163,43 @@ npm run runtime:backup -- restore --directory <新目标> --key-file <独立备�
 ## 可选服务
 
 MCP：`npm run mcp:stdio`。离线报告：`npm run smoke:x402`、`npm run x402:intel`。`npm run smoke:x402:live` 会进行外部测试网付款，执行前核对目标与配置。付款成功、报告可取回和报告业务准确性是三项分别验证的事实。数据和模型配置见 [data-sources.md](data-sources.md)。
+
+`npm run test:n4` 串行执行13项本地门禁，复跑应用、合约、W2～W5、N3实际EVM、整站浏览器、Agent与预检，保存技术源码摘要、命令退出码、截图和原始失败记录到 `artifacts/n4/<时间>/`。浏览器以中英文390/768/1280/1440px覆盖默认融资入口、角色与条款、25池分页和全部导航的整页宽度。HTTP/Ethereum桩的浏览器检查不替代独立EVM实付证据或真实手机钱包操作。
+
+## N5 候选复现与本机交付
+
+`npm run test:n5` 创建全新本地clone，覆盖本次工作区的公开源码并核对技术文件清单，重新安装两套锁定依赖。不提交/推送，不复制 `.env` 或runtime，仅继承操作系统路径和明确选择的浏览器。依次执行覆盖率、合约、W2～W5、N3真实EVM、浏览器、Agent、预检、两类依赖审计、两次干净构建、本机Docker和600秒离线连续运行；日志、失败和源码清单进入 `artifacts/n5/<时间>/`。覆盖率已执行应用套件，不重复记作两份独立证据。
+
+记录发布证据前先执行 `npm run check`。它与 `test:n5` 都会按 `.gitattributes` 检查技术输入（含未跟踪的新文件）：声明 `eol=lf` 的源码不能仍含 CRLF，否则 Git 提交/checkout 会改变已验证的字节。`-text` 的原始单据、冻结部署收据和 vendor 文件保留原字节。已有证据不能因换行整理而改写摘要；整理后生成新源码清单并重新验证。发布交接还应逐文件比较候选源码和将发布的 Git blob，记录预期 tree、真实暂存区未变及尚未创建提交，不能把 tree 标成已通过 CI 的 commit。
+
+本机镜像标注基线Git提交与实际技术源码SHA-256；有未提交修改时，基线提交不能代替源码摘要。Docker使用随机独立卷、回环端口、非root、只读根、tmpfs、去权限和禁止提权；检查ready/网页、停止后的租约释放、同卷重启及丢卷拒绝初始化。临时容器和测试卷结束后移除，保留镜像ID和日志。
+
+恢复只使用合成两投资者账本和加密研究vault。源目录离线，仅把加密包及两份独立临时密钥挂入替代Linux容器，核对共10份、8,000,000原子单位成本；错误备份密钥、错误vault密钥和缺历史均应拒绝。真实链账由N3 EVM另验；同机合成恢复不证明新测试网实例、原签名权或独立物理机接管。
+
+`npm run inspect:n5` 不加载 `.env` 或私钥，只核验公开现有实例、runtime、签名域及绑定；固定规范块读完各页，记录实际JSON-RPC数、五次读取p95和错误比例。现有池不足25时保留公共25池门槛；五次冒烟也不代表持续压测。公开deployer的latest/pending nonce相等时生成七笔无签名候选事务；nonce是观察值，不是预留。结果进入 `artifacts/n5-readonly/<时间>/`；公共配置、旧checkpoint及账本不改。
+
+CI增加N3角色与25池EVM作业。提交推送后须等待同一完整提交的全部适用必需检查；条件式异地主机恢复跳过需单列。未提交源码、本地绿灯和历史CI不关闭同提交CI门槛。
+
+## 课程演示与未参与开发者验收
+
+讲解顺序：默认融资页说明虚构铜货物、Singapore → Shanghai和TEST_USDC；完整条款解释本金、补偿、截止、零费与损失；角色工作台说明签发、估值、双审、holder同意和放款；最后由出资人分别核验到账。哈希证明材料未变，不证明真实货物；Hub只覆盖接入登记域；研究地址仍由同一操作员管理。平台离线时用户可依链上规则退出，是相对“签名数据库 + 平台托管”的主要差别。
+
+本地可复跑：`npm run test:n3:evm`。输出轨迹时先将 `AGENTBL_N3_EVIDENCE` 设为新的证据目录，结束后删除该环境变量。入口自行启动并停止本地链，不动公共测试网资金。1 TEST_USDC = 1,000,000原子单位：
+
+| 路径 | 精确整数与结果 | 独立核对 |
+|---|---|---|
+| 正常 | 两人投入合计8,000,000，回款及领取合计10,000,000 | 各钱包余额、原交易、池escrow归零 |
+| 失败退款 | 实认购2,400,000，截止后退款2,400,000 | 原成本退回、份额销毁 |
+| 损失与迟到款 | 初始回款4,000,001，迟到款9；最终每人2,000,005 | 烧份额后永久受益权仍收增量 |
+| 未知交易 | 已有广播checkpoint但未保存hash/回执 | 查原nonce与规范回执，不再次付款；重组保留审计 |
+
+公共新候选部署并成对切换配置前，Live仍是旧版仅退出实例，不能演示新增v2融资。人工验收需在已核验的新实例上由未参与开发的人独立操作；自动EVM钱包及浏览器桩不得代填人工通过。
+
+1. 记录源码/提交、实例、验收者、日期、设备和钱包版本，以及本人未参与开发的声明；只用研究测试账户。
+2. 连接并核对链/实例，验证已登记身份；读完整条款并复算金额、收款方、报价、截止、零费。先拒签一次，核对资金未动且无伪回执。
+3. 按待办完成材料交接、两地址审核、holder同意、发行、两资方分别认购、固定融资主体收款、实回款、独立领取；逐次记录本人实际签名和规范交易。
+4. 在另一失败募集池做截止退款，用浏览器或独立RPC记录前后余额、份额和escrow。金额不符时停止新增风险并保存证据。
+5. 观察损失及烧份额后的迟到回款；刷新/断网后的未知结果只恢复原交易。切换钱包/模式撤销旧预览，既有退款/领取仍可达。
+6. 实际手机另测连接、切链、拒签、确认、回前台及恢复；390px桌面不能代填手机通过。验收者说明区块链作用和信任边界，记录受阻步骤。
+
+人工收据至少保存：`source_sha256`、完整`commit`、`chain_id`、新地址及部署块、验收者、设备/钱包、逐步结果、实际签名次数、原hash/规范块、前后余额整数、独立查询来源、失败/重试及未完成项。没有实际验收者和签名时维持PENDING，不生成示例PASS。

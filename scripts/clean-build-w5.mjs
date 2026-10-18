@@ -10,7 +10,7 @@ const npmCli = process.env.npm_execpath;
 if (!npmCli || !/npm-cli\.c?js$/u.test(npmCli)) throw new Error('Run through npm run build:clean');
 const source = await releaseSourceSnapshot(), attempts = [];
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-clean-'));
-const artifactNames = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5', 'AgentDecisionLog'];
+const artifactNames = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5', 'RecoveryEntitlements', 'AgentDecisionLog'];
 // Solc AST identifiers depend on the compilation group. The immutable byte ranges do not.
 const normalizedArtifact = (artifact) => ({ abi: artifact.abi, bytecode: artifact.bytecode, deployedBytecode: artifact.deployedBytecode,
   immutableReferences: Object.values(artifact.immutableReferences ?? {}).flat().sort((a, b) => a.start - b.start).map(({ start, length }) => ({ start, length })) });

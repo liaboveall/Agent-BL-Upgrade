@@ -93,6 +93,11 @@ export class Ledger {
     return this.writer.exclusive(async () => {
       const intent = await this.getIntent(intentId);
       if (!intent || intent.tx_hash || intent.broadcast_nonce !== undefined) throw new Error('Intent already has a broadcast checkpoint; reconcile it before another send');
+      const history = await this.writer.readIntents();
+      const latest = new Map(); for (const row of history) latest.set(row.intent_id, { ...latest.get(row.intent_id), ...row });
+      if ([...latest.values()].some((other) => other.intent_id !== intentId && lower(other.investor) === lower(intent.investor)
+        && Number(other.protocol_instance?.chain_id) === Number(intent.protocol_instance.chain_id)
+        && ['broadcast_prepared', 'broadcast', 'reconciliation_required'].includes(other.status))) throw Object.assign(new Error('Reconcile the saved wallet operation before another send'), { code: 'wallet_reconciliation_required', status: 409, expose: true });
       if (!Number.isSafeInteger(checkpoint.nonce) || checkpoint.nonce < 0 || !Number.isSafeInteger(checkpoint.block) || checkpoint.block < 0) throw new Error('Invalid broadcast checkpoint');
       const updated = { ...intent, status: 'broadcast_prepared', broadcast_nonce: checkpoint.nonce, prepared_block: checkpoint.block };
       await this.writer.appendIntent(updated); return updated;

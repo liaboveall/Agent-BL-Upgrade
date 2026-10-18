@@ -10,7 +10,7 @@ export const appStore = createStore({
   liveAvailable: false,
   modeGeneration: 1,
 
-  view: 'market', // 'market' | 'mint' | 'agent' | 'discover'
+  view: 'finance', // 'finance' | 'market' | 'mint' | 'agent' | 'discover'
   busy: false,
 
   // catalog + selection

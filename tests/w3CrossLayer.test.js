@@ -10,15 +10,24 @@ import { deployRightsRpc } from './helpers/rightsHarness.js';
 import { listen, requestJson } from './helpers/http.js';
 import { RightsService } from '../src/rights/service.js';
 import { createRightsRoutes } from '../src/app/rightsRoutes.js';
+import { createControlledRoutes } from '../src/app/controlledRoutes.js';
 import { sendError } from '../src/app/http.js';
 import { sendRightsPlan } from '../web/src/lib/rights.js';
 import { loadRightsChain } from '../src/rights/chain.js';
+import { prepareRightsCandidate, writeRightsCandidate } from '../scripts/prepare-rights-candidate.mjs';
+import { Contract, ContractFactory, TypedDataEncoder } from 'ethers';
+import { titleDomain, ISSUANCE_TYPES, PLEDGE_TYPES, TERMS_TYPES, VALUATION_TYPES } from '../src/rights/typedData.js';
 
 async function backend(c, t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'w3-cross-')), env = { AGENTBL_RIGHTS_KEY: randomBytes(32).toString('hex'), AGENTBL_ADMIN_TOKEN: 'synthetic-cross-layer-admin-w3' };
   const service = new RightsService({ directory, env, chain: c.chain });
   const route = createRightsRoutes({ service, env });
-  const app = await listen(http.createServer((req, res) => route(req, res, new URL(req.url, 'http://local')).catch((error) => sendError(res, error, { logger: { warn() {}, error() {} } }))));
+  const controlled = createControlledRoutes({ env: { ...env, AGENTBL_RUNTIME_DIR: directory }, chain: c.chain, disclosures: service, getMode: () => 'live',
+    configuration: { chain_id: Number(c.chainId), deployment_block: 0, contracts: { RWAOfferingPoolV5: await c.pool.getAddress(), ControlledRWAToken: await c.token.getAddress() } } });
+  const app = await listen(http.createServer((req, res) => (async () => {
+    const url = new URL(req.url, 'http://local');
+    if (!await route(req, res, url)) await controlled(req, res, url);
+  })().catch((error) => sendError(res, error, { logger: { warn() {}, error() {} } }))));
   t.after(async () => { await app.close(); await fs.rm(directory, { recursive: true, force: true }); });
   const post = async (url, body, token, admin = false) => {
     const result = await requestJson(app.base, 'POST', `/api/rights/${url}`, body, { ...(token ? { 'x-rights-session': token } : {}), ...(admin ? { Authorization: `Bearer ${env.AGENTBL_ADMIN_TOKEN}` } : {}) });
@@ -53,6 +62,8 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     // Rebind the full terms and issuance to the actual salted material commitment.
     const issue = await c.issuance(material.document_hash), offer = await c.offering(eblId, issue.issuance);
     const recordId = material.material_id;
+    const { schema: _schema, policy: _policy, ...readableInput } = offer.pack.document;
+    await app.post(`materials/${recordId}/financing-disclosure`, readableInput, issuer.token);
     const registerPlan = await app.plan(issuer, { operation: 'register_title', payload: issue });
     const receipt = await app.execute(issuer, registerPlan); assert.equal(receipt.status, 'confirmed');
     assert.equal(await c.registry.holderOf(eblId), c.holder.address);
@@ -71,10 +82,23 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     const time = await c.now();
     await c.send(c.controller.connect(c.compliance).setEligibility(c.investor.address, c.fresh(), c.fresh(), time + 100000n));
     await c.send(c.controller.connect(c.compliance).refreshScreening(time + 80000n, c.fresh()));
-    const acceptance = await app.plan(investor, { operation: 'acknowledge_terms', pool_id: poolId, terms_hash: offer.hash, quote_version: '1', valid_until: offer.terms.subscribeUntil });
+    const read = await requestJson(app.app.base, 'GET', `/api/controlled/offerings/${poolId}/terms?download=1`);
+    assert.equal(read.status, 200); assert.equal(read.data.terms_hash, offer.hash); assert.equal(read.data.disclosure_hash, offer.terms.disclosureHash);
+    assert.equal(read.data.terms.issuePrice, offer.terms.issuePrice);
+    await assert.rejects(app.plan(investor, { operation: 'acknowledge_terms', pool_id: poolId, terms_hash: offer.hash, quote_version: '1', valid_until: offer.terms.subscribeUntil }), { code: 'financing_review_required' });
+    const acceptance = await app.plan(investor, { operation: 'acknowledge_terms', pool_id: poolId, terms_hash: offer.hash, quote_version: '1', valid_until: offer.terms.subscribeUntil, reviewed_disclosure_hash: offer.terms.disclosureHash });
     await app.execute(investor, acceptance);
     await c.send(c.usdc.mint(c.investor.address, 8000000n)); await c.send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), 8000000n));
-    await c.send(c.pool.connect(c.investor).subscribeWithTerms(poolId, 10, 800000, 1, offer.terms.subscribeUntil));
+    const subscriptionBody = { wallet: c.investor.address, chain_pool_id: poolId, shares: '10', max_unit_price: '800000', expected_quote_version: '1', deadline: String(await c.now() + 600n) };
+    const missingReview = await requestJson(app.app.base, 'POST', '/api/controlled/subscription-intents', subscriptionBody, { 'x-rights-session': investor.token });
+    assert.equal(missingReview.status, 409); assert.equal(missingReview.data.code, 'financing_review_required');
+    const prepared = await requestJson(app.app.base, 'POST', '/api/controlled/subscription-intents', { ...subscriptionBody, reviewed_disclosure_hash: offer.terms.disclosureHash }, { 'x-rights-session': investor.token });
+    assert.equal(prepared.status, 200);
+    const checkpoint = await requestJson(app.app.base, 'POST', `/api/controlled/intents/${prepared.data.intent.intent_id}/broadcast`, {}, { 'x-rights-session': investor.token });
+    assert.equal(checkpoint.status, 200);
+    const tx = await c.investor.sendTransaction({ to: c.pool.target, data: checkpoint.data.intent.calldata, nonce: checkpoint.data.intent.broadcast_nonce }); await tx.wait();
+    const confirmed = await requestJson(app.app.base, 'POST', `/api/controlled/intents/${prepared.data.intent.intent_id}/transaction`, { tx_hash: tx.hash }, { 'x-rights-session': investor.token });
+    assert.equal(confirmed.data.intent.status, 'confirmed');
     const draw = await app.plan(operator, { operation: 'disburse', pool_id: poolId, amount_atomic: '8000000', evidence_hash: c.fresh() });
     await app.execute(operator, draw); assert.equal(await c.usdc.balanceOf(c.holder.address), 8000000n);
     await c.send(c.usdc.mint(c.holder.address, 2000000n)); await c.send(c.usdc.connect(c.holder).approve(await c.pool.getAddress(), 10000000n));
@@ -108,7 +132,7 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     const file = path.join(app.directory, 'instance.json');
     await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', rpc_url: node.url, chain_id: String(c.chainId), contracts }));
     const loaded = await loadRightsChain(file); t.after(() => loaded.provider.destroy());
-    assert.equal((await loaded.verify()).control_version, 1);
+    assert.equal((await loaded.verify()).control_version, 2);
     const expected = c.chain.chainId; c.chain.chainId = 1;
     await assert.rejects(c.chain.verify(), { code: 'rights_network_mismatch' }); c.chain.chainId = expected;
     const issue = await c.issuance(), plan = await app.plan(issuer, { operation: 'register_title', payload: issue });
@@ -123,5 +147,76 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     const altered = governanceCode.slice(0, -2) + (governanceCode.endsWith('00') ? '01' : '00');
     await c.provider.send('hardhat_setCode', [await c.governance.getAddress(), altered]);
     await assert.rejects(loaded.verify(), { code: 'rights_bytecode_mismatch' });
+  });
+  it('prepares and executes an isolated unsigned v2 deployment while sharing historical identity reservations', async (t) => {
+    const c = await deployRightsRpc(node, t), directory = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-candidate-'));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const issue = await c.issuance(); await c.send(c.registry.registerTitle(issue.issuance, issue.signature));
+    const input = { instance_id: 'n1-local-candidate', chain_id: 31337, governance: await c.governance.getAddress(), hub: await c.hub.getAddress(),
+      deployer: c.memberA.address, nonce: await c.provider.getTransactionCount(c.memberA.address, 'pending') };
+    const prepared = await prepareRightsCandidate(input);
+    const written = await writeRightsCandidate(input, directory);
+    assert.equal(written.broadcast, false);
+    await assert.rejects(writeRightsCandidate(input, directory), { code: 'EEXIST' });
+    for (const request of prepared.transactions) {
+      const { expected_address: address, label: _label, ...transaction } = request;
+      const receipt = await c.send(c.memberA.sendTransaction(transaction));
+      if (address) assert.equal(receipt.contractAddress.toLowerCase(), address.toLowerCase());
+    }
+    const contract = (name) => new Contract(prepared.contracts[name], prepared.artifacts[name].abi, c.memberA);
+    const registry = contract('CommittedEBLRegistry'), controller = contract('RightsController'), pool = contract('RWAOfferingPoolV5');
+    await c.govern(c.hub, 'setRegistry', [registry.target, true]); await c.govern(registry, 'bindController', [controller.target]);
+    await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
+    const duplicate = { ...issue.issuance, nonce: '9999', validUntil: String(await c.now() + 10000n) };
+    await assert.rejects(registry.registerTitle(duplicate, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, duplicate)), /asset already reserved/u);
+    assert.equal(await pool.owner(), controller.target); assert.equal(await controller.intakeStopped(), true);
+    const file = path.join(directory, 'instance.json');
+    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 2,
+      rpc_url: node.url, chain_id: 31337, contracts: prepared.contracts }));
+    const loaded = await loadRightsChain(file); t.after(() => loaded.provider.destroy());
+    assert.equal((await loaded.verify()).control_version, 2);
+    assert.equal((await loaded.verify()).exit_only, false);
+    // An old instance's exact calldata/nonce journal cannot name the new pool.
+    assert.notEqual(prepared.runtime_namespace, `controlled-capital-${String(c.pool.target).toLowerCase()}`);
+    await assert.rejects(prepareRightsCandidate({ ...input, chain_id: 1 }));
+  });
+  it('loads frozen v1 code after recompilation, closes its risk entry, and preserves funded wallet exits', async (t) => {
+    const frozen = JSON.parse(await fs.readFile('scripts/config/rights-v1-artifacts.json', 'utf8')).contracts;
+    const c = await deployRightsRpc(node, t), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-legacy-'));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    const deploy = async (name, args) => (await new ContractFactory(frozen[name].abi, frozen[name].bytecode, c.memberA).deploy(...args)).waitForDeployment();
+    const registry = await deploy('CommittedEBLRegistry', [c.governance.target, c.hub.target]);
+    const controller = await deploy('RightsController', [c.governance.target, registry.target]); await c.send(controller.activate());
+    const pool = new Contract(await controller.capitalPool(), frozen.RWAOfferingPoolV5.abi, c.memberA);
+    const token = new Contract(await controller.token(), frozen.ControlledRWAToken.abi, c.memberA);
+    await c.govern(c.hub, 'setRegistry', [registry.target, true]); await c.govern(registry, 'bindController', [controller.target]);
+    const issue = await c.issuance(); await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
+    for (const [role, wallet] of [['ISSUER', c.issuer], ['VALUER', c.valuer], ['COMPLIANCE', c.compliance]]) await c.govern(controller, 'setRole', [await controller[role](), wallet.address, true]);
+    await c.govern(controller, 'setTestAsset', [c.usdc.target, true]); await c.govern(controller, 'setIntakeStopped', [false, c.fresh()]);
+    issue.issuance.validUntil = String(await c.now() + 100000n);
+    await c.send(registry.registerTitle(issue.issuance, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, issue.issuance)));
+    const current = await c.offering(1, issue.issuance), { disburseUntil: _drawDeadline, ...terms } = current.terms;
+    const oldDomain = { name: 'AgentBL Rights', version: '1', chainId: c.chainId, verifyingContract: controller.target };
+    const oldTypes = { OfferingTerms: TERMS_TYPES.OfferingTerms.filter((field) => field.name !== 'disburseUntil') };
+    const hash = TypedDataEncoder.hash(oldDomain, oldTypes, terms);
+    const valuation = { ...current.valuation, termsHash: hash };
+    const pledge = { eblId: 1, pool: pool.target, termsHash: hash, nonce: await registry.holderNonce(1), validUntil: terms.subscribeUntil };
+    await c.send(registry.pledge(1, pool.target, hash, terms.subscribeUntil, await c.holder.signTypedData(titleDomain(c.chainId, registry.target), PLEDGE_TYPES, pledge)));
+    await c.send(controller.connect(c.issuer).createControlledOffering(terms, valuation, c.valuer.address, await c.valuer.signTypedData(oldDomain, VALUATION_TYPES, valuation)));
+    await c.send(controller.connect(c.compliance).setEligibility(c.investor.address, c.fresh(), c.fresh(), await c.now() + 100000n));
+    await c.send(controller.connect(c.compliance).refreshScreening(await c.now() + 80000n, c.fresh()));
+    await c.send(controller.connect(c.investor).acknowledgeTerms(1, hash, 1, terms.subscribeUntil));
+    await c.send(c.usdc.mint(c.investor.address, 800000n)); await c.send(c.usdc.connect(c.investor).approve(pool.target, 800000n));
+    await c.send(pool.connect(c.investor).subscribe(1, 1));
+    const file = path.join(dir, 'v1.json');
+    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 1,
+      rpc_url: node.url, chain_id: 31337, contracts: { RightsGovernance: c.governance.target, AssetIdentityHub: c.hub.target,
+        CommittedEBLRegistry: registry.target, RightsController: controller.target, ControlledRWAToken: token.target, RWAOfferingPoolV5: pool.target } }));
+    const legacy = await loadRightsChain(file); t.after(() => legacy.provider.destroy());
+    assert.equal((await legacy.verify()).exit_only, true);
+    await assert.rejects(legacy.prepare({ wallet: c.issuer.address, roles: ['issuer'] }, { operation: 'register_title' }), { code: 'rights_legacy_exit_only' });
+    await c.advance(BigInt(terms.subscribeUntil) + 1n);
+    await c.send(pool.connect(c.investor).refundInvestor(1, c.investor.address));
+    assert.equal(await pool.escrowed(1, c.usdc.target), 0n); assert.equal(await token.balanceOf(1, c.investor.address), 0n);
   });
 });

@@ -1,7 +1,7 @@
 // The paid AI report market (x402): choose a report, unlock it (Demo simulation, Demo wallet
 // signature or Live USDC payment), then read it with its payment evidence and pricing impact.
 import { useEffect } from 'react';
-import { useApp, useStore } from '../../state/hooks.js';
+import { useApp, useStore, useLang } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import { evidenceFor } from '../../state/controller.js';
 import { shortLabel } from '../../lib/market.js';
@@ -303,8 +303,10 @@ function RiskIntelReport({ data }) {
 }
 
 function ValuationReport({ data }) {
+  const zh = useLang() === 'zh';
   return (
     <>
+      {data.human_takeover?.required && <p role="status" className="callout tone-warn">{zh ? '待人工接管：当前为研究参考，来源或模型尚未通过验收；请勿据此直接开放融资。' : 'Human takeover pending: this is a research reference. Sources or models have not passed acceptance; review before opening financing.'}</p>}
       <div className="kv-grid">
         <KV label={t('x402_r_collateral')}>{formatUsd(data.cargo_value, 0)}</KV>
         <KV label={t('x402_r_max_exposure')}>{formatUsd(data.max_safe_redemption_exposure_usd, 0)}</KV>

@@ -57,6 +57,7 @@ export async function runTestnetLifecycle({ state, save, txSend, signers, provid
   const contract = (name) => new Contract(state.contracts[name], artifacts[name].abi, provider);
   const controller = contract('RightsController'), registry = contract('CommittedEBLRegistry'), pool = contract('RWAOfferingPoolV5'), usdc = contract('MockAuthorizationUSDC');
   try {
+    ensure(Number(await controller.controlVersion()) === 2, 'Legacy v1 is exit-only; use an independently verified v2 candidate');
     const sessions = {};
     for (const [actor, roles] of [['issuer', ['issuer']], ['holder', ['holder']], ['investor', ['investor']], ['reviewer', ['reviewer']], ['governorC', ['reviewer']], ['operator', ['custodian']]]) sessions[actor] = await login(actor, roles);
     const executePlan = async (label, session, input) => {
@@ -83,7 +84,7 @@ export async function runTestnetLifecycle({ state, save, txSend, signers, provid
           issuerOrg: id('AGENTBL_W5_SYNTHETIC_ISSUER'), holder: signers.holder.address, revision: 1, previousHash: ZeroHash, nonce: String(BigInt(id(`issuance-${tag}`))), validUntil: String(time + 86400) };
         const terms = { eblId, assetKey: issuance.assetKey, documentHash: material.document_hash, settlementAsset: usdc.target, exporter: signers.holder.address,
           feeRecipient: signers.governorC.address, supply: '10', issuePrice: '800000', target: '1000000', minRaise: '8000000',
-          maturity: String(time + 86400), subscribeUntil: String(time + (tag === 'refund' ? 360 : 3600)), maxFee: '0',
+          maturity: String(time + 86400), subscribeUntil: String(time + (tag === 'refund' ? 360 : 3600)), disburseUntil: String(time + 7200), maxFee: '0',
           policyHash: id('W5_RESEARCH_TEST_ASSET_DISTRIBUTION_NO_REAL_COLLATERAL'), disclosureHash: id('W5_RESEARCH_SIMULATED_TITLE_DISCLOSURE'), nonce: String(BigInt(id(`terms-${tag}`))) };
         const termsHash = hashOfferingTerms(1439, controller.target, terms);
         const valuation = { termsHash, assetKey: terms.assetKey, settlementAsset: usdc.target, netValue: '20000000', coverageBps: 15000,

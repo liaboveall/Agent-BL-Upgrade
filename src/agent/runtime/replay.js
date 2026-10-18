@@ -32,7 +32,7 @@ export function replayDecision(decision) {
         const kinds = new Set(saved.findings.map((finding) => finding.kind));
         action = kinds.has('COMPLIANCE_BLOCK') ? 'REJECT'
           : saved.parser_review || saved.below_floor || checkDocumentConsistency(saved.case_data).has_critical
-            || ['PROMPT_INJECTION_SUSPECTED', 'OCR_REQUIRED', 'DOCUMENT_UNPARSEABLE', 'COMPLIANCE_REVIEW', 'STALE_EVIDENCE'].some((kind) => kinds.has(kind))
+            || ['PROMPT_INJECTION_SUSPECTED', 'OCR_REQUIRED', 'DOCUMENT_UNPARSEABLE', 'COMPLIANCE_REVIEW', 'STALE_EVIDENCE', 'VALUATION_REVIEW'].some((kind) => kinds.has(kind))
             ? 'HOLD_FOR_REVIEW'
             : ({ OPEN_OFFERING: 'OPEN', OPEN_WITH_WARNING: 'OPEN_WITH_WARNING' }[quote.pricing_action] ?? 'HOLD_FOR_REVIEW');
         // Rebuild the quote commitment inside the structured-input snapshot.

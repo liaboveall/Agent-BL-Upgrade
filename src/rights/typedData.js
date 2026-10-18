@@ -15,6 +15,7 @@ export const TERMS_TYPES = Object.freeze({ OfferingTerms: fields([
   ['eblId', 'uint256'], ['assetKey', 'bytes32'], ['documentHash', 'bytes32'], ['settlementAsset', 'address'],
   ['exporter', 'address'], ['feeRecipient', 'address'], ['supply', 'uint256'], ['issuePrice', 'uint256'],
   ['target', 'uint256'], ['minRaise', 'uint256'], ['maturity', 'uint64'], ['subscribeUntil', 'uint64'],
+  ['disburseUntil', 'uint64'],
   ['maxFee', 'uint256'], ['policyHash', 'bytes32'], ['disclosureHash', 'bytes32'], ['nonce', 'uint256']
 ]) });
 export const VALUATION_TYPES = Object.freeze({ Valuation: fields([
@@ -24,7 +25,7 @@ export const VALUATION_TYPES = Object.freeze({ Valuation: fields([
 export const SESSION_TYPES = Object.freeze({ BusinessSession: fields([
   ['subject', 'bytes32'], ['organization', 'bytes32'], ['wallet', 'address'], ['nonce', 'bytes32'], ['validUntil', 'uint64']
 ]) });
-export function rightsDomain(chainId, verifyingContract) { return { name: 'AgentBL Rights', version: '1', chainId, verifyingContract }; }
+export function rightsDomain(chainId, verifyingContract) { return { name: 'AgentBL Rights', version: '2', chainId, verifyingContract }; }
 export function titleDomain(chainId, verifyingContract) { return { name: 'AgentBL Title', version: '1', chainId, verifyingContract }; }
 export function hashOfferingTerms(chainId, controller, terms) { return TypedDataEncoder.hash(rightsDomain(chainId, controller), TERMS_TYPES, terms); }
 

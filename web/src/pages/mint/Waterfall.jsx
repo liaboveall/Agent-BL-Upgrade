@@ -5,6 +5,7 @@ import { potentialYieldText } from '../../lib/market.js';
 import { clearEvidenceSelection } from '../../state/controller.js';
 import { Button, Card, CardHead } from '../../components/ui.jsx';
 import { References } from '../../features/evidence/References.jsx';
+import { ResearchConstraints } from '../../features/rights/ResearchConstraints.jsx';
 
 /**
  * How the issue price steps down from the $1.00 target redemption: base anchor, payout-speed
@@ -80,6 +81,7 @@ export function Waterfall({ quote: current }) {
       <p className="explain">{t('pricing_exporter_summary', { cash: f.usd(quote.expected_cash_to_exporter_usd), cost: f.usd(quote.financing_cost_usd),
         share: f.bpsToPct(quote.exporter_profit_share_bps), net: f.usd(quote.exporter_net_profit_usd) })}</p>
       <p className="muted small">{t(`profit_basis_${quote.profit_basis ?? 'declared'}`)}</p>
+      <ResearchConstraints quote={quote} />
     </Card>
   );
 }

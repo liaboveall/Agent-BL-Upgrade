@@ -115,7 +115,8 @@ export class ChainEventRebuilder {
       const entry = active.find((item) => item.kind === kind && Ledger.protocolInstanceKey(item.protocol_instance) === key && item.chain_pool_id === intent.chain_pool_id
         && same(kind === 'INVESTOR_DEPOSIT' ? item.from : item.to, intent.investor) && same(item.asset, intent.asset)
         && (kind === 'CLAIM' || item.amount_atomic === intent.amount_atomic) && (kind === 'REFUND' || item.shares === intent.shares)
-        && (!intent.tx_hash || same(item.source.tx_hash, intent.tx_hash)));
+        && (!intent.tx_hash || same(item.source.tx_hash, intent.tx_hash))
+        && (intent.created_block === undefined || item.block_number >= intent.created_block));
       if (!entry) {
         if (reorg && intent.status === 'confirmed' && intent.tx_hash) await this.ledger.reconcileIntent(intent.intent_id, intent.tx_hash);
         continue;

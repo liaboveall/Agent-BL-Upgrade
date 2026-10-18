@@ -18,8 +18,9 @@ describe('W5 actual controlled capital HTTP, wallet and crash recovery', () => {
   const fixture = async (t) => {
     const c = await deployRightsRpc(node, t), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'w5-controlled-'));
     let mode = 'live';
+    const packs = new Map(), disclosures = { financingDisclosure: async (hash) => { const pack = packs.get(hash); if (!pack) throw new Error('Missing fixture terms'); return pack; } };
     const contracts = { RWAOfferingPoolV5: await c.pool.getAddress(), ControlledRWAToken: await c.token.getAddress() };
-    const routes = createControlledRoutes({ env: { AGENTBL_RUNTIME_DIR: dir }, chain: c.chain, configuration: { chain_id: 31337, deployment_block: 0, contracts }, getMode: () => mode });
+    const routes = createControlledRoutes({ env: { AGENTBL_RUNTIME_DIR: dir }, chain: c.chain, disclosures, configuration: { chain_id: 31337, deployment_block: 0, contracts }, getMode: () => mode });
     const app = await listen(http.createServer((req, res) => routes(req, res, new URL(req.url, 'http://local')).catch((error) => sendError(res, error, { logger: { warn() {}, error() {} } }))));
     t.after(async () => { await app.close(); await routes.close(); await fs.rm(dir, { recursive: true, force: true }); });
     const get = async (route) => (await requestJson(app.base, 'GET', `/api/controlled/${route}`)).data;
@@ -30,6 +31,7 @@ describe('W5 actual controlled capital HTTP, wallet and crash recovery', () => {
     const create = async () => {
       const issue = await c.issuance(); await c.send(c.registry.registerTitle(issue.issuance, issue.signature));
       const eblId = await c.registry.nextEblId() - 1n, offer = await c.offering(eblId, issue.issuance);
+      packs.set(offer.terms.disclosureHash, offer.pack);
       await c.send(c.registry.connect(c.holder).pledge(eblId, await c.pool.getAddress(), offer.hash, offer.terms.subscribeUntil, '0x'));
       await c.send(c.controller.connect(c.issuer).createControlledOffering(offer.terms, offer.valuation, offer.valuer, offer.signature));
       const poolId = String(await c.pool.nextPoolId() - 1n), time = await c.now();
@@ -43,7 +45,7 @@ describe('W5 actual controlled capital HTTP, wallet and crash recovery', () => {
     const config = (await get('status')).config;
     let latestIntent;
     const options = { getSession: () => session, getConfig: async () => config, ethersFn: async () => ethers,
-      prepareIntent: async (body) => { latestIntent = (await post('subscription-intents', body)).intent; return latestIntent; },
+      prepareIntent: async (body) => { const reviewed = await get(`offerings/${body.chain_pool_id}/terms`); latestIntent = (await post('subscription-intents', { ...body, reviewed_disclosure_hash: reviewed.disclosure_hash })).intent; return latestIntent; },
       prepareClaim: async (body) => { latestIntent = (await post('claim-intents', body)).intent; return latestIntent; },
       beforeBroadcast: async (intent) => { latestIntent = (await post(`intents/${intent.intent_id}/broadcast`, {})).intent; return latestIntent; },
       attachIntent: async (id, hash) => (await post(`intents/${id}/transaction`, { tx_hash: hash })).intent };
@@ -71,11 +73,21 @@ describe('W5 actual controlled capital HTTP, wallet and crash recovery', () => {
     assert.equal(await c.usdc.balanceOf(c.investor.address), 10000000n);
     assert.equal((await f.get(`positions?wallet=${c.investor.address}`)).positions[0].claimed_atomic, '10000000');
     assert.equal(await c.pool.escrowed(p.poolId, p.terms.settlementAsset), 0n);
+    // Permanent recovery rights survive a burned token and the append-only ledger replay.
+    await c.send(c.usdc.mint(c.holder.address, 1234567n));
+    await c.send(c.usdc.connect(c.holder).approve(await c.pool.getAddress(), 1234567n));
+    await c.send(c.pool.connect(c.holder).repay(p.poolId, 1234567n));
+    positions = (await f.get(`positions?wallet=${c.investor.address}`)).positions;
+    assert.equal(positions[0].shares, '0'); assert.equal(positions[0].claimable_atomic, '1234567'); assert.equal(positions[0].reconciled, true);
+    await claimPosition(positions[0], f.options);
+    assert.equal((await f.get(`positions?wallet=${c.investor.address}`)).positions[0].claimed_atomic, '11234567');
+    assert.equal(await c.usdc.balanceOf(c.investor.address), 11234567n);
+    assert.equal(await c.pool.escrowed(p.poolId, p.terms.settlementAsset), 0n);
   });
   it('reconciles a crash after nonce-bound broadcast without resending, and detects a canonical reorg', async (t) => {
     const f = await fixture(t), { c } = f, p = await f.create();
     await c.send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), 8000000n));
-    const prepared = (await f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '10', max_unit_price: '800000', expected_quote_version: '1', deadline: String(await c.now() + 600n) })).intent;
+    const prepared = (await f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '10', max_unit_price: '800000', expected_quote_version: '1', deadline: String(await c.now() + 600n), reviewed_disclosure_hash: p.terms.disclosureHash })).intent;
     const intent = (await f.post(`intents/${prepared.intent_id}/broadcast`, {})).intent;
     await assert.rejects(f.post(`intents/${prepared.intent_id}/broadcast`, {}));
     const snapshot = await c.provider.send('evm_snapshot', []), count = await c.provider.getTransactionCount(c.investor.address);

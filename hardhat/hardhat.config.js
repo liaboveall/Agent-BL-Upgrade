@@ -13,7 +13,7 @@ export default defineConfig({
   solidity: {
     version: '0.8.24',
     settings: {
-      // Pinned to match the Hardhat 2 build of the contracts deployed on Injective testnet.
+      // New candidate. Deployed v1 instances use the frozen artifact inventory.
       evmVersion: 'paris',
       optimizer: {
         enabled: true,

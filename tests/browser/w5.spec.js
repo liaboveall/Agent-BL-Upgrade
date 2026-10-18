@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { disclosureFixture } from '../helpers/disclosure.js';
 
 for (const language of ['zh', 'en']) {
   test(`W5 ${language}: readiness, fund rights and recovery remain explicit and keyboard accessible at 1280 and 1440`, async ({ page }, info) => {
@@ -38,17 +39,34 @@ for (const language of ['zh', 'en']) {
     }, { language, wallet });
     await page.route('**/api/demo/mode', (route) => route.fulfill({ json: { mode: 'live', demoMode: false, liveAvailable: true, generation: 3 } }));
     const config = { chainIdDecimal: 1439, protocolVersion: 5, confirmations: 3, contracts: { RWAOfferingPool: pool, RWAToken: `0x${'78'.repeat(20)}` }, abis: { RWAOfferingPool: [] } };
+    const pack = { ...disclosureFixture(), pool_id: 1, quote_version: '3' };
+    await page.route('**/api/controlled/offerings/1/terms*', (route) => route.fulfill({ json: pack }));
     await page.route('**/api/controlled/status', (route) => route.fulfill({ json: { active: true, config, controller: `0x${'90'.repeat(20)}` } }));
     await page.route('**/api/controlled/offerings', (route) => route.fulfill({ json: { config, offerings: [{ pool_id: 1, state: 'Open', shares: '10', subscribed: '0', issue_price_atomic: '800000', redemption_per_share_atomic: '1000000', settlement_asset: asset,
-      raised_atomic: '0', disbursed_atomic: '0', recovered_atomic: '0', maturity: '1900000000', subscription_deadline: '1899999900', quote_version: '3', terms_hash: `0x${'ab'.repeat(32)}`, subscription_open: true }] } }));
+      raised_atomic: '0', disbursed_atomic: '0', recovered_atomic: '0', maturity: '1900000000', subscription_deadline: pack.terms.subscribeUntil, disbursement_deadline: pack.terms.disburseUntil,
+      quote_version: '3', terms_hash: pack.terms_hash, disclosure_hash: pack.disclosure_hash, policy_hash: pack.policy_hash, subscription_open: true }] } }));
     await page.route('**/api/controlled/positions?**', (route) => route.fulfill({ json: { positions: [] } }));
     await page.goto('/#/market'); const panel = page.locator('.controlled-panel'); await panel.locator('summary').click();
     const review = panel.getByRole('button', { name: language === 'zh' ? '审阅认购' : 'Review subscription', exact: true }); await expect(review).toBeEnabled();
     await panel.locator('.controlled-shares input').fill('2'); await review.click();
-    const card = panel.locator('.controlled-confirm'); await expect(card).toContainText('1.600000'); await expect(card).toContainText(`0x${'ab'.repeat(32)}`);
+    const card = panel.locator('.controlled-confirm'); await expect(card).toContainText('1.600000'); await expect(card).toContainText(pack.terms_hash);
     for (const width of [1280, 1440]) { await page.setViewportSize({ width, height: 1000 }); expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true); await panel.screenshot({ path: info.outputPath(`controlled-${language}-${width}.png`) }); }
     expect((await new AxeBuilder({ page }).include('.controlled-panel').withTags(['wcag2a', 'wcag2aa']).analyze()).violations).toEqual([]);
     await page.evaluate(() => window.controlledWalletHandlers.accountsChanged([])); await expect(card).toHaveCount(0);
     expect(await page.evaluate(() => window.controlledWalletCalls.filter((method) => /sendTransaction|signTypedData|personal_sign/iu.test(method)))).toEqual([]);
+    await page.route('**/api/controlled/positions?**', (route) => route.fulfill({ json: { positions: [{ position_id: 'late-recovery-1',
+      protocol_instance: { chain_id: 1439, protocol_version: 5, pool_address: pool }, chain_pool_id: 1, investor: wallet, asset,
+      shares: '0', claimed_atomic: '2000000', claimable_atomic: '1', cost_atomic: '4000000', refunded_atomic: '0',
+      chain_state: 'LossSettled', reconciled: true, recovery_rights_retained: true }] } }));
+    await page.reload(); await page.locator('.controlled-panel summary').click();
+    const late = panel.getByRole('button', { name: language === 'zh' ? '审阅领取' : 'Review claim', exact: true });
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 950 });
+      await expect(late).toBeEnabled(); await late.focus(); await page.keyboard.press('Enter');
+      await expect(panel.locator('.controlled-confirm')).toContainText(language === 'zh' ? '领取' : 'Claim');
+      await expect(panel).toContainText(language === 'zh' ? '份额销毁后仍保留' : 'Recovery rights survive');
+      await page.screenshot({ path: info.outputPath(`late-recovery-${language}-${width}.png`), fullPage: true });
+      await panel.locator('.controlled-confirm').getByRole('button', { name: language === 'zh' ? '取消' : 'Cancel', exact: true }).click();
+    }
   });
 }

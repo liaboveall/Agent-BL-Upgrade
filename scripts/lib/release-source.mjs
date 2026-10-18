@@ -5,6 +5,27 @@ import { execFileSync } from 'node:child_process';
 
 export const releaseRoot = path.resolve(import.meta.dirname, '../..');
 export const digest = (value) => createHash('sha256').update(value).digest('hex');
+// Keep the byte-level evidence digest comparable with the future Git checkout.
+// Respect -text fixtures and vendored bundles rather than rewriting all text.
+export function lfSourcePaths(attributeOutput) {
+  const fields = attributeOutput.toString().split('\0'), attributes = new Map();
+  for (let i = 0; i + 2 < fields.length; i += 3) {
+    const [file, name, value] = fields.slice(i, i + 3);
+    if (!attributes.has(file)) attributes.set(file, {});
+    attributes.get(file)[name] = value;
+  }
+  return [...attributes].filter(([, values]) => values.eol === 'lf' && values.text !== 'unset').map(([file]) => file);
+}
+export async function releaseSourceByteIssues(source) {
+  const attributes = execFileSync('git', ['check-attr', '-z', '--stdin', 'text', 'eol'], {
+    cwd: releaseRoot, input: source.files.map((file) => file.path + '\0').join('')
+  });
+  const issues = [];
+  for (const file of lfSourcePaths(attributes)) {
+    if ((await fs.readFile(path.join(releaseRoot, file))).includes(Buffer.from('\r\n'))) issues.push(file);
+  }
+  return issues;
+}
 export async function releaseSourceSnapshot() {
   const names = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: releaseRoot }).toString().split('\0')
     .filter((file) => file && (/^(?:src|web|scripts|tests|public|data|\.github)\//u.test(file) || /^hardhat\/(?:contracts|test|scripts)\//u.test(file)

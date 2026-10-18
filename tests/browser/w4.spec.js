@@ -5,6 +5,7 @@ for (const language of ['zh', 'en']) {
   test(`W4 ${language}: source boundaries, session failure and mobile download form are accessible`, async ({ page }, testInfo) => {
     await page.addInitScript((lang) => localStorage.setItem('ts_lang', lang), language);
     await page.goto('/');
+    await page.locator('.research-tools > summary').click();
     const panel = page.locator('.evidence-panel'); await panel.locator('summary').first().click();
     await expect(panel).toContainText(language === 'zh' ? '独立业务验收' : 'Independent business acceptance');
     await expect(panel).toContainText(language === 'zh' ? '先对账' : 'Reconcile');

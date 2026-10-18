@@ -68,6 +68,8 @@ export async function buildPremiumValuation(caseData, options = {}) {
     service: 'premium-valuation',
     case_id: caseData.case_id,
     provider: report.provider,
+    model_status: report.model_status, provider_verified: report.provider_verified,
+    human_takeover: report.human_takeover, field_sources: report.field_sources,
     cargo_value: valuation.ai_verified_collateral_value_usd ?? null,
     max_safe_redemption_exposure_usd: valuation.max_safe_redemption_exposure_usd ?? null,
     unit_price: valuation.landed_price_usd_per_mt ?? report.live_market?.price_usd_per_mt ?? null,

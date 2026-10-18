@@ -107,7 +107,7 @@ function buildSummary(action, documentReport, valuation, quote) {
     ? 'Trade documents agree on the material financing fields.'
     : `${documentReport.issues.length} document issue(s) produced ${documentReport.penalty_bps} bps of risk penalty.`;
   const value = valuation.valuation?.ai_verified_collateral_value_usd ?? quote.ai_verified_collateral_value_usd;
-  return `${documentSentence} Verified collateral is USD ${Math.round(value)}. `
+  return `${documentSentence} Rule-estimated collateral is USD ${Math.round(value)}. `
     + `The recommended ${quote.payout_speed} quote is USD ${quote.final_issue_price_usd} with ${quote.risk_score_bps} bps risk. `
     + `Decision: ${action}.`;
 }
@@ -362,7 +362,9 @@ export class AgentOrchestrator {
         ...(options.valuation ?? {}),
         forceDeterministic: screen.suspicious ? true : options.forceDeterministic ?? true
       });
-      return { status: 'PASS', provider: report.provider, model_usage: report.model_usage, value: report };
+      if (['failed', 'incomplete'].includes(report.model_status)) findings.push({ kind: 'VALUATION_REVIEW', severity: 'high',
+        detail: 'Valuation model failed or omitted required evidence. Deterministic reference requires human takeover.' });
+      return { status: report.human_takeover?.required ? 'REVIEW' : 'PASS', provider: report.provider, model_usage: report.model_usage, value: report };
     });
     caseData = enrichCaseWithValuation(caseData, valuation);
 
@@ -453,6 +455,8 @@ export class AgentOrchestrator {
         reason = 'The documents contain text that reads like instructions to an automated system.';
       } else if (kinds.has('STALE_EVIDENCE')) {
         action = 'HOLD_FOR_REVIEW'; reason = 'World-risk evidence is stale; refresh it before opening.';
+      } else if (kinds.has('VALUATION_REVIEW')) {
+        action = 'HOLD_FOR_REVIEW'; reason = 'Valuation model evidence requires human takeover before opening.';
       } else if (parsing.requires_human_review || kinds.has('OCR_REQUIRED') || kinds.has('DOCUMENT_UNPARSEABLE')) {
         action = 'HOLD_FOR_REVIEW';
         reason = 'Document extraction is incomplete or low-confidence.';
@@ -562,7 +566,9 @@ export class AgentOrchestrator {
       }
     }
 
-    const selected = chooseAction({ parsing, documents: documentReport, recommended, preferences: options.exporter_preferences });
+    const selected = ['failed', 'incomplete'].includes(valuation.model_status)
+      ? { action: 'PAUSE_OFFERING', reason: 'Valuation model evidence requires human takeover.' }
+      : chooseAction({ parsing, documents: documentReport, recommended, preferences: options.exporter_preferences });
     const actionPayload = contractAction(selected.action, recommended);
     const inputSnapshot = {
       case_id: pricedCase.case_id,
@@ -601,7 +607,7 @@ export class AgentOrchestrator {
       pipeline: [
         { step: 'document_parse', status: parsing ? (parsing.requires_human_review ? 'REVIEW' : 'PASS') : 'STRUCTURED_INPUT' },
         { step: 'document_consistency', status: documentReport.has_critical ? 'CRITICAL' : documentReport.ok ? 'PASS' : 'WARNING' },
-        { step: 'cargo_valuation', status: 'PASS', provider: valuation.provider },
+        { step: 'cargo_valuation', status: valuation.human_takeover?.required ? 'REVIEW' : 'PASS', provider: valuation.provider },
         { step: 'three_speed_pricing', status: 'PASS', recommended: comparison.recommended_payout_speed },
         { step: 'decision', status: selected.action }
       ]

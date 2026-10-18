@@ -40,6 +40,7 @@ export async function loadDeploymentContinuation({ stateFile, evidenceFile, base
 }
 export async function runDeployment(action) {
   ensure(['prepare', 'activate', 'status', 'smoke', 'anchor'].includes(action), 'Use --prepare, --activate, --status, --smoke or --anchor');
+  ensure(action === 'status', 'The v1 deployment is exit-only. Prepare an isolated v2 candidate with npm run rights:candidate; never resume new artifacts over the old checkpoint');
   const evidence = process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR
     ? path.resolve(root, process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR)
     : path.join(root, 'artifacts/deployment/runs', new Date().toISOString().replaceAll(/[:.]/gu, '-'));
@@ -79,7 +80,7 @@ export async function runDeployment(action) {
     const signers = Object.fromEntries(Object.entries(unseal(key, stored, AAD)).map(([name, value]) => [name, new Wallet(value, provider)]));
     ensure(same(signers.governorA.address, owner.address), 'Deployer changed; use the saved authorized signer');
     const actors = Object.fromEntries(Object.entries(signers).map(([name, signer]) => [name, signer.address]));
-    const artifacts = Object.fromEntries(await Promise.all(names.map(async (name) => [name, await readJson(path.join(root, 'hardhat/artifacts/contracts', `${name}.sol`, `${name}.json`))])));
+    const artifacts = (await readJson(path.join(root, 'scripts/config/rights-v1-artifacts.json'))).contracts;
     ensure(names.every((name) => artifacts[name]?.bytecode), 'Compile contracts first');
     const artifactHashes = Object.fromEntries(names.map((name) => [name, sha(JSON.stringify(artifacts[name]))]));
     const stableHashes = Object.fromEntries(names.map((name) => { const a = artifacts[name]; return [name, sha(JSON.stringify({ abi: a.abi, bytecode: a.bytecode,

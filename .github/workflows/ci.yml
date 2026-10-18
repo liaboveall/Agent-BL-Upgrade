@@ -115,6 +115,29 @@ jobs:
       - run: npm run test:w4
       - run: npm run eval:w4
 
+  n3-workflow:
+    name: Financing roles and 25 pools · real EVM and HTTP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            hardhat/package-lock.json
+      - run: npm ci
+      - run: npm --prefix hardhat ci
+      - run: npm run test:n3:evm
+        env:
+          AGENTBL_N3_EVIDENCE: test-results/n3
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: financing-workflow-evidence
+          path: test-results/n3/
+
   w5-operations:
     name: W5 operations and isolated recovery
     runs-on: ubuntu-latest

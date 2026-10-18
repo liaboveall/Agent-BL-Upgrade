@@ -68,6 +68,18 @@ test('F04: partial recovery and missing debt terms cannot discharge an offering'
   assert.equal(planTransition('SETTLE', { ...pool, repaymentAmountAtomic: '100000000' }).to, 'Repaid');
 });
 
+test('N1: planning uses signed draw bounds, net drawn debt and zero-fee policy', () => {
+  const draw = { state: 'Funded', controlVersion: 2, chainTimestamp: '99', disbursementDeadline: '100', maturityAt: '200', drawSourcesValid: true };
+  assert.equal(planTransition('DISBURSE', draw).ok, true);
+  for (const patch of [{ chainTimestamp: '100' }, { drawSourcesValid: false }, { maturityAt: '99' }, { disbursementDeadline: undefined }]) {
+    assert.equal(planTransition('DISBURSE', { ...draw, ...patch }).ok, false);
+  }
+  assert.equal(planTransition('DEDUCT_FEE', { state: 'Repaid', controlVersion: 2 }).ok, false);
+  const partial = { state: 'InTransit', subscribed: 10, paymentProof: true, arrivalProof: true, targetRedemptionValueAtomic: '1000000',
+    repaymentAmountAtomic: '8750000', targetDistributionAtomic: '8750000' };
+  assert.equal(planTransition('SETTLE', partial).to, 'Repaid');
+});
+
 test('F05: workspace ownership isolates uploads and cross-case identical documents are rejected', async () => {
   const ingest = new IngestService();
   const request = { headers: {} }, responseHeaders = {};

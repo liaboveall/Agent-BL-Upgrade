@@ -27,6 +27,7 @@ contract RightsController is EIP712 {
         uint256 minRaise;
         uint64 maturity;
         uint64 subscribeUntil;
+        uint64 disburseUntil;
         uint256 maxFee;
         bytes32 policyHash;
         bytes32 disclosureHash;
@@ -53,8 +54,10 @@ contract RightsController is EIP712 {
         address reviewer;
         bool disputed;
         bool finalized;
+        bool disputeUsed;
+        uint64 hardDeadline;
     }
-    bytes32 public constant TERMS_TYPEHASH = keccak256("OfferingTerms(uint256 eblId,bytes32 assetKey,bytes32 documentHash,address settlementAsset,address exporter,address feeRecipient,uint256 supply,uint256 issuePrice,uint256 target,uint256 minRaise,uint64 maturity,uint64 subscribeUntil,uint256 maxFee,bytes32 policyHash,bytes32 disclosureHash,uint256 nonce)");
+    bytes32 public constant TERMS_TYPEHASH = keccak256("OfferingTerms(uint256 eblId,bytes32 assetKey,bytes32 documentHash,address settlementAsset,address exporter,address feeRecipient,uint256 supply,uint256 issuePrice,uint256 target,uint256 minRaise,uint64 maturity,uint64 subscribeUntil,uint64 disburseUntil,uint256 maxFee,bytes32 policyHash,bytes32 disclosureHash,uint256 nonce)");
     bytes32 public constant VALUATION_TYPEHASH = keccak256("Valuation(bytes32 termsHash,bytes32 assetKey,address settlementAsset,uint256 netValue,uint32 coverageBps,uint64 valuedAt,uint64 validUntil,uint256 nonce)");
     bytes32 public constant ISSUER = keccak256("ISSUER");
     bytes32 public constant VALUER = keccak256("VALUER");
@@ -65,7 +68,8 @@ contract RightsController is EIP712 {
     bytes32 public constant REVIEWER = keccak256("REVIEWER");
     bytes32 public constant GUARDIAN = keccak256("GUARDIAN");
     uint64 public constant NOTICE_PERIOD = 1 days;
-    uint256 public constant controlVersion = 1;
+    uint64 public constant MAX_RESOLUTION_PERIOD = 3 days;
+    uint256 public constant controlVersion = 2;
     bytes32 public constant scope = keccak256("RESEARCH_TEST_ASSETS_ONLY");
     address public immutable governance;
     CommittedEBLRegistry public immutable registry;
@@ -97,7 +101,8 @@ contract RightsController is EIP712 {
     event ScreeningRefreshed(uint64 validUntil, bytes32 evidenceHash);
     event TermsAccepted(uint256 indexed poolId, address indexed investor, bytes32 termsHash, uint256 quoteVersion, uint64 validUntil);
     event ResolutionNotified(uint256 indexed poolId, bytes32 evidenceHash, bytes32 distributionHash, uint256 expectedRecovery, uint64 noticeUntil);
-    event ResolutionDisputed(uint256 indexed poolId, address indexed participant, bytes32 evidenceHash);
+    event ResolutionDisputed(uint256 indexed poolId, address indexed participant, bytes32 evidenceHash, bytes32 disputeId);
+    event ResolutionVersioned(uint256 indexed poolId, bytes32 indexed resolutionId, uint64 hardDeadline);
     event ResolutionReviewed(uint256 indexed poolId, address indexed reviewer, bytes32 evidenceHash);
     event DisputeResolved(uint256 indexed poolId, bytes32 evidenceHash);
     event LifecycleExecuted(bytes4 indexed selector, uint256 indexed poolId, address indexed operator);
@@ -105,21 +110,24 @@ contract RightsController is EIP712 {
     modifier onlyGovernance() { require(msg.sender == governance, "not governance"); _; }
     modifier onlyRole(bytes32 role) { require(roles[role][msg.sender], "role required"); _; }
 
-    constructor(address governance_, address registry_) EIP712("AgentBL Rights", "1") {
+    constructor(address governance_, address registry_, address token_, address pool_) EIP712("AgentBL Rights", "2") {
         if (governance_.code.length == 0 || registry_.code.length == 0) revert InvalidSetup();
         if (RightsGovernance(governance_).delay() < 1 hours || RightsGovernance(governance_).memberCount() < 3
             || CommittedEBLRegistry(registry_).governance() != governance_) revert InvalidSetup();
         governance = governance_; registry = CommittedEBLRegistry(registry_);
-        ControlledRWAToken t = new ControlledRWAToken();
-        RWAOfferingPoolV5 p = new RWAOfferingPoolV5(registry_, address(t));
-        token = t; pool = p;
-        t.bindPool(address(p));
-        p.setOracle(address(this));
+        if (token_.code.length == 0 || pool_.code.length == 0) revert InvalidSetup();
+        token = ControlledRWAToken(token_); pool = RWAOfferingPoolV5(pool_);
     }
     /// @dev The controller has runtime code only after its constructor returns.
     ///      Activation is one-time and permissionless, with no caller-selected values.
     function activate() external {
         require(!activated, "already activated"); activated = true;
+        require(pool.nextPoolId() == 1 && pool.executorCount() == 0 && !pool.emergencyStopped()
+            && address(pool.eblRegistry()) == address(registry) && address(pool.rwaToken()) == address(token)
+            && token.pool() == address(pool), "capital binding invalid");
+        pool.acceptOwnership();
+        pool.setOracle(address(this));
+        pool.enableCumulativeClaims();
         pool.setComplianceGate(address(this));
         pool.setAccessMode(RWAOfferingPoolV5.AccessMode.ComplianceGated);
     }
@@ -153,8 +161,9 @@ contract RightsController is EIP712 {
         require(t.assetKey == registry.cargoHashOf(t.eblId) && t.documentHash == registry.metadataHashOf(t.eblId), "asset mismatch");
         require(testAsset[t.settlementAsset] && t.exporter != address(0) && t.feeRecipient != address(0), "invalid asset or recipient");
         require(t.policyHash != bytes32(0) && t.disclosureHash != bytes32(0), "policy missing");
-        require(t.supply > 0 && t.supply <= 1e18 && t.issuePrice > 0 && t.issuePrice <= t.target && t.target <= 1e24, "economic bounds");
-        require(t.maxFee <= t.supply * t.target && t.maturity <= block.timestamp + 366 days, "fee or maturity bounds");
+        require(t.supply > 0 && t.supply <= 1e6 && t.issuePrice > 0 && t.issuePrice <= t.target && t.target <= 1e24, "economic bounds");
+        require(t.maxFee == 0 && t.maturity <= block.timestamp + 366 days, "fee or maturity bounds");
+        require(t.subscribeUntil < t.disburseUntil && t.disburseUntil < t.maturity, "draw deadline invalid");
         require(v.termsHash == hash && v.assetKey == t.assetKey && v.settlementAsset == t.settlementAsset, "valuation domain mismatch");
         require(roles[VALUER][signer] && signer != msg.sender && !usedValuationNonce[signer][v.nonce], "valuer unavailable");
         require(v.valuedAt <= block.timestamp && v.validUntil >= block.timestamp && v.validUntil <= v.valuedAt + 30 days, "valuation expired or future");
@@ -163,6 +172,7 @@ contract RightsController is EIP712 {
         require(SignatureChecker.isValidSignatureNow(signer, valuationDigest(v), signature), "invalid valuation signature");
         usedValuationNonce[signer][v.nonce] = true;
         poolId = pool.createOfferingWithTerms(t.eblId, t.supply, t.issuePrice, t.target, t.maturity, t.subscribeUntil, t.settlementAsset, t.minRaise);
+        pool.setDisbursementDeadline(poolId, t.disburseUntil);
         terms[poolId] = t; termsHash[poolId] = hash; valuations[poolId] = v; valuer[poolId] = signer;
         latestPoolForEbl[t.eblId] = poolId;
         emit TermsCommitted(poolId, hash, t.policyHash, t.disclosureHash);
@@ -198,6 +208,9 @@ contract RightsController is EIP712 {
     }
     function disburse(uint256 poolId, uint256 amount, bytes32 evidenceHash) external onlyRole(OPERATOR) {
         require(!intakeStopped && registry.isActive(terms[poolId].eblId), "intake unavailable");
+        require(testAsset[terms[poolId].settlementAsset] && roles[VALUER][valuer[poolId]]
+            && block.timestamp < valuations[poolId].validUntil && screeningValidUntil >= block.timestamp
+            && roles[COMPLIANCE][_screeningAttestor], "draw sources unavailable");
         pool.disburseToExporter(poolId, amount, terms[poolId].exporter, evidenceHash);
     }
     function deductFee(uint256 poolId, uint256 amount, bytes32 evidenceHash) external onlyGovernance {
@@ -230,21 +243,46 @@ contract RightsController is EIP712 {
         require(evidenceHash != bytes32(0) && distributionHash != bytes32(0), "resolution missing");
         RWAOfferingPoolV5.OfferingState state = pool.stateOf(poolId);
         require(state == RWAOfferingPoolV5.OfferingState.Defaulted || state == RWAOfferingPoolV5.OfferingState.Liquidation, "not in resolution");
-        require(!resolutions[poolId].finalized && !resolutions[poolId].disputed, "resolution locked");
+        require(resolutions[poolId].proposer == address(0), "resolution locked");
         require(expectedRecovery == _actualRecovery(poolId), "recovery mismatch");
-        resolutions[poolId] = Resolution(evidenceHash, distributionHash, expectedRecovery, uint64(block.timestamp) + NOTICE_PERIOD, msg.sender, address(0), false, false);
+        _notify(poolId, evidenceHash, distributionHash, expectedRecovery, msg.sender);
+    }
+    function _notify(uint256 poolId, bytes32 evidenceHash, bytes32 distributionHash, uint256 expectedRecovery, address proposer) internal {
+        resolutions[poolId] = Resolution(evidenceHash, distributionHash, expectedRecovery, uint64(block.timestamp) + NOTICE_PERIOD,
+            proposer, address(0), false, false, false, uint64(block.timestamp) + MAX_RESOLUTION_PERIOD);
         emit ResolutionNotified(poolId, evidenceHash, distributionHash, expectedRecovery, uint64(block.timestamp) + NOTICE_PERIOD);
+        emit ResolutionVersioned(poolId, resolutionId(poolId), resolutions[poolId].hardDeadline);
+    }
+    function resolutionId(uint256 poolId) public view returns (bytes32) {
+        Resolution storage r = resolutions[poolId];
+        return keccak256(abi.encode(block.chainid, address(this), poolId, r.evidenceHash, r.distributionHash, r.expectedRecovery));
+    }
+    /// @notice Deterministic cash-only fallback if business operators are unavailable.
+    function startExit(uint256 poolId) external {
+        require(termsHash[poolId] != bytes32(0), "offering missing");
+        if (pool.disbursedAtomic(poolId) == 0) { pool.closeUndisbursed(poolId); return; }
+        RWAOfferingPoolV5.OfferingState state = pool.stateOf(poolId);
+        if (state != RWAOfferingPoolV5.OfferingState.Liquidation && state != RWAOfferingPoolV5.OfferingState.Defaulted) {
+            require(block.timestamp >= terms[poolId].maturity, "not overdue");
+            pool.markDefault(poolId);
+        }
+        require(resolutions[poolId].proposer == address(0), "resolution locked");
+        bytes32 hash = keccak256(abi.encode(termsHash[poolId], "CASH_ONLY_EXIT"));
+        _notify(poolId, hash, hash, _actualRecovery(poolId), address(this));
     }
     function disputeResolution(uint256 poolId, bytes32 evidenceHash) external {
         require(resolutions[poolId].proposer != address(0) && !resolutions[poolId].finalized && evidenceHash != bytes32(0), "no resolution");
         require(token.balanceOf(poolId, msg.sender) > 0 || msg.sender == registry.holderOf(terms[poolId].eblId) || roles[REVIEWER][msg.sender], "not participant");
+        require(block.timestamp < resolutions[poolId].noticeUntil && !resolutions[poolId].disputeUsed, "dispute window closed");
+        resolutions[poolId].disputeUsed = true;
         resolutions[poolId].disputed = true; resolutions[poolId].reviewer = address(0);
-        emit ResolutionDisputed(poolId, msg.sender, evidenceHash);
+        emit ResolutionDisputed(poolId, msg.sender, evidenceHash, keccak256(abi.encode(resolutionId(poolId), msg.sender, evidenceHash)));
     }
     function resolveDispute(uint256 poolId, bytes32 evidenceHash) external onlyGovernance {
-        require(resolutions[poolId].disputed && evidenceHash != bytes32(0), "no dispute");
+        require(resolutions[poolId].disputed && block.timestamp < resolutions[poolId].hardDeadline && evidenceHash != bytes32(0), "no dispute");
         resolutions[poolId].disputed = false;
-        resolutions[poolId].noticeUntil = uint64(block.timestamp) + NOTICE_PERIOD;
+        uint64 until = uint64(block.timestamp) + NOTICE_PERIOD;
+        resolutions[poolId].noticeUntil = until < resolutions[poolId].hardDeadline ? until : resolutions[poolId].hardDeadline;
         emit DisputeResolved(poolId, evidenceHash);
     }
     function reviewResolution(uint256 poolId, bytes32 evidenceHash) external onlyRole(REVIEWER) {
@@ -253,15 +291,13 @@ contract RightsController is EIP712 {
         r.reviewer = msg.sender;
         emit ResolutionReviewed(poolId, msg.sender, evidenceHash);
     }
-    function finalizeResolution(uint256 poolId) external onlyRole(OPERATOR) {
+    function finalizeResolution(uint256 poolId) external {
         Resolution storage r = resolutions[poolId];
-        require(r.proposer != address(0) && roles[DISPOSER][r.proposer] && roles[REVIEWER][r.reviewer]
-            && !r.disputed && !r.finalized && block.timestamp >= r.noticeUntil, "resolution not approved");
-        require(r.expectedRecovery == _actualRecovery(poolId), "recovery changed");
+        require(r.proposer != address(0) && !r.finalized && (block.timestamp >= r.hardDeadline
+            || (roles[DISPOSER][r.proposer] && roles[REVIEWER][r.reviewer] && !r.disputed && block.timestamp >= r.noticeUntil)), "resolution not approved");
         r.finalized = true;
         bytes32 hash = keccak256(abi.encode(r.evidenceHash, r.distributionHash, r.expectedRecovery));
-        if (pool.stateOf(poolId) == RWAOfferingPoolV5.OfferingState.Defaulted) pool.settleLoss(poolId, hash);
-        else pool.resolveLiquidation(poolId, hash);
+        pool.resolveLiquidation(poolId, hash);
     }
     function _actualRecovery(uint256 poolId) internal view returns (uint256) {
         (,,,,,,,,,, uint256 raised,,) = pool.offerings(poolId);

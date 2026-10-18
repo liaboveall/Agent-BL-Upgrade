@@ -8,7 +8,7 @@ import { runHarnessScenarios } from '../src/core/scenarioRunner.js';
 import { verifyVendor } from './vendor-frontend.mjs';
 import { validateKnowledgeBase } from '../src/rag/knowledgeBase.js';
 import { MCP_TOOLS_MANIFEST, MCP_TOOL_HANDLERS } from '../src/mcp/mcpServer.js';
-import { releaseSourceSnapshot } from './lib/release-source.mjs';
+import { releaseSourceSnapshot, releaseSourceByteIssues } from './lib/release-source.mjs';
 
 const config = loadApplicationConfig();
 assert.equal(config.protocolVersion, 5);
@@ -33,4 +33,5 @@ const retired = JSON.parse(await fs.readFile('scripts/config/retired-runtime-pat
 for (const file of retired.paths) assert.equal(await fs.access(file).then(() => true, () => false), false, 'Retired file reappeared: ' + file);
 const snapshot = await releaseSourceSnapshot();
 assert.ok(snapshot.file_count > 0);
+assert.deepEqual(await releaseSourceByteIssues(snapshot), [], 'Source bytes differ from the LF checkout required by .gitattributes; normalize the listed files before recording release evidence');
 console.log('check passed: controlled v5 configuration, current pricing, MCP tools, retired entry isolation and source inventory');

@@ -56,8 +56,8 @@ export async function readJsonBody(request, options) {
   if (text === '') return null;
   try {
     return JSON.parse(text);
-  } catch (cause) {
-    throw new HttpError(400, 'invalid_json', `Request body is not valid JSON: ${cause.message}`);
+  } catch {
+    throw new HttpError(400, 'invalid_json', 'Request body is not valid JSON');
   }
 }
 
@@ -105,7 +105,7 @@ export function describeError(error) {
     return { status: 400, code: 'validation_error', message: error.message, details: error.errors };
   }
   if (error instanceof SyntaxError) {
-    return { status: 400, code: 'invalid_json', message: error.message };
+    return { status: 400, code: 'invalid_json', message: 'Request body is not valid JSON' };
   }
   if (error instanceof URIError) {
     return { status: 400, code: 'malformed_url', message: 'Malformed percent-encoding in request URL' };
@@ -125,10 +125,12 @@ export function describeError(error) {
 export function sendError(response, error, { requestId, logger = console } = {}) {
   const mapped = describeError(error);
   if (mapped.status >= 500) {
-    // Expected operational failures (provider down, not configured) get one line;
-    // only genuinely unexpected exceptions are worth a stack trace.
-    if (error instanceof HttpError) logger.warn(`[agentbl] ${requestId ?? '-'} ${mapped.status} ${mapped.code}: ${mapped.message}`);
-    else logger.error(`[agentbl] ${requestId ?? '-'} unhandled error:`, error);
+    // Provider error objects and parser messages can embed private request bytes or
+    // credential-bearing URLs. Keep only the request ID and a bounded error code.
+    const code = /^[a-z_]{1,80}$/u.test(mapped.code ?? '') ? mapped.code : 'operation_failed';
+    const entry = `[agentbl] ${requestId ?? '-'} ${mapped.status} ${code}`;
+    if (error instanceof HttpError) logger.warn(entry);
+    else logger.error(entry);
   }
   if (response.headersSent) {
     // Mid-stream (e.g. SSE / LLM relay): the status line is gone, just stop.

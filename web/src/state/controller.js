@@ -190,7 +190,7 @@ export async function resetDemo() {
 // Navigation
 // ---------------------------------------------------------------------------------------------
 
-export const VIEWS = ['market', 'mint', 'agent', 'discover'];
+export const VIEWS = ['finance', 'market', 'mint', 'agent', 'discover'];
 
 export function setView(name) {
   if (!VIEWS.includes(name)) return;

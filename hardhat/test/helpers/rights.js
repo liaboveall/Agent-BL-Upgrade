@@ -8,10 +8,12 @@ export async function deployRights() {
   const governance = await deploy('RightsGovernance', [[memberA.address, memberB.address, memberC.address], 3600]);
   const hub = await deploy('AssetIdentityHub', [await governance.getAddress()]);
   const registry = await deploy('CommittedEBLRegistry', [await governance.getAddress(), await hub.getAddress()]);
-  const controller = await deploy('RightsController', [await governance.getAddress(), await registry.getAddress()]);
+  const token = await deploy('ControlledRWAToken');
+  const pool = await deploy('RWAOfferingPoolV5', [await registry.getAddress(), await token.getAddress()]);
+  await send(token.bindPool(await pool.getAddress()));
+  const controller = await deploy('RightsController', [await governance.getAddress(), await registry.getAddress(), await token.getAddress(), await pool.getAddress()]);
+  await send(pool.transferOwnership(await controller.getAddress()));
   await send(controller.activate());
-  const pool = await ethers.getContractAt('RWAOfferingPoolV5', await controller.capitalPool());
-  const token = await ethers.getContractAt('ControlledRWAToken', await controller.token());
   const usdc = await deploy('MockUSDC');
   const chainId = (await ethers.provider.getNetwork()).chainId;
   const domain = rightsDomain(chainId, await controller.getAddress()), title = titleDomain(chainId, await registry.getAddress());
@@ -50,7 +52,7 @@ export async function deployRights() {
     const terms = { eblId: record.eblId, assetKey: record.issuance.assetKey, documentHash: record.issuance.documentHash,
       settlementAsset: await usdc.getAddress(), exporter: holder.address, feeRecipient: memberC.address, supply: 10n, issuePrice: 800_000n,
       target: 1_000_000n, minRaise: 8_000_000n, maturity: time + 500_000n, subscribeUntil: time + 100_000n,
-      maxFee: 1_000_000n, policyHash: uniqueHash('policy'), disclosureHash: uniqueHash('disclosure'), nonce: BigInt(uniqueHash('terms-nonce')), ...overrides };
+      disburseUntil: time + 300_000n, maxFee: 0n, policyHash: uniqueHash('policy'), disclosureHash: uniqueHash('disclosure'), nonce: BigInt(uniqueHash('terms-nonce')), ...overrides };
     const hash = ethers.TypedDataEncoder.hash(domain, TERMS_TYPES, terms);
     const pledge = { eblId: record.eblId, pool: await pool.getAddress(), termsHash: hash, nonce: await registry.holderNonce(record.eblId), validUntil: time + 100_000n };
     const pledgeSignature = await holder.signTypedData(title, PLEDGE_TYPES, pledge);

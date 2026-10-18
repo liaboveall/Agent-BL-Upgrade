@@ -707,10 +707,12 @@ export async function readX402PaymentAttestation(reportOrReceiptId) {
   };
 }
 async function capitalPost(url, body) {
+  const { rightsSessionToken } = await import('./rights-session.js');
+  const token = rightsSessionToken();
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json', ...(token ? { 'x-rights-session': token } : {})
     },
     body: JSON.stringify(body)
   });

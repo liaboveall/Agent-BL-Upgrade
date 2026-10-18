@@ -115,7 +115,7 @@ describe('W3 committed rights and controlled capital instance', () => {
     expect(await c.token.balanceOf(p.poolId, c.investor.address)).to.equal(0n);
     expect(await c.registry.pledgedTo(p.eblId)).to.equal(ethers.ZeroAddress);
   });
-  it('completes real capital disbursement, repayment and claims with fixed recipients and fee caps', async () => {
+  it('completes test capital disbursement, repayment and claims with fixed recipients and zero fees', async () => {
     const c = await deployRights(), p = await c.create(); await c.eligible(p);
     await send(c.pool.connect(c.investor).subscribe(p.poolId, 10));
     await expect(c.controller.connect(c.operator).executeLifecycle(c.pool.interface.encodeFunctionData('disburseToExporter', [p.poolId, 8_000_000n, c.outsider.address, uniqueHash()]))).to.be.revertedWith('call not authorized');
@@ -128,11 +128,10 @@ describe('W3 committed rights and controlled capital instance', () => {
     await c.lifecycle(c.operator, 'settle', [p.poolId, 10_000_000n]);
     const badFee = await c.queue(c.controller, 'deductFee', [p.poolId, 1_000_001n, uniqueHash()]); await c.advance(badFee.eta);
     await expect(c.governance.execute(badFee.id, badFee.data)).to.be.revertedWith('fee cap exceeded');
-    await c.govern(c.controller, 'deductFee', [p.poolId, 1_000_000n, uniqueHash()]);
     await send(c.controller.connect(c.guardian).setIntakeStopped(true, uniqueHash()));
     await c.govern(c.controller, 'setRole', [await c.controller.COMPLIANCE(), c.compliance.address, false]);
     await send(c.pool.connect(c.investor).claim(p.poolId));
-    expect(await c.pool.totalClaimed(p.poolId)).to.equal(9_000_000n);
+    expect(await c.pool.totalClaimed(p.poolId)).to.equal(10_000_000n);
     expect(await c.pool.stateOf(p.poolId)).to.equal(STATE.Repaid);
   });
   it('requires notification, independent disposal review and disputed recovery reconciliation before loss release', async () => {
@@ -199,7 +198,7 @@ describe('W3 committed rights and controlled capital instance', () => {
     await c.govern(c.controller, 'setRole', [await c.controller.VALUER(), c.valuer.address, false]);
     await expect(c.pool.connect(c.investor).subscribe(other.poolId, 1)).to.be.revertedWithCustomError(c.pool, 'NotEligible');
   });
-  it('invalidates a reviewed resolution when late recovery changes and refuses self review', async () => {
+  it('keeps a reviewed resolution live when late recovery changes and refuses self review', async () => {
     const c = await deployRights(), p = await c.create(); await c.eligible(p);
     await send(c.pool.connect(c.investor).subscribe(p.poolId, 10));
     await send(c.controller.connect(c.operator).disburse(p.poolId, 8_000_000n, uniqueHash()));
@@ -210,8 +209,9 @@ describe('W3 committed rights and controlled capital instance', () => {
     await send(c.controller.connect(c.reviewer).reviewResolution(p.poolId, uniqueHash()));
     await send(c.usdc.connect(c.holder).approve(await c.pool.getAddress(), 1_000_000n)); await send(c.pool.connect(c.holder).repay(p.poolId, 1_000_000n));
     await c.advance((await c.controller.resolutions(p.poolId)).noticeUntil);
-    await expect(c.controller.connect(c.operator).finalizeResolution(p.poolId)).to.be.revertedWith('recovery changed');
-    expect(await c.registry.pledgedTo(p.eblId)).to.equal(await c.pool.getAddress());
+    await send(c.controller.connect(c.operator).finalizeResolution(p.poolId));
+    expect(await c.pool.claimable(p.poolId, c.investor.address)).to.equal(1_000_000n);
+    expect(await c.registry.pledgedTo(p.eblId)).to.equal(ethers.ZeroAddress);
   });
   it('completes zero and full liquidation recoveries without duplicate claims', async () => {
     const c = await deployRights();

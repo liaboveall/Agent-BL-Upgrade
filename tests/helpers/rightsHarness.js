@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { Contract, ContractFactory, JsonRpcProvider, id } from 'ethers';
+import { ContractFactory, JsonRpcProvider, id } from 'ethers';
 import { RightsChainService } from '../../src/rights/chain.js';
+import { createDisclosure } from '../../src/rights/disclosure.js';
 import { ISSUANCE_TYPES, TERMS_TYPES, VALUATION_TYPES, rightsDomain, titleDomain, hashOfferingTerms } from '../../src/rights/typedData.js';
 
 export async function deployRightsRpc(node, t) {
@@ -15,10 +16,12 @@ export async function deployRightsRpc(node, t) {
   const governance = await deploy('RightsGovernance', [[memberA.address, memberB.address, memberC.address], 3600]);
   const hub = await deploy('AssetIdentityHub', [await governance.getAddress()]);
   const registry = await deploy('CommittedEBLRegistry', [await governance.getAddress(), await hub.getAddress()]);
-  const controller = await deploy('RightsController', [await governance.getAddress(), await registry.getAddress()]);
+  const token = await deploy('ControlledRWAToken');
+  const pool = await deploy('RWAOfferingPoolV5', [await registry.getAddress(), await token.getAddress()]);
+  await send(token.bindPool(await pool.getAddress()));
+  const controller = await deploy('RightsController', [await governance.getAddress(), await registry.getAddress(), await token.getAddress(), await pool.getAddress()]);
+  await send(pool.transferOwnership(await controller.getAddress()));
   await send(controller.activate());
-  const pool = new Contract(await controller.capitalPool(), (await artifact('RWAOfferingPoolV5')).abi, memberA);
-  const token = new Contract(await controller.token(), (await artifact('ControlledRWAToken')).abi, memberA);
   const usdc = await deploy('MockUSDC');
   const now = async () => BigInt((await provider.getBlock('latest')).timestamp);
   const advance = async (time) => { await provider.send('evm_setNextBlockTimestamp', [Number(time)]); await provider.send('evm_mine', []); };
@@ -42,11 +45,16 @@ export async function deployRightsRpc(node, t) {
   const offering = async (eblId, value) => {
     const time = await now(), terms = { eblId: String(eblId), assetKey: value.assetKey, documentHash: value.documentHash,
       settlementAsset: await usdc.getAddress(), exporter: holder.address, feeRecipient: memberC.address, supply: '10', issuePrice: '800000', target: '1000000', minRaise: '8000000',
-      maturity: String(time + 200000n), subscribeUntil: String(time + 80000n), maxFee: '0', policyHash: fresh('disposal-policy'), disclosureHash: fresh('disclosure'), nonce: String(serial++) };
+      maturity: String(time + 200000n), subscribeUntil: String(time + 80000n), disburseUntil: String(time + 90000n), maxFee: '0', policyHash: fresh('disposal-policy'), disclosureHash: fresh('disclosure'), nonce: String(serial++) };
+    const { policyHash: _policy, disclosureHash: _disclosure, ...rawTerms } = terms;
+    const pack = createDisclosure({ revision: 1, instance: { chain_id: Number(chainId), controller: await controller.getAddress(), pool: await pool.getAddress() }, terms: rawTerms,
+      parties: { issuer: issuer.address, holder: holder.address, operator: operator.address, valuer: valuer.address, compliance: compliance.address, disposer: disposer.address, reviewer: reviewer.address, governance: await governance.getAddress() },
+      sources: ['invoice', 'cost', 'collateral', 'risk'].map((field) => ({ field, status: 'fixture', reference: 'synthetic research fixture; not real cargo' })) });
+    Object.assign(terms, pack.terms);
     const hash = hashOfferingTerms(chainId, await controller.getAddress(), terms);
     const valuation = { termsHash: hash, assetKey: value.assetKey, settlementAsset: terms.settlementAsset, netValue: '20000000', coverageBps: 15000,
       valuedAt: String(time), validUntil: String(time + 100000n), nonce: String(serial++) };
-    return { terms, valuation, valuer: valuer.address, signature: await valuer.signTypedData(domain, VALUATION_TYPES, valuation), hash };
+    return { terms, valuation, valuer: valuer.address, signature: await valuer.signTypedData(domain, VALUATION_TYPES, valuation), hash, pack };
   };
   const lifecycle = async (method, args) => send(controller.connect(['recordImporterPayment', 'recordCargoArrival'].includes(method) ? attestor : operator).executeLifecycle(pool.interface.encodeFunctionData(method, args)));
   t.after(() => provider.destroy());

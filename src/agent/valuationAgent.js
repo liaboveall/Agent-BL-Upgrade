@@ -10,6 +10,7 @@
 //     a fixed order and template the explanation. The demo therefore always runs.
 
 import { chatCompletion, completionMetadata, isConfigured, resolveProvider } from './llm/openaiCompatClient.js';
+import { sourceState } from '../provenance/fields.js';
 import {
   TOOL_SPECS,
   TOOL_EXECUTORS,
@@ -143,14 +144,14 @@ async function runDeterministic(caseData, env) {
   toolTrace.push({ tool: 'compute_cargo_valuation', args: valuationArgs, source: 'local-deterministic' });
 
   const v = captured.compute_cargo_valuation;
-  const explanation = `Verified collateral value USD ${v.ai_verified_collateral_value_usd} = ${v.valuation_basis}. `
-    + `Live ${f.commodity} ~USD ${captured.get_live_commodity_price.price_usd_per_mt}/MT plus a USD ${captured.get_regional_physical_premium.premium_usd_per_mt}/MT ${f.destination} premium. `
+  const explanation = `Rule-estimated collateral value USD ${v.ai_verified_collateral_value_usd} = ${v.valuation_basis}. `
+    + `Reference ${f.commodity} ~USD ${captured.get_live_commodity_price.price_usd_per_mt}/MT plus a USD ${captured.get_regional_physical_premium.premium_usd_per_mt}/MT ${f.destination} premium. `
     + `A ${Math.round(haircut * 100)}% haircut is applied because prices sit at war-premium highs (Strait of Hormuz), so the issuance is sized against a conservative floor of USD ${v.max_safe_redemption_exposure_usd}.`;
 
   return { explanation, captured, toolTrace };
 }
 
-function assembleReport(caseData, { explanation, captured, toolTrace, modelUsage }, provider) {
+function assembleReport(caseData, { explanation, captured, toolTrace, modelUsage, modelStatus = 'not_run', reviewReason = null }, provider) {
   const f = caseFacts(caseData);
   const live = captured.get_live_commodity_price ?? {};
   const premium = captured.get_regional_physical_premium ?? {};
@@ -184,6 +185,15 @@ function assembleReport(caseData, { explanation, captured, toolTrace, modelUsage
     valuation,
     ai_explanation: explanation,
     provider,
+    model_status: modelStatus, provider_verified: false,
+    human_takeover: { required: modelStatus !== 'completed' || [live, premium, hist].some((source) => source.data_status !== 'live'),
+      reason: reviewReason ?? 'research_sources_require_responsible_review', status: 'PENDING_REVIEW' },
+    field_sources: {
+      market: sourceState({ value: live.price_usd_per_mt, status: live.data_status, source: live.source, observed_at: live.as_of, expires_at: live.expires_at }),
+      premium: sourceState({ value: premium.premium_usd_per_mt, status: 'fixture', source: premium.source }),
+      collateral: sourceState({ value: valuation.ai_verified_collateral_value_usd, status: 'fixture', source: 'deterministic_rule_estimate_not_realizable_cargo_value' }),
+      historical: { status: /mock/u.test(hist.source ?? '') ? 'fixture' : 'unavailable', source: hist.source ?? null, applicability: 'historical_reference_not_current_liquidation_value' }
+    },
     tool_trace: toolTrace,
     ...(modelUsage?.length ? { model_usage: modelUsage } : {})
   };
@@ -213,12 +223,12 @@ export async function runValuationAgent(caseData, options = {}) {
     // If the model produced no usable numbers, backfill deterministically.
     if (!run.captured.get_live_commodity_price) {
       const det = await runDeterministic(caseData, env);
-      return assembleReport(caseData, { ...det, explanation: run.explanation || det.explanation, modelUsage: run.modelUsage }, provider);
+      return assembleReport(caseData, { ...det, modelUsage: run.modelUsage, modelStatus: 'incomplete', reviewReason: 'model_missing_required_evidence' }, 'deterministic-fallback');
     }
-    return assembleReport(caseData, run, provider);
-  } catch (error) {
+    return assembleReport(caseData, { ...run, modelStatus: 'completed' }, provider);
+  } catch {
     const det = await runDeterministic(caseData, env);
-    det.explanation = `[LLM error: ${error.message}; used deterministic fallback] ${det.explanation}`;
-    return assembleReport(caseData, det, 'deterministic-fallback');
+    det.explanation = `[LLM error; manual review required; used deterministic fallback] ${det.explanation}`;
+    return assembleReport(caseData, { ...det, modelStatus: 'failed', reviewReason: 'provider_failure' }, 'deterministic-fallback');
   }
 }

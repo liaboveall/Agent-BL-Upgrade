@@ -4,7 +4,7 @@ import { changeNetwork, setView, VIEWS } from '../state/controller.js';
 import { useRovingKeys } from '../components/ui.jsx';
 import { WalletMenu } from './WalletMenu.jsx';
 
-const NAV_KEYS = { market: 'nav_market', mint: 'nav_mint', agent: 'nav_agent', discover: 'nav_discover' };
+const NAV_KEYS = { finance: 'nav_finance', market: 'nav_market', mint: 'nav_mint', agent: 'nav_agent', discover: 'nav_discover' };
 
 export function TopBar() {
   const view = useApp((state) => state.view);
@@ -12,7 +12,7 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <a className="brand" href="#/market" onClick={(event) => { event.preventDefault(); setView('market'); }}>
+        <a className="brand" href="#/finance" onClick={(event) => { event.preventDefault(); setView('finance'); }}>
           <span className="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22"><rect width="24" height="24" rx="6" fill="currentColor" /><path d="M6 15.5 12 6l6 9.5H6Z" fill="#fff" /></svg>
           </span>

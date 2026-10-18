@@ -33,7 +33,7 @@
 .evidence-review-form textarea { min-width: 0; width: 100%; min-height: 80px; background: #fff; color: #0f172a; border: 1px solid #64748b; border-radius: 6px; padding: 8px; }
 .evidence-review-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 @media (max-width: 600px) {
-  /* The desktop shell has a minimum width; these forms must still fit the viewport. */
+  /* Public evidence forms follow the available viewport. */
   .evidence-panel, .rights-panel { box-sizing: border-box; width: 100vw; max-width: 100vw; margin-left: 0; margin-right: 0; padding: 8px 12px; }
   .evidence-panel dl > div, .rights-panel dl > div { grid-template-columns: 1fr; gap: 4px; }
 }
@@ -61,5 +61,19 @@
 .controlled-panel th, .controlled-panel td { text-align: left; padding: .7rem; border-bottom: 1px solid #d1dcd7; vertical-align: top; }
 .controlled-position, .controlled-confirm { padding: 1rem; margin-top: 1rem; border: 1px solid #acbfb5; border-radius: .5rem; }
 .controlled-position button + button, .controlled-confirm button + button { margin-left: .6rem; }
+.readable-terms { min-width: 0; overflow-wrap: anywhere; }
+.readable-terms dl > div { display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 3fr); gap: .5rem; padding: .3rem 0; }
+.readable-terms dd { margin: 0; min-width: 0; }
+.readable-terms dt { font-weight: 600; }
+.research-constraints { overflow-x: auto; margin-top: 1rem; }
+.research-constraints table { width: 100%; border-collapse: collapse; }
+.research-constraints th, .research-constraints td { padding: .4rem; text-align: left; }
 .controlled-pending { padding: 1rem 0; overflow-wrap: anywhere; }
 .controlled-pending input { display: block; max-width: 100%; width: 34rem; padding: .5rem; border: 1px solid #7c8d87; }
+
+.role-workspace { border: 1px solid var(--border, #586273); padding: 1rem; margin-block: 1rem; border-radius: .5rem; }
+.role-workspace label { display: block; margin-block: .75rem; }
+.role-workspace input:not([type="checkbox"]), .role-workspace textarea, .role-workspace select { max-width: 100%; width: 100%; box-sizing: border-box; }
+.role-workspace code, .role-workspace dd { overflow-wrap: anywhere; }
+.role-workspace ol { padding-inline-start: 1.5rem; }
+.role-workspace li { margin-block: .5rem; }

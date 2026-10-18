@@ -33,8 +33,11 @@ import { PAYOUT_SPEEDS } from './pricingSchema.js';
 import { ValidationError } from './schema.js';
 import { CALIBRATION, CALIBRATION_HASH, actualFinancingPeriod } from '../provenance/market.js';
 import { evidenceHash, snapshotForEvidence } from '../evidence/schema.js';
+import { researchConstraints, feasibility, researchSensitivity } from './researchConstraints.js';
+import { pricingFieldSources } from '../provenance/fields.js';
 
 export { PAYOUT_SPEEDS };
+const numeric = (value) => value === null || value === undefined || typeof value === 'string' && value.trim() === '' ? NaN : Number(value);
 
 // Base share of the exporter's gross trade profit handed to investors as the
 // financing discount, BEFORE any risk premium — the "reasonable ratio" per speed.
@@ -254,7 +257,7 @@ function buildInvestorExplanation(q) {
     `This eBL-backed RWA is offered at USD ${q.final_issue_price_usd.toFixed(4)} per token versus a USD 1.00 ` +
     `target redemption value — an implied ${yieldPct}% gross upside over about ${q.tenor_days} days ` +
     `(${(q.annualized_yield_bps / 100).toFixed(1)}% a year). ${compensation}${floorNote} Target redemption is not ` +
-    `guaranteed: it depends on importer payment, cargo settlement and insurance coverage.`
+    `guaranteed: it depends on actual recovery. This is a contractual target, not expected return. Risk pressure is not default probability.`
   );
 }
 
@@ -276,7 +279,7 @@ function buildExporterExplanation(q) {
   return (
     `Choosing ${q.payout_speed} payout advances USD ${usd(q.expected_cash_to_exporter_usd)} now at an issue price of ` +
     `USD ${q.final_issue_price_usd.toFixed(2)}. The financing cost is USD ${usd(q.financing_cost_usd)} — ` +
-    `${(q.exporter_profit_share_bps / 100).toFixed(1)}% of your USD ${usd(q.exporter_gross_profit_usd)} verified trade ` +
+    `${(q.exporter_profit_share_bps / 100).toFixed(1)}% of your USD ${usd(q.exporter_gross_profit_usd)} declared trade ` +
     `profit — leaving an estimated USD ${usd(q.exporter_net_profit_usd)} net.${aggressive}${collateral}${cheaper}${paused}`
   );
 }
@@ -338,9 +341,9 @@ export function priceRwaOffering(input) {
   const speed = input.payout_speed;
   if (!PAYOUT_SPEEDS.includes(speed)) throw new Error(`Unknown payout_speed: ${speed}`);
 
-  const cash = Number(input.requested_cash_usd);
-  const profit = Number(input.gross_profit_usd);
-  const collateral = Number(input.ai_verified_collateral_value_usd);
+  const cash = numeric(input.requested_cash_usd);
+  const profit = numeric(input.gross_profit_usd);
+  const collateral = numeric(input.ai_verified_collateral_value_usd);
   const coverage = Number(input.redemption_coverage_limit ?? 0.9);
   const target = Number(input.target_redemption_value_usd ?? 1);
   const riskScoreBps = Number(input.risk_score_bps ?? input.risk_discount_bps ?? 0);
@@ -368,7 +371,10 @@ export function priceRwaOffering(input) {
   // Additive decomposition (pre-floor) for the AI Pricing Console waterfall.
   const anchorPrice = priceFromCost(cash, costOf(BASE_PROFIT_SHARE.LOW_COST, 'LOW_COST', 0)); // patient-money anchor
   const speedPrice = priceFromCost(cash, costOf(baseShare, speed, 0));
-  const indicativePrice = priceFromCost(cash, costOf(effectiveShare, speed, riskScoreBps));
+  const policy = researchConstraints(input.research_constraints);
+  const feasibilityInput = { cash, profit, maxProfitShare: MAX_PROFIT_SHARE, annualCap: annualRateCap(speed, riskScoreBps), tenorDays, collateral: maxSafeRedemption, policy };
+  const interval = feasibility(feasibilityInput);
+  const indicativePrice = priceFromCost(cash, Math.max(costOf(effectiveShare, speed, riskScoreBps), interval.lower));
   const urgencyDiscountBps = Math.max(0, bps(anchorPrice - speedPrice));
   const riskDiscountBps = Math.max(0, bps(speedPrice - indicativePrice));
   const rateBound = rateCost(speed, riskScoreBps) < effectiveShare * profit;
@@ -383,10 +389,13 @@ export function priceRwaOffering(input) {
   }
   // Round toward the exporter, so price precision cannot breach the rate cap.
   finalPrice = Math.ceil((finalPrice - 1e-12) * 10000) / 10000;
+  // A coarse unit price may otherwise round compensation below its lower bound.
+  if (interval.feasible && finalPrice > cash / (cash + interval.lower)) finalPrice = Math.floor(cash / (cash + interval.lower) * 10000) / 10000;
 
   // Size the offering. Floor the supply so redemption can never exceed coverage.
   const supplyFromCash = cash / finalPrice;
   const tokenSupply = Math.floor(Math.min(supplyFromCash, maxSafeRedemption));
+  if (!Number.isSafeInteger(tokenSupply)) throw new ValidationError('Invalid pricing size', ['Whole share supply must be a safe integer']);
   const redemptionExposure = round(tokenSupply * target, 2);
   const expectedCash = round(tokenSupply * finalPrice, 2);
   const financingCost = round(redemptionExposure - expectedCash, 2);
@@ -404,6 +413,8 @@ export function priceRwaOffering(input) {
   if (netProfit < 0) economicFailures.push('NEGATIVE_NET_PROFIT');
   if (financingCost > expectedCash * annualRateCap(speed, riskScoreBps) * tenorDays / 365 + 0.005) economicFailures.push('ANNUAL_RATE_LIMIT');
   if (materialShortfall) economicFailures.push('FINANCING_SHORTFALL');
+  if (!interval.feasible) economicFailures.push('NO_COMMON_FINANCING_INTERVAL');
+  if (financingCost + 0.005 < expectedCash * interval.annual_floor_bps / 10000 * tenorDays / 365) economicFailures.push('INVESTOR_COMPENSATION_FLOOR');
   let pricingAction = pickPricingAction({
     riskLevel,
     paused: paused || economicFailures.length > 0 || input.data_review_required === true,
@@ -442,6 +453,10 @@ export function priceRwaOffering(input) {
     target_redemption_exposure_usd: redemptionExposure,
     expected_cash_to_exporter_usd: expectedCash,
     financing_cost_usd: financingCost,
+    atomic_economics: { decimals: 6, issue_price_atomic: String(Math.round(finalPrice * 1000000)),
+      principal_atomic: String(BigInt(tokenSupply) * BigInt(Math.round(finalPrice * 1000000))),
+      target_atomic: String(BigInt(tokenSupply) * 1000000n),
+      compensation_atomic: String(BigInt(tokenSupply) * (1000000n - BigInt(Math.round(finalPrice * 1000000)))) },
     exporter_profit_share_bps: bps(profitShare),
     exporter_net_profit_usd: netProfit,
     implied_gross_yield_bps: impliedYieldBps,
@@ -458,6 +473,12 @@ export function priceRwaOffering(input) {
     pricing_action: pricingAction,
     economic_checks: { ok: economicFailures.length === 0, failures: economicFailures, max_profit_share_bps: bps(MAX_PROFIT_SHARE) },
     profit_basis: input.profit_basis ?? 'declared',
+    field_sources: input.field_sources ?? null,
+    research_feasibility: { policy, status: interval.feasible ? 'FEASIBLE_RESEARCH_ONLY' : 'REJECT_NO_COMMON_INTERVAL',
+      investor_floor_usd: Math.ceil(interval.lower * 100) / 100, borrower_ceiling_usd: Math.floor(interval.borrower_ceiling * 100) / 100,
+      total_ceiling_usd: Math.floor(interval.upper * 100) / 100, annual_floor_bps: interval.annual_floor_bps,
+      parameter_status: 'research_assumptions_not_business_calibration', target_return: 'contractual_target_not_expected_return',
+      sensitivity: researchSensitivity(feasibilityInput) },
     execution_scope: 'indicative-terms',
     rejected_by_exporter: rejectedByExporter,
     min_acceptable_issue_price: input.min_acceptable_issue_price
@@ -478,7 +499,7 @@ export function priceRwaOffering(input) {
   core.calibration = { version: CALIBRATION.version, hash: CALIBRATION_HASH, status: CALIBRATION.status,
     risk_score_semantics: CALIBRATION.risk_score_semantics, payout_sla: null };
   core.evidence_hash = hashEvidence({
-    schema: core.evidence_schema, calibration_hash: CALIBRATION_HASH,
+    schema: core.evidence_schema, calibration_hash: CALIBRATION_HASH, research_policy: policy,
     input,
     collateral: core.ai_verified_collateral_value_usd,
     max_safe: core.max_safe_redemption_exposure_usd,
@@ -551,17 +572,18 @@ function profitFromCase(caseData) {
   const bl = caseData.bill_of_lading ?? {};
   const quantity = Number(cargo.quantity_mt ?? bl.quantity_mt ?? cargo.quantity);
 
-  let costOfGoods;
-  if (Number.isFinite(Number(te.cost_of_goods_usd))) costOfGoods = Number(te.cost_of_goods_usd);
-  else if (Number.isFinite(Number(te.cost_basis_usd_per_mt)) && Number.isFinite(quantity)) {
+  let costOfGoods, declaredCost = true;
+  if (Number.isFinite(numeric(te.cost_of_goods_usd))) costOfGoods = Number(te.cost_of_goods_usd);
+  else if (Number.isFinite(numeric(te.cost_basis_usd_per_mt)) && Number.isFinite(quantity)) {
     costOfGoods = Number(te.cost_basis_usd_per_mt) * quantity;
-  } else if (Number.isFinite(Number(te.cost_basis_usd_per_unit)) && Number.isFinite(Number(cargo.quantity))) {
+  } else if (Number.isFinite(numeric(te.cost_basis_usd_per_unit)) && Number.isFinite(numeric(cargo.quantity))) {
     costOfGoods = Number(te.cost_basis_usd_per_unit) * Number(cargo.quantity);
-  } else if (Number.isFinite(Number(te.gross_margin_pct))) {
+  } else if (Number.isFinite(numeric(te.gross_margin_pct))) {
     costOfGoods = invoice * (1 - Number(te.gross_margin_pct));
   } else {
     // Conservative fallback: assume a 12% gross margin if the case omits economics.
     costOfGoods = invoice * 0.88;
+    declaredCost = false;
   }
 
   // Always recompute profit/margin from the dollar figures so a stored typo
@@ -572,7 +594,7 @@ function profitFromCase(caseData) {
     cost_of_goods_usd: costOfGoods,
     gross_profit_usd: grossProfit,
     gross_margin_pct: invoice > 0 ? grossProfit / invoice : 0,
-    profit_basis: Object.keys(te).some((key) => ['cost_of_goods_usd', 'cost_basis_usd_per_mt', 'cost_basis_usd_per_unit', 'gross_margin_pct'].includes(key)) ? 'declared' : 'estimated_12pct_margin'
+    profit_basis: declaredCost ? 'declared' : 'estimated_12pct_margin'
   };
 }
 
@@ -600,6 +622,8 @@ export function quoteFromCase(caseData, options = {}) {
     cost_of_goods_usd: economics.cost_of_goods_usd,
     invoice_value_usd: economics.invoice_value_usd,
     profit_basis: economics.profit_basis,
+    research_constraints: financing.research_constraints,
+    field_sources: pricingFieldSources(caseData, economics, valuation.ai_verified_collateral_value_usd, options.now),
     ai_verified_collateral_value_usd: valuation.ai_verified_collateral_value_usd,
     redemption_coverage_limit: valuation.redemption_coverage_limit,
     target_redemption_value_usd: Number(financing.target_redemption_value_usd ?? 1),

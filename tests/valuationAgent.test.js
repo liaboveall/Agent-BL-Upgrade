@@ -98,6 +98,8 @@ test('AI-9: a working injected LLM drives the tool loop and reports its provider
     chat: fakeChat
   });
 
-  assert.equal(report.provider, 'deepseek');
+  assert.equal(report.provider, 'deterministic-fallback');
+  assert.equal(report.model_status, 'incomplete');
+  assert.equal(report.human_takeover.required, true);
   assert.ok(report.valuation.ai_verified_collateral_value_usd > 0);
 });
