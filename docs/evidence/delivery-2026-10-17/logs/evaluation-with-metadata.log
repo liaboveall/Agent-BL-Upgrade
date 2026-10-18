@@ -1,3 +1,0 @@
-Agent evaluation: PASS (20/20 gates, 0 retained failed cases)
-44 dialogues / 100 turns; 1350 pricing checks; 26 injection cases; live LLM SKIP
-Source SHA256: 7fa9c75d51b2340442d924894c36b3dc357a7f1271738df66d5c551b9ec93d2a

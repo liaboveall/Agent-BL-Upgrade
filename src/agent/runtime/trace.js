@@ -1,4 +1,4 @@
-// Decision traces (docs/agent-implementation-plan.md WP1.6): one trace per decision, made of spans
+// Decision traces: one trace per decision, made of spans
 // (pipeline steps, LLM calls, execution) with timing, status and sanitised attributes. They answer
 // "what did the agent do for this decision and how long did each step take".
 //

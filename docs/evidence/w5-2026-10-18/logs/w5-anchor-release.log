@@ -1,6 +1,0 @@
-anchor:deploy: 0x486dd1fc94f25c5a4782d91747eb183b424b464cca1f0b5a3d8a2fc30b0c9242
-anchor:register-version:1c49a2334158a94c: 0x1db426513326eb6f47b70a73d052a26f0e4629bd93abb52fcced6fd7b4dcee1e
-anchor:authorize-research-anchorer:1c49a2334158a94c: 0x7f60ed2f35c3b23b7ee9252aeed3d374d9510fbf70eba3330593b25788478f5a
-anchor:batch:0x1c49a2334158a94c2837a55e8e3e04d914913fbef9d9656ac30c262514475e17:3: 0x5a7ca1b276a62b07bdf57fda25cf626b852efd761681379d64d7e3421bf404c6
-Actual private-evidence anchor and canonical inclusion: PASS 0x5a7ca1b276a62b07bdf57fda25cf626b852efd761681379d64d7e3421bf404c6
-{"action":"anchor","prepared":true,"ready_after":"2026-10-17T18:46:20.000Z","activated":true,"contracts":{"RightsGovernance":"0x1Df02ED170bA2367d56F190Cc1b8225f58f6E2e5","AssetIdentityHub":"0x471c70CAb4166AF7D0261cb0dE9Be26B53C01e88","CommittedEBLRegistry":"0xee7e8125b92de8fFe5bD4eD82187129c1fDa10d5","RightsController":"0xD3ccC2FaBBC57611869d93c8701Ee594dB9B8ea4","MockAuthorizationUSDC":"0x127501470e26EEAEF38B3638aD87FE1f19692a4C","RWAOfferingPoolV5":"0xfd17Ec1ebDFdd35188adBfCe4ff88Bda61F21A0F","ControlledRWAToken":"0x20b454e2f926D5ABafa595C2224cB8F82c366696"},"transactions":97}

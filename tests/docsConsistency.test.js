@@ -5,12 +5,12 @@ import path from 'node:path';
 const root = path.join(import.meta.dirname, '..');
 const read = (...segments) => fs.readFileSync(path.join(root, ...segments), 'utf8');
 const readJson = (...segments) => JSON.parse(read(...segments));
-test('current documentation points to controlled configuration and an immutable historical archive',()=>{
- const text=read('README.md');assert.ok(text.includes('application-config.json'));assert.ok(text.includes('rights-instance.json'));assert.ok(text.includes('docs/archive/README.md'));assert.ok(!text.includes('verify:wave-b'));
+test('current documentation points to controlled configuration and the development entry',()=>{
+ const text=read('README.md');assert.ok(text.includes('application-config.json'));assert.ok(text.includes('rights-instance.json'));assert.ok(text.includes('docs/development-plan.md'));assert.ok(!text.includes('verify:wave-b'));
 });
 test('documented current npm commands exist',()=>{
  const scripts=new Set([...Object.keys(readJson('package.json').scripts),...Object.keys(readJson('hardhat','package.json').scripts)]);
- for(const file of ['README.md','docs/deployment-current.md'])for(const match of read(file).matchAll(/npm (?:--prefix \S+ )?run ([A-Za-z0-9:_-]+)/gu))assert.ok(scripts.has(match[1]),match[1]);
+ for(const file of ['README.md',...fs.readdirSync(path.join(root,'docs')).filter(name=>name.endsWith('.md')).map(name=>`docs/${name}`)])for(const match of read(file).matchAll(/npm (?:--prefix \S+ )?run ([A-Za-z0-9:_-]+)/gu))assert.ok(scripts.has(match[1]),`${file}: ${match[1]}`);
 });
 test('.env.example documents every variable the server reads and never ships a real key', () => {
   const example = read('.env.example');
@@ -20,7 +20,7 @@ test('.env.example documents every variable the server reads and never ships a r
     'LLM_MODEL', 'LLM_PROXY_ENABLED', 'LLM_MAX_TOKENS_CAP', 'LLM_REASONING_EFFORT', 'X402_MODE', 'X402_FACILITATOR_URL', 'X402_PAY_TO', 'X402_PUBLIC_BASE_URL', 'X402_CONFIRMATIONS',
     'AGENT_API_RATE_LIMIT_PER_MIN', 'AGENT_API_MAX_CONCURRENCY', 'AGENTBL_MCP_API_URL', 'AGENTBL_PUBLIC_BASE_URL', 'MCP_HUMAN_APPROVAL_TOKEN',
     'PAYMENT_ATTESTOR_PRIVATE_KEY', 'AGENT_ANCHOR_PRIVATE_KEY', 'SIGNER_KEYS_STRICT', 'DEPLOYER_PRIVATE_KEY',
-    // Agent runtime (docs/agent-implementation-plan.md §4.7); every variable src/agent/runtime/config.js reads
+    // Agent runtime; every variable src/agent/runtime/config.js reads
     // and the rest of the runtime relies on today.
     'AGENT_ENABLED', 'AGENT_AUTONOMY', 'AGENT_ALLOW_UNATTENDED_IRREVERSIBLE',
     'AGENT_MONITOR_INTERVAL_SEC', 'AGENT_MAX_PRICE_MOVE_BPS', 'AGENT_COOLDOWN_SEC', 'AGENT_MAX_ACTIONS_PER_POOL_PER_DAY',

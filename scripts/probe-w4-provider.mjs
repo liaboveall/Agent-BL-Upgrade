@@ -38,7 +38,7 @@ if (cfg) {
   }
 }
 result.latency_ms = Date.now() - started;
-const file = `docs/evidence/w4-local-2026-10-17/provider-runs/${result.executed_at.replaceAll(/[:.]/gu, '-')}-connectivity.json`;
-await fs.mkdir('docs/evidence/w4-local-2026-10-17/provider-runs', { recursive: true });
+const file = `artifacts/evaluation/provider-runs/${result.executed_at.replaceAll(/[:.]/gu, '-')}-connectivity.json`;
+await fs.mkdir('artifacts/evaluation/provider-runs', { recursive: true });
 await fs.writeFile(file, `${JSON.stringify(result, null, 2)}\n`, { flag: 'wx' });
 console.log(JSON.stringify(result));

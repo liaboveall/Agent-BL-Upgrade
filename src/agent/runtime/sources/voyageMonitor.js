@@ -1,4 +1,4 @@
-// Insurance deadline monitor (docs/agent-implementation-plan.md WP2.5).
+// Insurance deadline monitor.
 //
 //   expires within `warnDays`            → INSURANCE_EXPIRING  (a warning, nothing changes)
 //   already expired, pool still active   → INSURANCE_EXPIRED   (the pool should pause until cover is renewed)

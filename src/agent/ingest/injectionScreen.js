@@ -1,4 +1,4 @@
-// Prompt-injection screening for uploaded trade documents (docs/agent-implementation-plan.md WP2.2).
+// Prompt-injection screening for uploaded trade documents.
 //
 // Document text is DATA. This module never decides what the agent does; it only reports patterns that
 // look like instructions aimed at an automated reader, so the pipeline can hold the case for a human.

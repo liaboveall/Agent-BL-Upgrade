@@ -1,4 +1,4 @@
-// Policy engine (docs/agent-implementation-plan.md §4.5). A pure function: given what the agent wants
+// Policy engine. A pure function: given what the agent wants
 // to do and the situation around it, decide whether that may happen unattended, needs a human, is
 // only recorded, or is refused. The LLM never reaches this decision; it only sees the outcome.
 //

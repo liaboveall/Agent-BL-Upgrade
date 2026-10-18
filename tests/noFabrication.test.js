@@ -10,7 +10,7 @@ import { resetStore, storeState, subscribeToPool } from '../src/app/store.js';
 
 // WP0.1 — nothing simulated may look real. A simulated result carries mode:'demo' and a `demo:`
 // reference; a 0x transaction hash, an explorer link or an "autonomous agent" claim must only ever
-// come from something that actually happened (docs/agent-implementation-plan.md §2.2 principle 2).
+// come from something that actually happened.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

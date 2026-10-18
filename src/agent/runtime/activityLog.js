@@ -1,4 +1,4 @@
-// Agent activity feed (docs/agent-implementation-plan.md WP1.5). It replaces the in-memory-only
+// Agent activity feed. It replaces the in-memory-only
 // feed that lived in server.js:
 //   - every record gets a monotonic `seq`, which SSE sends as the event id so a reconnecting client
 //     can ask for what it missed (Last-Event-ID) instead of silently losing events;

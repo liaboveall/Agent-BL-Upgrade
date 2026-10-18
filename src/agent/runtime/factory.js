@@ -1,6 +1,6 @@
 // Builds an AgentService with its real dependencies. Persistence is opt-in: the server entry point
 // passes `persist: true`; `createServer()` and the tests get a memory-only service, so nothing
-// writes into data/runtime and tests stay deterministic (docs/agent-implementation-plan.md D9).
+// writes into data/runtime and tests stay deterministic.
 
 import path from 'node:path';
 import { loadApplicationConfig } from '../../chain/loadApplicationConfig.js';

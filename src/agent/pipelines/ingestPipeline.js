@@ -1,4 +1,4 @@
-// Ingest pipeline adapter (docs/agent-implementation-plan.md WP2.4): turns a DOCUMENTS_INGESTED event
+// Ingest pipeline adapter: turns a DOCUMENTS_INGESTED event
 // into an action PROPOSAL, exactly like monitorPipeline does for the other event types. The heavy
 // lifting is AgentOrchestrator.processDocuments; this file loads the stored documents, hands the
 // orchestrator the exporter's preferences, saves the resulting case and shapes the proposal.

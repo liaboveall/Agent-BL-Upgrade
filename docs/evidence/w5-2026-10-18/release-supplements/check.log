@@ -1,3 +1,0 @@
-npm notice run agentbl-agent-starter@0.1.0 check
-npm notice run node scripts/check.mjs
-check passed: files, scripts, seed data, chain registry, schemas, knowledge base, MCP manifest and scenario harness are valid.

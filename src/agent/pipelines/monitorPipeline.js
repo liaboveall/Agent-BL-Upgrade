@@ -1,5 +1,4 @@
-// Monitor pipeline: turns one agent event into zero or more action PROPOSALS (docs/agent-
-// implementation-plan.md §4.4). It decides WHAT the agent would do; whether that may run, needs a
+// Monitor pipeline: turns one agent event into zero or more action PROPOSALS. It decides WHAT the agent would do; whether that may run, needs a
 // human or is only recorded is the policy engine's call, and doing it is the executor's.
 //
 // Everything here is deterministic: prices come from the pricing engine, risk from the world-risk

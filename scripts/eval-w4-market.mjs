@@ -13,7 +13,7 @@ const report = { schema: 'agentbl-market-evaluation-v1', executed_at: new Date()
   rmse_usd_per_mt: Math.sqrt(errors.reduce((sum, item) => sum + item.error_usd_per_mt ** 2, 0) / errors.length),
   current_observation_rejection_rate: data.observations.filter((item) => Date.now() - Date.parse(`${item.month}-01T00:00:00Z`) >= CALIBRATION.max_observation_age_ms).length / data.observations.length,
   errors, cargo_valuation_error: null, business_accepted: false, approved_thresholds: null, human_review_required: true };
-const file = `docs/evidence/w4-local-2026-10-17/provider-runs/${report.executed_at.replaceAll(/[:.]/gu, '-')}-market.json`;
-await fs.mkdir('docs/evidence/w4-local-2026-10-17/provider-runs', { recursive: true });
+const file = `artifacts/evaluation/provider-runs/${report.executed_at.replaceAll(/[:.]/gu, '-')}-market.json`;
+await fs.mkdir('artifacts/evaluation/provider-runs', { recursive: true });
 await fs.writeFile(file, `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
 console.log(JSON.stringify({ file, mape: report.mape, rmse_usd_per_mt: report.rmse_usd_per_mt, rejection_rate: report.current_observation_rejection_rate, business_accepted: false }));

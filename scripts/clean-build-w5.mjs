@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { releaseRoot, releaseSourceSnapshot, digest } from './lib/release-source.mjs';
 
-const out = path.resolve(process.argv[2] ?? 'docs/evidence/w5-2026-10-18/clean-build');
+const out = path.resolve(process.argv[2] ?? `artifacts/clean-build/${new Date().toISOString().replaceAll(/[:.]/gu, '-')}`);
 await fs.mkdir(out, { recursive: true });
 const npmCli = process.env.npm_execpath;
 if (!npmCli || !/npm-cli\.c?js$/u.test(npmCli)) throw new Error('Run through npm run build:clean');

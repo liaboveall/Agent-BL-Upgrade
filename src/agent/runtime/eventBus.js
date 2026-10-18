@@ -1,4 +1,4 @@
-// Persistent event queue for the agent runtime (docs/agent-implementation-plan.md WP1.1).
+// Persistent event queue for the agent runtime.
 //
 //  - de-duplication: an idempotency key is processed once, ever (within the retention window);
 //  - ordering: events of one case run one at a time in arrival order, different cases in parallel

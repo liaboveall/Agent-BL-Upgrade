@@ -1,4 +1,4 @@
-// Agent runtime configuration (docs/agent-implementation-plan.md §4.7). Only variables something reads
+// Agent runtime configuration. Only variables something reads
 // today are here; the rest of §4.7 is added together with the work package
 // that uses it.
 //

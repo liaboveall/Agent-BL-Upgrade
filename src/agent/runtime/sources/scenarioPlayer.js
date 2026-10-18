@@ -1,4 +1,4 @@
-// Demo scenario player (docs/agent-implementation-plan.md WP2.5): plays a scripted timeline through the
+// Demo scenario player: plays a scripted timeline through the
 // SAME runtime the real sources feed -- events go into the bus, decisions come out, the policy engine
 // and the simulated executor do their usual work. Nothing in a scenario decides an outcome; it only
 // supplies what happened (a risk snapshot, a departure, a payment proof) and when.

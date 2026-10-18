@@ -1,4 +1,0 @@
-npm notice run agentbl-contracts@0.1.0 compile
-npm notice run hardhat build --force
-
-Compiled 20 Solidity files with solc 0.8.24 (evm target: paris)

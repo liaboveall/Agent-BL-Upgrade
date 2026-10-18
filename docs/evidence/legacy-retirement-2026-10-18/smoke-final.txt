@@ -1,3 +1,0 @@
-npm notice run agentbl-agent-starter@0.1.0 smoke
-npm notice run node scripts/smoke.mjs
-smoke passed: health, demo data, risk, workflow, scenarios, pricing quote, offering, merged workflow, retired-route rejection, MCP, RAG and Skill harness work.

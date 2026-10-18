@@ -3,7 +3,7 @@ import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { parseSdnExport, screenPrimaryName } from '../src/provenance/screening.js';
 
-const base = 'docs/evidence/w4-local-2026-10-17/provider-runs', at = new Date().toISOString();
+const base = 'artifacts/evaluation/provider-runs', at = new Date().toISOString();
 await fs.mkdir(base, { recursive: true });
 const result = { schema: 'agentbl-screening-source-probe-v1', executed_at: at,
   provider: 'OFAC-public-Sanctions-List-Service', status: 'UNAVAILABLE', business_accepted: false, attempts: [] };

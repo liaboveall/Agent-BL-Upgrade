@@ -1498,7 +1498,7 @@ async function routeRequest(request, response, url) {
 
     // A browser that sends only name/type/size has nothing to read, so it stays a mock acknowledgement.
     // When the upload carries its content for a case, the same bytes go through the agent's ingest
-    // pipeline (docs/agent-implementation-plan.md WP2.1); what that did is reported, never assumed.
+    // pipeline; what that did is reported, never assumed.
     let ingest = null;
     if (caseId && typeof body.file.content === 'string' && body.file.content.length > 0) {
       const textual = ['text/markdown', 'text/plain'].includes(body.file.type);

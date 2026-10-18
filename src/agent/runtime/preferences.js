@@ -1,4 +1,4 @@
-// Exporter preferences per case (docs/agent-implementation-plan.md WP2.8, FE-14). They are used in two
+// Exporter preferences per case. They are used in two
 // places: the ingest pipeline picks a payout speed and a financing target with them, and the policy
 // engine refuses to lower a price below the exporter's floor without a human (rule 10).
 //

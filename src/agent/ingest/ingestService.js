@@ -1,4 +1,4 @@
-// Document intake (docs/agent-implementation-plan.md WP2.1): validate an upload, store it by content
+// Document intake: validate an upload, store it by content
 // and open a job that the ingest pipeline works through.
 //
 //   POST /api/agent/ingest ─► validate (type, magic bytes, size) ─► store by SHA-256 ─► job

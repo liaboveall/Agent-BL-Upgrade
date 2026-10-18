@@ -1,4 +1,4 @@
-// HTTP routes of the agent runtime (docs/agent-implementation-plan.md §4.6). They are thin on purpose:
+// HTTP routes of the agent runtime. They are thin on purpose:
 // parse, authorise, call the AgentService, shape the reply. The older /api/agent/activity routes stay
 // in server.js because they share the SSE plumbing there.
 //

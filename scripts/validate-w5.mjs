@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { releaseRoot, releaseSourceSnapshot } from './lib/release-source.mjs';
 
-const at = new Date().toISOString(), directory = path.join(releaseRoot, 'docs/evidence/current-validation/runs', at.replaceAll(/[:.]/gu, '-'));
+const at = new Date().toISOString(), directory = path.join(releaseRoot, 'artifacts/validation/runs', at.replaceAll(/[:.]/gu, '-'));
 await fs.mkdir(directory, { recursive: true });
 const npmCli = process.env.npm_execpath; if (!npmCli || !/npm-cli\.c?js$/u.test(npmCli)) throw new Error('Run through npm run validate');
 const before = await releaseSourceSnapshot(), receipts = [];
@@ -45,5 +45,5 @@ const result = { schema: 'agentbl-w5-command-receipts-v1', started_at: at, compl
 result.passed = result.source_unchanged && receipts.every((item) => item.exit_code === 0 && !item.timed_out);
 await fs.writeFile(path.join(directory, 'source-manifest.json'), JSON.stringify(before, null, 2) + '\n');
 await fs.writeFile(path.join(directory, 'receipts.json'), JSON.stringify(result, null, 2) + '\n');
-await fs.writeFile(path.join(releaseRoot, 'docs/evidence/current-validation/latest-run.json'), JSON.stringify({ directory: path.relative(releaseRoot, directory).replaceAll('\\', '/'), passed: result.passed }, null, 2) + '\n');
+await fs.writeFile(path.join(releaseRoot, 'artifacts/validation/latest-run.json'), JSON.stringify({ directory: path.relative(releaseRoot, directory).replaceAll('\\', '/'), passed: result.passed }, null, 2) + '\n');
 console.log(JSON.stringify({ passed: result.passed, source_unchanged: result.source_unchanged, directory })); process.exitCode = result.passed ? 0 : 1;

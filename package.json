@@ -1,11 +1,10 @@
 {
-  "name": "agentbl-agent-starter",
+  "name": "agentbl",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Hackathon harness for an AI dynamic pricing eBL-backed RWA trade finance protocol.",
+  "description": "Controlled trade-finance blockchain research application with auditable testnet custody and settlement",
   "scripts": {
-    "postinstall": "node scripts/install.mjs || echo 'Skipping postinstall'",
     "build": "vite build --config web/vite.config.js",
     "predev": "npm run build",
     "dev": "node src/app/server.js",
@@ -58,10 +57,9 @@
     "validate": "node scripts/validate-w5.mjs"
   },
   "engines": {
-    "node": ">=20.11"
+    "node": ">=22.13"
   },
   "keywords": [
-    "hackathon",
     "ai-agent",
     "blockchain",
     "trade-finance",

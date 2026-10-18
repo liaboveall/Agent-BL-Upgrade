@@ -1,4 +1,4 @@
-// Approval queue (docs/agent-implementation-plan.md WP1.3). In Live this is the only way an agent
+// Approval queue. In Live this is the only way an agent
 // decision becomes an action: every proposal waits here for a human.
 //
 //   PENDING ──approve──► APPROVED ──(server can sign)──► EXECUTED | FAILED

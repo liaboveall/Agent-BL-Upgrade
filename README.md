@@ -4,6 +4,12 @@
 
 当前仅保留 **离线 Demo** 与 **受控 v5 测试网融资**。单证、身份与估值属于研究场景，真实商业准入未启用。
 
+## 新一轮开发
+
+从 **[开发规划](docs/development-plan.md)** 开始：24 项任务、依赖顺序、资金与权限不变量、完成条件和验收证据。下一批推进 N0 + N1，明确业务规则并修复核心合约的资金退出与处置流程。
+
+当前到期放款、微额回款阻断处置、重复异议、费用政策、可读条款、分页和整页移动布局仍待修复。文档整理不计为产品修复。
+
 ## 开始运行
 
 需要 Node 22.13+。
@@ -12,13 +18,12 @@
 npm ci
 npm --prefix hardhat ci
 npm run compile:contracts
-npm run build
 npm run dev
 ```
 
 浏览器打开终端给出的本地地址。Demo 可直接查看报价、风险、模拟发行、模拟认购及证据；实际测试代币融资从 **受控测试网融资与持仓** 面板操作，需配置实例并连接合资格钱包。
 
-公开配置：钱包及服务使用 [application-config.json](public/application-config.json)，受控部署使用 [rights-instance.json](public/rights-instance.json)。服务端通过 AGENTBL_RIGHTS_CONFIG 选择并核验实际实例。详细启动、配置及验证见 [当前部署说明](docs/deployment-current.md)。
+`dev` 自动构建页面。公开配置：钱包及服务使用 [application-config.json](public/application-config.json)，受控部署使用 [rights-instance.json](public/rights-instance.json)。服务端通过 AGENTBL_RIGHTS_CONFIG 选择并核验实际实例。详细启动、配置及验证见 [运行与验收](docs/operations.md)。
 
 ## 当前能力
 
@@ -52,8 +57,8 @@ MCP：`npm run mcp:stdio`。离线报告示例：`npm run smoke:x402`、`npm run
 
 - [当前架构](docs/architecture-current.md)
 - [合约设计](docs/contracts.md)
-- [运营、监控与恢复](docs/w5-delivery-operations.md)
-- [当前源码综合评估](docs/project-current-assessment-2026-10-18.md)
-- [历史归档](docs/archive/README.md)
+- [运行、部署、监控与恢复](docs/operations.md)
+- [数据与研究参数](docs/data-sources.md)
+- [历史材料取回](docs/history.md)
 
-旧单合约铸造、免费认购、v3 交易路径、owner CLI 及预编译实验已退役。既有链上记录保留，历史源码及测试可在归档中查阅。清理后的验证结果单独保存，不继承旧提交的测试通过声明。
+旧实验、开发报告、逐阶段规划、评审记录及原始验收产物已移出当前文档树，可从冻结提交和仓库外快照取回。后续执行产物默认写入 Git 忽略的 `artifacts/`，开发状态统一更新到规划，不继承旧提交的测试通过声明。

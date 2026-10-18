@@ -51,7 +51,7 @@ async function text(relative) {
 
 // What a developer sets to run Live. The unit suite asserts the Demo-mode defaults, so it runs without these
 // (a preflight started with DEMO_MODE=false, or from a checkout whose .env is configured for Live, still passes it).
-const LIVE_SETTINGS = /^(DEMO_MODE|AGENTBL_ADMIN_TOKEN|X402_[A-Z0-9_]+|WHITE_AGENT_PRIVATE_KEY|PAYMENT_ATTESTOR_PRIVATE_KEY|PRICING_UPDATER_PRIVATE_KEY|SIGNER_KEYS_STRICT|DEPLOYER_PRIVATE_KEY)$/u;
+const LIVE_SETTINGS = /^(DEMO_MODE|AGENTBL_ADMIN_TOKEN|AGENTBL_RIGHTS_[A-Z0-9_]+|AGENTBL_REQUIRE_EXISTING_RUNTIME|X402_[A-Z0-9_]+|WHITE_AGENT_PRIVATE_KEY|PAYMENT_ATTESTOR_PRIVATE_KEY|PRICING_UPDATER_PRIVATE_KEY|SIGNER_KEYS_STRICT|DEPLOYER_PRIVATE_KEY)$/u;
 const withoutLiveSettings = (testRunner = false) => ({ ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !LIVE_SETTINGS.test(name)
   && name !== 'NODE_TEST_CONTEXT' && !/^(?:LLM_|OPENAI_|AZURE_OPENAI_|DEEPSEEK_|DASHSCOPE_|Tencent_|Ali_|XAPI_)/u.test(name))),
   // Node sets its own marker inside test workers. Setting it on the test runner would suppress every test.
@@ -59,6 +59,14 @@ const withoutLiveSettings = (testRunner = false) => ({ ...Object.fromEntries(Obj
 
 async function command(group, name, binary, args, cwd = root, env = process.env, timeoutMs = 180_000) {
   const viaNode = binary === npmCli;
+  const retainOutput = async (output) => {
+    if (!options.report) return;
+    const directory = path.resolve(root, `${options.report}.commands`);
+    await fs.mkdir(directory, { recursive: true });
+    const label = name.replaceAll(/[^a-zA-Z0-9_-]+/gu, '-');
+    const at = new Date().toISOString().replaceAll(/[:.]/gu, '-');
+    await fs.writeFile(path.join(directory, `${at}-${label}.log`), output, { flag: 'wx' });
+  };
   try {
     const { stdout, stderr } = await execFileAsync(viaNode ? process.execPath : binary, viaNode ? [binary, ...args] : args, {
       cwd,
@@ -70,10 +78,12 @@ async function command(group, name, binary, args, cwd = root, env = process.env,
       // Only the fallback npm.cmd shim needs cmd.exe on Windows.
       shell: !viaNode && process.platform === 'win32' && /\.(?:cmd|bat)$/iu.test(binary)
     });
+    await retainOutput(`${stdout}\n${stderr}`);
     pass(group, name, (stdout || stderr).trim().split(/\r?\n/u).at(-1));
     return { ok: true, output: `${stdout}\n${stderr}` };
   } catch (error) {
     const output = `${error.stdout ?? ''}\n${error.stderr ?? ''}`.trim();
+    await retainOutput(output || error.message);
     fail(group, name, output.split(/\r?\n/u).at(-1) || error.message);
     return { ok: false, output };
   }
@@ -83,8 +93,8 @@ console.log(`\nAgentBL preflight — fixed ${EXPECTED_CHECKS}-check release gate
 
 // 1-8: environment and configuration
 console.log('\n[Environment]');
-const nodeMajor = Number(process.versions.node.split('.')[0]);
-check('Environment', 'Node.js >= 20', nodeMajor >= 20, process.version);
+const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+check('Environment', 'Node.js >= 22.13', nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 13), process.version);
 check('Environment', 'package-lock.json present', await exists('package-lock.json'));
 const packageJson = JSON.parse(await text('package.json'));
 check('Environment', '@injectivelabs/x402 is pinned', packageJson.dependencies?.['@injectivelabs/x402'] === '0.0.1');
@@ -135,7 +145,7 @@ for (const [file, label] of [
   ['public/application-config.json', 'Current controlled application config'],
   ['web/index.html', 'Dashboard HTML (Vite entry)'],
   ['web/src/styles/index.css', 'Dashboard CSS'],
-  ['docs/deployment-current.md', 'Current deployment and x402 documentation']
+  ['docs/operations.md', 'Current deployment and x402 documentation']
 ]) check('Files and schemas', label, await exists(file), file);
 
 // 19-25: executable release checks

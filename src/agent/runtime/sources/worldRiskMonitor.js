@@ -1,4 +1,4 @@
-// World-risk monitor source (docs/agent-implementation-plan.md WP2.5). Each tick it assesses every pool
+// World-risk monitor source. Each tick it assesses every pool
 // the agent may act on and lets the RiskTracker decide whether anything CHANGED. With the offline
 // fixtures that means: baseline once, then silence -- not a repeat of the same alert every poll.
 

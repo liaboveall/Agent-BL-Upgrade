@@ -13,7 +13,7 @@ import { maskImmutableBytecode, loadRightsChain } from '../src/rights/chain.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const dir = path.join(root, 'data/runtime/w5-deployment');
-const historicalEvidence = path.join(root, 'docs/evidence/w5-2026-10-18/testnet');
+const deploymentBaseline = path.join(root, 'scripts/config/testnet-deployment-baseline.json');
 const names = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5', 'MockAuthorizationUSDC'];
 const roleNames = ['governorB', 'governorC', 'issuer', 'holder', 'valuer', 'operator', 'attestor', 'compliance', 'disposer', 'reviewer', 'guardian', 'investor'];
 const AAD = 'agentbl-w5-research-signers-v1';
@@ -27,8 +27,8 @@ export function deploymentCheckpoint(journalEntry, stateEntry) {
   if (saved && !/^0x[a-fA-F0-9]{64}$/u.test(saved.tx_hash ?? '')) throw new Error('Deployment broadcast checkpoint is incomplete; reconcile without signing again');
   return saved;
 }
-export async function loadDeploymentContinuation({ stateFile, evidenceFile, historicalFile, initialized }) {
-  for (const file of [...new Set([stateFile, evidenceFile, historicalFile])]) {
+export async function loadDeploymentContinuation({ stateFile, evidenceFile, baselineFile, initialized }) {
+  for (const file of [...new Set([stateFile, evidenceFile, baselineFile].filter(Boolean))]) {
     const state = await readJson(file);
     if (!state) continue;
     if (state.schema !== 'agentbl-w5-testnet-deployment-v1' || state.chain_id !== 1439
@@ -42,12 +42,12 @@ export async function runDeployment(action) {
   ensure(['prepare', 'activate', 'status', 'smoke', 'anchor'].includes(action), 'Use --prepare, --activate, --status, --smoke or --anchor');
   const evidence = process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR
     ? path.resolve(root, process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR)
-    : path.join(root, 'docs/evidence/current-deployment/runs', new Date().toISOString().replaceAll(/[:.]/gu, '-'));
-  ensure(evidence !== historicalEvidence, 'Historical deployment evidence is immutable; choose a new evidence directory');
+    : path.join(root, 'artifacts/deployment/runs', new Date().toISOString().replaceAll(/[:.]/gu, '-'));
+  ensure(evidence !== path.dirname(deploymentBaseline), 'Deployment baseline is immutable; choose a new evidence directory');
   const stateFile = path.join(dir, 'deployment-state.json');
   const initializedFile = path.join(dir, 'deployment-initialized.json');
   const previous = await loadDeploymentContinuation({ stateFile, evidenceFile: path.join(evidence, 'deployment.json'),
-    historicalFile: path.join(historicalEvidence, 'deployment.json'), initialized: Boolean(await readJson(initializedFile)) });
+    baselineFile: deploymentBaseline, initialized: Boolean(await readJson(initializedFile)) });
   await fs.mkdir(dir, { recursive: true }); await fs.mkdir(evidence, { recursive: true });
   const keyDirectory = process.env.AGENTBL_W5_KEY_DIR || path.join(os.homedir(), '.agentbl', 'w5-2026-10-18');
   await fs.mkdir(keyDirectory, { recursive: true, mode: 0o700 });

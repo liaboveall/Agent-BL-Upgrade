@@ -55,7 +55,7 @@ const REASONING_EFFORTS = new Set(['low', 'medium', 'high']);
  * Optional `reasoning_effort` for reasoning models (GLM, DeepSeek-R1, o-series, ...). It is opt-in through
  * LLM_REASONING_EFFORT because a provider that does not know the field may reject the request; an unset or
  * unknown value sends nothing. Hidden thinking counts against max_tokens, so on a reasoning model an explicit
- * effort also decides whether the visible answer fits (see docs/DEPLOYMENT.md).
+ * effort also decides whether the visible answer fits (see docs/operations.md).
  */
 export function reasoningEffort(env = process.env) {
   const value = String(env.LLM_REASONING_EFFORT ?? '').trim().toLowerCase();

@@ -55,8 +55,9 @@ if (args.includes('--live-llm')) {
   }
 }
 if (!args.includes('--check')) {
-  await writeJsonAtomic(path.join(root, 'docs/evidence/agent-eval.json'), evaluation);
-  await writeFileAtomic(path.join(root, 'docs/evaluation-report.md'), renderEvaluationReport(evaluation));
+  const directory = path.join(root, 'artifacts/agent-evaluation', new Date().toISOString().replaceAll(/[:.]/gu, '-'));
+  await writeJsonAtomic(path.join(directory, 'evaluation.json'), evaluation);
+  await writeFileAtomic(path.join(directory, 'report.md'), renderEvaluationReport(evaluation));
 }
 console.log(`Agent evaluation: ${evaluation.passed ? 'PASS' : 'FAIL'} (${evaluation.gates.filter((gate) => gate.passed).length}/${evaluation.gates.length} gates, ${evaluation.failed_cases.length} retained failed cases)`);
 console.log(`${evaluation.counts.copilot.dialogues} dialogues / ${evaluation.counts.copilot.turns} turns; ${evaluation.counts.pricing.quotes} pricing checks; ${evaluation.counts.injection.attacks} injection cases; live LLM ${evaluation.live_llm?.status ?? 'SKIP'}`);

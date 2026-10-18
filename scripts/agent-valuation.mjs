@@ -79,5 +79,5 @@ console.log(`\nprovider: ${report.provider}`);
 
 if (report.provider === 'deterministic-fallback') {
   console.log('\n(Tip) No LLM key found. Add DEEPSEEK_API_KEY or DASHSCOPE_API_KEY to .env to let the model drive the tools.');
-  console.log('      See docs/ai-valuation-tooling.md for all API keys and how to get them.');
+  console.log('      See docs/data-sources.md and .env.example for provider configuration.');
 }

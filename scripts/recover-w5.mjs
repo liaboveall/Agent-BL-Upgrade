@@ -40,7 +40,7 @@ try {
   await fs.rename(offline, source);
 }
 const evidenceRoot = process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR ? path.resolve(releaseRoot, process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR)
-  : path.join(releaseRoot, 'docs/evidence/current-deployment/runs', at);
+  : path.join(releaseRoot, 'artifacts/deployment/runs', at);
 const directory = path.join(evidenceRoot, 'recovery'); await fs.mkdir(directory, { recursive: true });
 await fs.writeFile(path.join(directory, 'replacement.log'), stdout + stderr);
 const result = code === 0 ? JSON.parse(stdout.trim().split('\n').at(-1)) : { passed: false, exit_code: code };

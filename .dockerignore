@@ -22,6 +22,8 @@ hardhat/*
 !hardhat/contracts
 tests
 docs
-patches
+artifacts
+.superpowers
+.playwright-cli
+test-results
 scripts/vendor
-Assign

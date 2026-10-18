@@ -1,4 +1,4 @@
-// AgentService (docs/agent-implementation-plan.md WP1.5): the one object that wires the runtime
+// AgentService: the one object that wires the runtime
 // together. An event goes in; out come decisions with a recorded policy verdict, and -- depending on
 // that verdict, the mode and the autonomy level -- either an executed (Demo, simulated) action, an
 // approval waiting for a human, or just a record.
@@ -8,7 +8,7 @@
 //                                                                ├─ OBSERVE_ONLY ───► record
 //                                                                └─ REJECTED ───────► record
 //
-// Rules this class enforces on top of the pieces it wires (docs/agent-implementation-plan.md §2.2):
+// Rules this class enforces on top of the pieces it wires:
 //   - a simulated result never carries a tx hash and a Live result is never simulated;
 //   - the same event never produces a second execution (decision log + executor reconciliation);
 //   - an approval created in one mode is not executed in another;

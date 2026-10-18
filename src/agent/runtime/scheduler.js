@@ -1,4 +1,4 @@
-// Periodic tick for the agent runtime (docs/agent-implementation-plan.md WP2.5/WP1.5): runs
+// Periodic tick for the agent runtime: runs
 // `task` every `intervalMs` (±10% jitter so several instances do not hit an RPC in lockstep), never
 // overlaps itself (a slow tick makes the next one wait), and its timer is unref'd so it cannot keep
 // the process alive. `trigger()` runs one tick on demand with the same no-overlap guarantee.

@@ -14,9 +14,6 @@ trim_trailing_whitespace = false
 [*.{sol,py}]
 indent_size = 4
 
-[Makefile]
-indent_style = tab
-
 # Vendored third-party bundles: leave exactly as built.
 [public/vendor/**]
 charset = unset

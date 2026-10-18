@@ -168,7 +168,7 @@ test('HTTP hardening', async (t) => {
   });
 
   await t.test('path traversal attempts never read files outside /public', async () => {
-    const marker = '"agentbl-agent-starter"'; // the name field of the root package.json
+    const marker = JSON.stringify(JSON.parse(fs.readFileSync(path.resolve(publicDir, '../package.json'), 'utf8')).name);
     const attempts = [
       '/..%2f..%2fpackage.json',
       '/%2e%2e/%2e%2e/package.json',

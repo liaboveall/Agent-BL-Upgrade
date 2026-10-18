@@ -12,7 +12,7 @@ RUN npm run compile
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-# Lifecycle scripts are not needed at runtime (postinstall only prints a banner).
+# Install only production dependencies without package lifecycle hooks.
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 # The React dashboard (web/) is built with Vite into dist/; only the output reaches the runtime image.

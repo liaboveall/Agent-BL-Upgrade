@@ -6,6 +6,7 @@
 
 # Runtime state (x402 receipts, cached paid reports, decision logs)
 data/runtime/
+artifacts/
 
 # Dependencies
 node_modules/
@@ -35,16 +36,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# OS / editor cruft
-.DS_Store
-Thumbs.db
-
-# Claude Code local-machine settings (keep .claude/settings.json shareable)
-.claude/settings.local.json
-.claude/launch.json
-
-# Claude Code worktrees (parallel sessions check out copies of the repo here)
-.claude/worktrees/
-
-# My own
-Assign/
+# Local assistant sessions and generated development scaffolds
+.claude/
+.superpowers/

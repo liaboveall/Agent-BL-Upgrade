@@ -29,7 +29,7 @@ if (args.includes('--live') && process.env.COMPLIANCE_SCREENING_URL) {
 }
 const { report_hash: _previousHash, ...completeReport } = report;
 report.report_hash = hashSnapshot(completeReport);
-const directory = path.resolve('docs/evidence/w4-local-2026-10-17/provider-runs'); await fs.mkdir(directory, { recursive: true });
+const directory = path.resolve('artifacts/evaluation/provider-runs'); await fs.mkdir(directory, { recursive: true });
 const corpusFile = path.join(directory, `corpus-${corpus.corpus_hash.slice(2)}.json`);
 try { await fs.writeFile(corpusFile, `${JSON.stringify(corpus, null, 2)}\n`, { flag: 'wx' }); }
 catch (error) { if (error.code !== 'EEXIST') throw error; }

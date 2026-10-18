@@ -1,8 +1,0 @@
-file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/validate-w5.mjs:9
-const npmCli = process.env.npm_execpath; if (!npmCli || !/npm-cli\.c?js$/u.test(npmCli)) throw new Error('Run through npm run validate:w5');
-                                                                                               ^
-
-Error: Run through npm run validate:w5
-    at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/validate-w5.mjs:9:96
-
-Node.js v26.8.1

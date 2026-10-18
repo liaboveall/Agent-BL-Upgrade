@@ -1,9 +1,0 @@
-npm notice run agentbl-agent-starter@0.1.0 npx
-npm notice run eslint src web scripts/check.mjs --fix --max-warnings=0
-
-E:\NUS\BlockChain\Project\Agent-BL-Upgrade\src\mcp\resources.js
-  2:8  warning  'path' is defined but never used. Allowed unused vars must match /^_/u  no-unused-vars
-
-✖ 1 problem (0 errors, 1 warning)
-
-ESLint found too many warnings (maximum: 0).

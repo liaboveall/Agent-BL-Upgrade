@@ -22,7 +22,7 @@ const set = (patch) => appStore.set(patch);
 const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
 
 const versions = { evidence: 0, selection: 0, caseVersion: 0, search: 0 };
-// Decision verbs worth a toast when the agent emits them (docs/agent-implementation-plan.md §4.3).
+// Decision verbs worth a toast when the agent emits them.
 const NOTIFY_DECISION_ACTIONS = new Set(['REPRICE', 'PAUSE', 'RESUME', 'FREEZE', 'LIQUIDATE', 'SETTLE']);
 const DEMO_WALLET = '0xDemoWallet';
 const walletAddress = () => get().wallet?.address || DEMO_WALLET;

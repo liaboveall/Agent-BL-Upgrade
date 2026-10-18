@@ -8,7 +8,7 @@ import { performance } from 'node:perf_hooks';
 import { Ledger } from '../src/ledger/ledger.js';
 
 const args = process.argv.slice(2), outputIndex = args.indexOf('--output');
-const output = path.resolve(outputIndex >= 0 ? args[outputIndex + 1] : 'docs/evidence/w5-2026-10-18/load.json');
+const output = path.resolve(outputIndex >= 0 ? args[outputIndex + 1] : `artifacts/load/${new Date().toISOString().replaceAll(/[:.]/gu, '-')}.json`);
 const soakSeconds = Number(args.includes('--soak-seconds') ? args[args.indexOf('--soak-seconds') + 1] : 600);
 if (!Number.isInteger(soakSeconds) || soakSeconds < 1 || soakSeconds > 3600) throw new Error('Invalid soak duration');
 const root = path.resolve(import.meta.dirname, '..'), runtime = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-w5-load-'));

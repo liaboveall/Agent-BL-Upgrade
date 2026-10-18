@@ -16,11 +16,10 @@
 .gitignore text eol=lf
 .gitattributes text eol=lf
 
-# Always LF, on every platform: shells, containers, make and CI parse these literally.
+# Always LF, on every platform: shells, containers and CI parse these literally.
 *.sh text eol=lf
 Dockerfile text eol=lf
 .dockerignore text eol=lf
-Makefile text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 .nvmrc text eol=lf
@@ -29,8 +28,8 @@ Makefile text eol=lf
 # holds their SHA-256) and must never be converted.
 public/vendor/** -text
 
-# Review receipts are hashed as captured; preserve their bytes across platforms.
-docs/evidence/** -text
+# The operational deployment seed is a frozen receipt; preserve its original bytes.
+scripts/config/testnet-deployment-baseline.json -text
 # Source-document fixture hashes must survive checkout without newline conversion.
 data/uploads/** -text
 

@@ -1,6 +1,6 @@
 // Demo executor: applies an agent action to the OFFCHAIN pool mirror held by the server. Nothing is
 // sent to any network, so the result never contains a transaction hash or an explorer link; it carries
-// a `demo:` reference and mode: 'demo' (docs/agent-implementation-plan.md §2.2 principle 2).
+// a `demo:` reference and mode: 'demo'.
 
 import { createPool, storeState } from '../../../app/store.js';
 import { planTransition } from '../poolRules.js';

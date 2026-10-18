@@ -1,4 +1,4 @@
-// Agent events (docs/agent-implementation-plan.md §4.3). Every input to the agent runtime -- an
+// Agent events. Every input to the agent runtime -- an
 // uploaded document, a world-risk change, an insurance deadline, a payment proof, a chain log -- is
 // normalised into one validated shape before it is queued, so the rest of the runtime never has to
 // guess what it was given. Event data is untrusted: it can carry values, never instructions.

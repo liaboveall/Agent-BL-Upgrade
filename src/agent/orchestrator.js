@@ -4,7 +4,7 @@
 // three-speed pricing -> recommendation -> optional on-chain execution.
 //
 // `processEbl` is the original structured-case pipeline. `processDocuments` is the ingest pipeline the
-// agent runtime runs for uploads (docs/agent-implementation-plan.md WP2.4): it adds injection
+// agent runtime runs for uploads: it adds injection
 // screening, compliance, world risk and exporter constraints, times every step and can decide to hold
 // or reject instead of opening.
 
@@ -147,7 +147,7 @@ export class AgentOrchestrator {
   }
 
   /**
-   * The ingest pipeline (docs/agent-implementation-plan.md WP2.4): uploaded documents in, one opening
+   * The ingest pipeline: uploaded documents in, one opening
    * proposal out. Every step is timed and reported through `onStep`; none of them can change the result
    * by what the document TEXT asks for -- text is parsed, screened, and priced by the engine.
    *

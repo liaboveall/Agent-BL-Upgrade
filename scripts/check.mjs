@@ -29,8 +29,8 @@ for (const file of files) {
   assertPricingQuote(quoteFromCase(data), data);
 }
 assert.ok((await runHarnessScenarios()).length >= 5);
-const retired = JSON.parse(await fs.readFile('docs/evidence/legacy-retirement-2026-10-18/retired-files.json', 'utf8'));
-for (const file of retired.files) assert.equal(await fs.access(file.path).then(() => true, () => false), false, 'Retired file reappeared: ' + file.path);
+const retired = JSON.parse(await fs.readFile('scripts/config/retired-runtime-paths.json', 'utf8'));
+for (const file of retired.paths) assert.equal(await fs.access(file).then(() => true, () => false), false, 'Retired file reappeared: ' + file);
 const snapshot = await releaseSourceSnapshot();
 assert.ok(snapshot.file_count > 0);
-console.log('check passed: controlled v5 configuration, current pricing, MCP tools, archive isolation and source inventory');
+console.log('check passed: controlled v5 configuration, current pricing, MCP tools, retired entry isolation and source inventory');

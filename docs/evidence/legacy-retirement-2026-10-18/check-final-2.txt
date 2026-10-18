@@ -1,3 +1,0 @@
-npm notice run agentbl-agent-starter@0.1.0 check
-npm notice run node scripts/check.mjs
-check passed: controlled v5 configuration, current pricing, MCP tools, archive isolation and source inventory

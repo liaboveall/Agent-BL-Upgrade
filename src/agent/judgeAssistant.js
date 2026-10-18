@@ -6,7 +6,7 @@
 // discount to 0.80?", "what happens when risk rises?", "what goes on-chain?",
 // "how is the collateral verified?".
 //
-// Two design rules, both straight from docs/PRD.md §13 (risk mitigations):
+// Two design rules for grounded research answers:
 //   1. Deterministic-first. Every answer is built from REAL engine numbers
 //      (quoteFromCase / compareSpeeds) and REAL retrieved risk-intel citations
 //      (riskIntel.js), so the assistant can never contradict the pricing engine

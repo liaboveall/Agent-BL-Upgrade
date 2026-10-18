@@ -1,4 +1,4 @@
-// World-risk change detector with hysteresis (docs/agent-implementation-plan.md WP2.5).
+// World-risk change detector with hysteresis.
 //
 // The offline fixture (and any slow live feed) returns the SAME snapshot every time it is polled, so
 // "there is risk" is not an event -- a CHANGE is. For every case this keeps what was last seen and
