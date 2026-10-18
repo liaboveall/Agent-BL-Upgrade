@@ -29,7 +29,9 @@ export class CapitalLedgerService {
 
   async sync() {
     const ctx = await this.context(), cfg = this.chainConfig;
-    const budget = this.readPool.budget(10000);
+    // Cold recovery can scan many 2,000-block log windows. Keep it bounded,
+    // independently of the short budget for one page of current balances.
+    const budget = this.readPool.budget(10000, { deadlineMs: 120000 });
     const result = await this.rebuilder.rebuild({ provider: boundedProvider(ctx.provider, budget.read), poolAddress: cfg.contracts.RWAOfferingPool,
       chainId: cfg.chainIdDecimal, protocolVersion: 5,
       fromBlock: cfg.deployments?.RWAOfferingPool?.blockNumber ?? 0, confirmations: this.confirmations });
@@ -37,12 +39,15 @@ export class CapitalLedgerService {
   }
 
   async list(wallet, demoInvestments = [], query = {}) {
-    const chainPositions = new Map(), budget = this.readPool.budget(200), { read } = budget;
+    const chainPositions = new Map();
+    let budget = { stats: { calls: 0, retries: 0, failures: 0 } };
     let syncError = null, snapshot = null, nextCursor = null, total = null, ledgerAtSnapshot = null;
     const failures = [], from = query.from ?? 1, limit = query.limit ?? 20;
     try {
       if (Number(this.chainConfig?.protocolVersion) === 5) {
         const { positions, cursor, context } = await this.sync();
+        budget = this.readPool.budget(200);
+        const { read } = budget;
         if (!cursor) throw new Error('No confirmed ledger checkpoint');
         const cfg = this.chainConfig;
         // Pagination of balances uses the requested confirmed block, independently of

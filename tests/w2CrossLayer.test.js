@@ -7,6 +7,7 @@ import { id } from 'ethers';
 import { runHardhatNode, stopHardhatNode, deployW2 } from './helpers/ledgerTestHarness.js';
 import { Ledger } from '../src/ledger/ledger.js';
 import { CapitalLedgerService } from '../src/ledger/service.js';
+import { RpcReadPool } from '../src/rights/reads.js';
 import { createServer, setAgentService } from '../src/app/server.js';
 import { storeState, resetStore } from '../src/app/store.js';
 import { subscribeOffering, claimPosition } from '../web/src/lib/web3.js';
@@ -53,6 +54,24 @@ describe('W2 real EVM + HTTP + wallet lifecycle', { skip: process.env.AGENTBL_W2
   let node;
   before(async () => { node = await runHardhatNode(); });
   after(async () => { await stopHardhatNode(node); });
+
+  it('reconciles a real position when cold history takes longer than the balance-page budget', async (t) => {
+    const ctx = await deployW2(node, t), offering = await ctx.createOffering();
+    await ctx.send(ctx.usdc.mint(ctx.investor.address, 8000000n));
+    await ctx.send(ctx.usdc.connect(ctx.investor).approve(ctx.pool.target, 8000000n));
+    await ctx.send(ctx.pool.connect(ctx.investor).subscribe(offering.poolId, 10));
+    const provider = new Proxy(ctx.provider, { get(target, key) {
+      if (key === 'getLogs') return async (...args) => { await new Promise((resolve) => setTimeout(resolve, 1000)); return target.getLogs(...args); };
+      const value = Reflect.get(target, key); return typeof value === 'function' ? value.bind(target) : value;
+    } });
+    const reads = new RpcReadPool({ timeoutMs: 5000 }), budget = reads.budget.bind(reads);
+    reads.budget = (calls, options) => budget(calls, calls === 200 ? { deadlineMs: 500 } : options);
+    const service = new CapitalLedgerService({ ledger: ctx.ledger, chainConfig: ctx.cfg, getContext: async () => ({ provider }), getMode: () => 'live', readPool: reads });
+    const result = await service.list(ctx.investor.address);
+    assert.equal(result.complete, true); assert.equal(result.positions[0].reconciled, true);
+    assert.equal(result.positions[0].shares, '10'); assert.equal(result.positions[0].cost_atomic, '8000000');
+    assert.equal((await ctx.ledger.writer.readCashEntries()).length, 1);
+  });
 
   it('persists wallet subscriptions, additional purchases, fees and claims through the real HTTP adapter', async (t) => {
     const ctx = await deployW2(node, t), app = await backend(ctx, t);
