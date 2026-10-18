@@ -20,7 +20,13 @@
 .research-tools { margin-top: 24px; }
 .research-tools > summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
 .research-tools > aside { width: 100%; padding-inline: 0; }
-.topbar-inner { gap: 16px; }
+.topbar-inner { height: auto; min-height: 60px; flex-wrap: wrap; gap: 12px 16px; padding-block: 12px; }
+.topbar-right { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+.nav { min-width: 0; flex-wrap: wrap; }
+.detail-panel, .detail-panel > * { min-width: 0; }
+.detail-head { overflow-wrap: anywhere; }
+.detail-price { flex-wrap: wrap; }
+.detail-actions .btn { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .nav-tab { padding-inline: 10px; }
 .readable-terms .research-constraints { max-width: 100%; }
 .readable-terms table { min-width: 0; }

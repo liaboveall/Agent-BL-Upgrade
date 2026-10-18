@@ -63,7 +63,8 @@
     "test:n3:evm": "node scripts/test-n3-evm.mjs",
     "test:n4": "node scripts/test-n4.mjs",
     "test:n5": "node scripts/test-n5.mjs",
-    "inspect:n5": "node scripts/inspect-n5.mjs"
+    "inspect:n5": "node scripts/inspect-n5.mjs",
+    "deploy:n5": "node scripts/deploy-n5-testnet.mjs"
   },
   "engines": {
     "node": ">=22.13"

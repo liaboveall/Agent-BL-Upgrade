@@ -46,6 +46,7 @@ export default [
       'hardhat/artifacts/**',
       'hardhat/cache/**',
       'data/runtime/**',
+      'artifacts/**',
       '.claude/**',
       'coverage/**',
       'test-results/**', 'playwright-report/**'

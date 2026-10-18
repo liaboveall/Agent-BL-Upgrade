@@ -132,6 +132,7 @@ jobs:
       - run: npm run test:n3:evm
         env:
           AGENTBL_N3_EVIDENCE: test-results/n3
+      - run: node --test tests/n5Deployment.integration.js
       - uses: actions/upload-artifact@v6
         if: always()
         with:

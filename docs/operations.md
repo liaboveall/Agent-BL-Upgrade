@@ -180,6 +180,12 @@ MCP：`npm run mcp:stdio`。离线报告：`npm run smoke:x402`、`npm run x402:
 
 CI增加N3角色与25池EVM作业。提交推送后须等待同一完整提交的全部适用必需检查；条件式异地主机恢复跳过需单列。未提交源码、本地绿灯和历史CI不关闭同提交CI门槛。
 
+N5公共执行入口为 `npm run deploy:n5 -- prepare n5-v2-20261019 --execute`，其次为 `activate` 或只读 `status`，同一实例ID必须续用原candidate和journal。执行前要求工作区干净，并在 `artifacts/n5-publish/<完整HEAD>/ci.json` 保存该提交全部15项适用检查成功的GitHub原始收据。入口只接受1439，重新核验旧实例、共用治理/Hub、成员、nonce和runtime；从原加密研究保管读取角色密钥，不将密钥写入输出或候选文件。新状态隔离在 `data/runtime/n5-deployment/<实例ID>/`，原v1 checkpoint不改。
+
+`prepare`按七笔确定性部署/绑定计划执行，沿用明确标注的原研究TEST_USDC，再由两名原治理成员批准13项登记、角色、资产及intake配置；1小时延时保留。`activate`只执行原批准的目标和calldata，并验证新实例七份runtime、签名域与不可变绑定。两个入口均在广播前持久保存原nonce/hash；RPC结果未知时只查原交易，不重新签名或重发。已确认步骤可重复核对，不重复执行。公共配置切换另须完成N5.2资金路径；`active:true`只表示孤立候选治理配置已激活，不等于公共前端已切换或人工已验收。
+
+执行器的实际本地EVM回归：先 `npm run compile:contracts`，再 `node --test tests/n5Deployment.integration.js`。它部署共享Hub的新实例、验证提前执行拒绝、保留旧登记、完成治理和域/runtime核验，并模拟节点已接受但响应丢失后的单次广播恢复；同项也进入现有N3 CI作业。
+
 ## 课程演示与未参与开发者验收
 
 讲解顺序：默认融资页说明虚构铜货物、Singapore → Shanghai和TEST_USDC；完整条款解释本金、补偿、截止、零费与损失；角色工作台说明签发、估值、双审、holder同意和放款；最后由出资人分别核验到账。哈希证明材料未变，不证明真实货物；Hub只覆盖接入登记域；研究地址仍由同一操作员管理。平台离线时用户可依链上规则退出，是相对“签名数据库 + 平台托管”的主要差别。
