@@ -8,13 +8,15 @@ import { JsonRpcProvider, FetchRequest, Wallet } from 'ethers';
 import { prepareRightsCandidate } from './prepare-rights-candidate.mjs';
 import { releaseRoot, releaseSourceSnapshot } from './lib/release-source.mjs';
 import { executeCandidate } from './lib/n5-deployment.mjs';
+import { runCandidateFunding } from './lib/n5-funding.mjs';
+import { measureCandidateCapacity } from './lib/n5-capacity.mjs';
 import { unseal } from '../src/rights/vault.js';
 import { readJson, writeJsonAtomic } from '../src/lib/jsonStore.js';
 import { loadRightsChain } from '../src/rights/chain.js';
 
 const [action, instanceId, confirmation] = process.argv.slice(2);
-if (!['prepare', 'activate', 'status'].includes(action) || !/^[a-z][a-z0-9-]{2,63}$/u.test(instanceId ?? '')
-  || (action !== 'status' && confirmation !== '--execute')) throw new Error('Use deploy-n5-testnet.mjs <prepare|activate|status> <instance-id> --execute');
+if (!['prepare', 'activate', 'funding', 'capacity', 'status'].includes(action) || !/^[a-z][a-z0-9-]{2,63}$/u.test(instanceId ?? '')
+  || (!['status', 'capacity'].includes(action) && confirmation !== '--execute')) throw new Error('Use deploy-n5-testnet.mjs <prepare|activate|funding|capacity|status> <instance-id> --execute');
 const directory = path.join(releaseRoot, 'data/runtime/n5-deployment', instanceId);
 const candidateFile = path.join(directory, 'candidate.json');
 const predecessor = await readJson(path.join(releaseRoot, 'public/rights-instance.json'));
@@ -22,7 +24,12 @@ const rpc = new FetchRequest(process.env.INJECTIVE_RPC_URL || predecessor.rpc_ur
 const provider = new JsonRpcProvider(rpc, undefined, { cacheTimeout: -1 }); provider.pollingInterval = 1000;
 try {
   if (Number((await provider.getNetwork()).chainId) !== 1439) throw new Error('Only Injective research testnet 1439 is authorized');
-  if (action === 'status') {
+  if (action === 'capacity') {
+    const result = await measureCandidateCapacity({ manifest: path.join(directory, 'rights-instance.json'),
+      directory: path.join(releaseRoot, 'artifacts/n5-capacity', instanceId, new Date().toISOString().replaceAll(/[:.]/gu, '-')) });
+    console.log(JSON.stringify({ passed: result.passed, p95_ms: result.p95_ms, error_ratio: result.error_ratio, trials: result.observations.length }));
+    process.exitCode = result.passed ? 0 : 1;
+  } else if (action === 'status') {
     const state = await readJson(path.join(directory, 'deployment-state.json'));
     if (!state) throw new Error('Candidate state missing');
     console.log(JSON.stringify({ instance_id: instanceId, active: state.active, ready_after: state.ready_after,
@@ -58,7 +65,12 @@ try {
       await fs.writeFile(path.join(directory, 'predecessor-rights.json'), JSON.stringify(predecessor, null, 2) + '\n', { flag: 'wx' });
       await fs.copyFile(path.join(releaseRoot, 'public/application-config.json'), path.join(directory, 'predecessor-application.json'), fs.constants.COPYFILE_EXCL);
     }
-    const { state } = await executeCandidate({ directory, candidate, provider, signers, action });
+    const run = await executeCandidate({ directory, candidate, provider, signers, action: action === 'funding' ? 'status' : action });
+    const { state } = run;
+    if (action === 'funding') {
+      const rightsKey = (await fs.readFile(path.join(keyDirectory, 'rights-key.hex'), 'utf8')).trim();
+      await runCandidateFunding({ ...run, directory, candidate, provider, signers, rightsKey });
+    }
     const evidence = path.join(releaseRoot, 'artifacts/n5-deployment', instanceId, new Date().toISOString().replaceAll(/[:.]/gu, '-'));
     await fs.mkdir(evidence, { recursive: true });
     await writeJsonAtomic(path.join(evidence, 'deployment.json'), state);
