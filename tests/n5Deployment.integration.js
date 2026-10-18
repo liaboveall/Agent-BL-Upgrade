@@ -10,6 +10,7 @@ import { prepareRightsCandidate } from '../scripts/prepare-rights-candidate.mjs'
 import { executeCandidate, candidateSender } from '../scripts/lib/n5-deployment.mjs';
 import { loadRightsChain } from '../src/rights/chain.js';
 import { runCandidateFunding } from '../scripts/lib/n5-funding.mjs';
+import { measureCandidateCapacity } from '../scripts/lib/n5-capacity.mjs';
 
 it('deploys a new instance against a shared hub, enforces delay, resumes canonically and never repeats an uncertain broadcast', async () => {
   const node = await runHardhatNode(); let c, directory;
@@ -46,6 +47,9 @@ it('deploys a new instance against a shared hub, enforces delay, resumes canonic
     const afterFunding = await c.provider.getTransactionCount(signers.governorA.address);
     assert.equal((await runCandidateFunding(options)).passed, true);
     assert.equal(await c.provider.getTransactionCount(signers.governorA.address), afterFunding, 'A second funding run must only reconcile original transactions');
+    const insufficient = await measureCandidateCapacity({ manifest: path.join(directory, 'rights-instance.json'), directory: path.join(directory, 'insufficient-pools'), seconds: 1 });
+    assert.equal(insufficient.chain_id, 31337); assert.equal(insufficient.public_testnet, false);
+    assert.equal(insufficient.passed, false, 'Three pools cannot qualify as 25-pool capacity');
     const unresolvedDir = path.join(directory, 'uncertain'), state = { transactions: [] }, save = async () => {};
     let broadcasts = 0;
     const provider = new Proxy(c.provider, { get(target, key) {

@@ -79,7 +79,13 @@ try {
       const bindings = await chain.verify(); await chain.provider.destroy();
       await writeJsonAtomic(path.join(evidence, 'bindings.json'), bindings);
     }
-    console.log(JSON.stringify({ directory, evidence, active: state.active, ready_after: state.ready_after, transactions: state.transactions.length }));
+    const scenarios = state.funding?.scenarios;
+    const funding = scenarios ? { passed: state.funding.passed === true, normal: scenarios.normal?.passed === true,
+      refund: scenarios.refund?.passed === true, loss: scenarios.loss?.passed === true,
+      pending: [['refund', scenarios.refund?.wait_until], ['loss', scenarios.loss?.notice_until ?? scenarios.loss?.maturity_wait_until]]
+        .filter(([name, until]) => !scenarios[name]?.passed && until).map(([path, not_before]) => ({ path, not_before })) } : undefined;
+    console.log(JSON.stringify({ directory, evidence, active: state.active, ready_after: state.ready_after, transactions: state.transactions.length,
+      ...(funding ? { funding, funding_status: funding.passed ? 'VERIFIED' : funding.pending.length ? 'WAITING_FOR_CHAIN_TIME' : 'IN_PROGRESS' } : {}) }));
   }
 } catch (error) {
   // Do not serialize provider request objects or configuration containing credentials.

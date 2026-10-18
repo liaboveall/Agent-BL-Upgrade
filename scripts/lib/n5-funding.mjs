@@ -20,8 +20,8 @@ export async function runCandidateFunding({ directory, candidate, state, save, t
   const work = state.funding, sessions = {};
   const source = await releaseSourceSnapshot();
   work.execution_sources ??= [];
-  if (!work.execution_sources.some((entry) => entry.commit === source.base_head && entry.source_sha256 === source.source_sha256)) {
-    work.execution_sources.push({ commit: source.base_head, source_sha256: source.source_sha256, observed_at: new Date().toISOString() }); await save();
+  if (!work.execution_sources.some((entry) => entry.base_head === source.base_head && entry.source_sha256 === source.source_sha256)) {
+    work.execution_sources.push({ base_head: source.base_head, source_sha256: source.source_sha256, observed_at: new Date().toISOString() }); await save();
   }
   const contract = (name) => new Contract(state.contracts[name], candidate.artifacts[name].abi, provider);
   const controller = contract('RightsController'), registry = contract('CommittedEBLRegistry'), pool = contract('RWAOfferingPoolV5'), token = contract('ControlledRWAToken'), usdc = contract('MockAuthorizationUSDC');
