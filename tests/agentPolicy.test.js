@@ -130,7 +130,7 @@ test('config: Live never runs above propose, Demo defaults to auto (D1)', () => 
 test('config: environment parsing, defaults and bounds', () => {
   const defaults = loadAgentConfig({});
   assert.equal(defaults.enabled, true);
-  assert.deepEqual(defaults.protectedChainPools, [2]);
+  assert.deepEqual(defaults.protectedChainPools, []);
   assert.equal(defaults.monitorIntervalSec, 300);
   assert.equal(defaults.maxPriceMoveBps, 200);
   assert.equal(defaults.allowUnattendedIrreversible, false);
@@ -142,7 +142,7 @@ test('config: environment parsing, defaults and bounds', () => {
   });
   assert.equal(custom.enabled, false);
   assert.equal(custom.monitorIntervalSec, 30, 'the monitor interval has a floor of 30s');
-  assert.deepEqual(custom.protectedChainPools, [2, 3]);
+  assert.deepEqual(custom.protectedChainPools, []);
   assert.equal(custom.cooldownSec, 0);
   assert.equal(custom.allowUnattendedIrreversible, true);
   assert.equal(custom.maxActionsPerPoolPerDay, 12, 'garbage falls back to the default');

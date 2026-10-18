@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useApp } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
@@ -82,7 +81,7 @@ export function MintPanel({ quote }) {
         <div className="input-row">
           <input id="mint-financing" className="input" type="number" min="0" step="100000" inputMode="numeric" value={String(financing)} disabled={paused}
             onChange={(event) => setFinancing(event.target.value)} />
-          <Button id="mint-btn" variant="primary" disabled={paused || minting || busy} onClick={mint}>{minting ? t('minting') : t(demoMode ? 'mint_demo_btn' : 'mint_lab_btn')}</Button>
+          <Button id="mint-btn" variant="primary" disabled={paused || minting || busy || !demoMode} onClick={mint}>{minting ? t('minting') : t(demoMode ? 'mint_demo_btn' : 'mint_lab_btn')}</Button>
         </div>
       </Field>
       {paused ? (
@@ -106,40 +105,11 @@ export function MintPanel({ quote }) {
 }
 
 function MintResult({ result, quote }) {
-  const networkName = useApp((s) => s.networkName);
-  const [balance, setBalance] = useState(null);
-  const chain = result && (result.mode === 'chain' || result.mode === 'chain_pending');
-  useEffect(() => {
-    setBalance(null);
-    if (!result || result.mode !== 'chain' || !result.poolId) return undefined;
-    let current = true;
-    web3.readBalance(result.poolId, result.address).then((value) => { if (current) setBalance(f.int(value)); }, () => { if (current) setBalance('—'); });
-    return () => { current = false; };
-  }, [result]);
   if (!result) return <p className="muted small mint-hint" id="mint-result">{t('mint_hint')}</p>;
-  const pending = result.mode === 'chain_pending', failed = result.mode === 'chain_failed', timeout = result.mode === 'chain_timeout';
-  const tone = failed ? 'crit' : timeout ? 'warn' : chain ? 'ok' : 'warn';
-  const label = failed ? t('res_failed') : timeout ? t('res_timeout') : pending ? t('res_pending') : chain ? t('res_chain', { network: networkName || 'Testnet' }) : t('res_sim');
-  return (
-    <div className="mint-result" id="mint-result" aria-live="polite">
-      <div className="mint-result-head">
-        <Badge tone={tone}>{label}</Badge>
-        <span>{t('res_minted_pre')} <strong>{f.int(result.mintedAmount)}</strong> {t('res_unit_rwa')}</span>
-      </div>
-      <div className="kv-stack">
-        <KV label={t('res_price')}>{`$${f.price(quote.final_issue_price_usd)} ${t('unit_per_token')}`}</KV>
-        <KV label="tx_hash" mono>
-          {result.txHash ? (result.explorerUrl
-            ? <a href={result.explorerUrl} target="_blank" rel="noopener noreferrer">{`${f.shortHash(result.txHash, 12, 10)} ↗`}</a>
-            : f.shortHash(result.txHash, 12, 10)) : t('res_no_tx')}
-        </KV>
-        {result.poolId ? <KV label="poolId" mono>{String(result.poolId)}</KV> : null}
-        {result.blockNumber ? <KV label="block">{`#${f.int(result.blockNumber)}`}</KV> : pending ? <KV label="block">{t('res_confirming')}</KV> : null}
-        {result.mode === 'chain' && result.poolId ? <KV label={t('res_balance')}>{balance ?? t('res_reading')}</KV> : null}
-      </div>
-      <p className={cx('small', failed ? 'text-crit' : timeout || pending ? 'text-warn' : 'muted')}>
-        {failed ? t('res_execution_failed') : timeout ? t('res_timeout_detail') : pending ? t('res_pending_detail') : chain ? '' : t('res_sim_foot')}
-      </p>
-    </div>
-  );
+  return <div className="mint-result" id="mint-result" aria-live="polite">
+    <Badge tone="warn">{t('res_sim')}</Badge>
+    <p>{t('res_minted_pre')} <strong>{f.int(result.mintedAmount)}</strong> {t('res_unit_rwa')}</p>
+    <KV label={t('res_price')}>{'$' + f.price(quote.final_issue_price_usd)}</KV>
+    <p className="muted small">{t('res_sim_foot')}</p>
+  </div>;
 }

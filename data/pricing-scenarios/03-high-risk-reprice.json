@@ -1,6 +1,6 @@
 {
   "name": "high-risk-reprice",
-  "description": "FAST copper offering opens at ~0.990, then a severe-weather + route-deviation event raises the risk level in transit and the RiskPricingOracle reprices the pool DOWN.",
+  "description": "Offline FAST copper offering opens at ~0.990; severe weather and route deviation raise the risk level, producing a lower research quote in the simulation.",
   "base_case": "data/cases/copper-sg-shanghai.case.json",
   "overrides": {
     "financing": {

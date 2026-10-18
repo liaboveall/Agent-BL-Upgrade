@@ -90,17 +90,14 @@ try {
   assert.equal(merged.final_state, merged.offering.final_state);
   assert.equal(merged.risk_report.pricing_action, merged.pricing_quote.pricing_action);
 
-  // BE-8: on-chain oracle update payload carries both anchoring hashes.
-  const oracle = await fetch(`${baseUrl}/api/oracle/pricing-update?pool_id=POOL-SMOKE`, { method: 'POST' }).then((r) => r.json());
-  assert.match(oracle.evidence_hash, /^0x[0-9a-f]{64}$/);
-  assert.match(oracle.quote_hash, /^0x[0-9a-f]{64}$/);
-  assert.equal(oracle.pool_id, 'POOL-SMOKE');
-  assert.ok(oracle.pricing_action && oracle.offering_state);
+  // The unbound Oracle experiment is retired.
+  const retired = await fetch(baseUrl + '/api/oracle/pricing-update', {method:'POST'});
+  assert.equal(retired.status, 410);
 
   // MCP endpoints
   const mcpTools = await fetch(`${baseUrl}/api/mcp/tools`).then((r) => r.json());
   assert.equal(mcpTools.ok, true);
-  assert.equal(mcpTools.tools.length, 15);
+  assert.equal(mcpTools.tools.length, 14);
 
   const mcpCall = await fetch(`${baseUrl}/api/mcp/call`, {
     method: 'POST',
@@ -140,7 +137,7 @@ try {
   assert.equal(skillDemo.ok, true);
   assert.equal(skillDemo.status, 'ok');
 
-  console.log('smoke passed: health, demo data, risk, workflow, scenarios, pricing quote, offering, merged workflow, oracle update, MCP, RAG and Skill harness work.');
+  console.log('smoke passed: health, demo data, risk, workflow, scenarios, pricing quote, offering, merged workflow, retired-route rejection, MCP, RAG and Skill harness work.');
 } finally {
   server.close();
 }

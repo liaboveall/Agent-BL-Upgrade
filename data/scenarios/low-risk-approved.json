@@ -27,7 +27,11 @@
     "expected_yield_bps": 520,
     "initial_ltv": 0.59,
     "liquidation_threshold": 0.85,
-    "currency": "USDC"
+    "currency": "USDC",
+    "requested_cash_usd": 5000000,
+    "payout_speed": "BALANCED",
+    "target_redemption_value_usd": 1,
+    "redemption_coverage_limit": 0.85
   },
   "market": {
     "commodity": "Copper",

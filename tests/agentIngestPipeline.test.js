@@ -6,7 +6,7 @@ import test from 'node:test';
 import { resetStore, storeState } from '../src/app/store.js';
 import { AgentOrchestrator } from '../src/agent/orchestrator.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
-import { createAgentService, loadChainConfig } from '../src/agent/runtime/factory.js';
+import { createAgentService, loadApplicationConfig } from '../src/agent/runtime/factory.js';
 import { pdfFixture } from './helpers/pdf.js';
 import { createExternalComplianceChecker } from '../src/agent/compliance/external.js';
 
@@ -37,7 +37,7 @@ async function runtime({ mode = 'demo', env = {}, dir, orchestrator, now } = {})
     store: storeState,
     getMode: () => state.mode,
     getGeneration: () => state.generation,
-    chainConfig: loadChainConfig(),
+    chainConfig: loadApplicationConfig(),
     getChainContext: async () => null,
     sleep: async () => {},
     orchestrator,
@@ -481,8 +481,8 @@ test('ingest pipeline in Live: an opening is only a proposal, and nothing is fak
   assert.equal(decision.policy.verdict, 'NEEDS_APPROVAL');
   assert.ok(decision.policy.reasons.some((reason) => reason.rule === 'LIVE_REQUIRES_APPROVAL'));
   assert.equal(decision.status, 'SKIPPED', 'there is no signing route for an opening yet, and the record says so');
-  assert.match(decision.note, /on-chain/u);
-  assert.equal(decision.execution, undefined);
+  assert.match(decision.note, /controlled wallet/u);
+  assert.deepEqual(decision.execution, {mode:'record',attempts:0});
   assert.equal(storeState.pools.has('CASE-UP-LIVE-1'), false, 'Live does not create an offchain pool from an upload');
   for (const record of service.activity.list({ limit: 1000 })) {
     assert.equal(record.tx_hash, undefined);

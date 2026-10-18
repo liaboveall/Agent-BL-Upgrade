@@ -1,16 +1,13 @@
 // AgentBL MCP Tool Implementations
-// 9 tools: deterministic trade/pricing/document/report capabilities plus
-// policy-guarded oracle writes.
+// Deterministic trade/pricing/document/report capabilities.
+// Financing transactions use the controlled participant-wallet workflow.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import os from 'node:os';
-import { fileURLToPath } from 'node:url';
-import { calculateRisk } from '../core/riskEngine.js';
+import { listenOnUsablePort } from '../../scripts/lib/listen.mjs';
 import { quoteFromCase } from '../core/pricingEngine.js';
 import { normalizePricingQuoteHashes, PAYOUT_SPEEDS, assertPricingQuote } from '../core/pricingSchema.js';
-import { toChainPricingArgs } from '../core/oracle.js';
 import { simulateWorkflow } from '../core/workflow.js';
 import { assertTradeCase } from '../core/schema.js';
 import { listHarnessCaseFiles } from '../core/scenarioRunner.js';
@@ -18,29 +15,19 @@ import { searchKnowledgeBase } from '../rag/search.js';
 import { checkDocumentConsistency } from '../agent/documentConsistency.js';
 import { authorizeMcpWrite, MCP_PINNED_NETWORK } from './security.js';
 import { X402_SERVICES } from '../x402/config.js';
-import chainConfigLib from '../../scripts/lib/chain-config.cjs';
-import { resolveSignerKey, signerKeyRequirement } from '../chain/signerKeys.js';
+import { loadApplicationConfig } from '../chain/loadApplicationConfig.js';
 import { previewMysteryVoyage } from '../mystery/service.js';
 import { MysteryRevealStore } from '../mystery/store.js';
 import { verifyRevealProof } from '../mystery/fairness.js';
 
 // Import Bowen's pricing engine — for real PricingQuote generation
-async function tryImportPricingEngine() {
-  try {
-    return await import('../core/pricingEngine.js');
-  } catch {
-    return null;
-  }
-}
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '../..');
 const MYSTERY_OPEN_PRICE_USDC = 0.001;
-
 async function loadMysteryPools(caseId) {
   const pools = new Map();
-  const files = await listHarnessCaseFiles({ includeDemo: true });
+  const files = await listHarnessCaseFiles({
+    includeDemo: true
+  });
   for (const file of files) {
     const caseData = JSON.parse(await fs.readFile(file, 'utf8'));
     if (caseId && caseData.case_id !== caseId) continue;
@@ -82,7 +69,9 @@ async function loadMysteryPools(caseId) {
  * @throws {Error} if not found
  */
 async function loadCaseById(caseId) {
-  const files = await listHarnessCaseFiles({ includeDemo: true });
+  const files = await listHarnessCaseFiles({
+    includeDemo: true
+  });
   for (const file of files) {
     const raw = await fs.readFile(file, 'utf8');
     const data = JSON.parse(raw);
@@ -98,7 +87,9 @@ async function loadCaseById(caseId) {
 // Tool 1: get_trade_case
 // ============================================================
 
-export async function handleGetTradeCase({ case_id }) {
+export async function handleGetTradeCase({
+  case_id
+}) {
   if (!case_id || typeof case_id !== 'string') {
     throw new Error('Missing required parameter: case_id (string)');
   }
@@ -113,119 +104,17 @@ export async function handleGetTradeCase({ case_id }) {
 // Tool 2: generate_pricing_quote
 // ============================================================
 
-export async function handleGeneratePricingQuote({ case_id, trade_case } = {}) {
+export async function handleGeneratePricingQuote({
+  case_id,
+  trade_case
+} = {}) {
   const caseData = trade_case || (case_id ? await loadCaseById(case_id) : null);
-  if (!caseData) {
-    throw new Error('Either case_id or trade_case must be provided');
-  }
-
+  if (!caseData) throw new Error('Either case_id or trade_case must be provided');
   assertTradeCase(caseData);
-
-  // ============================================================
-  // New model (Bowen): delegate to the canonical pricing engine.
-  //
-  // quoteFromCase is the SAME entry point the backend (/api/pricing/quote),
-  // the frontend and the offering simulator use, so the MCP tool emits the
-  // identical PricingQuote — one structured output for AI / backend / FE /
-  // contract (the P0 schema goal). Bowen's engine derives gross profit from
-  // trade_economics, risk from scoreRisk, and collateral from the AI valuation;
-  // the base issue price is the patient-money anchor (a discount to the 1.00
-  // target), NOT a flat 1.00. Only legacy scenario cases without a payout_speed
-  // fall back to the riskEngine mock below.
-  // ============================================================
-  const pricingEngine = await tryImportPricingEngine();
-  if (pricingEngine?.quoteFromCase && caseData.financing?.payout_speed) {
-    try {
-      const quote = pricingEngine.quoteFromCase(caseData, {
-        payout_speed: caseData.financing.payout_speed
-      });
-      return { tool: 'generate_pricing_quote', result: quote };
-    } catch (err) {
-      // If the new-model engine cannot price this case, fall back to legacy mock.
-      console.warn('quoteFromCase failed, falling back to legacy:', err.message);
-    }
-  }
-
-  // ============================================================
-  // Legacy fallback (riskEngine-based mock)
-  // ============================================================
-  const riskReport = calculateRisk(caseData);
-  const bl = caseData.bill_of_lading;
-  const financing = caseData.financing;
-
-  // Map risk to pricing
-  const cargoHealthScore = riskReport.cargo_health_score;
-
-  // Risk discount: based on cargo health score
-  // Cargo health 100 = no discount. Cargo health 0 = maximum discount.
-  const riskDiscountBps = Math.round((100 - cargoHealthScore) * 6);
-  const riskDiscount = riskDiscountBps / 10000; // bps to decimal
-
-  // Base price depends on the financing structure
-  const basePrice = 1.0; // Target redemption is always 1 USD per RWA
-
-  // Final price = base - risk discount, floor at 0.35
-  const finalPrice = Math.max(0.35, Math.round((basePrice - riskDiscount) * 100) / 100);
-
-  // Implied gross yield for investors
-  const impliedYieldBps = finalPrice > 0 ? Math.round(((1 / finalPrice) - 1) * 10000) : 0;
-
-  // Collateral-based limits
-  const aiVerifiedCollateral = riskReport.verified_cargo_value_usd;
-  const adjustedCollateral = riskReport.adjusted_collateral_value_usd;
-  const liquidationThreshold = financing.liquidation_threshold || 0.85;
-  const maxSafeRedemptionExposure = Math.round(adjustedCollateral * liquidationThreshold);
-  const recommendedTokenSupply = maxSafeRedemptionExposure; // 1 RWA = 1 USD target redemption
-
-  // Expected cash to exporter
-  const expectedCash = Math.round(finalPrice * recommendedTokenSupply);
-
-  // Pricing action mapping: riskEngine contract_action → PRD pricing_action
-  const pricingActionMap = {
-    'APPROVE_FINANCING': 'OPEN_OFFERING',
-    'CONTINUE_WITH_WARNING': 'OPEN_WITH_WARNING',
-    'TRIGGER_MARGIN_CALL': 'REPRICE_DOWN',
-    'FREEZE_POOL': 'PAUSE_OFFERING',
-    'TRIGGER_LIQUIDATION': 'TRIGGER_LIQUIDATION'
-  };
-
-  // Build the quote hash (deterministic evidence of this pricing decision)
-  const quoteCore = {
-    case_id: caseData.case_id,
-    bl_id: bl.bl_id,
-    base_price: basePrice,
-    risk_discount_bps: riskDiscountBps,
-    final_price: finalPrice,
-    risk_level: riskReport.risk_level,
-    pricing_action: pricingActionMap[riskReport.contract_action],
-    timestamp: new Date().toISOString()
-  };
-  const quoteHash = '0x' + crypto.createHash('sha256')
-    .update(JSON.stringify(quoteCore))
-    .digest('hex');
-
-  const quote = {
-    case_id: caseData.case_id,
-    bl_id: bl.bl_id,
-    target_redemption_value_usd: 1,
-    ai_verified_collateral_value_usd: aiVerifiedCollateral,
-    max_safe_redemption_exposure_usd: maxSafeRedemptionExposure,
-    recommended_token_supply: recommendedTokenSupply,
-    requested_cash_usd: financing.requested_amount_usd,
-    base_issue_price_usd: basePrice,
-    urgency_discount_bps: 0, // Urgency discount TBD when payout_speed field is added
-    risk_discount_bps: riskDiscountBps,
-    final_issue_price_usd: finalPrice,
-    expected_cash_to_exporter_usd: expectedCash,
-    implied_gross_yield_bps: impliedYieldBps,
-    risk_level: riskReport.risk_level,
-    pricing_action: pricingActionMap[riskReport.contract_action] || 'OPEN_WITH_WARNING',
-    risk_factors: riskReport.detected_risks,
-    investor_explanation: riskReport.explanation,
-    evidence_hash: riskReport.evidence_hash,
-    quote_hash: quoteHash
-  };
-
+  const quote = quoteFromCase(caseData, {
+    payout_speed: caseData.financing?.payout_speed ?? 'BALANCED'
+  });
+  assertPricingQuote(quote, caseData);
   return {
     tool: 'generate_pricing_quote',
     result: quote
@@ -236,12 +125,14 @@ export async function handleGeneratePricingQuote({ case_id, trade_case } = {}) {
 // Tool 3: simulate_offering
 // ============================================================
 
-export async function handleSimulateOffering({ case_id, trade_case } = {}) {
+export async function handleSimulateOffering({
+  case_id,
+  trade_case
+} = {}) {
   const caseData = trade_case || (case_id ? await loadCaseById(case_id) : null);
   if (!caseData) {
     throw new Error('Either case_id or trade_case must be provided');
   }
-
   const workflow = simulateWorkflow(caseData);
   const report = workflow.risk_report;
 
@@ -260,7 +151,6 @@ export async function handleSimulateOffering({ case_id, trade_case } = {}) {
       risk_level: report.risk_level
     }
   };
-
   return {
     tool: 'simulate_offering',
     result: offeringResult
@@ -268,155 +158,21 @@ export async function handleSimulateOffering({ case_id, trade_case } = {}) {
 }
 
 // ============================================================
-// Tool 4: push_pricing_to_oracle
+// Tool: search_knowledge_base
 // ============================================================
 
-export async function handlePushPricingToOracle({
-  case_id,
-  pricing_quote,
-  pool_id = 1,
-  expected_quote_version,
-  valid_until,
-  decision_seq,
-  network = MCP_PINNED_NETWORK,
-  contract,
-  dry_run = true,
-  approved = false,
-  approval_token
+export async function handleSearchKnowledgeBase({
+  query,
+  categories,
+  limit
 } = {}) {
-  if (!case_id) {
-    throw new Error('Missing required parameter: case_id');
-  }
-  if (!pricing_quote) {
-    throw new Error('Missing required parameter: pricing_quote');
-  }
-
-  const chainConfig = chainConfigLib.resolveNetworkConfig(
-    JSON.parse(await fs.readFile(path.join(rootDir, 'public', 'chain-config.json'), 'utf8')),
-    'injective-testnet'
-  );
-  const oracleAddress = contract ?? chainConfig.contracts?.RiskPricingOracle;
-  if (!oracleAddress) throw new Error('RiskPricingOracle is not deployed in public/chain-config.json');
-
-  const policy = authorizeMcpWrite({
-    operation: 'pricing_update',
-    network,
-    contract: oracleAddress,
-    amount_usdc: 0,
-    dry_run,
-    approved,
-    approval_token
-  });
-  const txPayload = {
-    oracle_id: 'AgentBL-RiskPricingOracle-v1',
-    oracle_address: oracleAddress,
-    case_id,
-    ...toChainPricingArgs(pricing_quote, {
-      pool_id,
-      // A07 preconditions: a live write resolves these from the chain; a dry run shows the
-      // caller-supplied values, or records that they are resolved at execution time.
-      expected_quote_version, valid_until, decision_seq
-    })
-  };
-  if (expected_quote_version === undefined || valid_until === undefined || decision_seq === undefined) {
-    txPayload.preconditions = 'resolved_at_execution';
-  }
-
-  if (policy.dry_run) {
-    return {
-      tool: 'push_pricing_to_oracle',
-      result: {
-        status: 'dry_run',
-        policy,
-        transaction: txPayload,
-        event: 'PricingUpdated',
-        evidence_hash: pricing_quote.evidence_hash,
-        quote_hash: pricing_quote.quote_hash,
-        tx_hash: null,
-        explorer_url: null
-      }
-    };
-  }
-
-  // A dedicated PRICING_UPDATER key (authorised via RiskPricingOracle.setUpdater);
-  // DEPLOYER_PRIVATE_KEY (the contract owner) is only a deprecated fallback.
-  const signer = resolveSignerKey('PRICING_UPDATER');
-  if (!signer) throw new Error(`An approved oracle write requires ${signerKeyRequirement('PRICING_UPDATER')}`);
-  // The ABI ships in chain-config.json; compiled Hardhat artifacts are not deployed with the app.
-  const oracleAbi = chainConfig.abis?.RiskPricingOracle;
-  if (!Array.isArray(oracleAbi) || oracleAbi.length === 0) {
-    throw new Error('RiskPricingOracle ABI is missing from public/chain-config.json');
-  }
-  const { ethers } = await import('ethers');
-  const rpcUrl = process.env.INJECTIVE_RPC_URL ?? 'https://k8s.testnet.json-rpc.injective.network';
-  const provider = new ethers.JsonRpcProvider(rpcUrl, 1439);
-  const wallet = new ethers.Wallet(signer.privateKey, provider);
-  const oracle = new ethers.Contract(oracleAddress, oracleAbi, wallet);
-  if (txPayload.expected_quote_version === undefined || txPayload.valid_until === undefined
-    || txPayload.decision_seq === undefined || txPayload.preconditions) {
-    const [version, lastSeq, block] = await Promise.all([
-      oracle.quoteVersion(txPayload.pool_id), oracle.lastDecisionSeq(txPayload.pool_id), provider.getBlock('latest')
-    ]);
-    txPayload.expected_quote_version = version;
-    txPayload.valid_until = BigInt(block.timestamp + 3600);
-    txPayload.decision_seq = BigInt(lastSeq) + 1n;
-    delete txPayload.preconditions;
-  }
-  const transaction = await oracle.updatePricing(
-    txPayload.pool_id,
-    txPayload.issue_price_e6,
-    txPayload.risk_level,
-    txPayload.pricing_action,
-    txPayload.evidence_hash,
-    txPayload.quote_hash,
-    txPayload.expected_quote_version,
-    txPayload.valid_until,
-    txPayload.decision_seq
-  );
-  const mined = await transaction.wait();
-  const explorerUrl = `${chainConfig.explorerBase}/tx/${mined.hash}`;
-
-  return {
-    tool: 'push_pricing_to_oracle',
-    result: {
-      tx_hash: mined.hash,
-      block_number: mined.blockNumber,
-      block_hash: mined.blockHash,
-      status: 'confirmed',
-      confirmations: await mined.confirmations(),
-      gas_used: mined.gasUsed.toString(),
-      from: mined.from,
-      to: mined.to,
-      contract_address: oracleAddress,
-      explorer_url: explorerUrl,
-      policy,
-      event: 'PricingUpdated',
-      event_args: {
-        poolId: txPayload.pool_id,
-        issuePrice: pricing_quote.final_issue_price_usd,
-        riskLevel: pricing_quote.risk_level,
-        pricingAction: pricing_quote.pricing_action,
-        evidenceHash: pricing_quote.evidence_hash,
-        quoteHash: pricing_quote.quote_hash
-      }
-    }
-  };
-}
-
-// ============================================================
-// Tool 5: search_knowledge_base
-// ============================================================
-
-export async function handleSearchKnowledgeBase({ query, categories, limit } = {}) {
   if (!query || typeof query !== 'string' || query.trim() === '') {
     throw new Error('Missing required parameter: query (non-empty string)');
   }
-
   const results = searchKnowledgeBase(query, {
     categories: Array.isArray(categories) ? categories : undefined,
     limit: typeof limit === 'number' && limit > 0 ? limit : 5
   });
-
   return {
     tool: 'search_knowledge_base',
     result: {
@@ -432,7 +188,10 @@ export async function handleSearchKnowledgeBase({ query, categories, limit } = {
 // Tool 6: verify_trade_documents
 // ============================================================
 
-export async function handleVerifyTradeDocuments({ case_id, trade_case } = {}) {
+export async function handleVerifyTradeDocuments({
+  case_id,
+  trade_case
+} = {}) {
   const caseData = trade_case || (case_id ? await loadCaseById(case_id) : null);
   if (!caseData) throw new Error('Either case_id or trade_case must be provided');
   assertTradeCase(caseData);
@@ -441,18 +200,16 @@ export async function handleVerifyTradeDocuments({ case_id, trade_case } = {}) {
     result: checkDocumentConsistency(caseData)
   };
 }
-
 async function withEphemeralApp(run) {
-  const { createServer } = await import('../app/server.js');
+  const {
+    createServer
+  } = await import('../app/server.js');
   const server = createServer();
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
-  });
+  await listenOnUsablePort(server, '127.0.0.1');
   try {
     return await run(`http://127.0.0.1:${server.address().port}`);
   } finally {
-    await new Promise((resolve) => server.close(resolve));
+    await new Promise(resolve => server.close(resolve));
   }
 }
 
@@ -469,16 +226,12 @@ export async function handlePurchasePremiumAnalysis({
   approval_token
 } = {}) {
   if (!case_id) throw new Error('Missing required parameter: case_id');
-  const service = X402_SERVICES.find((item) => item.serviceId === kind);
+  const service = X402_SERVICES.find(item => item.serviceId === kind);
   if (!service) throw new Error(`Unknown premium analysis kind: ${kind}`);
   if (!['demo', 'live'].includes(mode)) throw new Error('mode must be demo or live');
   const caseData = await loadCaseById(case_id);
-
   if (mode === 'live') {
-    const chainConfig = chainConfigLib.resolveNetworkConfig(
-      JSON.parse(await fs.readFile(path.join(rootDir, 'public', 'chain-config.json'), 'utf8')),
-      'injective-testnet'
-    );
+    const chainConfig = loadApplicationConfig();
     authorizeMcpWrite({
       operation: 'x402_payment',
       network: MCP_PINNED_NETWORK,
@@ -490,25 +243,24 @@ export async function handlePurchasePremiumAnalysis({
     });
     throw new Error('Live MCP purchase requires the V2 facilitator client; use npm run smoke:x402:live. Demo mode still traverses the HTTP 402 middleware.');
   }
-
-  const { fetchPaidIntel } = await import('../x402/client.js');
+  const {
+    fetchPaidIntel
+  } = await import('../x402/client.js');
   const previousDemoMode = process.env.DEMO_MODE;
   const previousX402Mode = process.env.X402_MODE;
   process.env.DEMO_MODE = 'true';
   process.env.X402_MODE = 'demo';
   let result;
   try {
-    result = await withEphemeralApp((baseUrl) => fetchPaidIntel(baseUrl, service.endpoint, {
+    result = await withEphemeralApp(baseUrl => fetchPaidIntel(baseUrl, service.endpoint, {
       demoMode: true,
       budgetUSDC: Number(budget_usdc),
       caseData,
       timeoutMs: 15_000
     }));
   } finally {
-    if (previousDemoMode === undefined) delete process.env.DEMO_MODE;
-    else process.env.DEMO_MODE = previousDemoMode;
-    if (previousX402Mode === undefined) delete process.env.X402_MODE;
-    else process.env.X402_MODE = previousX402Mode;
+    if (previousDemoMode === undefined) delete process.env.DEMO_MODE;else process.env.DEMO_MODE = previousDemoMode;
+    if (previousX402Mode === undefined) delete process.env.X402_MODE;else process.env.X402_MODE = previousX402Mode;
   }
   if (!result.paid?.report_envelope) throw new Error(result.error?.error ?? 'Paid report was not unlocked');
   const envelope = result.paid.report_envelope;
@@ -542,7 +294,9 @@ export async function handlePurchasePremiumAnalysis({
 export async function handlePreviewMysteryVoyage({
   wallet_address,
   case_id,
-  risk_passport = { tier: 'BALANCED' },
+  risk_passport = {
+    tier: 'BALANCED'
+  },
   budget_usdc = MYSTERY_OPEN_PRICE_USDC,
   idempotency_key,
   ttl_seconds
@@ -554,14 +308,19 @@ export async function handlePreviewMysteryVoyage({
   if (!wallet_address) throw new Error('Missing required parameter: wallet_address');
   const pools = await loadMysteryPools(case_id);
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-mcp-mystery-'));
-  const store = new MysteryRevealStore({ filePath: path.join(directory, 'reveals.json') });
+  const store = new MysteryRevealStore({
+    filePath: path.join(directory, 'reveals.json')
+  });
   try {
     const preview = await previewMysteryVoyage({
       wallet_address,
       risk_passport,
       idempotency_key,
       ttl_seconds
-    }, { pools, store });
+    }, {
+      pools,
+      store
+    });
     return {
       tool: 'preview_mystery_voyage',
       result: {
@@ -578,7 +337,10 @@ export async function handlePreviewMysteryVoyage({
       }
     };
   } finally {
-    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(directory, {
+      recursive: true,
+      force: true
+    });
   }
 }
 
@@ -586,19 +348,15 @@ export async function handlePreviewMysteryVoyage({
 // Tool 9: verify_mystery_reveal
 // ============================================================
 
-export async function handleVerifyMysteryReveal({ proof, report, report_envelope } = {}) {
+export async function handleVerifyMysteryReveal({
+  proof,
+  report,
+  report_envelope
+} = {}) {
   if (!proof || typeof proof !== 'object') throw new Error('Missing required parameter: proof');
   const verification = verifyRevealProof(proof);
   const errors = [...verification.errors];
-  const bindings = [
-    ['report.selected_pool_id', report?.selected_pool_id, proof.selected_pool_id],
-    ['report.reveal_proof_hash', report?.reveal_proof_hash, proof.reveal_proof_hash],
-    ['report.risk_passport_hash', report?.risk_passport_hash, proof.risk_passport_hash],
-    ['report_envelope.selected_pool_id', report_envelope?.selected_pool_id, proof.selected_pool_id],
-    ['report_envelope.reveal_proof_hash', report_envelope?.reveal_proof_hash, proof.reveal_proof_hash],
-    ['report_envelope.risk_passport_hash', report_envelope?.risk_passport_hash, proof.risk_passport_hash],
-    ['report_envelope.payment_tx', report_envelope?.payment_tx, proof.payment_tx_hash]
-  ];
+  const bindings = [['report.selected_pool_id', report?.selected_pool_id, proof.selected_pool_id], ['report.reveal_proof_hash', report?.reveal_proof_hash, proof.reveal_proof_hash], ['report.risk_passport_hash', report?.risk_passport_hash, proof.risk_passport_hash], ['report_envelope.selected_pool_id', report_envelope?.selected_pool_id, proof.selected_pool_id], ['report_envelope.reveal_proof_hash', report_envelope?.reveal_proof_hash, proof.reveal_proof_hash], ['report_envelope.risk_passport_hash', report_envelope?.risk_passport_hash, proof.risk_passport_hash], ['report_envelope.payment_tx', report_envelope?.payment_tx, proof.payment_tx_hash]];
   for (const [field, actual, expected] of bindings) {
     if (actual !== undefined && String(actual).toLowerCase() !== String(expected).toLowerCase()) {
       errors.push(`${field} mismatch`);

@@ -2,7 +2,7 @@
 //
 // Drives an eBL-backed RWA offering through its on-chain states using the AI
 // PricingQuote, and shows what happens when risk escalates mid-transit: the
-// RiskPricingOracle reprices the pool, pauses it, or it settles and redeems.
+// Research pricing proposes changes while the offline model simulates the outcome.
 //
 //   Created -> Priced -> Open -> Subscribed -> Funded -> InTransit
 //             -> (Repriced | Paused | Frozen)
@@ -144,7 +144,7 @@ export function simulateOffering(caseData, opts = {}) {
   // AI declines to open the offering at all.
   if (NON_OPENING_ACTIONS.has(initialQuote.pricing_action)) {
     const state = STATE_BY_PRICING_ACTION[initialQuote.pricing_action];
-    push(state, 'RiskPricingOracle', `Offering not opened — ${initialQuote.investor_explanation}`);
+    push(state, 'Research pricing', `Offering not opened — ${initialQuote.investor_explanation}`);
     return finalize(initialQuote, initialQuote, { requested_usd: 0, raised_usd: 0, tokens: 0 }, state, steps);
   }
 
@@ -167,15 +167,15 @@ export function simulateOffering(caseData, opts = {}) {
     finalQuote = reQuote;
     if (NON_OPENING_ACTIONS.has(reQuote.pricing_action)) {
       endState = STATE_BY_PRICING_ACTION[reQuote.pricing_action];
-      push(endState, 'RiskPricingOracle',
+      push(endState, 'Research pricing',
         `Risk escalated to ${reQuote.risk_level}: ${reQuote.pricing_action}. New evidence ${shortHash(reQuote.evidence_hash)}`);
     } else if (reQuote.final_issue_price_usd < initialQuote.final_issue_price_usd - REPRICE_THRESHOLD) {
       endState = 'InTransit';
-      push('InTransit', 'RiskPricingOracle',
+      push('InTransit', 'Research pricing',
         `Risk up to ${reQuote.risk_level}: reprice ${initialQuote.final_issue_price_usd.toFixed(3)} -> ${reQuote.final_issue_price_usd.toFixed(3)} (evidence ${shortHash(reQuote.evidence_hash)})`);
       steps.at(-1).action = 'REPRICE_DOWN';
     } else {
-      push('InTransit', 'RiskPricingOracle', `Risk reassessed (${reQuote.risk_level}); price held at ${reQuote.final_issue_price_usd.toFixed(3)}`);
+      push('InTransit', 'Research pricing', `Risk reassessed (${reQuote.risk_level}); price held at ${reQuote.final_issue_price_usd.toFixed(3)}`);
     }
   }
 

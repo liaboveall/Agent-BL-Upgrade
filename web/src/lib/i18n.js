@@ -626,7 +626,6 @@ const DICT = {
     mint_btn: '⛓ 铸造 RWA 上链',
     minting: '⛓ 铸造中…',
     compliance: '<strong>非保本。</strong> 1 RWA = $1.00 是<em>目标</em>兑付价，取决于进口商付款、货物结算与保险覆盖。仅限合格投资者。',
-    onchain_h: '链上锚定 · AgentBLRWA',
     mint_hint: '输入融资金额并点击「铸造 RWA 上链」。连接钱包且合约已部署时铸造真实链上交易，否则走高保真模拟交易。',
     ebl_upload_h: 'eBL 单据管理',
     ebl_upload_drop: '将 eBL、发票和保险单拖放到此处',
@@ -1460,7 +1459,6 @@ const DICT = {
     mint_btn: '⛓ Mint RWA on-chain',
     minting: '⛓ Minting…',
     compliance: '<strong>Not principal-protected.</strong> 1 RWA = $1.00 is a <em>target</em> redemption value, depending on importer payment, cargo settlement and insurance coverage. Permissioned investors only.',
-    onchain_h: 'On-chain anchoring · AgentBLRWA',
     mint_hint: 'Enter a financing amount and click “Mint RWA on-chain”. With a wallet connected and the contract deployed it mints a real on-chain tx, otherwise a high-fidelity simulated tx.',
     ebl_upload_h: 'eBL Document Management',
     ebl_upload_drop: 'Drag and drop your eBL, invoice and insurance policies here',
@@ -1789,4 +1787,3 @@ const DICT = {
 // The dashboard's own copy (layout, tabs, short labels) completes the dictionary.
 Object.assign(DICT.zh, UI_DICT.zh);
 Object.assign(DICT.en, UI_DICT.en);
-

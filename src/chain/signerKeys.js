@@ -1,31 +1,11 @@
 // Least-privilege signing keys for the long-running server.
 //
 // DEPLOYER_PRIVATE_KEY is the contract OWNER key. The server used to sign
-// PaymentOracle attestations and RiskPricingOracle updates with it, so a web-server
-// compromise meant losing every contract. Both contracts already have a scoped role
-// for this (PaymentOracle.setAttestor, RiskPricingOracle.setUpdater), so each runtime
-// role now has its own key. The owner key is only a deprecated fallback.
-//
+// Payment attestations use a scoped role; financing is signed by participant wallets.
 // SIGNER_KEYS_STRICT=true refuses the fallback altogether (recommended in production).
 
 export const SIGNER_ROLES = Object.freeze({
-  PAYMENT_ATTESTOR: Object.freeze({
-    env: 'PAYMENT_ATTESTOR_PRIVATE_KEY',
-    contractRole: 'PaymentOracle.setAttestor(address,true)'
-  }),
-  PRICING_UPDATER: Object.freeze({
-    env: 'PRICING_UPDATER_PRIVATE_KEY',
-    contractRole: 'RiskPricingOracle.setUpdater(address,true)'
-  }),
-  // OPTIONAL (docs/agent-implementation-plan.md D2). Only when this key is set can the server itself send
-  // markInTransit / recordImporterPayment / recordCargoArrival / settle; otherwise an operator signs them
-  // with the owner key through `npm run agent:approve`. It never falls back to the owner key.
-  AGENT_EXECUTOR: Object.freeze({
-    env: 'AGENT_EXECUTOR_PRIVATE_KEY',
-    contractRole: 'RWAOfferingPool.setAgentExecutor(address,true)',
-    optional: true,
-    noOwnerFallback: true
-  })
+ PAYMENT_ATTESTOR:Object.freeze({env:'PAYMENT_ATTESTOR_PRIVATE_KEY',contractRole:'PaymentOracle.setAttestor(address,true)'})
 });
 
 export const OWNER_KEY_ENV = 'DEPLOYER_PRIVATE_KEY';

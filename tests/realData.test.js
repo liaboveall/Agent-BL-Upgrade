@@ -53,7 +53,7 @@ test('demo dates: a curated case keeps voyage, cover and tenor on any day; fixed
   // Today sits inside the voyage on every day.
   assert.ok(later.bill_of_lading.shipped_on_board < '2027-03-01' && '2027-03-01' < later.bill_of_lading.eta);
   // Data without an anchor (uploads, the archived pool #2 case) is untouched.
-  const archived = JSON.parse(await fs.readFile(new URL('../data/cases/archive/copper-sg-shanghai-2026-06.case.json', import.meta.url), 'utf8'));
+  const archived = { ...raw, date_anchor: undefined };
   assert.equal(rebaseCaseDates(archived, { env: { AGENTBL_DEMO_TODAY: '2027-03-01' } }), archived);
   assert.equal(rebaseCaseDates(null), null);
 });

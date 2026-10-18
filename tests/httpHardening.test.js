@@ -61,7 +61,7 @@ test('HTTP hardening', async (t) => {
     assert.equal(unknown.status, 404);
     assert.equal(unknown.data.code, 'not_found');
 
-    const post = await requestJson(app.base, 'POST', '/chain-config.json', {});
+    const post = await requestJson(app.base, 'POST', '/application-config.json', {});
     assert.equal(post.status, 405);
     assert.equal(post.headers.get('allow'), 'GET, HEAD');
   });
@@ -104,7 +104,7 @@ test('HTTP hardening', async (t) => {
     const secrets = { DEEPSEEK_API_KEY: 'sk-unit-test-deepseek-SECRET', LLM_API_KEY: 'sk-unit-test-llm-SECRET', DASHSCOPE_API_KEY: 'sk-unit-test-qwen-SECRET' };
     Object.assign(process.env, secrets);
     try {
-      for (const asset of ['/', '/chain-config.json', ...builtAssets()]) {
+      for (const asset of ['/', '/application-config.json', ...builtAssets()]) {
         const res = await getRaw(app.base, asset, { headers: { 'accept-encoding': 'identity' } });
         assert.ok(res.status === 200 || (asset === '/' && res.status === 503), `${asset} -> ${res.status}`);
         const text = decodeBody(res).toString('utf8');
@@ -116,13 +116,13 @@ test('HTTP hardening', async (t) => {
   });
 
   await t.test('static files: ETag revalidation, per-type caching and HEAD', async () => {
-    const first = await getRaw(app.base, '/chain-config.json');
+    const first = await getRaw(app.base, '/application-config.json');
     assert.equal(first.status, 200);
     assert.match(first.headers['content-type'], /^application\/json/u);
     assert.equal(first.headers['cache-control'], 'no-cache');
     assert.ok(first.headers.etag);
 
-    const revalidated = await getRaw(app.base, '/chain-config.json', { headers: { 'if-none-match': first.headers.etag } });
+    const revalidated = await getRaw(app.base, '/application-config.json', { headers: { 'if-none-match': first.headers.etag } });
     assert.equal(revalidated.status, 304);
     assert.equal(revalidated.body.length, 0);
 
@@ -145,15 +145,15 @@ test('HTTP hardening', async (t) => {
   });
 
   await t.test('static text assets are served br/gzip-compressed and decode to the exact file bytes', async () => {
-    const original = fs.readFileSync(path.join(publicDir, 'chain-config.json'));
+    const original = fs.readFileSync(path.join(publicDir, 'application-config.json'));
     for (const encoding of ['br', 'gzip']) {
-      const res = await getRaw(app.base, '/chain-config.json', { headers: { 'accept-encoding': encoding } });
+      const res = await getRaw(app.base, '/application-config.json', { headers: { 'accept-encoding': encoding } });
       assert.equal(res.headers['content-encoding'], encoding);
       assert.equal(res.headers.vary, 'Accept-Encoding');
       assert.ok(res.body.length < original.length / 2, `${encoding} should shrink the chain config`);
       assert.deepEqual(decodeBody(res), original);
     }
-    const identity = await getRaw(app.base, '/chain-config.json', { headers: { 'accept-encoding': 'identity' } });
+    const identity = await getRaw(app.base, '/application-config.json', { headers: { 'accept-encoding': 'identity' } });
     assert.equal(identity.headers['content-encoding'], undefined);
     assert.deepEqual(identity.body, original);
   });

@@ -88,7 +88,7 @@ test('BE-7: a well-formed override still succeeds (validation is not over-eager)
   });
 });
 
-test('BE-8: API rejects a 67-character evidence hash before any chain call', async () => {
+test('retired Oracle tool cannot be invoked with any supplied commitment', async () => {
   await withServer(async (baseUrl) => {
     const quoteResponse = await postJson(baseUrl, '/api/pricing/quote', { payout_speed: 'FAST' });
     const quote = await quoteResponse.json();
@@ -102,7 +102,7 @@ test('BE-8: API rejects a 67-character evidence hash before any chain call', asy
 
     assert.equal(res.status, 400);
     assert.equal(body.ok, false);
-    assert.match(body.error, /evidence_hash must be exactly 32 bytes/u);
-    assert.match(body.error, /received 67 characters/u);
+    assert.match(body.error, /Unknown tool/u);
+    assert.ok(!body.error.includes('confirmed'));
   });
 });

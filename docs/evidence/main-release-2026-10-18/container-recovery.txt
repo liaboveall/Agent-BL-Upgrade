@@ -1,0 +1,3 @@
+npm notice run agentbl-agent-starter@0.1.0 recover:w5
+npm notice run node scripts/recover-w5.mjs agentbl:main-candidate
+{"passed":true,"directory":"E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\docs\\evidence\\main-release-2026-10-18\\recovery"}

@@ -1,0 +1,11 @@
+{
+  "schema": "agentbl-retirement-static-dependencies-v1",
+  "checked_at": "2026-10-18T06:24:00.683Z",
+  "source_files_parsed": 443,
+  "relative_imports_checked": 1522,
+  "npm_packages_checked": 2,
+  "retired_files_checked": 119,
+  "issues": [],
+  "passed": true,
+  "scope": "Literal static/dynamic imports and requires, direct npm JS command targets; runtime-generated paths are covered by regression tests"
+}

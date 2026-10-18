@@ -471,7 +471,7 @@ export function priceRwaOffering(input) {
   core.investor_explanation = buildInvestorExplanation(core);
   core.exporter_explanation = buildExporterExplanation(core);
 
-  // BE-8: two hashes for the on-chain RiskPricingOracle.
+  // BE-8: two hashes for the on-chain controlled terms.
   //   evidence_hash anchors the INPUTS behind the price (valuation, risk, docs);
   //   quote_hash anchors the TERMS the pool opens with (price, supply, action).
   core.evidence_schema = 'agentbl-pricing-evidence-v2';

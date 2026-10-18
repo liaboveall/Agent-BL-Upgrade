@@ -65,7 +65,7 @@ try {
   console.log('│ 💰 投资者认购                                          │');
   console.log('│    出口商质押 eBL → 智能合约创建 RWA Offering        │');
   console.log('│    投资者以 $0.80 折价认购 → 目标兑付 $1.00          │');
-  console.log('│    RiskPricingOracle 链上锚定定价决策                  │');
+  console.log('│    controlled terms 链上锚定定价决策                  │');
   console.log('└──────────────────────────────────────────────────────┘\n');
 
   const offering = await fetch(`${API}/api/offering/simulate`, {

@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
 import test from 'node:test';
 import {
   authorizeMcpWrite,
@@ -7,15 +6,12 @@ import {
   MCP_PINNED_NETWORK,
   McpWritePolicyError
 } from '../src/mcp/security.js';
-import chainConfig from '../scripts/lib/chain-config.cjs';
+import {loadApplicationConfig} from '../src/chain/loadApplicationConfig.js';
 
-const config = chainConfig.resolveNetworkConfig(
-  JSON.parse(await fs.readFile('public/chain-config.json', 'utf8')),
-  'injective-testnet'
-);
-const target = config.contracts.RiskPricingOracle;
+const config = loadApplicationConfig();
+const target = config.contracts.PaymentOracle;
 const base = {
-  operation: 'pricing_update',
+  operation: 'x402_payment',
   network: MCP_PINNED_NETWORK,
   contract: target,
   amount_usdc: 0
@@ -85,7 +81,7 @@ test('MCP-10: raw EVM smoke rejects every non-allowlisted selector', () => {
     () => authorizeMcpWrite({
       ...base,
       operation: 'raw_evm_smoke',
-      contract: config.contracts.AgentBLRWA,
+      contract: config.contracts.RWAOfferingPool,
       calldata: '0xdeadbeef',
       dry_run: true
     }),

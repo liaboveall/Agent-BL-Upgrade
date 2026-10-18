@@ -1,26 +1,14 @@
-import { STATE, ACTION, TARGET, ISSUE_PRICE, send, uniqueHash, deployProtocol as deployProtocolV4, ethers } from './protocol.js';
+import { STATE, ACTION, TARGET, ISSUE_PRICE, send, uniqueHash, ethers } from './protocol.js';
 
 export { STATE, ACTION, TARGET, ISSUE_PRICE, send, uniqueHash, ethers };
 
 export async function deployProtocolV5() {
-  const ctx = await deployProtocolV4();
-  const usdc = await (await ethers.getContractFactory('MockUSDC')).deploy();
-  await usdc.waitForDeployment();
-  const token = await (await ethers.getContractFactory('RWATokenV5')).deploy();
-  await token.waitForDeployment();
-  const pool = await (await ethers.getContractFactory('RWAOfferingPoolV5')).deploy(
-    await ctx.registry.getAddress(),
-    await token.getAddress()
-  );
-  await pool.waitForDeployment();
-  const oracle = await (await ethers.getContractFactory('RiskPricingOracle')).deploy(await pool.getAddress());
-  await oracle.waitForDeployment();
-  await send(token.setPool(await pool.getAddress()));
-  await send(pool.setOracle(await oracle.getAddress()));
-  await send(pool.setAgentExecutor(ctx.agent.address, true));
-  // Use a signer distinct from the v4 roles for the exporter/disbursement recipient.
-  const [, , , , , , exporter] = await ethers.getSigners();
-  return { ...ctx, exporter, usdc, token, pool, oracle };
+  const [owner,investor,outsider,agent,other,third,exporter]=await ethers.getSigners();
+  const deploy=async(name,...args)=>(await (await ethers.getContractFactory(name)).deploy(...args)).waitForDeployment();
+  const registry=await deploy('MockCapitalRegistry'),usdc=await deploy('MockUSDC'),token=await deploy('ControlledRWAToken');
+  const pool=await deploy('RWAOfferingPoolV5',await registry.getAddress(),await token.getAddress());
+  await send(token.bindPool(await pool.getAddress()));await send(pool.setAgentExecutor(agent.address,true));
+  return {owner,investor,outsider,agent,other,third,exporter,registry,usdc,token,pool};
 }
 
 export async function newOfferingV5(ctx, tag, {

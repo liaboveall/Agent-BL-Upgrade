@@ -15,7 +15,7 @@ export const storeState = {
   investments: []
 };
 
-const ledgerBaseDir = process.env.AGENTBL_LEDGER_DIR || path.join(runtimeDir(), 'ledger');
+const ledgerBaseDir = process.env.AGENTBL_LEDGER_DIR || path.join(runtimeDir(), 'demo-ledger');
 export const ledger = new Ledger({ baseDir: ledgerBaseDir });
 
 export function resetStore() {

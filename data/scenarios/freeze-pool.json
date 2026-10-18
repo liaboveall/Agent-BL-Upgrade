@@ -27,7 +27,11 @@
     "expected_yield_bps": 750,
     "initial_ltv": 0.42,
     "liquidation_threshold": 0.85,
-    "currency": "USDC"
+    "currency": "USDC",
+    "requested_cash_usd": 3540000,
+    "payout_speed": "BALANCED",
+    "target_redemption_value_usd": 1,
+    "redemption_coverage_limit": 0.85
   },
   "market": {
     "commodity": "Copper",
@@ -66,8 +70,13 @@
     "contract_action": "FREEZE_POOL",
     "final_state": "Frozen",
     "risk_level": "CRITICAL",
-    "min_health_factor": 1.00,
+    "min_health_factor": 1,
     "max_health_factor": 1.05,
-    "detected_risks_include": ["commodity_price_drop", "bad_weather", "delay", "insurance_expiry_risk"]
+    "detected_risks_include": [
+      "commodity_price_drop",
+      "bad_weather",
+      "delay",
+      "insurance_expiry_risk"
+    ]
   }
 }

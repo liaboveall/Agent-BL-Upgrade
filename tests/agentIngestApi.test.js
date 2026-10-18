@@ -13,7 +13,7 @@ const { createServer, closeActivityStreams, setAgentService, activityLog } = awa
 const { createPool, resetStore, storeState } = await import('../src/app/store.js');
 const { quoteFromCase } = await import('../src/core/pricingEngine.js');
 const { loadAgentConfig } = await import('../src/agent/runtime/config.js');
-const { createAgentService, loadChainConfig } = await import('../src/agent/runtime/factory.js');
+const { createAgentService, loadApplicationConfig } = await import('../src/agent/runtime/factory.js');
 const { demoModeController } = await import('../src/demo/mode.js');
 const { createAgentRoutes } = await import('../src/app/agentRoutes.js');
 const { ActivityLog } = await import('../src/agent/runtime/activityLog.js');
@@ -37,7 +37,7 @@ async function freshService(env = {}) {
     ensurePools: async () => {},
     activity: activityLog,
     store: storeState,
-    chainConfig: loadChainConfig(),
+    chainConfig: loadApplicationConfig(),
     getChainContext: async () => null,
     sleep: async () => {}
   });

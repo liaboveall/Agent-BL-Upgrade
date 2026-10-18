@@ -1,17 +1,9 @@
 import { expect } from 'chai';
-import hre from 'hardhat';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import { ethers, send } from './helpers/protocol.js';
 import { anchorLeaf, merkleTree } from '../../src/agent/runtime/anchorProof.js';
 import { createAgentVersion } from '../../src/agent/runtime/agentVersion.js';
 import { loadAgentConfig } from '../../src/agent/runtime/config.js';
 import { hashSnapshot } from '../../src/agent/decisionLogger.js';
-import { deployAgentLog } from '../../scripts/lib/deploy-agent-log.mjs';
-import { createOwnerJournal } from '../../scripts/lib/owner-journal.mjs';
-import chainConfig from '../../scripts/lib/chain-config.cjs';
-import { verifyDeployment } from '../../scripts/verify-bytecode.mjs';
 
 const version = createAgentVersion(loadAgentConfig({}), {}, hashSnapshot('test-source'));
 const args = [version.version_id, version.policy_hash, version.code_commit, version.model_id];
@@ -92,31 +84,7 @@ describe('AgentDecisionLog append-only decision commitments', () => {
     await expect(log.connect(stranger).anchorBatch(root, 2, 2, 1, args[0])).to.be.revertedWith('not anchorer');
   });
 
-  it('deployment defaults to zero broadcasts and needs no signer, network, keys or filesystem', async () => {
-    const plan = { schema: 'agentbl-anchor-deployment-plan-v1', chain_id: 1439, versions: [version] };
-    const result = await deployAgentLog({ plan });
-    expect(result.dry_run).to.equal(true); expect(result.broadcasts).to.equal(0);
-  });
 
-  it('deploys and initializes locally, merges only the new contract, verifies bytecode and resumes without retransmission', async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-log-deploy-'));
-    try {
-      const [owner, anchorer] = await ethers.getSigners();
-      const artifact = await hre.artifacts.readArtifact('AgentDecisionLog');
-      const configPath = path.join(dir, 'chain-config.json');
-      const original = chainConfig.migrateLegacy({}); original.networks['injective-testnet'].contracts.Legacy = owner.address;
-      original.networks['injective-testnet'].abis.Legacy = []; original.networks['injective-testnet'].deployments.Legacy = { retained: true };
-      await fs.writeFile(configPath, JSON.stringify(original));
-      const options = { confirmed: true, plan: { schema: 'agentbl-anchor-deployment-plan-v1', chain_id: 1439, versions: [version] },
-        owner, anchorer: anchorer.address, provider: ethers.provider, artifact, journal: createOwnerJournal(dir), configPath, expectedChainId: 31337 };
-      const first = await deployAgentLog(options); expect(first.broadcasts).to.equal(3);
-      const merged = JSON.parse(await fs.readFile(configPath, 'utf8'));
-      expect(merged.networks['injective-testnet'].contracts.Legacy).to.equal(owner.address);
-      expect(merged.networks['injective-testnet'].deployments.Legacy).to.deep.equal({ retained: true });
-      expect(merged.networks['injective-mainnet']).to.deep.equal(original.networks['injective-mainnet']);
-      const report = await verifyDeployment({ configPath, getCode: async (_urls, _method, [address]) => ethers.provider.getCode(address) });
-      expect(report.results.find((entry) => entry.name === 'AgentDecisionLog').status).to.equal('MATCH');
-      const second = await deployAgentLog(options); expect(second.broadcasts).to.equal(0); expect(second.address).to.equal(first.address);
-    } finally { await fs.rm(dir, { recursive: true, force: true }); }
-  });
+
+
 });

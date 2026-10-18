@@ -1,0 +1,9 @@
+file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/docs/evidence/legacy-retirement-2026-10-18/read-only-instance-check.mjs:26
+    if (!matches) throw new Error(`${name} no longer matches the current artifact`);
+                        ^
+
+Error: PaymentOracle no longer matches the current artifact
+    at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/docs/evidence/legacy-retirement-2026-10-18/read-only-instance-check.mjs:26:25
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v26.8.1

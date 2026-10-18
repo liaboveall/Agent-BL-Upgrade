@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { priceRwaOffering, PAYOUT_SPEEDS, quoteFromCase } from '../src/core/pricingEngine.js';
 import { assertPricingQuote } from '../src/core/pricingSchema.js';
-import { cargoIdentityHash, cargoIdentityHashV2 } from '../src/chain/cargoIdentity.js';
+
 import { planTransition, ACTIVE_STATES } from '../src/agent/runtime/poolRules.js';
 import { fetchSeaState, fetchFuturesQuote } from '../src/realdata/sources.js';
 import { getMarketQuote, routeRiskEvents } from '../src/realdata/index.js';
@@ -13,8 +13,8 @@ import { createPool, resetStore, subscribeToPool } from '../src/app/store.js';
 import { subscriptionAvailability } from '../src/core/subscription.js';
 import { IngestService } from '../src/agent/ingest/ingestService.js';
 import { workspaceOwner, canReadWorkspaceCase } from '../src/app/workspaceAccess.js';
-import { buildOpeningPlan } from '../src/agent/runtime/openingPlan.js';
-import { openingChain, oil, chainConfig, copper } from './helpers/opening.js';
+
+
 
 const input = { case_id: 'ECON-BOUNDARY', bl_id: 'BL-BOUNDARY', payout_speed: 'BALANCED', requested_cash_usd: 5e6,
   gross_profit_usd: 100, ai_verified_collateral_value_usd: 8e6, tenor_days: 30 };
@@ -57,23 +57,9 @@ test('F02: pricing is orthogonal to every active lifecycle, including full fundi
   assert.equal(planTransition('MARK_IN_TRANSIT', { state: planTransition('REPRICE', { state: 'Funded' }).to }).to, 'InTransit');
 });
 
-test('F03: canonical title identity ignores case IDs, document versions and display formatting; v1 commitments stay reproducible', async () => {
-  const copy = structuredClone(oil); copy.case_id = 'A-DIFFERENT-CASE';
-  copy.bill_of_lading.bl_id = ` ${oil.bill_of_lading.bl_id.toLowerCase()} `;
-  copy.bill_of_lading.vessel = 'Different display label'; copy.bill_of_lading.document_version = 2;
-  assert.equal(cargoIdentityHashV2(copy), cargoIdentityHashV2(oil));
-  assert.notEqual(cargoIdentityHash(copy), cargoIdentityHash(oil));
-  assert.equal(cargoIdentityHash(copper), '0xcbb79a2dc7946a1b0db32fa57833f07d5130915393acbf4315ddc3958383ad2f');
-  const chain = openingChain(); chain.seed(copper);
-  const alias = structuredClone(copper); alias.case_id = 'RENAMED-COPPER';
-  const plan = await buildOpeningPlan({ params: { case_data: alias, quote: quoteFromCase(alias), compliance: { status: 'CLEAR' } }, chainConfig, context: chain.context });
-  assert.equal(plan.kind, 'link'); assert.equal(plan.existing.pool_id, 2); assert.equal(plan.steps.length, 0);
-});
 
-test('F03: new registrations fail closed against a legacy deployment until reviewed migration', async () => {
-  const chain = openingChain(); delete chain.context.pool.protocolVersion;
-  await assert.rejects(buildOpeningPlan({ params: { case_data: oil, quote: quoteFromCase(oil), compliance: { status: 'CLEAR' } }, chainConfig, context: chain.context }), { code: 'protocol_migration_required' });
-});
+
+
 
 test('F04: partial recovery and missing debt terms cannot discharge an offering', () => {
   const pool = { state: 'InTransit', subscribed: 100, paymentProof: true, arrivalProof: true, targetRedemptionValueAtomic: '1000000', repaymentAmountAtomic: '1' };

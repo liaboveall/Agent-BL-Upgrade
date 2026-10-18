@@ -1,0 +1,2080 @@
+npm notice run agentbl-agent-starter@0.1.0 test
+npm notice run node --test --test-concurrency=4 tests/*.test.js
+✔ tab keyboard navigation wraps, handles Home/End and skips disabled choices (0.5313ms)
+✔ modifier keys, Tab and keys outside the group are left to the browser (0.6387ms)
+✔ menu arrow keys only move focus, wrap, and ignore other keys (0.2041ms)
+✔ modal Tab and reverse Tab wrap at the edges while ordinary navigation is untouched (0.1727ms)
+✔ timeline announcements exclude initial history, unchanged polls and removed decisions (0.9335ms)
+✔ reduced motion selects immediate programmatic scrolling (0.1628ms)
+▶ agent activity feed
+  ✔ a priced quote is recorded as PRICING_QUOTE with its price (71.1174ms)
+  ✔ a subscription is recorded without publishing the full wallet address (29.0713ms)
+  ✔ a document upload and a world-risk escalation are recorded (48.1744ms)
+  ✔ subscribers receive a connected frame, then live activity, filtered by case (50.1284ms)
+  ✔ idle streams get heartbeat comments so proxies do not drop them (78.1296ms)
+[agentbl] 4fd8b01d9150 503 sse_capacity: Too many live-stream subscribers; retry shortly
+  ✔ the number of concurrent subscribers is capped (7.9498ms)
+  ✔ closed subscribers are removed from the registry (27.9427ms)
+  ✔ closeActivityStreams ends every open stream (graceful shutdown) (3.2718ms)
+✔ agent activity feed (341.0612ms)
+[agentbl] 49984ecf0956 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: X402_PAY_TO is required in live mode
+▶ runtime mode switching requires the admin token
+  ✔ an anonymous caller cannot leave Live mode (the paywall-bypass chain is closed) (36.1458ms)
+  ✔ the correct token (Bearer or X-Admin-Token) switches the mode (22.5571ms)
+  ✔ Demo -> Live on a server that is not Live-ready is refused by the controller, token or not (7.8612ms)
+  ✔ no-op requests and invalid modes need no token (15.785ms)
+  ✔ once Live is configured, entering Live is protected as well (16.3839ms)
+  ✔ demo reset is unavailable in Live mode (14.1663ms)
+  ✔ in Live the legacy upload needs the token, like POST /api/agent/ingest (15.7078ms)
+  ✔ in Live the simulated subscription ledger is closed (3.3389ms)
+  ✔ without a configured (or with a too-short) token, leaving Live is impossible at runtime (28.8447ms)
+✔ runtime mode switching requires the admin token (186.4957ms)
+✔ a pure demo deployment (nothing Live configured) keeps the toggle open and harmless (45.0646ms)
+✔ a Demo server with a configured admin token protects the shared reset (20.9537ms)
+▶ BE-15: Agent Activity API Tests
+  ✔ GET /api/agent/activity returns empty array initially (34.3161ms)
+  ✔ GET /api/agent/activity returns logged activities (2.7091ms)
+  ✔ GET /api/agent/activity filters by case_id (1.2608ms)
+  ✔ GET /api/agent/activity filters by pool_id (1.2038ms)
+  ✔ GET /api/agent/activity/stream establishes SSE connection (107.039ms)
+  ✔ Agent activities do not expose internal chain-of-thought (2.9726ms)
+✔ BE-15: Agent Activity API Tests (172.6455ms)
+✔ anchor preflight requires the deployed testnet, exact version, explicit signer role and continuous head (13.416ms)
+✔ anchor broadcast shares the signer lock, static-preflights and persists hash before waiting (0.9751ms)
+✔ confirmed anchors require exact calldata, sender, receipt event, current canonical block and chain batch (13.9336ms)
+✔ pending or underconfirmed anchors are never reported as confirmed; changed deployment bindings fail closed (1.0582ms)
+✔ broadcast recovery uses one exact event in a bounded scan, with no send or inferred hash (0.9074ms)
+✔ chain verification rechecks finality and inclusion instead of trusting a stored ANCHORED label (3.0866ms)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+[Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\data\cases\archive\copper-sg-shanghai-2026-06.case.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\data\\cases\\archive\\copper-sg-shanghai-2026-06.case.json'
+}
+
+Node.js v26.8.1
+✖ tests\agentAnchoring.test.js (510.4505ms)
+▶ agent API (Demo)
+  ✖ GET /api/agent/status is public and reports the runtime without exposing keys (12.717ms)
+  ✖ an injected world-risk event produces a decision, an executed simulated reprice and a trace (0.822ms)
+  ✖ the same event again is a duplicate and does not execute twice (0.6675ms)
+  ✖ without ?wait the event is accepted (202) and processed in the background (0.5928ms)
+  ✖ invalid input is refused with a 4xx and a readable reason (0.5699ms)
+  ✖ control: autonomy and emergency stop change what the agent does (0.5603ms)
+  ✖ approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx (0.7009ms)
+  ✖ the admin token protects control, events and the approval queue once it is configured (0.5933ms)
+  ✖ the activity stream sends an id per event and replays what a reconnecting client missed (0.6723ms)
+  ✖ POST /api/demo/reset clears what the agent recorded in Demo and rebuilds the pools (0.6198ms)
+✖ agent API (Demo) (44.2029ms)
+✔ agent API: in Live the admin token is mandatory even for actions Demo leaves open (30.1125ms)
+✔ approvals: create is idempotent per open decision and rejects bad input (3.7297ms)
+✔ approvals: approve and reject follow the state machine (1.4764ms)
+✔ approvals: a pending approval expires after its ttl and can no longer be approved (0.9479ms)
+✔ approvals: owner-signed steps are recorded in order and complete the approval (0.8322ms)
+✔ approvals: failures keep a bounded reason; an approval awaiting a signature can expire (0.7388ms)
+✔ approvals: state survives a restart and the record cap never drops open approvals (45.9184ms)
+(node:15436) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ console: dynamic values never go through HTML injection (decisions carry event and chain data) (0.8096ms)
+✔ console: a link is only ever built from an https explorer_url, never from a hash or a demo reference (0.5152ms)
+✔ console: a simulated execution is labelled DEMO and has no link path (0.1086ms)
+✔ console: shortId shortens without repeating the value (0.0936ms)
+✔ judge-facing Agent activity does not intercept browser diagnostics (1.1324ms)
+✔ render code does not emit debug logs (the activity panel shows business events only) (0.4156ms)
+✔ measured Agent suites meet every frozen deterministic threshold using real components (1.4662ms)
+✔ scoring rejects missing and non-finite metrics rather than treating them as success (0.1829ms)
+✔ label boundary rejects leaked labels at any depth and freezes the component input (1.1161ms)
+✔ changing gold cannot change subject output, and broken extraction fails the quality gate (1714.9549ms)
+✔ empty or truncated evaluation suites are rejected, never awarded perfect safety scores (0.6638ms)
+✔ NDCG penalizes reversed rankings, irrelevant and duplicate results, and empty output (0.1326ms)
+✔ report shows failures and limits, and never claims an unrun provider evaluation (900.1453ms)
+✔ events: normalizeEvent fills defaults and derives a stable event_id (2.9679ms)
+✔ events: invalid events are refused with a readable reason (1.6639ms)
+✔ events: payload keys beyond the checked ones are preserved but never trusted blindly (0.8462ms)
+✔ bus: an event is processed once; resubmitting it is a duplicate (3.5182ms)
+✔ bus: events of one case run one at a time in arrival order, other cases run in parallel (53.8533ms)
+✔ bus: concurrency is capped (58.721ms)
+✔ bus: an event older than the last handled one for the same case and type is STALE and never runs (2.6896ms)
+✔ bus: a failing handler is retried, then the event is dead-lettered with its payload (0.6071ms)
+✔ bus: a handler that recovers on a later attempt ends DONE; a dead event can be retried (0.7311ms)
+✔ bus: state survives a restart; duplicates stay duplicates and STALE detection persists (33.7646ms)
+✔ bus: events that were queued or mid-flight when the process stopped are processed after restart (28.5597ms)
+✔ bus: a bus that is not started keeps events queued and reports them (0.4718ms)
+✔ bus: the index is pruned to its cap without losing unfinished or dead events (2.3268ms)
+✔ bus: the handler receives a copy, so it cannot corrupt the stored event (0.3769ms)
+✔ bus: submit refuses an event that was not normalised (0.1985ms)
+▶ ingest API (Demo)
+  ✖ POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step (11.9537ms)
+  ✖ uploading the same documents again is a 200 with the same job, not a second decision (0.7539ms)
+  ✖ a document that tries to steer the agent is held, and the answer says so (0.6625ms)
+  ✖ bad uploads are refused with a status and a code, and open no job (0.6665ms)
+  ✖ a document over the size limit is a 413 (0.6463ms)
+  ✖ exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them (0.7111ms)
+  ✖ scenarios: list, run one over HTTP, and the pool and approvals show the result (0.5851ms)
+  ✖ the admin token, once configured, protects scenarios but not Demo uploads (0.5889ms)
+  ✖ the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case (0.6664ms)
+✖ ingest API (Demo) (37.1311ms)
+✔ ingest API: in Live, uploads and preferences need the admin token (89.8125ms)
+file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestPipeline.test.js:9
+import { createAgentService, loadChainConfig } from '../src/agent/runtime/factory.js';
+                             ^^^^^^^^^^^^^^^
+SyntaxError: The requested module '../src/agent/runtime/factory.js' does not provide an export named 'loadChainConfig'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:463:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:561:5)
+    at async node:internal/modules/esm/loader:650:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v26.8.1
+✖ tests\agentIngestPipeline.test.js (449.8223ms)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+[Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\data\cases\archive\copper-sg-shanghai-2026-06.case.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\data\\cases\\archive\\copper-sg-shanghai-2026-06.case.json'
+}
+
+Node.js v26.8.1
+✖ tests\agentInterop.test.js (551.4595ms)
+✔ risk tracker: the first look is a baseline, and an unchanged picture is never an event (1.145ms)
+✔ risk tracker: a new or worse alert is reported with the alerts that are active now (0.7916ms)
+✔ risk tracker: risk counts as cleared only after the configured number of quiet looks in a row (0.3563ms)
+✔ risk tracker: one alert in the middle of the quiet restarts the count (no flapping) (0.2479ms)
+✔ risk tracker: state survives a restart, so a restart does not re-announce or forget (17.8508ms)
+✔ insurance: warns inside the window, pauses after expiry, and ignores cases that are not active (1.9979ms)
+✔ insurance monitor: Demo stays silent on the real clock; a scenario clock or Live checks the policy (0.709ms)
+✔ world-risk monitor: baseline, change, repeat, escalation and clearing, with deterministic event ids (1.1945ms)
+✔ world-risk monitor: live evidence is labelled live, finished pools and unmapped Live pools are skipped, a failing feed is not fatal (0.3433ms)
+✔ runtime: a monitor source feeds the tick; the same fixture does not trigger the same decision twice (60.9078ms)
+✔ runtime: a throwing source does not stop the other sources or the tick (2.7887ms)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+[Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\data\cases\archive\copper-sg-shanghai-2026-06.case.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\data\\cases\\archive\\copper-sg-shanghai-2026-06.case.json'
+}
+
+Node.js v26.8.1
+✖ tests\agentPhase5.test.js (514.5467ms)
+✔ policy: demo auto: a reversible action runs unattended (1.2472ms)
+✔ policy: demo auto: PAUSE runs unattended (0.1246ms)
+✔ policy: demo propose: needs approval (0.0743ms)
+✔ policy: autonomy off refuses everything (0.0707ms)
+✔ policy: observe only records (1.022ms)
+✔ policy: live: every action needs approval (0.1615ms)
+✔ policy: live: even PAUSE needs approval (0.1565ms)
+✔ policy: emergency stop refuses a reprice (0.1379ms)
+✔ policy: emergency stop still lets PAUSE through (0.1039ms)
+✔ policy: protected pool: SETTLE refused (0.1305ms)
+✔ policy: protected pool: FREEZE refused (0.071ms)
+✔ policy: protected pool: LIQUIDATE refused (0.0435ms)
+✔ policy: protected pool: CANCEL refused (0.0401ms)
+✔ policy: protected pool: REPRICE is fine (0.0381ms)
+✔ policy: protected pool: PAUSE and RESUME are fine (0.0574ms)
+✔ policy: prompt injection → hold for review (0.1066ms)
+✔ policy: compliance REVIEW → hold for review (0.0461ms)
+✔ policy: compliance BLOCK → reject (0.0258ms)
+✔ policy: an unrelated finding changes nothing (0.0228ms)
+✔ policy: a model-only signal is only observed (0.0268ms)
+✔ policy: stale evidence needs approval (0.0228ms)
+✔ policy: SETTLE always needs approval (0.0199ms)
+✔ policy: FREEZE always needs approval (0.0253ms)
+✔ policy: RECORD_PAYMENT always needs approval (0.0191ms)
+✔ policy: RECORD_ARRIVAL is reversible enough to run (0.0193ms)
+✔ policy: MARK_IN_TRANSIT runs in demo auto (0.0187ms)
+✔ policy: a price move above the cap needs approval (0.0222ms)
+✔ policy: a price move at the cap is fine (0.0198ms)
+✔ policy: a price below the exporter floor needs approval (0.0296ms)
+✔ policy: a price at the exporter floor is fine (0.0188ms)
+✔ policy: the cooldown blocks the same action on the same pool but not a different one (1.0439ms)
+✔ policy: the cooldown is configurable and the daily limit debounces a flapping signal (0.133ms)
+✔ policy: the cooldown sits before the Live approval rule so a flapping signal never floods the queue (0.067ms)
+✔ policy: the first matching rule decides the verdict, every matching rule is listed (0.4962ms)
+✔ policy: the unattended-irreversible exemption works in Demo only (0.0656ms)
+✔ policy: rejects unknown actions, modes and autonomy levels instead of guessing (0.3089ms)
+✔ config: Live never runs above propose, Demo defaults to auto (D1) (0.1422ms)
+✖ config: environment parsing, defaults and bounds (0.8769ms)
+✔ policy: informational actions (WARNING, HOLD_FOR_REVIEW, REJECT) are records and never wait for approval (0.1553ms)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+[Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\data\cases\archive\copper-sg-shanghai-2026-06.case.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\data\\cases\\archive\\copper-sg-shanghai-2026-06.case.json'
+}
+
+Node.js v26.8.1
+✖ tests\agentPrivacy.test.js (476.9792ms)
+✔ activity: append assigns a monotonic seq, stamps the mode and notifies subscribers (3.1385ms)
+✔ activity: the in-memory buffer is bounded and filterable (0.4528ms)
+✔ activity: persisted records survive a restart and the sequence continues (8.0274ms)
+✔ activity: records appended before persistence is attached are written after the existing ones (5.4904ms)
+✔ activity: since() answers from memory and falls back to the files when the client is far behind (13.0083ms)
+✔ activity: clearMode drops one mode from memory and from the files, never the other (22.1875ms)
+✔ activity: a disk failure is reported but never breaks append (2.5386ms)
+✔ trace: spans nest, time themselves and record errors (0.9998ms)
+✔ trace: secrets are redacted and LLM calls keep hashes, never text (0.4474ms)
+✔ trace: traces persist to a JSONL file and are found again by decision id (3.9824ms)
+✔ trace: bindDecision attaches the id once it is known (0.2853ms)
+✔ scheduler: ticks repeatedly with jitter, never overlaps, and stops cleanly (29.6746ms)
+✔ scheduler: a failing task is reported and the schedule continues; setInterval reschedules (0.6896ms)
+✔ scheduler: drain waits for a tick that is in flight (32.4762ms)
+✔ pipeline: world risk that lowers the price proposes a REPRICE with the move in bps (15.3856ms)
+✔ pipeline: a critical event pauses; an already paused or non-active pool does not (4.722ms)
+✔ pipeline: events that change nothing are ignored with a reason (1.6907ms)
+✔ pipeline: RESUME needs a paused pool and reuses its last verified quote (0.5257ms)
+✔ pipeline: insurance, departure, arrival and payment map to their actions (3.3823ms)
+✔ pipeline: the same event on the same pool always yields the same proposal (1.9071ms)
+✔ pipeline: text inside event data cannot change the proposal (2.461ms)
+✔ scenarios: the catalog lists every shipped scenario with a bilingual title (41.6986ms)
+✔ copper-typhoon: the whole cargo story runs through the real policy and the simulated executor (122.2216ms)
+✔ copper-typhoon: approving the payment makes the agent propose settlement, and settlement needs its own approval (140.4531ms)
+✔ copper-typhoon: rejecting the payment leaves the pool unsettled and proposes nothing further (155.8151ms)
+✔ copper-typhoon: playing it twice does not duplicate anything; reset gives a clean run (284.5546ms)
+✔ copper-typhoon: can be played one step at a time, and says when it is over (150.626ms)
+✔ warcrisis-hormuz: a crude cargo is repriced down as war risk rises, paused when the strait closes, and stays paused (51.3658ms)
+✔ scenarios: a case whose pool is already paused ignores a pause, with the reason on record (4.2929ms)
+✔ insurance-gap: a warning a week ahead, then a pause once cover has lapsed (43.0428ms)
+✔ scenarios: Demo only, only known names, and the case must be in the market (6.9489ms)
+✔ Demo: a world-risk event becomes a decision, an executed simulated reprice, activity and a trace (44.3195ms)
+✔ Demo: injecting the same event again never produces a second execution (6.141ms)
+✔ Demo: the full risk cycle reprice → pause → resume restores the previous state (11.3125ms)
+✔ Demo: events that change nothing are ignored with a reason, not turned into decisions (5.4397ms)
+✔ invalid events are refused before they are queued (2.4706ms)
+✔ policy: a price move above the cap waits for approval; approving it executes, rejecting does not (7.9701ms)
+✔ policy: rejecting a pending proposal records it and changes nothing (3.7061ms)
+✔ policy: observe and off modes never execute; set_autonomy changes it at runtime and is logged (10.9229ms)
+✔ policy: an emergency stop blocks a reprice but lets a pause through, and can be lifted (6.3574ms)
+✔ policy: the cooldown stops a flapping signal from acting twice in a row (6.1227ms)
+✔ settlement actions: RECORD_PAYMENT always needs approval, RECORD_ARRIVAL does not (7.5943ms)
+✔ a failing action is recorded as FAILED with its reason, and the event itself still completes (4.8039ms)
+✖ status reports mode, autonomy, signers (booleans only) and queue depth (2.1664ms)
+✔ listDecisions filters and paginates; getDecision returns one (10.306ms)
+✔ Demo reset clears the agent state of Demo mode only (7.5687ms)
+✔ decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate (60.6861ms)
+✔ a replayed event whose decision already exists does not decide again (45.9623ms)
+▶ PRD Agent APIs use real steps over HTTP and leave all runtime state untouched
+  ✔ extracts real fields with source lines and hashes, without opening a job (69.0608ms)
+  ✔ verifies consistency and exposes a real mismatch and its risk penalty (7.4144ms)
+  ✔ prices the selected speed with exactly the existing engine numbers and hashes (41.9752ms)
+  ✔ brief numbers and risks come from its returned quote, with explicit evidence limits (14.2262ms)
+  ✔ graph commits pricing, actual documents, verification and versioned compliance (24.6768ms)
+  ✔ method, MIME, malformed JSON and unknown operations have bounded errors (22.7031ms)
+✔ PRD Agent APIs use real steps over HTTP and leave all runtime state untouched (196.9537ms)
+▶ stateless input validation and review boundaries
+  ✔ empty source never becomes a clear verification (0.5685ms)
+  ✔ paths, client quotes, forged compliance, unknown keys and malformed document arrays are rejected (1.4782ms)
+  ✔ wrong numeric types, impossible prices, invalid events, dates and unsafe nesting fail before pricing (2.276ms)
+  ✔ incomplete and CNY trades cannot be converted or priced as USD (2.9149ms)
+  ✔ binary magic, UTF-8, base64 and document size share the intake validator (0.8826ms)
+  ✔ unknown or unparseable documents keep explicit review evidence (0.4921ms)
+  ✔ conflicting documents retain evidence when merged fields are overwritten (4.1622ms)
+  ✔ demo BLOCK survives a request and never becomes an executable offering (3.0454ms)
+  ✔ injection is data, marks review, and cannot trigger even optional polish (2.8629ms)
+✔ stateless input validation and review boundaries (19.5925ms)
+✔ graph hash is canonical, repeatable and binds changed input and document bytes (39.5334ms)
+▶ stateless image extraction honors its vision switch and preserves review boundaries
+  ✔ enabled vision extracts actual fields and always requires review (4.0327ms)
+  ✔ disabled vision stays offline and requires OCR (0.4024ms)
+  ✔ default vision stays offline and requires OCR (0.2007ms)
+  ✔ unconfigured vision stays offline and requires OCR (0.2335ms)
+  ✔ provider failure remains review evidence without upstream details (0.5139ms)
+✔ stateless image extraction honors its vision switch and preserves review boundaries (5.8445ms)
+▶ stateless extraction screens the entire readable bundle before every model path
+  ✔ later text injection prevents earlier text completion and image transcription (4.7606ms)
+  ✔ later PDF injection prevents earlier text completion and image transcription (83.8864ms)
+  ✔ suspicious image transcription also prevents text completion (1.213ms)
+  ✔ unsafe supplied case data blocks otherwise clean document models (2.0037ms)
+✔ stateless extraction screens the entire readable bundle before every model path (92.7357ms)
+▶ optional brief polish accepts only grounded output and falls back on failure or inventions
+  ✔ explicit output budget (2.5151ms)
+  ✔ default output budget (2.0322ms)
+  ✔ explicit unlimited output (2.1871ms)
+  ✔ grounded (3.2255ms)
+  ✔ new number (2.2985ms)
+  ✔ negative price (2.4299ms)
+  ✔ guarantee (2.2113ms)
+  ✔ unsupported authority (2.211ms)
+  ✔ provider failure (2.1557ms)
+  ✔ empty (2.2071ms)
+  ✔ the model disable switch prevents optional public polish (2.0227ms)
+✔ optional brief polish accepts only grounded output and falls back on failure or inventions (26.8205ms)
+✔ the five operations share one per-client budget including invalid requests (15.2667ms)
+✔ concurrency is bounded globally and a failed request releases its slot (15.1013ms)
+✔ JSON bodies have a byte cap before parsing or model work (3.8111ms)
+✔ no route answers a malformed request with a 5xx (7195.3318ms)
+✔ valid input is still accepted after the validation tightening (57.3732ms)
+✔ BE-7: invalid payout_speed is rejected with 400 (22.4463ms)
+✔ BE-7: a non-positive requested_cash_usd is rejected (price/amount not valid) (19.2458ms)
+✔ BE-7: a negative subscription_usd is rejected on /api/offering/simulate (4.6947ms)
+✔ BE-7: a case whose target redemption is not 1.00 is rejected (exceeds the fixed target) (3.1549ms)
+✔ BE-7: events must be an array (3.794ms)
+✔ BE-7: a well-formed override still succeeds (validation is not over-eager) (19.9042ms)
+✖ BE-8: API rejects a 67-character evidence hash before any chain call (20.9031ms)
+✔ AI-14: six event families map to OPEN/REPRICE/PAUSE/RESUME/SETTLE/WARNING (20.5977ms)
+✔ AI-14: cargo arrival settles only after importer payment is verified (0.2099ms)
+✔ AI-15: bounded retry succeeds and records the real attempt count (1.4726ms)
+✔ AI-15: concurrent and repeated delivery of one event never creates a duplicate tx (0.4732ms)
+✔ AI-15: a completed decision survives process restart and is not resubmitted (12.238ms)
+✔ AI-15: an EXECUTING record reconciles a prior tx before any resubmission (0.4193ms)
+✔ AI-15: monitoring polls repeatedly while duplicate events remain idempotent (0.4239ms)
+(node:12772) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ every cargo picture the frontend can request exists as WebP (5.3647ms)
+✔ each catalog case maps to the picture of its own cargo (7.7907ms)
+✔ the cargo pictures stay web-sized (0.5929ms)
+✔ there are curated cases to check (0.6044ms)
+✔ fixture demo-case.json prices, scores and re-prices end to end (21.7224ms)
+✔ fixture cases/alu-dxb-rtm.case.json prices, scores and re-prices end to end (5.4144ms)
+✔ fixture cases/alu-fs-wh-00013.case.json prices, scores and re-prices end to end (4.152ms)
+✔ fixture cases/alu-fs-wh-00014.case.json prices, scores and re-prices end to end (3.9091ms)
+✔ fixture cases/alu-fs-wh-00015.case.json prices, scores and re-prices end to end (3.4598ms)
+✔ fixture cases/copper-sg-shanghai.case.json prices, scores and re-prices end to end (4.4492ms)
+✔ fixture cases/crude-fuj-sin.case.json prices, scores and re-prices end to end (3.6315ms)
+✔ fixture cases/cuconc-anf-lyg.case.json prices, scores and re-prices end to end (2.9796ms)
+✔ fixture cases/ironore-au-tj.case.json prices, scores and re-prices end to end (3.2049ms)
+✔ fixture cases/refined-sg-jkt.case.json prices, scores and re-prices end to end (4.1951ms)
+✔ fixture cases/rubber-bkk-qd.case.json prices, scores and re-prices end to end (3.6184ms)
+✔ fixture cases/soybean-ssz-dlc.case.json prices, scores and re-prices end to end (3.098ms)
+✔ compliance v2: clean facts have versioned, auditable demo evidence and declared standards (35.4334ms)
+✔ compliance v2: exact names, aliases, punctuation, suffixes and fullwidth characters block (5.1303ms)
+✔ compliance v2: near names in 0.85–0.92 require review; unrelated country words do not block (4.077ms)
+✔ compliance v2: seller, consignee, carrier, notify party, invoice and warehouse parties are screened (2.9529ms)
+✔ compliance v2: each demo jurisdiction derives from a known port, including transshipment (2.4157ms)
+✔ compliance v2: unknown, malformed and conflicting ports require review without substring matches (2.5192ms)
+✔ compliance v2: bundled lookup covers every shipped transport and warehouse location (112.501ms)
+✔ compliance v2: synthetic IMO and vessel name block; invalid checksums require review (2.924ms)
+✔ compliance v2: HS prefix rules screen all sources and cannot be waived by a clean code (3.5394ms)
+✔ compliance v2: military and dual-use cargo declarations are conservative demo rules (1.8144ms)
+✔ compliance v2: instructions, hidden characters, wallet fields and oversized names never clear (3.2444ms)
+✔ compliance v2: a bare platform name does not prove compliance and warehouse standards are not invented (2.6298ms)
+✔ compliance v2: matcher uses fixed Jaccard/Winkler scores, never a keyword fallback (0.1597ms)
+✔ compliance v2: malformed demo data, duplicate IDs and mismatched country codes fail loading (1.8748ms)
+✔ compliance external: explicit injection sends only structured facts and validates output (13.3186ms)
+✔ compliance external: CLEAR never overrides local BLOCK or REVIEW; provider may escalate (2.7153ms)
+✔ compliance external: timeout aborts even a transport that ignores AbortSignal (20.4506ms)
+✔ compliance external: failed, malformed, oversized and contradictory results retain evidence and review (5.0311ms)
+✔ compliance external: missing transport, URL credentials and invalid timeouts are rejected before a request (0.233ms)
+✔ contract harness emits pricing oracle evidence for the demo case (3.3091ms)
+✔ contract harness aligns event fields with the frozen contract design (0.8575ms)
+✔ contract harness rejects non-permissioned investors (0.9393ms)
+✔ contract harness covers scenario contract actions with oracle events (3.4164ms)
+✖ pool action codes match the JS harness and the AgentBLRWA action enum (1.0374ms)
+✖ risk levels: harness codes, oracle limit and demo-contract limit agree (0.1588ms)
+✖ every on-chain offering state is a known lifecycle state, and Repaid keeps its code (0.1623ms)
+(node:34036) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Copilot actions: a message creates a priced card, explicit confirmation records one real Demo position, and retries return the same reference (10.3122ms)
+✔ Copilot actions: ambiguity, missing amounts, model amounts and saved budget breaches cannot create executable cards (3.7054ms)
+✔ Copilot actions: cancel, new messages, expiry and runtime changes invalidate old consent (3.031ms)
+✔ Copilot actions: changed prices, capacity, pauses and unresolved document holds are checked again before mutation (2.1251ms)
+✔ Copilot actions: Demo subscriptions accept repriced pools and snapshots persist without wallets (14.6508ms)
+✔ Copilot actions: Live cards use chain price and integer shares; confirmation only prepares the wallet and cannot run twice (1.5199ms)
+✔ Copilot actions: unmapped, paused, empty and tiny Live offerings fail closed without a simulated substitute (1.2611ms)
+✔ Copilot actions: report cards use the paid-service catalogue, enforce budget and become single-use before any payment (1.5237ms)
+✔ Copilot browser actions: generation changes after preparation prevent wallet signing; Demo reports use the existing simulated flow (0.3717ms)
+✔ Copilot actions: decimal and scientific budgets never round up; legacy Demo report hashes are not rendered as transactions (0.1714ms)
+✔ Copilot actions API: the real subscribe route accepts a confirmed card, ignores tampered amounts and records Copilot attribution (503.7974ms)
+(node:48268) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Copilot API: create/read/message/delete session lifecycle and privacy (58.2037ms)
+✔ Copilot API: SSE sends structured results then validated narrative and completion (10.7136ms)
+✔ Copilot API: malformed, oversized and unknown routes return errors before any stream opens (53.6693ms)
+✔ Copilot API: real server routes use latest market pools and positions expose current state (532.7974ms)
+✔ Copilot browser SSE parser: split bytes preserve Chinese text; truncated streams are errors (2.1243ms)
+✔ Copilot browser: a result from another mode generation is never rendered or accepted (0.3884ms)
+✔ Copilot: refine, commodity override, negation and reset preserve exactly the intended dimensions (7.6472ms)
+✔ Copilot: refinement tightens limits; an explicit override can relax a single dimension (0.5436ms)
+✔ Copilot intent: browse investments (1.8108ms)
+✔ Copilot intent: 低风险铜 (0.1321ms)
+✔ Copilot intent: actually aluminium (0.1108ms)
+✔ Copilot intent: compare copper and soybeans (0.1423ms)
+✔ Copilot intent: 为什么 (0.1034ms)
+✔ Copilot intent: show my portfolio (0.0689ms)
+✔ Copilot intent: subscribe USD 1000 (0.0912ms)
+✔ Copilot intent: buy a report (0.1089ms)
+✔ Copilot intent: start over (0.0951ms)
+✔ Copilot intent: write code (0.0744ms)
+✔ Copilot intent: 收益至少100001bps (0.4783ms)
+✔ Copilot: Chinese and English commodities, ports, negative terms, units and payout speeds (0.6499ms)
+✔ Copilot: LLM prose interpretation is validated and deterministic numeric constraints win (0.4979ms)
+✔ Copilot: malformed, low-confidence and failing models fall back; a model cannot infer an action or reset (0.5884ms)
+✔ Copilot: history is bounded, immutable, and contains structured deltas only (2.1942ms)
+✔ softer risk wording reweights the ranking without excluding assets, and a bare 投 sets the ticket (0.2701ms)
+(node:28048) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ document upload reads actual bytes as base64 and rejects files beyond the intake limit (0.7485ms)
+✔ Copilot surfaces share the server, contain no client ranking, and never inject dynamic HTML (2.9107ms)
+✔ Copilot rerank: pause drops a rank and resume restores it without another message or LLM call (12.6728ms)
+✔ Copilot rerank: hard filters, explicit pool scope, watchlists and removed recommendations remain consistent (3.9722ms)
+✔ Copilot rerank: recorded proposals retain the actual price, completed actions use the changed price and duplicate notifications are idempotent (1.6424ms)
+✔ Copilot rerank: deletion, expiry and mode invalidation close streams and cannot resurrect a session (1.0457ms)
+✔ Copilot rerank: two subscribers retain the decision baseline when execution beats or follows the first notification (3.3386ms)
+✔ Copilot rerank: messages and notifications serialize; deletion during a snapshot does not restore state (1.869ms)
+✔ Copilot rerank: persisted snapshots resume after restart and store no private query vocabulary (16.4278ms)
+[agentbl] - 503 sse_capacity: Too many Copilot streams
+✔ Copilot stream: real SSE push, cursor replay, capacity and session deletion have bounded lifecycles (42.6246ms)
+✔ Copilot retrieval: every hard constraint excludes the candidate and gives a specific reason (2.9424ms)
+✔ Copilot retrieval: missing tenor/insurance/risk, closed pools, compliance blocks and Agent holds fail closed (0.5239ms)
+✔ Copilot retrieval: BM25 handles Chinese synonyms and MMR diversifies commodities and routes (2.4399ms)
+✔ Copilot ranking: latest quote/state and data quality change scores with auditable breakdowns (0.6653ms)
+✔ Copilot narrative: numbers must be structured facts, never digits borrowed from an identifier (1.0902ms)
+✔ Copilot narrative: ranking ordinals and rounded real figures are allowed, invented ones are not (0.3423ms)
+✔ Copilot service: multiple turns preserve constraints and return current evidence and exclusions (17.3919ms)
+✔ Copilot service: a decision hold and a changed quote affect the next query, without stale catalogue hints (3.8612ms)
+✔ Copilot service: compare/explain/action turns do not silently modify persisted filters or execute (4.4062ms)
+✔ Copilot service: sessions persist only bounded structured context, expire and respect capacity (15.3956ms)
+✔ Copilot service: runtime invalidation persists, so restarting generation numbering cannot revive an old session (4.4604ms)
+✔ Copilot service: concurrent messages serialize and cannot lose a preference update (1.4536ms)
+✔ Copilot service: deletion or runtime change during a model call cannot resurrect stale context (1.2818ms)
+✔ Copilot service: structured recommendations arrive before slow narrative; invalid queries never call a model (1.7052ms)
+✔ Copilot service: the LLM disable switch, output cap and bounded concurrency apply to the new endpoints (1.8703ms)
+✔ Copilot service: unsupported numeric intervals ask for clarification without weakening saved limits (1.0161ms)
+✔ Copilot service: exceeding a cumulative filter limit is rejected without dropping the new hard constraint silently (0.4326ms)
+(node:51120) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✖ Copilot wallet: a matching contract receipt is required for a Live subscription result (1.5488ms)
+✔ Copilot wallet: deployment, account, network, price, capacity, eligibility and stopped pools refuse before signing (0.6277ms)
+✔ Copilot wallet: a wallet or mode change after static simulation prevents broadcast (0.2665ms)
+✖ Copilot wallet: wrong events, failed receipts and price changes during mining remain unconfirmed without automatic retry (1.1158ms)
+▶ BE-13: Dashboard API Tests
+  ✔ GET /api/investors/portfolio returns investments and summary (1.5364ms)
+  ✔ GET /api/exporters/dashboard returns ebl pools (1.0867ms)
+✔ BE-13: Dashboard API Tests (74.6148ms)
+✔ AI-16: decision_id and evidence hashes are reproducible under key reordering (1.4432ms)
+✔ AI-16: decisions persist across logger restarts and remain queryable by idempotency key (11.585ms)
+✔ AI-16: transaction backfill is persisted without changing the deterministic decision_id (9.3654ms)
+✔ AI-16: repeated record calls upsert one audit record rather than duplicating it (0.6083ms)
+node:fs:621
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\public\chain-config.json'
+    at Object.readFileSync (node:fs:621:20)
+    at read (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/docsConsistency.test.js:9:34)
+    at readJson (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/docsConsistency.test.js:10:46)
+    at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/docsConsistency.test.js:12:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:569:25)
+    at async node:internal/modules/esm/loader:650:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\public\\chain-config.json'
+}
+
+Node.js v26.8.1
+✖ tests\docsConsistency.test.js (47.4604ms)
+✔ AI-8: the clean copper fixture passes all consistency checks (0.7872ms)
+✔ AI-8: a quantity mismatch is flagged critical with a penalty (0.2369ms)
+✔ AI-8: an insurance coverage gap and an expired policy are detected (0.1418ms)
+✔ AI-8: incoterms and over-invoicing mismatches raise warnings (0.1473ms)
+✔ AI-8: degrades gracefully when only an eBL is present (legacy case) (0.0825ms)
+✔ PDF: real two-page text PDF preserves values and page-local line provenance (85.9213ms)
+✔ PDF: positioned table cells and plain labels parse without Markdown syntax (148.5887ms)
+✔ PDF: scans, broken PDFs, page limits, text limits and a hard worker timeout are distinct (264.4273ms)
+✔ PDF: worker core releases resources, and table geometry retains cells in reading order (53.9683ms)
+✔ PDF: a mixed PDF with an unreadable page is held even when another page has complete fields (164.3674ms)
+✔ PDF: the stored binary bundle actually opens once, and its bytes and sources survive reload (320.7886ms)
+✔ vision: defaults are offline, and enabling vision without a provider still requires OCR (5.1331ms)
+✔ vision: the actual runtime sends a tool-free image request with strict schema and caps confidence (13.8324ms)
+✔ vision: malformed fields, attempted tools, injection and unavailable providers never open (15.3182ms)
+✔ model transport: the shared compatible client preserves schema and never sends tools (26.0255ms)
+✔ text model: typed, grounded completion retains deterministic values and records conflicts (1.1816ms)
+✔ text model: only incomplete text calls it; prompts delimit and sanitize document data (24.7979ms)
+✔ injection: screen all later documents before any model sees the bundle (11.3015ms)
+✔ injection: Chinese, zero-width, homoglyphs, wallet fields and payTo are flagged (0.2869ms)
+✔ warehouse: bilingual receipt and CNY invoice retain original units and detect mismatches (3.7531ms)
+✔ warehouse: CNY bundles expose fields and consistency but never infer USD financing (83.8241ms)
+✔ model schema rejects duplicate fields, unknown properties and invalid calendar dates (0.6126ms)
+✔ written calendar dates keep the same day in Singapore, UTC and US timezones (326.8277ms)
+✔ AI-17: parses the demo eBL with field-level provenance and confidence (10.3589ms)
+✔ AI-17: parses invoice totals, unit price, parties and shipment references (3.2211ms)
+✔ AI-17: merges a document bundle over a structured template without losing pricing fields (4.1868ms)
+✔ AI-17: PDF/image extraction is injectable and AI failure falls back deterministically (2.8287ms)
+✔ WP2.2: an invalid binary PDF is distinguished from a scan needing OCR (0.5496ms)
+✔ WP2.2: a crude cargo quoted in barrels parses completely, using the tonnes the document states (4.837ms)
+✔ WP2.2: a barrel quantity with no stated tonnes is left unfilled rather than guessed (3.0737ms)
+▶ BE-14: eBL Document Ingestion Tests
+  ✔ POST /api/ebl/upload accepts valid PDF document (56.218ms)
+  ✔ POST /api/ebl/upload rejects invalid file type (1.5848ms)
+  ✔ POST /api/ebl/upload rejects oversized file (1.0921ms)
+  ✔ POST /api/ebl/upload is idempotent for same file (2.0649ms)
+  ✔ metadata-only uploads are hashed deterministically and flagged as not content-hashed (2.5033ms)
+  ✔ GET /api/ebl/document-status reports receipt, not verification (1.9263ms)
+  ✔ POST /api/ebl/upload validates the file envelope (4.9983ms)
+  ✔ uploaded file names are reduced to a safe base name (0.8774ms)
+  ✔ GET /api/ebl/document-status only knows documents it issued (1.1492ms)
+  ✔ POST /api/ebl/upload records the case link without claiming orchestration (1.0862ms)
+✔ BE-14: eBL Document Ingestion Tests (91.331ms)
+✔ .env is loaded for the app but not inside the test runner (0.4284ms)
+✔ the real test runner marks this process, so .env cannot leak into any test (0.5492ms)
+▶ HTTP hardening
+  ✔ a malformed request target answers 400 and never takes the process down (20.4087ms)
+  ✔ malformed percent-encoding is a 400, not a 500 (22.44ms)
+  ✔ request bodies over the configured limit are rejected with 413 (18.3076ms)
+  ✔ invalid JSON is a 400 with a stable error code (2.0459ms)
+  ✔ unknown API routes are a JSON 404 and non-GET static paths a 405 (10.1514ms)
+  ✔ unexpected failures never leak internal error text (15.5178ms)
+  ✔ every response carries the baseline security headers; the dashboard also gets a CSP (77.6538ms)
+  ✖ the server-side LLM key is never sent to the browser (2.7576ms)
+  ✖ static files: ETag revalidation, per-type caching and HEAD (1.5883ms)
+  ✖ static text assets are served br/gzip-compressed and decode to the exact file bytes (0.4121ms)
+  ✔ large JSON API responses are gzip-compressed on request (15.533ms)
+  ✔ path traversal attempts never read files outside /public (5.6889ms)
+  ✔ directories and missing files are 404s (3.0108ms)
+✖ HTTP hardening (214.0473ms)
+✔ readBody enforces the limit while streaming and by declared Content-Length (2.3308ms)
+✔ readJsonBody: empty -> null, valid -> parsed, malformed -> 400 invalid_json (1.6491ms)
+✔ configuredBodyLimit honours AGENTBL_MAX_BODY_BYTES and ignores junk (0.09ms)
+✔ safeDecodeURIComponent turns malformed escapes into a 400 (0.1096ms)
+✔ describeError maps known failures to statuses and hides everything else (0.2552ms)
+✔ clientIp trusts X-Forwarded-For only for the configured number of proxy hops (0.1915ms)
+✔ createRateLimiter counts per key in fixed windows and stays bounded (0.2324ms)
+✔ envInt accepts non-negative integers only (0.0916ms)
+✔ checkAdminToken: fail closed, constant-time, Bearer or X-Admin-Token (0.6713ms)
+✔ the CSP allows only same-origin scripts and lists the chain hosts the wallet flow needs (0.3166ms)
+✔ connectOriginsFromChainConfig extracts, normalises and de-duplicates origins (0.244ms)
+(node:13144) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ frontend translation keys have both Chinese and English copy (3.3513ms)
+✔ the document language follows the language switch (0.2052ms)
+✔ Chinese UI keeps navigation and key investor information in Chinese (0.0682ms)
+✔ English UI copy contains no accidental Chinese (2.4886ms)
+✔ Chinese-native trade data is rendered in English in English mode (0.5394ms)
+✔ ingest: a text document is stored by content and gets a job and a mock ENI record (2.968ms)
+✔ ingest: the same content for the same case is idempotent and returns the same job (0.9008ms)
+✔ ingest: without a case_id one is derived from the content, so the same upload lands on the same case (0.2435ms)
+✔ ingest: a real PDF and PNG are accepted by their magic bytes, base64 or not (0.6247ms)
+✔ ingest: refuses what it cannot trust, with a code a client can act on (1.1872ms)
+✔ ingest: file names are reduced to a safe base name (0.0946ms)
+✔ ingest: uploads, jobs and built cases survive a restart; an unfinished job is reported as interrupted (23.5455ms)
+✔ ingest: a case id that is not a safe file name is never written to disk (0.7021ms)
+✔ screen: the shipped trade documents are clean (17.3353ms)
+✔ screen: instructions aimed at an automated reader are flagged, in English and Chinese (2.8288ms)
+✔ screen: hidden text and wallet addresses are flagged; ordinary figures are not (0.2806ms)
+✔ screen: a bundle reports which document was the problem (0.1827ms)
+✔ screen: untrusted text is wrapped as data and cannot close its own wrapper (0.096ms)
+✔ preferences: validated, replaced as a whole, persisted, and cleared by an empty object (8.7567ms)
+✔ preferences: nonsense is refused with the offending field named (1.0283ms)
+✔ AI-19: deterministic fallback filters by low risk (0.8962ms)
+✔ AI-19: deterministic fallback sorts by high yield (0.1168ms)
+✔ AI-19: deterministic fallback filters by commodity (0.142ms)
+✔ WP0.2: normalizeRiskLevel maps HIGH to WARNING and rejects unknown values (0.4492ms)
+✔ WP0.2: risk_max keeps WARNING cases when the ceiling is WARNING or CRITICAL (0.6432ms)
+✔ WP0.2: risk_max=CRITICAL keeps every market pool, including the WARNING ones (46.4418ms)
+✔ WP0.2: LLM criteria are validated; unknown keys are dropped and invalid values fall back (1.1947ms)
+✔ writeJsonAtomic writes pretty JSON and readJson returns it (WP0.3) (5.7496ms)
+✔ readJson returns the fallback for a missing file but throws on corrupt JSON (2.4859ms)
+✔ writeJsonAtomic retries a transient EPERM rename and then succeeds (29.2404ms)
+✔ writeJsonAtomic removes its temp file when the rename keeps failing (18.3055ms)
+✔ writeJsonAtomic does not retry non-transient errors (1.5842ms)
+✔ createWriteQueue runs tasks in order and survives a failed task (31.362ms)
+✔ appendJsonl appends records and readJsonl returns them oldest-first with tail and filter (6.015ms)
+✔ appendJsonl rotates by size and keeps at most keepFiles generations (14.9603ms)
+✔ readJsonl skips a torn final line left by a crash (1.4343ms)
+✔ cleanupOrphanTemps removes only old *.tmp files (2.7951ms)
+✔ AI-12: every canonical judge question gets a grounded, cited answer (21.9648ms)
+✔ AI-12: the "guaranteed?" question keeps the non-principal-protection line (1.5523ms)
+✔ AI-12: the pricing question explains the profit-share model with real numbers (1.4246ms)
+✔ AI-12: the risk-rises answer cites the pause action from the real engine (1.3772ms)
+✔ AI-12: routing picks the on-chain and collateral intents correctly (0.1154ms)
+✔ AI-12: a configured LLM rephrases, but a failing LLM falls back to grounded (3.9019ms)
+▶ W2 durable capital ledger
+  ✔ retains intent terms and refuses a second transaction hash on restart (47.0504ms)
+  ✔ records deposits, zero/partial claims and refunds without mixing wallets or protocol instances (76.2208ms)
+  ✔ deduplicates concurrent same-process writers and rejects conflicting evidence (145.1402ms)
+  ✔ recovers a committed cash entry after a crash before writing its position snapshot (30.0219ms)
+  ✔ keeps orphaned chain facts in the audit history while rebuilding canonical positions (54.7931ms)
+  ✔ preserves a torn tail for audit, recovers the committed prefix, and rejects interior corruption (35.321ms)
+  ✔ serializes independent processes and recovers a dead writer lease without double counting (271.7455ms)
+  ✔ preserves a successor lease while the previous writer cleans up its released directory (88.4726ms)
+  ✔ retries transient Windows lease retirement errors while preserving the shared lock and committed entry (71.7025ms)
+  ✔ records disbursement, recovery and fee without creating fictitious investor positions (42.4573ms)
+✔ W2 durable capital ledger (864.2208ms)
+✔ the blocked-port list covers the ports that made fetch fail on this kind of host (0.496ms)
+✔ listenOnUsablePort gives back a bound port and a working server (30.5743ms)
+✔ a blocked port is released and another one is requested (0.3462ms)
+✔ listenOnUsablePort gives up instead of looping forever (0.43ms)
+✔ a listen error is reported, not swallowed (1.7508ms)
+✔ AI-20: all succeed and reach consensus (1.479ms)
+✔ AI-20: single provider fails but others reach consensus (0.7732ms)
+✔ AI-20: extreme outlier causes disagreement fallback (1.128ms)
+✔ AI-20: all fail triggers fallback (0.678ms)
+✔ WP0.2: with no provider configured nothing is called and the fallback is used (0.0929ms)
+✔ WP0.2: the default provider list is only the providers with a real key (1.6166ms)
+✔ WP0.2: no placeholder credentials are injected and a custom endpoint cannot hijack a provider (1.9664ms)
+✔ WP0.2: an unconfigured provider fails by itself, it is not called with a fake key (1.5092ms)
+✔ WP0.2: HIGH from a provider is read as WARNING and the consensus uses the engine vocabulary (1.2189ms)
+▶ every provider resolves the project model, including blank overrides and Azure deployment routing
+  ✔ custom (0.5316ms)
+  ✔ tencent (0.109ms)
+  ✔ deepseek (0.0974ms)
+  ✔ qwen (0.0687ms)
+  ✔ qwen-alias (0.0607ms)
+  ✔ openai (0.4855ms)
+  ✔ azure (0.1809ms)
+✔ every provider resolves the project model, including blank overrides and Azure deployment routing (2.4689ms)
+▶ direct agent API calls transmit x-test-2 across every provider (intercepted, zero real calls)
+  ✔ custom (2.1113ms)
+  ✔ tencent (0.2989ms)
+  ✔ deepseek (0.2525ms)
+  ✔ qwen (0.2798ms)
+  ✔ qwen-alias (0.364ms)
+  ✔ openai (0.2929ms)
+  ✔ azure (0.2778ms)
+✔ direct agent API calls transmit x-test-2 across every provider (intercepted, zero real calls) (4.6877ms)
+▶ browser relay transmits x-test-2 across providers and ignores client model injection
+  ✔ custom (34.7335ms)
+  ✔ tencent (6.8969ms)
+  ✔ deepseek (3.1933ms)
+  ✔ qwen (3.058ms)
+  ✔ qwen-alias (4.0576ms)
+  ✔ openai (2.652ms)
+  ✔ azure (2.4332ms)
+✔ browser relay transmits x-test-2 across providers and ignores client model injection (57.7107ms)
+✔ Copilot model adapter: an explicit token budget reaches the provider; no budget stays omitted (33.262ms)
+▶ LLM relay
+  ✔ status reveals the provider and model but never the key (8.0154ms)
+  ✔ relays a completion with the server key; model, token cap and shape are server-controlled (4.7431ms)
+  ✔ LLM_MAX_TOKENS_CAP raises the output cap, 0 removes it, and a missing or out-of-range value keeps 2048 (155.2817ms)
+  ✔ LLM_REASONING_EFFORT is forwarded only when it is a known level (66.8175ms)
+  ✔ a non-streamed answer carries finish_reason and usage, so a truncated reply is detectable (56.9165ms)
+  ✔ tool calls and tool results round-trip (27.6609ms)
+  ✔ streams server-sent events through unchanged (35.1434ms)
+  ✔ never relays the hidden thinking of a reasoning model, streamed or not (46.637ms)
+  ✔ rejects malformed requests before touching the provider (134.057ms)
+  ✔ oversized request bodies are refused with 413 (20.0153ms)
+[agentbl] 25c92af9b371 503 llm_not_configured: No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)
+  ✔ answers 503 when no provider is configured, and 404 when the relay is disabled (15.6629ms)
+[agentbl] LLM upstream custom answered HTTP 401: {"error":{"message":"invalid api key sk-LEAKED-UPSTREAM-DETAIL"}}
+[agentbl] 650a9b5de24c 502 llm_upstream_error: LLM provider returned HTTP 401
+[agentbl] LLM upstream custom answered HTTP 429: {"error":"slow down"}
+[agentbl] 527eab3263b9 502 llm_upstream_error: The LLM provider returned no message
+[agentbl] LLM upstream custom unreachable: fetch failed
+[agentbl] 5f0dcca6c33f 502 llm_upstream_unreachable: The LLM provider could not be reached
+  ✔ upstream failures are mapped without leaking provider details (81.3498ms)
+  ✔ caps concurrent upstream calls (310.7104ms)
+  ✔ aborts the upstream request when the browser disconnects mid-stream (36.5421ms)
+✔ LLM relay (1004.5955ms)
+✔ normalizeChatRequest clamps and normalises (0.1179ms)
+✔ normalizeChatRequest honours a raised cap and never exceeds it (0.0719ms)
+✔ maxTokensCap and reasoningEffort read their settings strictly (0.0575ms)
+✔ the agent client forwards LLM_REASONING_EFFORT too (4.2743ms)
+▶ BE-11: Market API Tests
+  ✔ GET /api/market/listings returns active pools (37.7568ms)
+  ✔ POST /api/market/search returns AI recommendations (4.2318ms)
+✔ BE-11: Market API Tests (57.3429ms)
+▶ MCP Tool Manifest
+  ✖ has exactly 15 tools (0.8592ms)
+  ✔ all tools have required fields (0.1624ms)
+  ✔ all manifest tools have handlers (0.0859ms)
+✖ MCP Tool Manifest (1.7018ms)
+▶ MCP Tool Handlers
+  ✔ get_trade_case — loads demo case (5.1239ms)
+  ✔ get_trade_case — throws on missing case_id (0.3375ms)
+  ✔ get_trade_case — throws on unknown case (3.1369ms)
+  ✔ generate_pricing_quote — prices demo case (11.592ms)
+  ✔ search_knowledge_base — finds results (0.7163ms)
+  ✔ search_knowledge_base — respects limit (0.2455ms)
+  ✔ simulate_offering — runs full lifecycle (1.3622ms)
+  ✖ push_pricing_to_oracle — produces oracle payload (1.36ms)
+✖ MCP Tool Handlers (24.4401ms)
+▶ MCP callTool Dispatcher
+  ✔ dispatches known tool (1.4441ms)
+  ✔ throws on unknown tool (0.1806ms)
+✔ MCP callTool Dispatcher (1.7347ms)
+▶ MCP Tool Chain
+  ✔ pricing chain runs end-to-end (2.6963ms)
+✔ MCP Tool Chain (2.8097ms)
+✖ MCP tools manifest has exactly 15 tools (1.0681ms)
+✖ manifest contains all expected tool names (2.3344ms)
+✔ each tool in manifest has required fields (0.1657ms)
+✔ each tool in manifest has a registered handler (0.0909ms)
+✔ manifest parameter schemas declare every required field, and status accepts an empty object (0.4074ms)
+✔ get_trade_case: returns valid trade case for demo ID (4.2241ms)
+✔ get_trade_case: returns low-risk scenario (2.3656ms)
+✔ get_trade_case: returns critical-liquidation scenario (1.4548ms)
+✔ get_trade_case: throws for unknown case ID (2.6988ms)
+✔ get_trade_case: throws when case_id is missing (0.2411ms)
+✔ generate_pricing_quote: returns full PricingQuote for demo case (12.8863ms)
+✖ generate_pricing_quote: low-risk case has higher price than critical case (3.277ms)
+✖ generate_pricing_quote: approved case returns OPEN_OFFERING action (4.0358ms)
+✖ generate_pricing_quote: critical case returns TRIGGER_LIQUIDATION action (2.1647ms)
+✔ generate_pricing_quote: works with inline trade_case (1.503ms)
+✔ generate_pricing_quote: throws when no case_id or trade_case provided (0.1673ms)
+✔ simulate_offering: returns workflow result (1.3162ms)
+✔ simulate_offering: final_state matches workflow expectation (2.1658ms)
+✔ simulate_offering: has all workflow step states (0.6874ms)
+✔ simulate_offering: offers inline trade_case (0.6735ms)
+✖ push_pricing_to_oracle: defaults to a policy-checked dry run (1.1544ms)
+✖ push_pricing_to_oracle: repeated dry runs are deterministic and never invent tx hashes (1.188ms)
+✔ push_pricing_to_oracle: requires pricing_quote (0.226ms)
+✖ push_pricing_to_oracle: requires case_id (0.1676ms)
+✔ search_knowledge_base MCP tool returns formatted results (0.6934ms)
+✔ search_knowledge_base MCP tool requires query (0.1178ms)
+✔ search_knowledge_base MCP tool rejects empty query (0.0842ms)
+✔ callTool throws for unknown tool name (0.0526ms)
+✔ callTool error message includes available tools (0.0529ms)
+✖ full MCP tool chain executes end-to-end (1.9482ms)
+✖ low-risk → warning → critical scenarios form an increasing risk gradient (2.2367ms)
+✔ runToolChain executes a 3-step pricing chain (1.716ms)
+✖ push_pricing_to_oracle: an unknown risk level or action is rejected, not defaulted (WP0.2) (1.3171ms)
+✖ push_pricing_to_oracle: RESUME_OFFERING is encoded as action 6 (WP0.2) (1.3349ms)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+[Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\data\cases\archive\copper-sg-shanghai-2026-06.case.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\data\\cases\\archive\\copper-sg-shanghai-2026-06.case.json'
+}
+
+Node.js v26.8.1
+✖ tests\mcpProtocol.test.js (597.761ms)
+✔ MCP-10: dry-run is safe without approval (1.5985ms)
+✔ MCP-10: real write requires explicit human approval (0.7602ms)
+✔ MCP-10: wrong network, excessive amount and unknown contract are rejected (0.5645ms)
+✔ MCP-10: approved, pinned and allowlisted write passes (0.6019ms)
+✔ MCP-10: model-controlled approval cannot replace the out-of-band channel (0.6341ms)
+✔ MCP-10: raw EVM smoke rejects every non-allowlisted selector (0.5838ms)
+✔ MBOX-BE-5/X402-1/2/AI-1: preview → 402 → paid reveal → public proof is verifiable (196.1591ms)
+✔ MBOX-BE-5: demo preview refreshes stale deterministic quotes before filtering (21.6445ms)
+✔ MBOX-BE-6: a candidate invalidated before payment aborts without collecting or replacing (34.5942ms)
+✔ MBOX-BE-3: same committed inputs always select the same pool (9.9522ms)
+✔ MBOX-BE-3: candidate, weight, nonce, payment and quote tampering fail verification (1.1801ms)
+✔ MBOX-BE-3: 10,000 deterministic seeds exercise rejection sampling without material bias (78.7861ms)
+(node:40216) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ MBOX-FE: quoted document evidence retains exact source text and marks only the original fields (0.9888ms)
+✔ MBOX-FE-5: browser verifier reproduces the backend reveal selection (34.9931ms)
+✔ MBOX-FE-5: proof and binding tampering fails closed (8.8095ms)
+✔ MBOX-FE-6: independent subscription guard requires amount, acknowledgement and selected pool binding (0.1548ms)
+✔ MBOX-FE-7: Passport share card uses a strict public whitelist (4.7858ms)
+✔ MBOX-FE-7: public transaction disclosure requires both advanced confirmations (0.195ms)
+✔ MBOX-FE-1~6: signing order, subscription binding and reveal motion are kept (the DOM contract is in webDom.test.js) (3.4909ms)
+✔ MBOX-MCP-1: preview enforces budget and never authorizes payment (49.0287ms)
+✔ MBOX-MCP-1: verifier recomputes proof and fails closed on report binding tamper (6.6764ms)
+✔ MBOX-BE-7/FE-7: verified reveal issues a signed, sanitized Discovery credential (50.0871ms)
+✔ MBOX-BE-7: mystery source is bound into portfolio without changing quote-derived price or yield (15.062ms)
+✔ MBOX-FE-7: Investor Journey stamp requires a mystery-attributed subscription (10.615ms)
+✔ MBOX-BE-2: the three Risk Passport tiers apply deterministic ceilings (2.8655ms)
+✔ MBOX-BE-2: compliance, lifecycle, capacity and freshness fail closed (0.3273ms)
+✔ MBOX-BE-2: cargo, route and jurisdiction exclusions are enforced (0.6194ms)
+✔ MBOX-BE-2: filtering returns an explicit zero-candidate result (0.29ms)
+✔ MBOX-BE-4: preview persists commitment, restores after restart and hides secret/candidates (14.9486ms)
+✔ MBOX-BE-4: idempotency is scoped to wallet and payment receipts cannot be replayed (10.3218ms)
+✔ MBOX-BE-4: concurrent payment attempts yield one reveal and one fail-closed result (4.6121ms)
+✔ MBOX-BE-4/6: expiry and post-payment invalidation are terminal and auditable (6.5366ms)
+(node:23996) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ WP0.1: no source builds a hex hash out of Math.random() (5.6556ms)
+✔ WP0.1: randomBytes(32) is only used for secrets, commitment salts and signature challenges (1.1622ms)
+✔ WP0.1: no source claims behaviour that does not exist (4.2264ms)
+✔ WP0.1: the browser never builds an explorer link by itself (0.3888ms)
+✔ WP0.1: the Demo wallet x402 flow no longer shows a link or a "your wallet" claim (0.2279ms)
+✔ WP0.1: a simulated mint has no hash-shaped placeholder (0.1101ms)
+✔ WP0.1: a Demo subscription gets a demo: reference and no transaction hash (0.4675ms)
+✔ WP0.1: /api/x402/smoke labels every step as a Demo simulation (40.4605ms)
+✔ WP0.1: with no activity the assistant says so instead of inventing decisions (1.0745ms)
+✔ WP0.1: the assistant only shows a transaction when the server recorded one (0.3807ms)
+✔ WP0.1: the assistant portfolio comes from the server and labels subscriptions as Demo (0.3153ms)
+✔ BE-4: a healthy offering runs Created -> ... -> Redeemed (7.0408ms)
+✔ BE-4: an in-transit risk shock reprices the pool down (1.4445ms)
+✔ BE-4: a critical case never opens — it pauses (0.6978ms)
+✔ BE-4: subscription never mints more than the recommended supply (0.6378ms)
+✔ AI-13: orchestrator runs parse/check/value/three-speed-price/decision as one pipeline (29.2738ms)
+✔ AI-13: the same eBL produces exactly the same deterministic opening decision (4.347ms)
+✔ AI-13: a critical document mismatch pauses instead of auto-opening (1.2811ms)
+✔ AI-13: optional execution and decision logging use the same decision_id (1.8902ms)
+✔ X402-7: schema manifest contains every required envelope field (0.8186ms)
+✔ X402-7: creates a valid immutable-delivery envelope with deterministic IDs (1.9287ms)
+✔ MBOX-X402-2: Mystery envelope canonically binds payment, case, pool, passport and reveal proof (0.4202ms)
+✔ X402-7: report hash is stable under object key reordering (0.2332ms)
+✔ X402-7: payload tampering invalidates the canonical report hash (0.56ms)
+✔ X402-7: malformed identities, amount, network and expiry are rejected (0.759ms)
+✔ X402-7: creator strips chain-of-thought, private keys and raw documents (0.3762ms)
+✔ X402-7: manually supplied sensitive fields fail validation even with a recomputed hash (0.2052ms)
+✔ X402-7: demo receipt identifiers are explicit while fake transaction hashes are rejected (0.3099ms)
+✔ X402-7: expiry is deterministic at and after the TTL boundary (0.2475ms)
+✔ X402-7: envelope creation does not mutate the caller snapshot (0.4484ms)
+✔ Phase 4: full playback parses actual files and preserves separate payment and settlement approval (339.613ms)
+✔ Phase 4: repeated playback has no duplicate event, job, subscription or execution (333.9718ms)
+✔ Phase 4: two starts and manual steps cannot race a paced run; stop drains and preserves progress (29.8862ms)
+✔ Phase 4: playback rejects invalid speed/name, Live and non-auto autonomy (2.303ms)
+✔ Phase 4: speed only changes pacing; virtual event times, decisions and quote commitments stay deterministic (284.7977ms)
+✔ Phase 4: a mode generation change cancels playback before another step or subscription (2.992ms)
+✔ Phase 4: references distinguish report payment from decision execution; Demo never inherits a transaction (0.3021ms)
+✔ Phase 4 HTTP: historical quote stays saved while latest market, timeline and portfolio share references (129.7716ms)
+✔ Phase 4 HTTP: playback is asynchronous, admin-protected when configured, and rejects Live (281.6272ms)
+✔ Phase 4: actual provider usage reaches valuation metadata without changing or leaking into chat messages (1.6003ms)
+✔ Phase 4: mode switching during event initialization rejects the old scenario before bus submission (1.8274ms)
+▶ BE-12: Pool API Tests
+  ✔ POST /api/pool/subscribe works for valid amount (18.4016ms)
+  ✔ GET /api/pool/status returns correct subscription state (1.1882ms)
+  ✔ POST /api/pool/subscribe rejects over-subscription (1.4487ms)
+  ✔ POST /api/pool/subscribe rejects missing, non-numeric and non-finite amounts without corrupting the pool (5.872ms)
+  ✔ POST /api/pool/subscribe validates the request envelope (2.1787ms)
+  ✔ POST /api/pool/subscribe refuses wallet strings that could carry markup (4.7596ms)
+  ✔ GET /api/pool/status answers 404 for an unknown pool (1.171ms)
+✔ BE-12: Pool API Tests (88.9709ms)
+✔ AI-2: base issue price is set by payout speed (FAST cheapest, LOW_COST dearest) (10.6103ms)
+✔ AI-3: the more urgent the payout, the lower the price and the bigger the urgency discount (0.5734ms)
+✔ profit-grounded: FAST costs ~60% of margin, LOW_COST ~30% (the reasonable ratio) (0.4785ms)
+✔ higher trade risk lowers the price (investors paid more to take it) (0.4629ms)
+✔ AI-5: redemption exposure never exceeds safe collateral coverage (0.6635ms)
+✔ AI-1: every produced quote passes the PricingQuote schema validator (3.3401ms)
+✔ AI-6: quotes carry investor and exporter explanations (0.2406ms)
+✔ quoteFromCase derives the copper headline deterministically (0.4121ms)
+✔ the annual-rate cap prices short tenors: no more 100% upside on a 3-day voyage (0.5281ms)
+✔ tenorFromCase reads payment terms and voyage dates (0.407ms)
+✔ compareSpeeds returns all three speeds plus a recommendation (1.0878ms)
+✔ scoreRisk reads macro + shipment events into bps and a level (0.1232ms)
+✔ BASE_PROFIT_SHARE encodes the reasonable ratio per speed (0.046ms)
+✔ AI-7: every quote carries an evidence graph mapping discounts to evidence (0.4215ms)
+✔ BE-8: quote_hash and evidence_hash are distinct, stable 0x sha256 hashes (1.0131ms)
+✔ AI-4/AI-8: document inconsistency raises the risk discount and lowers the price (0.9055ms)
+✔ BE-10: the grounded narrative cites price, yield, risk and the not-guaranteed nuance (0.6508ms)
+✔ BE-10: narratePricing without an LLM returns the deterministic narrative (0.2074ms)
+✔ BE-10: disabling the project LLM switch prevents narrator requests (0.1201ms)
+✔ BE-10: a failing LLM falls back to the grounded narrative (0.5199ms)
+✔ BE-10: a working LLM rephrase is used and reports the Tencent provider (0.1981ms)
+✔ AI-4/AI-10: all bundled pricing scenarios pass and cover the demo arc (0.9608ms)
+✔ AI-4: fast vs balanced open cleanly with the urgency-monotone price (0.2117ms)
+✔ AI-10: an in-transit risk shock reprices the pool but it still settles (0.1353ms)
+✔ AI-10: a critical war-crisis case is paused, never opened (0.1263ms)
+✔ AI-4/AI-10: the scenario set covers both an opening and a pausing action (0.1748ms)
+✔ BE-2: a well-formed PricingQuote passes (with and without case cross-check) (1.1827ms)
+✔ BE-2: a non-object is rejected (0.2655ms)
+✔ BE-2: missing / non-finite numeric fields are rejected (0.2801ms)
+✔ BE-2: out-of-set enums are rejected (0.2678ms)
+✔ BE-2 invariant (AI-5): redemption exposure must not exceed safe collateral coverage (0.1494ms)
+✔ BE-2 invariant: base - urgency - risk must reconstruct the indicative price (0.1117ms)
+✔ BE-2 invariant: the collateral floor can only lift the price (final >= indicative) (0.1075ms)
+✔ BE-2 invariant: cash advanced cannot exceed cash requested (0.1107ms)
+✔ BE-2: evidence graph and 0x sha256 oracle hashes are required (BE-8) (0.2235ms)
+✔ BE-2: case_id / bl_id are cross-checked against the case (0.3631ms)
+✔ BE-6: merged workflow carries pricing_quote + risk_report + offering that agree (8.6603ms)
+✔ BE-6: a war-crisis case merges to a paused offering (1.4011ms)
+✔ BE-6: risk_report surfaces document-consistency findings and risk factors (1.0552ms)
+✔ BE-6: an in-transit risk shock is reflected in the merged final_state (1.5424ms)
+✔ knowledge base has correct number of categories (0.7688ms)
+✔ knowledge base has at least 3 entries per category (0.1458ms)
+✔ validateKnowledgeBase returns zero errors (0.2178ms)
+✔ every entry has all required fields (0.1338ms)
+✔ every entry has a valid category (0.0886ms)
+✔ every entry has a valid severity (0.0764ms)
+✔ every entry has at least 3 keywords (0.0787ms)
+✔ every entry has a valid ISO date string (0.0794ms)
+✔ no duplicate IDs in knowledge base (0.1159ms)
+✔ all IDs follow the XXX-NNN pattern (0.2181ms)
+✔ search returns entries matching exact keywords (0.9197ms)
+✔ search returns relevant results for "copper" (0.2048ms)
+✔ search for "monsoon" returns weather-related results (0.2128ms)
+✔ search returns empty array for completely unrelated query (0.1518ms)
+✔ search returns empty array for empty query string (0.0365ms)
+✔ search is case-insensitive (0.3074ms)
+✔ search respects category filter (0.1331ms)
+✔ search respects limit parameter (0.1786ms)
+✔ search with limit=1 returns at most 1 result (0.1294ms)
+✔ search ranks critical entries above info entries when scores are tied (0.2496ms)
+✔ search returns entries with _score and _matchedTokens (0.454ms)
+✔ searchByRoute finds route-relevant results (0.2229ms)
+✔ searchByCommodity finds commodity-relevant results (0.151ms)
+✔ fullRiskSweep returns results for all 6 risk dimensions (1.2883ms)
+✔ Judge Q&A has exactly 4 pairs (0.0422ms)
+✔ each Judge Q&A pair has required fields (0.0539ms)
+✔ getAllQAPairs returns all 4 pairs (0.0323ms)
+✔ getQAById returns correct pair (0.045ms)
+✔ getQAById returns null for unknown ID (0.0382ms)
+✔ searchQA finds relevant Q&A by keywords (0.2015ms)
+✔ searchQA returns empty for unrelated query (0.0582ms)
+✔ searchQA respects limit parameter (0.0547ms)
+▶ per-IP rate limiting
+  ✖ API requests beyond the per-minute budget get 429 with Retry-After; health and static are exempt (80.4285ms)
+  ✔ writes have a tighter budget than reads (88.9442ms)
+[agentbl] a0e9e389028f 503 llm_not_configured: No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)
+[agentbl] 82e760940590 503 llm_not_configured: No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)
+  ✔ the LLM relay is throttled separately (and counted even when it answers an error) (30.4196ms)
+  ✔ X-Forwarded-For is ignored unless TRUST_PROXY is set (cannot be used to dodge the limit) (128.3066ms)
+✖ per-IP rate limiting (344.8748ms)
+✔ demo dates: every ISO date moves by the same number of days, other text does not (1.4697ms)
+✔ demo dates: today is pinned by AGENTBL_DEMO_TODAY, is the anchor under tests, else the clock (0.2131ms)
+✖ demo dates: a curated case keeps voyage, cover and tenor on any day; fixed facts keep their day (3.0923ms)
+✔ demo dates: documents move with their case (0.8449ms)
+✔ real data: on by default, off under tests unless asked, off when switched off (0.1591ms)
+✔ real data: the cache shares one request, keeps values for their window and serves the last good one on failure (0.4765ms)
+✔ real data: HTTP errors and non-JSON bodies are errors (0.3007ms)
+✔ sources: PortWatch transits become a 7-day average against the same week a year earlier (6.7214ms)
+✔ sources: Google News RSS items keep title, outlet, time and link (0.6124ms)
+✔ sources: Polymarket keeps open YES/NO markets with their YES price (0.3734ms)
+✔ sources: sea state is the highest forecast wave; futures quotes carry the month move (0.6907ms)
+✔ mapping: transits, waves, odds and price moves map to severities at fixed thresholds (0.1342ms)
+✔ mapping: the disruption market is the first to resolve after the cargo needs the route (0.2364ms)
+✔ mapping: marking to market moves only the market block, in the cargo's own unit (0.1885ms)
+✔ snapshot: real values with their own dates, used whenever live data is off (1.3416ms)
+✔ live: a working source is labelled live; a failing one falls back to the labelled snapshot (2.1871ms)
+✔ curated cases: the Hormuz-transit cargo pauses on the snapshot; the adjacent one only warns; a clean route stays clean (12.4313ms)
+✔ curated cases: invoice totals equal quantity x unit price and every margin funds its financing (7.8076ms)
+✔ world risk: public sources replace fixtures; headlines are capped and never double a measured risk (4.1519ms)
+✔ F01: final rounded terms reject the independently reproduced loss, zero profit and negative profit (11.1866ms)
+✔ F01: every openable rounded quote satisfies profit, annual rate, cash and collateral invariants (27.827ms)
+✔ F02: pricing is orthogonal to every active lifecycle, including full funding and in-transit (0.2829ms)
+✔ F04: partial recovery and missing debt terms cannot discharge an offering (0.1308ms)
+✔ F05: workspace ownership isolates uploads and cross-case identical documents are rejected (2.5241ms)
+✔ F09: full funding, transit and unknown states are closed through the shared eligibility rule (0.1961ms)
+✔ subscription precision: integer shares conserve six-decimal amounts and leave the unspent budget explicit (5.485ms)
+✔ F10: null sea heights stay missing and filtering retains the correct observation date (0.7558ms)
+✔ F10: missing prices are rejected; null closes are omitted; old observations stay stale after a successful fetch (1.8842ms)
+✔ F11: a newer same-source observation can downgrade or resolve risk; empty/stale feeds cannot (0.2839ms)
+✔ W3 uses stable issuer/original identity and salted commitments; public projection rejects arbitrary data (3.1951ms)
+✔ W3 wallet-bound sessions reject wrong signer/replay/expiry and survive restart with immediate revocation (153.6426ms)
+✔ W3 vault fails closed without separate key, wrong key or tampered ciphertext; no material/token/wallet plaintext persists (76.1139ms)
+✔ W3 enforces same-object authorization over HTTP/download/SSE/MCP/A2A and keeps public projection independent (500.7072ms)
+✔ W3 concurrent process-scoped writers do not overwrite subjects or permit two independent sessions from one challenge (248.9599ms)
+✔ W3 HTTP admin bootstrap, RPC adapters, private download and session-revoked SSE share the same checks (327.6124ms)
+✔ W3 expired sessions and retention cannot read private materials after policy expiry (95.0686ms)
+✔ W3 missing initialized vault refuses reinitialization and status reports unavailable chain controls (62.4231ms)
+✔ risk engine returns a structured report for the demo case (3.1923ms)
+✔ risk engine becomes more conservative when price drops further (0.9798ms)
+✔ AI-11: corpus loads from the risk-intel feed (0.5343ms)
+✔ AI-11: copper case retrieves the Hormuz war + copper volatility intel (0.5928ms)
+✔ AI-11: retrieval eval keeps precision@k high (>= 0.8 mean) (0.3509ms)
+✔ AI-11: free-text query surfaces policy notes for the Q&A assistant (0.2317ms)
+✔ AI-11: a custom corpus can be supplied (no hidden global state) (0.1296ms)
+✔ case retrieval only cites intel that shares the commodity, a region or a global risk type (4.8122ms)
+✔ scenario harness validates expected contract actions across core cases (4.8859ms)
+✔ scenario harness exposes concise summaries for downstream agents and UI (1.7769ms)
+✔ smoke: mock API supports the main demo flow (46.3983ms)
+✔ smoke: invalid case payload is rejected as a client error (7.6053ms)
+✔ BE-3/BE-4: pricing quote and offering simulate endpoints work end to end (71.9606ms)
+✔ BE-3: an invalid payout_speed is rejected as a client error (3.5331ms)
+OpenTelemetry API not installed: spans are no-ops
+✔ tracing helpers work whether or not @opentelemetry/api is installed (2.9729ms)
+✔ LLM and chain metrics are recorded as span attributes (0.1694ms)
+✔ span attributes are sanitised: secrets redacted, long strings truncated, PII hashed (0.6245ms)
+✔ computeCargoValuation takes the conservative minimum and applies the haircut (0.6368ms)
+✔ suggestHaircut sums war + volatility macro risk into 5% for the copper case (0.1202ms)
+✔ runValuationAgent (deterministic) returns market valuation + historical comparables (4.9601ms)
+✔ resolveProvider selects by env key and returns null when none set (0.4425ms)
+✔ resolveProvider wires Tencent to the shared project model and wins on tie (0.2029ms)
+✔ AI-9: a configured LLM that errors falls back to the deterministic valuation (0.4697ms)
+✔ AI-9: a working injected LLM drives the tool loop and reports its provider (0.2431ms)
+✔ public/vendor matches its manifest (hashes, versions, no unlisted files) (5.2912ms)
+✔ the vendored ethers build is the version the backend pins (24.9978ms)
+✔ the cosmjs bundle exports exactly what web3.js uses and imports no Node built-ins (4.0793ms)
+✔ no frontend source loads code from a third-party origin (30.2117ms)
+✔ the browser code never reads an API key from the page or talks to an LLM provider directly (23.9632ms)
+(node:24364) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+﹣ W2 real EVM + HTTP + wallet lifecycle (0.2858ms) # SKIP
+▶ position view
+  ✔ merges demo and live positions (5.7281ms)
+  ✔ falls back to ledger shares when no chain balance is supplied (0.1558ms)
+  ✔ prefers chain balance when supplied (0.09ms)
+✔ position view (6.6452ms)
+▶ confirmed position boundaries
+  ✔ exposes only the requested wallet and uses exact atomic claim amounts (0.1491ms)
+  ✔ does not invent paid cost or claimable proceeds for unknown chain balances (0.0897ms)
+  ✔ does not infer current claimable money from a stale ledger snapshot or a balance mismatch (0.1381ms)
+✔ confirmed position boundaries (0.5223ms)
+(node:31976) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ W2 wallet saves the funding intent before approval, then simulates with allowance and verifies escrow (9.9059ms)
+✔ W2 wallet refuses version, asset and decimal changes before a subscription signature (10.8502ms)
+✔ W2 wallet rechecks the session after approval and never broadcasts a failed preflight (7.0679ms)
+✔ W2 wallet keeps missing escrow and insufficient canonical confirmations unresolved after one broadcast (7.7445ms)
+﹣ W3 actual EVM + business-session HTTP + wallet plans (0.3363ms) # SKIP
+✔ W4 browser saves the exact authorization before sending; lost response/reload never asks for another payment signature (40.6795ms)
+✔ W4 browser storage corruption/quota prevents sending a signed payment without a recovery checkpoint (4.9943ms)
+﹣ W4 actual ERC-3009 EVM + HTTP: exact receipt, wrong terms, failed delivery, expiry, restart, reorg and unknown recovery (0.4821ms) # SKIP
+﹣ W4 actual anchor contract binds encrypted runtime evidence; version registration, local inclusion and reorg are independent (0.0981ms) # SKIP
+✔ W4 evidence canonical encoding rejects lossy values and domain confusion; private salts stay out of projection (4.0305ms)
+✔ W4 every evidence kind has typed amounts, explicit nullable execution, UTC/version/ref boundaries (4.3497ms)
+✔ W4 full private evidence preserves documents above the short-label limit and rejects oversized material (33.8193ms)
+✔ W4 authorization, encrypted restart, new-process verification, missing dependency and initialized-vault loss fail explicitly (617.898ms)
+✔ W4 manual handover binds material revision and runtime version, excludes self-review and retains rejection (234.5033ms)
+✔ W4 fake facilitator success, missing verifier and canonical receipt failure never unlock (4.5419ms)
+✔ W4 nonce identity survives signature changes, rejects changed value/request and concurrent cross-resource replay (0.8932ms)
+✔ W4 unknown settlement, expired authorization and restart recover read-only without another charge (129.8062ms)
+✔ W4 independently confirmed payment losing its receipt blocks repeat delivery and keeps prior proof (1.3751ms)
+✔ W4 facilitator verify retries reads; settle never repeats an unknown broadcast (0.4337ms)
+✔ W4 two independent processes cannot settle the same authorization twice (476.9971ms)
+✔ W4 CLI restart reuses the encrypted signed request; wrong keys and missing initialized history stop new payments (47.301ms)
+✔ W4 market rejects missing/stale/conflicting/closed/extreme/unit/grade/region data without a false clear (0.9861ms)
+✔ W4 official-list adapter handles quoted fields and rejects truncated/schema-invalid sources; no-match never clears eligibility (1.4105ms)
+✔ W4 ACT/365 uses actual remaining time, exact atomic amounts and explicit fee-adjusted yield (0.9309ms)
+✔ W4 pricing commits complete source inputs and policy/calibration versions with stable key order (15.9559ms)
+✔ W4 frozen corpus isolates labels, records actual failures/unsupported evidence/version drift, and refuses changed manifest (19.4776ms)
+✔ W5 explicit controlled financing can select Live independently of paid-report configuration (0.6365ms)
+✔ W5 deployment recovers a missing CLI journal from the durable signed-hash ledger and never accepts conflicting checkpoints (0.4605ms)
+✔ W5 runtime lease prevents a second OS writer, survives SIGKILL and refuses unknown remote owners (297.2889ms)
+✔ W5 readiness separates storage, RPC/reorg uncertainty, queues and startup; alerts arrive, deduplicate and recover (75.5358ms)
+✔ W5 low disk and failed atomic rename are observable without modifying existing runtime data (10.8264ms)
+[agentbl] 46890e1e9e2a 503 operations_not_ready: New intake is paused. Preserve existing records and reconcile operational health.
+✔ W5 operations HTTP keeps liveness separate, authenticates diagnostics and blocks new intake while keeping claims reachable (100.8452ms)
+✔ W5 initialized private history detects missing stores and wrong keys; a configured monitor verifies without a signer (20.1145ms)
+✔ W5 encrypted stopped-service backup restores ledger, business session and evidence in a new OS process with source offline (441.8525ms)
+✔ W5 restore authenticates every byte before writing, rejects traversal, collisions, wrong keys and interrupted restores (5.0714ms)
+✔ W5 a degraded operation blocks new x402 settlement but permits original paid-authorization recovery (1.565ms)
+(node:19784) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ WEB3-20: event reads stay within the Injective eth_getLogs block limit (1.6395ms)
+✔ WEB3-18: detects MetaMask, Keplr and Leap independently (0.2544ms)
+✖ WEB3-18: keplr connects through the native injective-888 signer (0.4383ms)
+✖ WEB3-18: leap connects through the native injective-888 signer (0.1486ms)
+✖ WEB3-19: browser resolver switches network-specific contract ABI without flattening registry (0.178ms)
+✔ WEB3-18: MetaMask network switching (wallet_switchEthereumChain) (0.3954ms)
+✔ WEB3-18: MetaMask signing rejection (ACTION_REJECTED) (0.2839ms)
+✔ WEB3-18: MetaMask permission revocation (wallet_revokePermissions) (0.3682ms)
+✔ WEB3-18: restoreWalletSession for MetaMask using eth_accounts (0.4129ms)
+✖ WEB3-18: restoreWalletSession for Keplr restores native signer (0.71ms)
+✖ the Vite build is CSP-clean and self-contained (363.8646ms)
+(node:36936) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ every navigation tab owns a named panel and exactly one is selected (21.7112ms)
+✔ every dialog has an accessible name that exists in the document (3.321ms)
+✔ the Demo / Live boundary is always visible with its controls (2.0407ms)
+✔ the Agent console announces decision changes in a polite live region (0.703ms)
+✔ server data is rendered as text, never as markup (1.1945ms)
+✔ MBOX-FE-1~6: the Mystery Voyage flow keeps its tiers, five steps, reveal, verifier and guarded subscribe (2.7307ms)
+✔ the English UI has no leftover Chinese on any page (4.3123ms)
+✔ XAPI: offline fallback (no key) yields valid macro_risk_events (7.3592ms)
+✔ XAPI: derived events raise the cargo risk score fed to the pricing engine (1.5702ms)
+✔ XAPI: an injected live executor produces live signals and the right risk types (6.7829ms)
+✔ XAPI: an auth failure falls back to fixtures without throwing (1.5351ms)
+✔ XAPI: re-pricing with world risk lowers the issue price or escalates the action (8.2235ms)
+✔ XAPI: scoreWorldSignals maps a prediction-market probability to severity (0.1959ms)
+▶ x402 Config
+  ✔ exports network identifiers (1.1312ms)
+  ✔ has at least 2 services (0.1597ms)
+✔ x402 Config (1.9158ms)
+▶ x402 Server
+  ✔ buildPaymentRequiredResponse returns valid 402 body (0.6117ms)
+  ✔ createX402Route returns handler function (0.2286ms)
+✔ x402 Server (0.9786ms)
+▶ x402 Client
+  ✔ createPaidFetch returns fetch-compatible function (1.6727ms)
+  ✔ fetchPaidIntel detects free endpoints (90.8728ms)
+  ✔ a purchased report is re-readable via GET /api/x402/report/:id within TTL (67.2326ms)
+✔ x402 Client (160.0723ms)
+▶ x402 Settlement
+  ✔ generatePaymentReceipt returns txHash + receipt (0.473ms)
+  ✔ buildPaymentEvidence returns structured evidence (0.1521ms)
+  ✔ recordPaymentEvidence returns full payment record (0.2077ms)
+✔ x402 Settlement (0.9631ms)
+▶ x402 Endpoints (integration)
+  ✔ GET /api/x402/config returns services (4.7426ms)
+  ✔ GET /api/x402/intel/premium-risk returns 402 without payment (3.453ms)
+  ✔ POST /api/x402/smoke returns full flow (8.0017ms)
+✔ x402 Endpoints (integration) (16.3924ms)
+✔ the EIP-712 type list matches the official client field for field (0.9127ms)
+✔ typed data and authorization window match the official construction (26.6664ms)
+✔ a browser-signed authorization is a valid EIP-3009 signature by the paying wallet (12.453ms)
+✔ the PAYMENT-SIGNATURE header decodes with the official decoder to the same payload (7.498ms)
+✔ pickRequirement refuses anything unexpected before a signature is requested (0.5608ms)
+✔ decodeAbiString / readTokenName read the on-chain token name (6.2361ms)
+✔ payV2WithWallet signs only after validating the challenge, and never signs a wrong price (6.8925ms)
+✔ payV2WithWallet passes through a free / pre-payment rejection untouched (5.3556ms)
+✔ X402-5: a 402 challenge is signed by a demo signer and the retry unlocks the report (138.2627ms)
+✔ X402-5: the signer private key is used locally and never sent to the server (7.9521ms)
+✔ X402-5: a non-402 response passes through untouched without payment (0.6635ms)
+✔ X402-5: a price above the budget is refused before any signature (0.6286ms)
+✔ X402-5: a payment on an unexpected network is refused (0.341ms)
+✔ X402-5: a cancelled wallet signature is reported as recoverable (0.3602ms)
+✔ X402-5: a transport failure surfaces a recoverable network error (0.1494ms)
+✔ X402-5: a hung request aborts with a recoverable timeout (52.841ms)
+✔ X402-5: an underfunded signer is refused before signing (0.6932ms)
+✔ X402-5: a funded signer passes the balance guard and settles (0.4195ms)
+✔ X402-5: live mode without a signer refuses to invent one (0.3003ms)
+✔ X402-5: a server settlement failure is classified with a recoverable hint (5.1115ms)
+✔ X402-5: classifyPaidFailure maps known settlement errors to recoverable codes (0.1091ms)
+✔ X402-3: demo mode has safe deterministic testnet defaults and four priced endpoints (1.2441ms)
+✔ X402-3: live mode fails fast when payTo or facilitator URL is missing (0.4638ms)
+✔ X402-3: unsupported CAIP-2 identifiers are rejected (0.0996ms)
+✔ X402-3: malformed, non-canonical, and wrongly-scaled USDC configuration is rejected (0.1064ms)
+✔ X402-3: prices must be positive integer atomic units with no precision ambiguity (0.2744ms)
+✔ X402-3: live mainnet always requires HTTPS (0.1568ms)
+✔ X402-3: insecure HTTP is limited to an explicit testnet opt-in (0.2608ms)
+✔ X402-3: demo mode skips facilitator network I/O (0.2404ms)
+✔ X402-3: live startup accepts exact/V2 testnet USDC EIP-3009 support (15.5994ms)
+✔ X402-3: live startup fails closed on wrong network, asset, or transfer metadata (1.1576ms)
+✔ X402-8/MBOX-X402-1: catalog exposes four distinct paid business reports (6.3947ms)
+✔ X402-8: premium risk report reuses world-risk repricing (17.2139ms)
+✔ X402-8: premium valuation report reuses valuation tools and comparables (1.0267ms)
+✔ X402-8: fraud review reuses consistency checker, pricing and scenario runner (1.5074ms)
+✔ WP6: a v2 financing case delivers fraud review without legacy LTV fields or an invented contract action (3.8446ms)
+✔ X402-8/MBOX-X402-1: all four business endpoints return HTTP 402 before payment (38.6793ms)
+✔ X402-8: premium-risk unlocks after a signed demo payment (56.7033ms)
+✔ X402-8: premium-valuation unlocks after a signed demo payment (19.8248ms)
+✔ X402-8: fraud-review unlocks after a signed demo payment (15.6747ms)
+✔ X402-13/14: client rejects a challenge above its budget before signing (1.0783ms)
+✔ X402-14: client refuses a challenge on an unapproved network (0.358ms)
+✔ X402-14: wallet cancellation is a recoverable typed error (0.3671ms)
+[agentbl] dc13079acfec 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: X402_PAY_TO is required in live mode
+✔ X402-14: live client fails safely when no signer is configured (9.5362ms)
+✔ X402-14: network timeout becomes a recoverable typed error (16.6358ms)
+✔ DEMO-1: mode endpoint defaults to explicit demo and supports deterministic reset (49.0978ms)
+✔ DEMO-1: live toggle fails explicitly when live infrastructure is absent (4.3571ms)
+✔ usdcToAtomic rounds instead of truncating (0.6007ms)
+✔ resolveSignerKey prefers the dedicated key and only falls back (loudly, once) to the owner key (0.8611ms)
+✔ recordPaymentEvidence: Demo mode returns a clearly simulated receipt (1.8491ms)
+✔ recordPaymentEvidence: Live mode fails closed instead of degrading to a fake receipt (2.8337ms)
+✔ recordPaymentEvidence: Live attestation writes the PaymentOracle once and is idempotent on retry (2.1873ms)
+✔ recordPaymentEvidence: Live attestation rejects a payer mismatch and wraps chain failures (1.3679ms)
+✔ runtime state lives under the project root regardless of the working directory (62.0419ms)
+✖ the deployments MCP resource survives a missing docs/ folder (not shipped in the container image) (2.6293ms)
+✔ a Wallet-derived payer round-trips through the envelope as a valid address (28.4649ms)
+▶ Demo x402 transport
+  ✔ a signed request unlocks a clearly-simulated report (61.1212ms)
+  ✔ a client-claimed X402-TxHash is never treated as a verified, settled payment (22.443ms)
+  ✔ a malformed X402-TxHash is a 400 (22.1039ms)
+  ✔ an oversized request body is refused with 413 (21.1455ms)
+  ✔ a signature from a different wallet than the claimed signer is a 401 (26.4466ms)
+  ✔ invalid input is rejected before the (simulated) payment is recorded (15.4603ms)
+  ✔ a case the engine cannot price is refused BEFORE payment, without leaking engine internals (34.767ms)
+✔ Demo x402 transport (246.681ms)
+[agentbl] 2bd369612bba 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: Facilitator /supported returned HTTP 503
+▶ x402 live gateway on the real app server
+  ✔ an unavailable facilitator is a 503, and the gateway recovers once it is back (151.0334ms)
+  ✔ unpaid requests get a decodable V2 challenge priced from the service catalog (33.5589ms)
+  ✔ the personal-sign (demo) headers do not unlock anything in Live mode (14.3675ms)
+  ✔ a verified payment settles once, delivers the report, and attests it on-chain (158.6478ms)
+  ✔ replaying the same signed authorization re-delivers without a second charge or attestation (31.7815ms)
+  ✔ the paid report can be re-read from the cache without paying again (34.7759ms)
+  ✔ payments that do not match the protected resource never reach the facilitator (22.4816ms)
+  ✔ a facilitator settlement failure never delivers the report (60.979ms)
+  ✔ malformed input is refused BEFORE the buyer is charged (1.9183ms)
+[agentbl] x402 live gateway error: { code: 'payment_oracle_write_failed' }
+  ✔ a failure after settlement says the payment went through and that a retry is free (138.7612ms)
+[agentbl] x402 live gateway error: { code: 'payment_oracle_unavailable' }
+  ✔ without a configured attestor the report is not delivered (Live never fakes a receipt) (89.3732ms)
+  ✔ Mystery Voyage: invalid reveals are rejected before payment, a valid one completes after it (183.85ms)
+  ✔ the OFFICIAL x402 client (real EIP-3009 signing) can pay the gateway (152.4514ms)
+  ✔ the repo CLI client pays a Live endpoint, but enforces budget, network and signer BEFORE signing (175.5805ms)
+  ✔ the BROWSER wallet flow (eth_signTypedData_v4) pays the gateway like the official client (129.8917ms)
+  ✔ the browser flow completes a Mystery Voyage reveal (wallet = previewing wallet) (151.1642ms)
+  ✔ a wrong-wallet Mystery payment is refused before the browser wallet is even asked to sign (47.7024ms)
+✔ x402 live gateway on the real app server (1612.0906ms)
+✔ X402-10: a paid envelope adds provenance without changing any risk or price result (13.4563ms)
+✔ X402-10: paid report is a clearly neutral evidence-graph node (0.7983ms)
+✔ X402-10: tampered report hash cannot enter pricing (0.8033ms)
+✔ X402-10: expired report cannot enter pricing (0.584ms)
+✔ X402-10: report from another trade case cannot enter pricing (0.6924ms)
+✔ X402-10: duplicate report ids are idempotent in the evidence graph (0.7629ms)
+✔ X402-11: a saved report is re-readable within its TTL without re-payment (6.6764ms)
+✔ X402-11: an unknown report id is a clean miss (0.3074ms)
+✔ X402-11: an expired report is pruned and no longer readable (0.2682ms)
+✔ X402-11: a report without a valid expires_at is not cached (0.1021ms)
+✔ X402-11: cached reports survive a process restart within TTL (4.0062ms)
+✔ X402-11: expired entries are dropped when the store is reloaded (3.6783ms)
+✔ X402-11: list returns identity metadata for unexpired reports only (0.372ms)
+✔ X402-4: unpaid request returns a decodable V2 PAYMENT-REQUIRED challenge (33.8412ms)
+✔ X402-4: matching payment settles, exposes receipt metadata, and unlocks after 2xx (9.0461ms)
+✔ X402-4: malformed payment header is rejected before settlement (3.8803ms)
+✔ X402-4: expired, future, and overlong authorizations are rejected (14.3695ms)
+✔ X402-4: wrong network is rejected (4.0367ms)
+✔ X402-4: wrong amount is rejected in both accepted terms and signed authorization (5.2857ms)
+✔ X402-4: wrong recipient is rejected in accepted terms and signed authorization (5.2869ms)
+✔ X402-4: settlement failure never releases the protected handler (3.859ms)
+✔ X402-4: middleware leaves unprotected routes untouched (2.8113ms)
+✔ X402-6: concurrent duplicate submissions verify and settle exactly once (4.5906ms)
+✔ X402-6: settled and unlocked receipts survive process restart without re-settlement (98.2625ms)
+✔ X402-6: verification failure persists FAILED and can never unlock (0.8417ms)
+✔ X402-6: transient facilitator errors retry with bounded attempts (3.6006ms)
+✔ X402-6: the same authorization cannot unlock a different resource (0.9208ms)
+✔ X402-6: restart converts an ambiguous SETTLING record to fail-closed reconciliation (25.4589ms)
+✔ X402-6: demo settlement is explicit, non-onchain, and has no fake tx hash (0.409ms)
+ℹ tests 1020
+ℹ suites 14
+ℹ pass 955
+ℹ fail 63
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 18383.4698
+
+✖ failing tests:
+
+test at tests\agentAnchoring.test.js:1:1
+✖ tests\agentAnchoring.test.js (510.4505ms)
+  'test failed'
+
+test at tests\agentApi.test.js:77:11
+✖ GET /api/agent/status is public and reports the runtime without exposing keys (12.717ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:78:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:77:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:95:11
+✖ an injected world-risk event produces a decision, an executed simulated reprice and a trace (0.822ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:96:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:95:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:124:11
+✖ the same event again is a duplicate and does not execute twice (0.6675ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:125:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:124:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:134:11
+✖ without ?wait the event is accepted (202) and processed in the background (0.5928ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:135:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:134:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:144:11
+✖ invalid input is refused with a 4xx and a readable reason (0.5699ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:145:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:144:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:161:11
+✖ control: autonomy and emergency stop change what the agent does (0.5603ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:162:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:161:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:177:11
+✖ approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx (0.7009ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:178:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:177:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:219:11
+✖ the admin token protects control, events and the approval queue once it is configured (0.5933ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:220:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:219:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:249:11
+✖ the activity stream sends an id per event and replays what a reconnecting client missed (0.6723ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:250:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:249:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentApi.test.js:282:11
+✖ POST /api/demo/reset clears what the agent recorded in Demo and rebuilds the pools (0.6198ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:37:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:283:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentApi.test.js:282:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:60:11
+✖ POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step (11.9537ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:61:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:60:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:94:11
+✖ uploading the same documents again is a 200 with the same job, not a second decision (0.7539ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:95:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:94:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:106:11
+✖ a document that tries to steer the agent is held, and the answer says so (0.6625ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:107:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:106:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:120:11
+✖ bad uploads are refused with a status and a code, and open no job (0.6665ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:121:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:120:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:136:11
+✖ a document over the size limit is a 413 (0.6463ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:137:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:136:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:148:11
+✖ exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them (0.7111ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:149:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:148:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:172:11
+✖ scenarios: list, run one over HTTP, and the pool and approvals show the result (0.5851ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:173:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:172:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:197:11
+✖ the admin token, once configured, protects scenarios but not Demo uploads (0.5889ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:198:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:197:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestApi.test.js:212:11
+✖ the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case (0.6664ms)
+  TypeError: loadChainConfig is not a function
+      at freshService (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:40:18)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:213:27)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentIngestApi.test.js:212:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests\agentIngestPipeline.test.js:1:1
+✖ tests\agentIngestPipeline.test.js (449.8223ms)
+  'test failed'
+
+test at tests\agentInterop.test.js:1:1
+✖ tests\agentInterop.test.js (551.4595ms)
+  'test failed'
+
+test at tests\agentPhase5.test.js:1:1
+✖ tests\agentPhase5.test.js (514.5467ms)
+  'test failed'
+
+test at tests\agentPolicy.test.js:130:1
+✖ config: environment parsing, defaults and bounds (0.8769ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   2
+  - ]
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentPolicy.test.js:133:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 2 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\agentPrivacy.test.js:1:1
+✖ tests\agentPrivacy.test.js (476.9792ms)
+  'test failed'
+
+test at tests\agentService.test.js:276:1
+✖ status reports mode, autonomy, signers (booleans only) and queue depth (2.1664ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'AGENT_EXECUTOR',
+  -   'PRICING_UPDATER'
+  - ]
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/agentService.test.js:283:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'AGENT_EXECUTOR', 'PRICING_UPDATER' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\apiValidation.test.js:91:1
+✖ BE-8: API rejects a 67-character evidence hash before any chain call (20.9031ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /evidence_hash must be exactly 32 bytes/u. Input:
+  
+  'Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal'
+  
+      at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/apiValidation.test.js:105:12
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async withServer (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/apiValidation.test.js:19:5)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/apiValidation.test.js:92:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal',
+    expected: /evidence_hash must be exactly 32 bytes/u,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\contractParity.test.js:28:1
+✖ pool action codes match the JS harness and the AgentBLRWA action enum (1.0374ms)
+  Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\hardhat\contracts\RWAOfferingPool.sol'
+      at Object.readFileSync (node:fs:621:20)
+      at read (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:12:34)
+      at contract (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:13:28)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:31:32)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    errno: -4058,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\hardhat\\contracts\\RWAOfferingPool.sol'
+  }
+
+test at tests\contractParity.test.js:38:1
+✖ risk levels: harness codes, oracle limit and demo-contract limit agree (0.1588ms)
+  Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\hardhat\contracts\RiskPricingOracle.sol'
+      at Object.readFileSync (node:fs:621:20)
+      at read (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:12:34)
+      at contract (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:13:28)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:40:32)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    errno: -4058,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\hardhat\\contracts\\RiskPricingOracle.sol'
+  }
+
+test at tests\contractParity.test.js:44:1
+✖ every on-chain offering state is a known lifecycle state, and Repaid keeps its code (0.1623ms)
+  Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\hardhat\contracts\RWAOfferingPool.sol'
+      at Object.readFileSync (node:fs:621:20)
+      at read (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:12:34)
+      at contract (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:13:28)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/contractParity.test.js:45:30)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    errno: -4058,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\hardhat\\contracts\\RWAOfferingPool.sol'
+  }
+
+test at tests\copilotWallet.test.js:29:1
+✖ Copilot wallet: a matching contract receipt is required for a Live subscription result (1.5488ms)
+  Error: Only controlled v5 subscriptions are supported
+      at err (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:183:13)
+      at subscribeOffering (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:430:48)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/copilotWallet.test.js:30:45)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    code: 'PROTOCOL_RETIRED'
+  }
+
+test at tests\copilotWallet.test.js:59:1
+✖ Copilot wallet: wrong events, failed receipts and price changes during mining remain unconfirmed without automatic retry (1.1158ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    Comparison {
+  +   code: 'PROTOCOL_RETIRED'
+  -   code: 'subscription_reconciliation_required'
+    }
+  
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/copilotWallet.test.js:66:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: Only controlled v5 subscriptions are supported
+        at err (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:183:13)
+        at subscribeOffering (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:430:48)
+        at async waitForActual (node:assert:615:5)
+        at async strict.rejects (node:assert:738:25)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/copilotWallet.test.js:66:5)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7),
+    expected: { code: 'subscription_reconciliation_required' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests\docsConsistency.test.js:1:1
+✖ tests\docsConsistency.test.js (47.4604ms)
+  'test failed'
+
+test at tests\httpHardening.test.js:102:11
+✖ the server-side LLM key is never sent to the browser (2.7576ms)
+  AssertionError [ERR_ASSERTION]: /chain-config.json -> 404
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHardening.test.js:109:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHardening.test.js:102:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\httpHardening.test.js:118:11
+✖ static files: ETag revalidation, per-type caching and HEAD (1.5883ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHardening.test.js:120:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHardening.test.js:118:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\httpHardening.test.js:147:11
+✖ static text assets are served br/gzip-compressed and decode to the exact file bytes (0.4121ms)
+  Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\public\chain-config.json'
+      at Object.openSync (node:fs:779:18)
+      at Object.readFileSync (node:fs:625:35)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHardening.test.js:148:25)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at TestContext.test (node:internal/test_runner/test:400:20)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/httpHardening.test.js:147:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7) {
+    errno: -4058,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\public\\chain-config.json'
+  }
+
+test at tests\mcp-server.test.js:13:3
+✖ has exactly 15 tools (0.8592ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  14 !== 15
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp-server.test.js:14:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at node:internal/test_runner/test:1903:71
+      at node:internal/per_context/primordials:504:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:478:3)
+      at node:internal/per_context/primordials:504:9
+      at Array.map (<anonymous>) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 14,
+    expected: 15,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\mcp-server.test.js:79:3
+✖ push_pricing_to_oracle — produces oracle payload (1.36ms)
+  TypeError: MCP_TOOL_HANDLERS.push_pricing_to_oracle is not a function
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp-server.test.js:81:44)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests\mcp.test.js:12:1
+✖ MCP tools manifest has exactly 15 tools (1.0681ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  14 !== 15
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:13:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 14,
+    expected: 15,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\mcp.test.js:16:1
+✖ manifest contains all expected tool names (2.3344ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(names.includes('push_pricing_to_oracle'))
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:21:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\mcp.test.js:137:1
+✖ generate_pricing_quote: low-risk case has higher price than critical case (3.277ms)
+  Error: Tool "generate_pricing_quote" failed: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:236:21)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:138:19)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    code: undefined,
+    status: undefined,
+    expose: undefined,
+    issues: undefined,
+    [cause]: Error [ValidationError]: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+        at priceRwaOffering (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:350:11)
+        at quoteFromCase (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:594:17)
+        at handleGeneratePricingQuote (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/tools.js:106:15)
+        at async callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:228:20)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:138:19)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+      errors: [ 'Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target' ]
+    }
+  }
+
+test at tests\mcp.test.js:151:1
+✖ generate_pricing_quote: approved case returns OPEN_OFFERING action (4.0358ms)
+  Error: Tool "generate_pricing_quote" failed: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:236:21)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:152:18)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    code: undefined,
+    status: undefined,
+    expose: undefined,
+    issues: undefined,
+    [cause]: Error [ValidationError]: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+        at priceRwaOffering (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:350:11)
+        at quoteFromCase (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:594:17)
+        at handleGeneratePricingQuote (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/tools.js:106:15)
+        at async callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:228:20)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:152:18)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+      errors: [ 'Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target' ]
+    }
+  }
+
+test at tests\mcp.test.js:157:1
+✖ generate_pricing_quote: critical case returns TRIGGER_LIQUIDATION action (2.1647ms)
+  Error: Tool "generate_pricing_quote" failed: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:236:21)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:158:18)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    code: undefined,
+    status: undefined,
+    expose: undefined,
+    issues: undefined,
+    [cause]: Error [ValidationError]: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+        at priceRwaOffering (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:350:11)
+        at quoteFromCase (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:594:17)
+        at handleGeneratePricingQuote (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/tools.js:106:15)
+        at async callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:228:20)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:158:18)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+      errors: [ 'Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target' ]
+    }
+  }
+
+test at tests\mcp.test.js:216:1
+✖ push_pricing_to_oracle: defaults to a policy-checked dry run (1.1544ms)
+  Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:224:11)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:218:24)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests\mcp.test.js:232:1
+✖ push_pricing_to_oracle: repeated dry runs are deterministic and never invent tx hashes (1.188ms)
+  Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:224:11)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:234:20)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests\mcp.test.js:247:1
+✖ push_pricing_to_oracle: requires case_id (0.1676ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /case_id/. Input:
+  
+  'Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal'
+  
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:248:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal
+        at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:224:11)
+        at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:249:11
+        at waitForActual (node:assert:601:21)
+        at strict.rejects (node:assert:738:31)
+        at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:248:16)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1402:25)
+        at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+        at Test.postRun (node:internal/test_runner/test:1542:19)
+        at Test.run (node:internal/test_runner/test:1467:12),
+    expected: /case_id/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests\mcp.test.js:304:1
+✖ full MCP tool chain executes end-to-end (1.9482ms)
+  Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:224:11)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:329:30)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests\mcp.test.js:338:1
+✖ low-risk → warning → critical scenarios form an increasing risk gradient (2.2367ms)
+  Error: Tool "generate_pricing_quote" failed: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:236:21)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:339:19)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    code: undefined,
+    status: undefined,
+    expose: undefined,
+    issues: undefined,
+    [cause]: Error [ValidationError]: Invalid pricing economics: Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target
+        at priceRwaOffering (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:350:11)
+        at quoteFromCase (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/pricingEngine.js:594:17)
+        at handleGeneratePricingQuote (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/tools.js:106:15)
+        at async callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:228:20)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:339:19)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+      errors: [ 'Pricing requires finite economics, non-negative cash/collateral/risk, coverage in [0,1] and a $1 target' ]
+    }
+  }
+
+test at tests\mcp.test.js:382:1
+✖ push_pricing_to_oracle: an unknown risk level or action is rejected, not defaulted (WP0.2) (1.3171ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /unknown risk_level/. Input:
+  
+  'Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal'
+  
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:384:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal
+        at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:224:11)
+        at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:385:11
+        at waitForActual (node:assert:601:21)
+        at strict.rejects (node:assert:738:31)
+        at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:384:16)
+        at async Test.run (node:internal/test_runner/test:1409:7)
+        at async Test.processPendingSubtests (node:internal/test_runner/test:974:7),
+    expected: /unknown risk_level/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests\mcp.test.js:394:1
+✖ push_pricing_to_oracle: RESUME_OFFERING is encoded as action 6 (WP0.2) (1.3349ms)
+  Error: Unknown tool: "push_pricing_to_oracle". Available tools: get_agent_status, list_agent_decisions, explain_decision, submit_agent_event, recommend_trade_assets, delegate_pricing, get_trade_case, generate_pricing_quote, simulate_offering, search_knowledge_base, verify_trade_documents, purchase_premium_analysis, preview_mystery_voyage, verify_mystery_reveal
+      at callTool (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/mcp/mcpServer.js:224:11)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/mcp.test.js:396:24)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests\mcpProtocol.test.js:1:1
+✖ tests\mcpProtocol.test.js (597.761ms)
+  'test failed'
+
+test at tests\rateLimit.test.js:18:11
+✖ API requests beyond the per-minute budget get 429 with Retry-After; health and static are exempt (80.4285ms)
+  AssertionError [ERR_ASSERTION]: static assets are not API traffic
+  
+  404 !== 200
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/rateLimit.test.js:28:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/rateLimit.test.js:18:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\realData.test.js:42:1
+✖ demo dates: a curated case keeps voyage, cover and tenor on any day; fixed facts keep their day (3.0923ms)
+  [Error: ENOENT: no such file or directory, open 'E:\NUS\BlockChain\Project\Agent-BL-Upgrade\data\cases\archive\copper-sg-shanghai-2026-06.case.json'] { errno: -4058, code: 'ENOENT', syscall: 'open', path: 'E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\data\\cases\\archive\\copper-sg-shanghai-2026-06.case.json' }
+
+test at tests\web3Wallets.test.js:86:3
+✖ WEB3-18: keplr connects through the native injective-888 signer (0.4383ms)
+  Error: Cosmos chain ID is missing from chain-config
+      at err (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:183:13)
+      at connectWallet (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:281:31)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/web3Wallets.test.js:89:23)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    code: 'NETWORK_CONFIG'
+  }
+
+test at tests\web3Wallets.test.js:86:3
+✖ WEB3-18: leap connects through the native injective-888 signer (0.1486ms)
+  Error: Cosmos chain ID is missing from chain-config
+      at err (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:183:13)
+      at connectWallet (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:281:31)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/web3Wallets.test.js:89:23)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    code: 'NETWORK_CONFIG'
+  }
+
+test at tests\web3Wallets.test.js:99:1
+✖ WEB3-19: browser resolver switches network-specific contract ABI without flattening registry (0.178ms)
+  Error: Expected the current research application configuration
+      at resolveApplicationConfig (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/chain/applicationConfig.js:6:11)
+      at resolveBrowserChainConfig (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/web/src/lib/web3.js:106:80)
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/web3Wallets.test.js:112:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests\web3Wallets.test.js:220:1
+✖ WEB3-18: restoreWalletSession for Keplr restores native signer (0.71ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'inj1restored'
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/web3Wallets.test.js:229:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'inj1restored',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\webBuild.test.js:12:1
+✖ the Vite build is CSP-clean and self-contained (363.8646ms)
+  Error: ENOENT: no such file or directory, access 'C:\Users\Mars\AppData\Local\Temp\agentbl-web-build-JVEKr7\chain-config.json'
+      at async Object.access (node:internal/fs/promises:1344:10)
+      at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/webBuild.test.js:31:94)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    errno: -4058,
+    code: 'ENOENT',
+    syscall: 'access',
+    path: 'C:\\Users\\Mars\\AppData\\Local\\Temp\\agentbl-web-build-JVEKr7\\chain-config.json'
+  }
+
+test at tests\x402Hardening.test.js:244:1
+✖ the deployments MCP resource survives a missing docs/ folder (not shipped in the container image) (2.6293ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - null
+  
+      at TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/x402Hardening.test.js:251:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

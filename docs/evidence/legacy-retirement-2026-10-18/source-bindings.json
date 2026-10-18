@@ -1,0 +1,14 @@
+{
+  "schema": "agentbl-retirement-source-bindings-v1",
+  "checked_at": "2026-10-18T06:26:54.615Z",
+  "base_revision": "b8db411de044b1132f14419a432be6da6ff1501b",
+  "release_source_sha256": "214be96b6f196280b30e28066dc4384746dd73c78d15b1a68d9dd838e5dd1373",
+  "release_source_files": 576,
+  "frozen_release_source_matches": true,
+  "preflight_agent_evaluation_sha256": "61968195940563734ac20abef717859cdcf2ab6b7b1872b4439130163b0f212f",
+  "recomputed_agent_evaluation_sha256": "61968195940563734ac20abef717859cdcf2ab6b7b1872b4439130163b0f212f",
+  "preflight_agent_source_matches": true,
+  "scopes_differ": true,
+  "explanation": "Preflight source_sha256 is the historical Agent evaluation corpus hash. The release source manifest separately binds application, web, contracts, tests and build inputs.",
+  "passed": true
+}

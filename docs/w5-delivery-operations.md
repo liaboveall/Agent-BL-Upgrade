@@ -1,13 +1,15 @@
+> 本文保留 W5 运营机制说明。旧验收收据仅绑定原提交；本次清理后的本地验证另存于 docs/evidence/legacy-retirement-2026-10-18/。
+
 # W5 交付、运营与最终验收
 
 本轮覆盖综合报告 C04–C07，以及 W1–W4 的最终集成。交付层级为**受控 Injective 测试网应用**：实际测试代币托管 / 放款 / 回款 / 退款 / 领取，模拟单证、研究身份和估值。真实企业身份、承运人权利、法律处置和商业准入仍保持外部门槛。
 
-用户在 2026-10-18 直接授权部署、必要交易、测试、提交和推送。规范见 [W5 设计](superpowers/specs/2026-10-18-w5-delivery-operations-design.md)。运行结果见 [W5 证据](evidence/w5-2026-10-18/)；GitHub checks 和 artifacts 记录提交后同 SHA 的 CI 与独立主机恢复，不能由提交前文档预先宣称通过。
+用户在 2026-10-18 直接授权部署、必要交易、测试、提交和推送。规范见 [当前架构](architecture-current.md)。运行结果见 [W5 证据](evidence/w5-2026-10-18/)；GitHub checks 和 artifacts 记录提交后同 SHA 的 CI 与独立主机恢复，不能由提交前文档预先宣称通过。
 
 ## 操作范围
 
 1. Demo：内存演示、固定样本和模拟收据；链上失败不会自动改成模拟成功。
-2. 历史实验 / v3：保留 `public/chain-config.json` 地址和记录；旧协议不会因新源码而升级。
+2. 历史实验已退役：旧源码和部署记录见 [历史归档](archive/README.md)，默认运行不加载旧协议。
 3. 受控融资：显式 `AGENTBL_RIGHTS_CONFIG` 指向 [rights-instance.json](../public/rights-instance.json)，逐次核对链、六份 runtime、治理、EIP-712 域及 owner / oracle / gate / minter，实际绑定通过才显示已连接。
 
 受控融资面板展示实例、条款 / 报价版本、募集、放款、回收、持仓、可领取、已领取和退款。中英文桌面支持 1280 / 1440、键盘和焦点。资格及条款同意通过后才可认购；Live 钱包操作单独确认，以 6 位原子金额核对成本。结清与投资者实际领取分别记账。
@@ -56,7 +58,7 @@ npm run runtime:backup -- restore --directory <new-target> --key-file <separate-
 ## 构建、容量及发布
 
 ```sh
-npm run validate:w5
+npm run validate
 npm run deploy:w5 -- --status
 ```
 

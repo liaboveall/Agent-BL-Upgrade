@@ -134,9 +134,9 @@ test('encrypted persistent snapshots replay after restart and CLI reports failur
   const second = await phase5Runtime(t, { dir, store: first.store });
   assert.equal((await second.service.replayDecision(decision.decision_id)).passed, true);
   const run = promisify(execFile);
-  const { stdout } = await run(process.execPath, ['scripts/agent-replay.mjs', '--decision', decision.decision_id, '--file', path.join(dir, 'agent-decisions.json')]);
+  const { stdout } = await run(process.execPath, ['scripts/agent-replay.mjs', '--decision', decision.decision_id, '--file', path.join(dir, 'research-agent', 'agent-decisions.json')]);
   assert.equal(JSON.parse(stdout).status, 'PASS');
-  await assert.rejects(run(process.execPath, ['scripts/agent-replay.mjs', '--decision', 'unknown', '--file', path.join(dir, 'agent-decisions.json')]), (error) => error.code === 1);
+  await assert.rejects(run(process.execPath, ['scripts/agent-replay.mjs', '--decision', 'unknown', '--file', path.join(dir, 'research-agent', 'agent-decisions.json')]), (error) => error.code === 1);
   await second.service.stop(); await fs.rm(dir, { recursive: true, force: true });
 });
 

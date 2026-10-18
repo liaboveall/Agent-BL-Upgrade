@@ -1,20 +1,15 @@
 import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import chainConfig from '../../scripts/lib/chain-config.cjs';
+import { loadApplicationConfig } from '../chain/loadApplicationConfig.js';
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export const MCP_PINNED_NETWORK = 'eip155:1439';
 export const MCP_MAX_WRITE_USDC = 0.005;
 export const MCP_ALLOWED_WRITE_OPERATIONS = Object.freeze([
-  'pricing_update',
   'x402_payment',
   'raw_evm_smoke'
 ]);
 export const MCP_RAW_EVM_SELECTORS = Object.freeze({
-  // AgentBLRWA.nextPoolId(): controlled calldata-bearing read smoke only.
+  // RWAOfferingPoolV5.nextPoolId(): controlled calldata-bearing read smoke only.
   raw_evm_smoke: Object.freeze(['0x18e56131'])
 });
 
@@ -28,8 +23,7 @@ export class McpWritePolicyError extends Error {
 
 function readChainConfig() {
   try {
-    const raw = JSON.parse(fs.readFileSync(path.join(rootDir, 'public', 'chain-config.json'), 'utf8'));
-    return chainConfig.resolveNetworkConfig(raw, 'injective-testnet');
+    return loadApplicationConfig();
   } catch {
     return {};
   }
@@ -117,7 +111,7 @@ export function authorizeMcpWrite(request = {}) {
   const amountUSDC = assertAmount(request.amount_usdc);
   const contract = String(request.contract ?? '').toLowerCase();
   if (!/^0x[0-9a-f]{40}$/u.test(contract) || !configuredWriteAllowlist().has(contract)) {
-    throw new McpWritePolicyError('contract_not_allowlisted', 'Target contract is not in public/chain-config.json');
+    throw new McpWritePolicyError('contract_not_allowlisted', 'Target contract is not in public/application-config.json');
   }
   const selector = assertRawEvmSelector(operation, request.calldata);
 

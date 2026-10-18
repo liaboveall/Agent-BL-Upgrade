@@ -1,0 +1,162 @@
+{
+  "schema": "agentbl-main-release-evidence-manifest-v1",
+  "generated_at": "2026-10-18T09:21:17.661Z",
+  "source_sha256": "ff0f988ec90a563bc8ff667e497e999a56bc059bd683efd51b7541c09a606680",
+  "excluded": [
+    "manifest.json itself",
+    "*.log originals with txt copies",
+    "private runtime, backups and keys"
+  ],
+  "files": [
+    {
+      "path": "docs/evidence/main-release-2026-10-18/branch-preservation.json",
+      "bytes": 1151,
+      "sha256": "f155d12bc9dbfc53c0faa6b7ff62742deda3b6610f9cf498d2c4bac874f3234d"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/browser.json",
+      "bytes": 22586,
+      "sha256": "b75cd33f8a38938f3064396c40f3a625db4deb44b687a452ff00e8effd4491a2"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/browser.txt",
+      "bytes": 3200,
+      "sha256": "e0571729305f97dc5ed84cbcdb1da56e0feb1f3165191f5bd381d1697e5c8870"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/container-recovery.txt",
+      "bytes": 251,
+      "sha256": "8d4df79f857c9f8dd7cf27e8675bab1d5dc5089ad7bbf174fe7bc83a87213c1e"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/coverage.txt",
+      "bytes": 122352,
+      "sha256": "64d5b4e807e334cce3911d7d1706830ae4bb79294621eb9e213721c459eac6af"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/deployment-continuation-tests-initial.txt",
+      "bytes": 184,
+      "sha256": "de1add34997a9860e9a2b46a0e7c09479bdabd37c0832982017ddf3d3ae5f095"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/deployment-continuation-tests.txt",
+      "bytes": 330,
+      "sha256": "f8b70097fb53d90af15ffb35c7f641b27debb73f6386b089eb0f36a1a66d774c"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/docker-build.txt",
+      "bytes": 7219,
+      "sha256": "6c2bb9357ca689174c5caf3fb1a0eeb923587a1992b4b092828a3a88a973e79d"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/docker-controlled-smoke-initial.json",
+      "bytes": 6123,
+      "sha256": "eb8c2b5a6159202534d4b094637402efc394610566c825fe734af2de166070bc"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/docker-controlled-smoke.json",
+      "bytes": 708,
+      "sha256": "4156b2efe22aaff2e971639ec6d7207b2865ae6cb89b229b4b0098f28f2d2dba"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/docker-demo-smoke.json",
+      "bytes": 114,
+      "sha256": "0407a4f7666458a0a08018424b484365e77c256001beafd94f0d324d6a5f99e4"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/docker-operations-first.json",
+      "bytes": 2172,
+      "sha256": "c21180fd1c615d6f8a056beae0598d534c4de22a3f5ad22a905991e9990fd7a9"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/lint.txt",
+      "bytes": 91,
+      "sha256": "8cbccf04ec9a692af57283787aecd0b2ad8d8d57e0a28fc4dfa0601a26a0d614"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/pre-upgrade-backup.json",
+      "bytes": 558,
+      "sha256": "97b1d891107bfb42808b0038d65090f9381e82a93af6f823c18292a3f3f84d0d"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/precommit-validation.json",
+      "bytes": 1169,
+      "sha256": "3d900be4ef7c7e1abbe134ced759c5a3f05bb4d603686060c3669e67527c7c38"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/preflight.json",
+      "bytes": 11945,
+      "sha256": "f0e5a889c79e092bdb030ca1415703fd69e6a20fa425941611ec1cdc28f093aa"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/preflight.txt",
+      "bytes": 5973,
+      "sha256": "3e4877d529907dc953a7c23c783c0bc8587d3d57aadf6ec54bba9168feed6d04"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/README.md",
+      "bytes": 1953,
+      "sha256": "6ff55779079513e1227493b0dfc0307c0cc1252ac50026ded94b0333c75ba344"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/recovery/receipt.json",
+      "bytes": 2125,
+      "sha256": "c1d55272e7b524236e784997f97bd54e631697b389afa94634656eff712f39b9"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/recovery/replacement.txt",
+      "bytes": 1069,
+      "sha256": "4d81f64e7b7a8657aea9d9e24cfb6d2710db5fe19c2fe294a64d417caa3af48c"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/source-manifest.json",
+      "bytes": 82815,
+      "sha256": "24a441bfa3940d016dd5381d2f0d6137edc63e6ff041c8e154f4f80c29dbc24d"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/stale-lease-verification.json",
+      "bytes": 474,
+      "sha256": "21d717e36ef8ecbc43f14abbc6894eff8b20ef790735eb7f344a7dd3a854a1f9"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/testnet-anchor.txt",
+      "bytes": 1296,
+      "sha256": "67cddea961cae81e9303b3853b969a999af671754420ce57a154f5f979a96e24"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/testnet-smoke.txt",
+      "bytes": 2683,
+      "sha256": "ad5626b75905065d3557652c604c8f36af25c170d1e687727e06814c538723fb"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/testnet-status.txt",
+      "bytes": 701,
+      "sha256": "5690b9c6b8b44f31cb522b923bc1c7994ae0ddb25a1ccaafc8b58e3620b842a1"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/testnet/anchor-acceptance.json",
+      "bytes": 5048,
+      "sha256": "9b7978b2257158abb1134bd61a17973ad1bea2a1699997f1e3fe0fde3e59230e"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/testnet/deployment.json",
+      "bytes": 261337,
+      "sha256": "4909164f87b964c8bdbba1dfb2120aa6c3e4ba2226bd865228f0412734b986ed"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/testnet/financing-acceptance.json",
+      "bytes": 3380,
+      "sha256": "51e4661c89f2a5bf86bb7f33083ba9f7ec69986a07addd98bb0beb23a587ddc0"
+    },
+    {
+      "path": "docs/evidence/main-release-2026-10-18/web-build.txt",
+      "bytes": 558,
+      "sha256": "5fe04deb4b17cfd9021e5a1861d77f475dc388111b2294347d9d3e11ec34c4bd"
+    },
+    {
+      "path": "docs/main-release-2026-10-18.md",
+      "bytes": 4856,
+      "sha256": "75a212a673f81ebe0b60ca45f49c54b18f21a8826b9bf8deafc4cc7f09a3ff20"
+    }
+  ]
+}

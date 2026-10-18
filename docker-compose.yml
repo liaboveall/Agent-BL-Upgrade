@@ -7,7 +7,7 @@ services:
     image: agentbl:local
     ports:
       # Loopback only. To serve it publicly, put a reverse proxy (nginx, Caddy) with TLS in
-      # front instead of publishing the port; see docs/DEPLOYMENT.md.
+      # front instead of publishing the port; see docs/deployment-current.md.
       - "127.0.0.1:${AGENTBL_PORT:-3000}:3000"
     env_file:
       - path: .env

@@ -4,7 +4,7 @@
 // a demo-ready summary suitable for CLI output or API response.
 //
 // Chain: get_trade_case → search_knowledge_base → generate_pricing_quote
-//        → simulate_offering → push_pricing_to_oracle
+//        → simulate_offering
 //
 // Input: { case_id: string }
 // Output: { skill, demo: { steps[], summary, full_chain_outputs } }
@@ -96,34 +96,13 @@ export async function runDemoOperator({ case_id } = {}) {
     outputs.simulate_offering = null;
   }
 
-  // Step 5: push_pricing_to_oracle
-  try {
-    const oracleResult = await callTool('push_pricing_to_oracle', {
-      case_id: case_id,
-      pricing_quote: outputs.generate_pricing_quote
-    });
-    outputs.push_pricing_to_oracle = oracleResult.result;
-    steps.push({
-      step: 5,
-      tool: 'push_pricing_to_oracle',
-      status: 'ok',
-      summary: oracleResult.result.status === 'dry_run'
-        ? `Dry run: ${oracleResult.result.transaction.oracle_address} | explicit approval required for write`
-        : `Tx: ${oracleResult.result.tx_hash.slice(0, 18)}... | ${oracleResult.result.status} | Block ${oracleResult.result.block_number}`
-    });
-  } catch (err) {
-    errors.push(err.message);
-    steps.push({ step: 5, tool: 'push_pricing_to_oracle', status: 'error', error: err.message });
-    outputs.push_pricing_to_oracle = null;
-  }
-
   // Build the demo summary
   const quote = outputs.generate_pricing_quote;
   const offering = outputs.simulate_offering;
-  const oracle = outputs.push_pricing_to_oracle;
 
   return {
     skill: 'agentbl-demo-operator',
+    mode: 'demo',
     status: errors.length > 0 ? 'partial' : 'ok',
     demo: {
       case_id: case_id,
@@ -138,22 +117,15 @@ export async function runDemoOperator({ case_id } = {}) {
         implied_yield_bps: quote.implied_gross_yield_bps,
         investor_explanation: quote.investor_explanation,
         workflow_final_state: offering ? offering.final_state : 'unknown',
-        oracle_tx_status: oracle ? oracle.status : 'failed',
-        oracle_tx_hash: oracle ? oracle.tx_hash : null
       },
       timeline: [
         { stage: '1. Case Loaded', detail: `Trade case ${case_id} loaded: ${bl.cargo} from ${bl.shipper}` },
         { stage: '2. Risk Intelligence Gathered', detail: `${outputs.search_knowledge_base.match_count} risk events identified on the ${bl.port_of_loading} → ${bl.port_of_discharge} route` },
         { stage: '3. AI Priced RWA', detail: `Issue price $${quote.final_issue_price_usd} (${quote.risk_discount_bps} bps risk discount, ${quote.implied_gross_yield_bps} bps implied yield)` },
         { stage: '4. Offering Simulated', detail: `Workflow reached "${offering ? offering.final_state : 'unknown'}" state with action ${quote.pricing_action}` },
-        {
-          stage: oracle?.status === 'dry_run' ? '5. Oracle Write Prepared' : '5. Oracle Updated',
-          detail: oracle?.status === 'dry_run'
-            ? `Pricing payload prepared: ${quote.evidence_hash.slice(0, 18)}... (dry-run; explicit approval required)`
-            : `Pricing pushed on-chain: ${quote.evidence_hash.slice(0, 18)}... via tx ${oracle?.tx_hash?.slice(0, 18) ?? 'N/A'}...`
-        }
+
       ],
-      chain: ['get_trade_case', 'search_knowledge_base', 'generate_pricing_quote', 'simulate_offering', 'push_pricing_to_oracle']
+      chain: ['get_trade_case', 'search_knowledge_base', 'generate_pricing_quote', 'simulate_offering']
     },
     steps,
     errors: errors.length > 0 ? errors : undefined

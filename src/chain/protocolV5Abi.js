@@ -52,7 +52,7 @@ const RWAOfferingPoolV5 = Object.freeze([
   'event AdditionalPaymentRecorded(uint256 indexed poolId,bytes32 paymentProof,uint256 amount,uint256 totalRecovered)'
 ]);
 
-const RWATokenV5 = Object.freeze([
+const ControlledRWAToken = Object.freeze([
   'function balanceOf(uint256,address) view returns (uint256)',
   'function totalSupply(uint256) view returns (uint256)',
   'function burn(uint256,address,uint256)',
@@ -61,10 +61,10 @@ const RWATokenV5 = Object.freeze([
 
 export const PROTOCOL_V5_ABI = Object.freeze({
   RWAOfferingPoolV5,
-  // Backwards-compatible alias used by Task 5 rebuilder/tests before the V5 naming was finalised.
+  // Shared ledger interfaces resolve these names to the controlled instance only.
   RWAOfferingPool: RWAOfferingPoolV5,
-  RWATokenV5,
-  RWAToken: RWATokenV5
+  ControlledRWAToken,
+  RWAToken: ControlledRWAToken
 });
 
 /** Return the configured ABI plus any missing v5 fragments; unknown contracts are unchanged. */

@@ -17,7 +17,6 @@ import { createAgentRoutes } from '../src/app/agentRoutes.js';
 import { phase5Runtime, riskDecision } from './helpers/phase5.js';
 import { listen, requestJson } from './helpers/http.js';
 import { resolveProvider } from '../src/agent/llm/openaiCompatClient.js';
-import { validateAgentLogPlan } from '../scripts/lib/deploy-agent-log.mjs';
 
 const config = loadAgentConfig({ AGENT_ANCHOR_INTERVAL_SEC: '1' });
 const version = createAgentVersion(config, {}, hashSnapshot('test source'));
@@ -102,7 +101,6 @@ test('anchor model metadata matches provider normalization for absent, empty, wh
     const env = { LLM_MODEL: model, LLM_BASE_URL: 'http://127.0.0.1:1', LLM_API_KEY: 'fixture-only' };
     const normalized = createAgentVersion(config, env, hash('model-normalization'));
     assert.equal(normalized.model_id, resolveProvider(env).model);
-    assert.equal(validateAgentLogPlan({ schema: 'agentbl-anchor-deployment-plan-v1', chain_id: 1439, versions: [normalized] }).versions[0].model_id, normalized.model_id);
   }
 });
 

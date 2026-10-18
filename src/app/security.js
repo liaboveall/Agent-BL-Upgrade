@@ -2,7 +2,7 @@
 // a small in-memory rate limiter, and admin-token verification.
 import crypto from 'node:crypto';
 
-// RPC hosts the browser wallet flow talks to that are not (yet) in chain-config.json.
+// RPC hosts the browser wallet flow talks to that are not (yet) in application-config.json.
 const BUILTIN_CONNECT_ORIGINS = Object.freeze([
   'https://k8s.testnet.json-rpc.injective.network',
   'https://testnet.sentry.chain.json-rpc.injective.network'
@@ -17,7 +17,7 @@ function originOf(value) {
   }
 }
 
-/** Collect every origin the page may legitimately call, from chain-config.json. */
+/** Collect every origin the page may legitimately call, from application-config.json. */
 export function connectOriginsFromChainConfig(registry) {
   const origins = new Set(BUILTIN_CONNECT_ORIGINS);
   for (const network of Object.values(registry?.networks ?? {})) {

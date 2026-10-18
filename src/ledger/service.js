@@ -61,7 +61,7 @@ export class CapitalLedgerService {
       } catch { chainPositions.clear(); syncError = 'chain_reconciliation_required'; }
     }
     return { wallet: wallet.toLowerCase(), positions: buildPositionView({ wallet, demoInvestments,
-      ledgerPositions: await this.ledger.listPositions(), chainPositions }), ...(syncError ? { warning: syncError } : {}) };
+      ledgerPositions: Number(this.chainConfig?.protocolVersion) === 5 ? await this.ledger.listPositions() : [], chainPositions }), ...(syncError ? { warning: syncError } : {}) };
   }
 
   async prepareSubscription({ wallet, chain_pool_id: poolId, shares, max_unit_price: maxPrice, expected_quote_version: expectedVersion, deadline }) {

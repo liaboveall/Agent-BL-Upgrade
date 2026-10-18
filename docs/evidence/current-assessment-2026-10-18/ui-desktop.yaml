@@ -1,0 +1,374 @@
+- generic [ref=e3]:
+  - link "跳到主要内容" [ref=e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e5]:
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - link [ref=e8] [cursor=pointer]:
+          - /url: "#/market"
+          - strong [ref=e14]: AgentBL
+        - tablist "页面导航" [ref=e15]:
+          - tab "投资市场" [selected] [ref=e16] [cursor=pointer]
+          - tab "定价与发行" [ref=e17] [cursor=pointer]
+          - tab "Agent 控制台" [ref=e18] [cursor=pointer]
+          - tab "航线盲盒" [ref=e19] [cursor=pointer]
+        - generic [ref=e20]:
+          - combobox "协议网络" [ref=e107]:
+            - option "Injective EVM Testnet" [selected]
+            - option "Injective EVM Mainnet · 未部署"
+          - button "EN" [ref=e21] [cursor=pointer]
+          - button "连接钱包" [ref=e23] [cursor=pointer]
+    - generic [ref=e29]:
+      - generic [ref=e30]: DEMO
+      - generic [ref=e32]: 演示模式 · 无需钱包 · 模拟回执不是链上交易
+      - generic [ref=e33]: ● 已配置 Injective EVM Testnet 合约 · 真实操作需在 LIVE 单独确认
+      - generic [ref=e34]:
+        - button "切换至真实模式" [ref=e35] [cursor=pointer]
+        - button "重置演示" [ref=e36] [cursor=pointer]
+  - main [ref=e38]:
+    - tabpanel "投资市场" [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - paragraph [ref=e43]: 投资市场
+            - heading "选择一笔 eBL 支撑的贸易项目。" [level=1] [ref=e44]
+            - paragraph [ref=e45]: 每个项目由一张电子提单担保，发行价由 AI 按货值和航线风险给出。
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - generic [ref=e48]: 开放项目
+              - strong [ref=e49]: 11 / 13
+            - generic [ref=e50]:
+              - generic [ref=e51]: 融资目标
+              - strong [ref=e52]: $181.23M
+            - generic [ref=e53]:
+              - generic [ref=e54]: 平均年化收益
+              - strong [ref=e55]: 11.7%
+            - button "我的持仓" [ref=e56] [cursor=pointer]
+        - search [ref=e60]:
+          - group "货物类别" [ref=e61]:
+            - button "全部" [pressed] [ref=e62] [cursor=pointer]
+            - button "能源化工类" [ref=e63] [cursor=pointer]
+            - button "金属" [ref=e64] [cursor=pointer]
+            - button "矿石" [ref=e65] [cursor=pointer]
+          - generic [ref=e66]:
+            - generic [ref=e67]: 项目排序
+            - combobox "项目排序" [ref=e68]:
+              - 'option "项目排序: 推荐排序" [selected]'
+              - 'option "项目排序: 年化收益最高"'
+              - 'option "项目排序: 风险最低"'
+              - 'option "项目排序: 认购最多"'
+              - 'option "项目排序: 最早到港"'
+          - generic [ref=e69]:
+            - searchbox "搜索提单或 AI 自然语言筛选…" [ref=e73]
+            - button "AI 筛选" [ref=e74] [cursor=pointer]
+        - generic [ref=e78]:
+          - region [ref=e79]:
+            - generic [ref=e80]:
+              - heading "项目列表" [level=2] [ref=e81]
+              - generic [ref=e82]: 13 个项目
+            - generic [ref=e108]:
+              - button "阴极铜 新加坡 → 中国, 上海 低风险 AI 发行价 $0.9903 年化 · 约 30 天 11.9% 0 已认购 0% · 目标 $5.00M ETA 10-20" [pressed] [ref=e109] [cursor=pointer]:
+                - generic [ref=e111]:
+                  - generic "阴极铜 (LME A级, Cu-CATH-1)" [ref=e112]: 阴极铜
+                  - generic "新加坡 → 中国, 上海 (洋山港)" [ref=e113]: 新加坡 → 中国, 上海
+                - generic [ref=e114]: 低风险
+                - generic [ref=e116]:
+                  - generic [ref=e117]:
+                    - generic [ref=e118]: AI 发行价
+                    - generic [ref=e119]: $0.9903
+                  - generic [ref=e120]:
+                    - generic [ref=e121]: 年化 · 约 30 天
+                    - generic [ref=e122]: 11.9%
+                - generic [ref=e123]:
+                  - progressbar "认购进度" [ref=e124]
+                  - generic [ref=e125]:
+                    - generic [ref=e126]: 已认购 0% · 目标 $5.00M
+                    - generic [ref=e127]: ETA 10-20
+              - button "柴油 新加坡 → 印尼, 雅加达 中风险 AI 发行价 $0.9879 年化 · 约 30 天 14.9% 0 已认购 0% · 目标 $30.00M 已抵达" [ref=e128] [cursor=pointer]:
+                - generic [ref=e130]:
+                  - generic "柴油 (含硫 10ppm)" [ref=e131]: 柴油
+                  - generic "新加坡 (裕廊炼油厂码头) → 印尼, 雅加达 (丹戎不碌)" [ref=e132]: 新加坡 → 印尼, 雅加达
+                - generic [ref=e133]: 中风险
+                - generic [ref=e135]:
+                  - generic [ref=e136]:
+                    - generic [ref=e137]: AI 发行价
+                    - generic [ref=e138]: $0.9879
+                  - generic [ref=e139]:
+                    - generic [ref=e140]: 年化 · 约 30 天
+                    - generic [ref=e141]: 14.9%
+                - generic [ref=e142]:
+                  - progressbar "认购进度" [ref=e143]
+                  - generic [ref=e144]:
+                    - generic [ref=e145]: 已认购 0% · 目标 $30.00M
+                    - generic [ref=e146]: 已抵达
+              - button "天然橡胶 泰国, 林查班 → 中国, 青岛 低风险 AI 发行价 $0.9855 年化 · 约 60 天 8.9% 0 已认购 0% · 目标 $1.50M ETA 10-24" [ref=e147] [cursor=pointer]:
+                - generic [ref=e149]:
+                  - generic "天然橡胶 (TSR20 / STR20)" [ref=e150]: 天然橡胶
+                  - generic "泰国, 林查班 → 中国, 青岛" [ref=e151]
+                - generic [ref=e152]: 低风险
+                - generic [ref=e154]:
+                  - generic [ref=e155]:
+                    - generic [ref=e156]: AI 发行价
+                    - generic [ref=e157]: $0.9855
+                  - generic [ref=e158]:
+                    - generic [ref=e159]: 年化 · 约 60 天
+                    - generic [ref=e160]: 8.9%
+                - generic [ref=e161]:
+                  - progressbar "认购进度" [ref=e162]
+                  - generic [ref=e163]:
+                    - generic [ref=e164]: 已认购 0% · 目标 $1.50M
+                    - generic [ref=e165]: ETA 10-24
+              - button "阴极铜 中国, 上海 → 德国, 汉堡 预警风险 开放 · 预警 AI 发行价 $0.9802 年化 · 约 45 天 16.4% 0 已认购 0% · 目标 $9.40M ETA 11-10" [ref=e166] [cursor=pointer]:
+                - generic [ref=e168]:
+                  - generic "阴极铜" [ref=e169]
+                  - generic "中国, 上海 → 德国, 汉堡" [ref=e170]
+                - generic [ref=e171]:
+                  - generic [ref=e172]: 预警风险
+                  - generic [ref=e173]: 开放 · 预警
+                - generic [ref=e174]:
+                  - generic [ref=e175]:
+                    - generic [ref=e176]: AI 发行价
+                    - generic [ref=e177]: $0.9802
+                  - generic [ref=e178]:
+                    - generic [ref=e179]: 年化 · 约 45 天
+                    - generic [ref=e180]: 16.4%
+                - generic [ref=e181]:
+                  - progressbar "认购进度" [ref=e182]
+                  - generic [ref=e183]:
+                    - generic [ref=e184]: 已认购 0% · 目标 $9.40M
+                    - generic [ref=e185]: ETA 11-10
+              - button "原油 阿联酋, 富查伊拉 → 新加坡 预警风险 开放 · 预警 AI 发行价 $0.9863 年化 · 约 30 天 16.9% 0 已认购 0% · 目标 $50.00M ETA 10-23" [ref=e186] [cursor=pointer]:
+                - generic [ref=e188]:
+                  - generic "原油 (Murban 穆尔班级, 轻质低硫)" [ref=e189]: 原油
+                  - generic "阿联酋, 富查伊拉 (富查伊拉石油码头) → 新加坡 (裕廊岛)" [ref=e190]: 阿联酋, 富查伊拉 → 新加坡
+                - generic [ref=e191]:
+                  - generic [ref=e192]: 预警风险
+                  - generic [ref=e193]: 开放 · 预警
+                - generic [ref=e194]:
+                  - generic [ref=e195]:
+                    - generic [ref=e196]: AI 发行价
+                    - generic [ref=e197]: $0.9863
+                  - generic [ref=e198]:
+                    - generic [ref=e199]: 年化 · 约 30 天
+                    - generic [ref=e200]: 16.9%
+                - generic [ref=e201]:
+                  - progressbar "认购进度" [ref=e202]
+                  - generic [ref=e203]:
+                    - generic [ref=e204]: 已认购 0% · 目标 $50.00M
+                    - generic [ref=e205]: ETA 10-23
+              - button "铁矿粉 澳大利亚, 黑德兰港 → 中国, 天津 低风险 AI 发行价 $0.9772 年化 · 约 90 天 9.5% 0 已认购 0% · 目标 $7.00M ETA 10-21" [ref=e206] [cursor=pointer]:
+                - generic [ref=e208]:
+                  - generic "铁矿粉 (Pilbara 皮尔巴拉混合, 62%品位)" [ref=e209]: 铁矿粉
+                  - generic "澳大利亚, 黑德兰港 → 中国, 天津" [ref=e210]
+                - generic [ref=e211]: 低风险
+                - generic [ref=e213]:
+                  - generic [ref=e214]:
+                    - generic [ref=e215]: AI 发行价
+                    - generic [ref=e216]: $0.9772
+                  - generic [ref=e217]:
+                    - generic [ref=e218]: 年化 · 约 90 天
+                    - generic [ref=e219]: 9.5%
+                - generic [ref=e220]:
+                  - progressbar "认购进度" [ref=e221]
+                  - generic [ref=e222]:
+                    - generic [ref=e223]: 已认购 0% · 目标 $7.00M
+                    - generic [ref=e224]: ETA 10-21
+              - button "巴西大豆 巴西, 桑托斯 → 中国, 大连 低风险 AI 发行价 $0.9878 年化 · 约 49 天 9.2% 0 已认购 0% · 目标 $25.00M ETA 11-15" [ref=e225] [cursor=pointer]:
+                - generic [ref=e227]:
+                  - generic "巴西大豆 (转基因黄豆, 压榨用)" [ref=e228]: 巴西大豆
+                  - generic "巴西, 桑托斯 → 中国, 大连" [ref=e229]
+                - generic [ref=e230]: 低风险
+                - generic [ref=e232]:
+                  - generic [ref=e233]:
+                    - generic [ref=e234]: AI 发行价
+                    - generic [ref=e235]: $0.9878
+                  - generic [ref=e236]:
+                    - generic [ref=e237]: 年化 · 约 49 天
+                    - generic [ref=e238]: 9.2%
+                - generic [ref=e239]:
+                  - progressbar "认购进度" [ref=e240]
+                  - generic [ref=e241]:
+                    - generic [ref=e242]: 已认购 0% · 目标 $25.00M
+                    - generic [ref=e243]: ETA 11-15
+              - button "铜精矿 智利, 安托法加斯塔 → 中国, 连云港 低风险 AI 发行价 $0.9783 年化 · 约 90 天 9.0% 0 已认购 0% · 目标 $15.00M ETA 11-06" [ref=e244] [cursor=pointer]:
+                - generic [ref=e246]:
+                  - generic "铜精矿 (含铜 28%)" [ref=e247]: 铜精矿
+                  - generic "智利, 安托法加斯塔 → 中国, 连云港" [ref=e248]
+                - generic [ref=e249]: 低风险
+                - generic [ref=e251]:
+                  - generic [ref=e252]:
+                    - generic [ref=e253]: AI 发行价
+                    - generic [ref=e254]: $0.9783
+                  - generic [ref=e255]:
+                    - generic [ref=e256]: 年化 · 约 90 天
+                    - generic [ref=e257]: 9.0%
+                - generic [ref=e258]:
+                  - progressbar "认购进度" [ref=e259]
+                  - generic [ref=e260]:
+                    - generic [ref=e261]: 已认购 0% · 目标 $15.00M
+                    - generic [ref=e262]: ETA 11-06
+              - button "原铝锭 阿联酋, 迪拜 → 荷兰, 鹿特丹 严重风险 已暂停 AI 发行价 $0.9608 年化 · 约 49 天 -- 0 已认购 0% · 目标 $30.00M ETA 11-15" [ref=e263] [cursor=pointer]:
+                - generic [ref=e265]:
+                  - generic "原铝锭 (P1020A, 铝含量 99.7%)" [ref=e266]: 原铝锭
+                  - generic "阿联酋, 迪拜 (杰贝阿里) → 荷兰, 鹿特丹" [ref=e267]: 阿联酋, 迪拜 → 荷兰, 鹿特丹
+                - generic [ref=e268]:
+                  - generic [ref=e269]: 严重风险
+                  - generic [ref=e270]: 已暂停
+                - generic [ref=e271]:
+                  - generic [ref=e272]:
+                    - generic [ref=e273]: AI 发行价
+                    - generic [ref=e274]: $0.9608
+                  - generic [ref=e275]:
+                    - generic [ref=e276]: 年化 · 约 49 天
+                    - generic [ref=e277]: "--"
+                - generic [ref=e278]:
+                  - progressbar "认购进度" [ref=e279]
+                  - generic [ref=e280]:
+                    - generic [ref=e281]: 已认购 0% · 目标 $30.00M
+                    - generic [ref=e282]: ETA 11-15
+              - button "铝锭 AL99.70 佛山南海指定仓库 · 仓内交货 低风险 AI 发行价 $0.9893 年化 · 约 30 天 13.2% 0 已认购 0% · 目标 $1.65M 已抵达" [ref=e283] [cursor=pointer]:
+                - generic [ref=e285]:
+                  - generic "铝锭 AL99.70（P1020 级别，国产重熔用铝锭）" [ref=e286]: 铝锭 AL99.70
+                  - generic "佛山南海指定仓库（入库单号 WH-FS-2026-05003） → 佛山南海指定仓库（出库单号 WH-FS-2026-05003）" [ref=e287]: 佛山南海指定仓库 · 仓内交货
+                - generic [ref=e288]: 低风险
+                - generic [ref=e290]:
+                  - generic [ref=e291]:
+                    - generic [ref=e292]: AI 发行价
+                    - generic [ref=e293]: $0.9893
+                  - generic [ref=e294]:
+                    - generic [ref=e295]: 年化 · 约 30 天
+                    - generic [ref=e296]: 13.2%
+                - generic [ref=e297]:
+                  - progressbar "认购进度" [ref=e298]
+                  - generic [ref=e299]:
+                    - generic [ref=e300]: 已认购 0% · 目标 $1.65M
+                    - generic [ref=e301]: 已抵达
+              - button "铝锭 AL99.70 佛山南海指定仓库 · 仓内交货 低风险 AI 发行价 $0.9929 年化 · 约 30 天 8.7% 0 已认购 0% · 目标 $2.34M 已抵达" [ref=e302] [cursor=pointer]:
+                - generic [ref=e304]:
+                  - generic "铝锭 AL99.70（P1020 级别，国产重熔用铝锭）" [ref=e305]: 铝锭 AL99.70
+                  - generic "佛山南海指定仓库（入库单号 WH-FS-2026-05002） → 佛山南海指定仓库（出库单号 WH-FS-2026-05002）" [ref=e306]: 佛山南海指定仓库 · 仓内交货
+                - generic [ref=e307]: 低风险
+                - generic [ref=e309]:
+                  - generic [ref=e310]:
+                    - generic [ref=e311]: AI 发行价
+                    - generic [ref=e312]: $0.9929
+                  - generic [ref=e313]:
+                    - generic [ref=e314]: 年化 · 约 30 天
+                    - generic [ref=e315]: 8.7%
+                - generic [ref=e316]:
+                  - progressbar "认购进度" [ref=e317]
+                  - generic [ref=e318]:
+                    - generic [ref=e319]: 已认购 0% · 目标 $2.34M
+                    - generic [ref=e320]: 已抵达
+              - button "铝锭 AL99.70 佛山南海指定仓库 · 仓内交货 低风险 AI 发行价 $0.9917 年化 · 约 30 天 10.2% 0 已认购 0% · 目标 $1.03M 已抵达" [ref=e321] [cursor=pointer]:
+                - generic [ref=e323]:
+                  - generic "铝锭 AL99.70（P1020 级别，国产重熔用铝锭）" [ref=e324]: 铝锭 AL99.70
+                  - generic "佛山南海指定仓库（入库单号 WH-FS-2026-05001） → 佛山南海指定仓库（出库单号 WH-FS-2026-05001）" [ref=e325]: 佛山南海指定仓库 · 仓内交货
+                - generic [ref=e326]: 低风险
+                - generic [ref=e328]:
+                  - generic [ref=e329]:
+                    - generic [ref=e330]: AI 发行价
+                    - generic [ref=e331]: $0.9917
+                  - generic [ref=e332]:
+                    - generic [ref=e333]: 年化 · 约 30 天
+                    - generic [ref=e334]: 10.2%
+                - generic [ref=e335]:
+                  - progressbar "认购进度" [ref=e336]
+                  - generic [ref=e337]:
+                    - generic [ref=e338]: 已认购 0% · 目标 $1.03M
+                    - generic [ref=e339]: 已抵达
+              - button "阴极铜 新加坡 → 中国, 上海 中风险 历史 AI 发行价 $0.9847 年化 · 约 30 天 -- 0 已认购 0% · 目标 $3.30M 已抵达" [ref=e340] [cursor=pointer]:
+                - generic [ref=e342]:
+                  - generic "阴极铜 (LME A级, Cu-CATH-1)" [ref=e343]: 阴极铜
+                  - generic "新加坡 → 中国, 上海 (洋山港)" [ref=e344]: 新加坡 → 中国, 上海
+                - generic [ref=e345]:
+                  - generic [ref=e346]: 中风险
+                  - generic [ref=e347]: 历史
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - generic [ref=e350]: AI 发行价
+                    - generic [ref=e351]: $0.9847
+                  - generic [ref=e352]:
+                    - generic [ref=e353]: 年化 · 约 30 天
+                    - generic [ref=e354]: "--"
+                - generic [ref=e355]:
+                  - progressbar "认购进度" [ref=e356]
+                  - generic [ref=e357]:
+                    - generic [ref=e358]: 已认购 0% · 目标 $3.30M
+                    - generic [ref=e359]: 已抵达
+          - complementary "当前项目" [ref=e85]:
+            - generic [ref=e86]:
+              - generic [ref=e360]:
+                - paragraph [ref=e361]: 所选项目
+                - heading "阴极铜" [level=2] [ref=e362]
+                - paragraph [ref=e363]: 新加坡 → 中国, 上海 (洋山港)
+              - generic [ref=e364]:
+                - generic [ref=e365]:
+                  - text: AI 发行价
+                  - strong [ref=e366]: $0.9903
+                - generic [ref=e367]:
+                  - generic [ref=e368]: 低风险
+                  - generic [ref=e369]: 开放
+              - generic [ref=e370]:
+                - generic [ref=e371]:
+                  - generic [ref=e372]: 年化收益
+                  - generic [ref=e373]: 11.9%
+                - generic [ref=e374]:
+                  - generic [ref=e375]: 潜在收益
+                  - generic [ref=e376]: 1.0% · 约 30 天
+                - generic [ref=e377]:
+                  - generic [ref=e378]: 风险分数
+                  - generic [ref=e379]: 0 bps
+                - generic [ref=e380]:
+                  - generic [ref=e381]: 抵押货值
+                  - generic [ref=e382]: $7.27M
+                - generic [ref=e383]:
+                  - generic [ref=e384]: 目标
+                  - generic [ref=e385]: $5.00M
+                - generic [ref=e386]:
+                  - generic [ref=e387]: 预计到港
+                  - generic [ref=e388]: 2026-10-20
+              - generic [ref=e389]:
+                - progressbar "航程进度" [ref=e390]
+                - paragraph [ref=e392]: 到 中国, 上海 (洋山港) 已完成 73% · ETA 2026-10-20
+              - generic [ref=e393]:
+                - generic [ref=e394]:
+                  - generic [ref=e395]: 投资金额 (USD)
+                  - generic [ref=e396]:
+                    - spinbutton "投资金额 (USD)" [ref=e397]: "400000"
+                    - button "模拟认购" [ref=e398] [cursor=pointer]
+                - generic [ref=e399]:
+                  - generic [ref=e400]:
+                    - generic [ref=e401]:
+                      - generic [ref=e402]: 预计获得
+                      - generic [ref=e403]: 403,918 RWA
+                    - generic [ref=e404]:
+                      - generic [ref=e405]: 目标兑付
+                      - generic [ref=e406]: $403,918
+                    - generic [ref=e407]:
+                      - generic [ref=e408]: 潜在毛收益
+                      - generic [ref=e409]: $3,918
+                  - paragraph [ref=e410]: 目标兑付不保本，取决于进口商付款、货物结算与保险覆盖。
+              - paragraph [ref=e411]: 离线快照 · 采集于 2026-10-16（非实时）
+              - paragraph [ref=e414]: 本页条款：快速 · 版本 1。发行页可试算其他到账速度，试算不修改已发布条款。
+              - paragraph [ref=e415]: 目标兑付不保证实现。回款、抵押处置和保险均需独立核验；本原型不托管或分配认购资金，风险分数不是违约概率。
+              - generic [ref=e416]:
+                - button "航程与风险" [ref=e417] [cursor=pointer]
+                - button "定价拆解" [ref=e422] [cursor=pointer]
+  - complementary "权利与控制" [ref=e88]:
+    - group [ref=e89]:
+      - generic "权利、资格与私人资料" [ref=e90] [cursor=pointer]
+  - complementary "受控测试网融资" [ref=e91]:
+    - group [ref=e92]:
+      - generic "受控测试网融资与持仓" [ref=e93] [cursor=pointer]
+  - complementary "证据与来源" [ref=e94]:
+    - group [ref=e95]:
+      - generic "证据、来源与人工复核" [ref=e96] [cursor=pointer]
+  - complementary "服务与资金操作" [ref=e97]:
+    - group [ref=e98]:
+      - generic "服务状态与操作恢复" [ref=e99] [cursor=pointer]
+  - contentinfo [ref=e100]:
+    - generic [ref=e101]: AgentBL Agent
+    - generic [ref=e102]: 所有数字由本地 AI 定价引擎实时产生 · 货值估算、风险评分与哈希均确定性、可离线复现 · 上链锚定于测试网
+  - button "投资者 Copilot" [ref=e103] [cursor=pointer]
+  - status [ref=e106]

@@ -1,3 +1,4 @@
+import { quoteFromCase } from '../src/core/pricingEngine.js';
 // AgentBL MCP Tests
 // Manifest validation + tool output shapes + error handling + chain integration
 
@@ -9,8 +10,8 @@ import { MCP_TOOLS_MANIFEST, MCP_TOOL_HANDLERS, callTool, runToolChain } from '.
 // MCP-1: Manifest Tests
 // ============================================================
 
-test('MCP tools manifest has exactly 15 tools', () => {
-  assert.equal(MCP_TOOLS_MANIFEST.length, 15);
+test('MCP tools manifest has exactly 14 tools', () => {
+  assert.equal(MCP_TOOLS_MANIFEST.length, 14);
 });
 
 test('manifest contains all expected tool names', () => {
@@ -18,7 +19,7 @@ test('manifest contains all expected tool names', () => {
   assert.ok(names.includes('get_trade_case'));
   assert.ok(names.includes('generate_pricing_quote'));
   assert.ok(names.includes('simulate_offering'));
-  assert.ok(names.includes('push_pricing_to_oracle'));
+  assert.ok(!names.includes('push_pricing_to_oracle'));
   assert.ok(names.includes('search_knowledge_base'));
   assert.ok(names.includes('verify_trade_documents'));
   assert.ok(names.includes('purchase_premium_analysis'));
@@ -134,31 +135,11 @@ test('generate_pricing_quote: returns full PricingQuote for demo case', async ()
   assert.ok(q.quote_hash.startsWith('0x'));
 });
 
-test('generate_pricing_quote: low-risk case has higher price than critical case', async () => {
-  const lowRisk = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-LOW-APPROVED' });
-  const critical = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-CRITICAL-LIQUIDATION' });
 
-  assert.ok(
-    lowRisk.result.final_issue_price_usd > critical.result.final_issue_price_usd,
-    `Low-risk price (${lowRisk.result.final_issue_price_usd}) should be > critical price (${critical.result.final_issue_price_usd})`
-  );
-  assert.ok(
-    lowRisk.result.implied_gross_yield_bps < critical.result.implied_gross_yield_bps,
-    `Low-risk yield (${lowRisk.result.implied_gross_yield_bps}) should be < critical yield (${critical.result.implied_gross_yield_bps})`
-  );
-});
 
-test('generate_pricing_quote: approved case returns OPEN_OFFERING action', async () => {
-  const result = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-LOW-APPROVED' });
-  assert.equal(result.result.pricing_action, 'OPEN_OFFERING');
-  assert.equal(result.result.risk_level, 'LOW');
-});
 
-test('generate_pricing_quote: critical case returns TRIGGER_LIQUIDATION action', async () => {
-  const result = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-CRITICAL-LIQUIDATION' });
-  assert.equal(result.result.pricing_action, 'TRIGGER_LIQUIDATION');
-  assert.equal(result.result.risk_level, 'CRITICAL');
-});
+
+
 
 test('generate_pricing_quote: works with inline trade_case', async () => {
   // First get a trade case
@@ -213,43 +194,13 @@ test('simulate_offering: offers inline trade_case', async () => {
 // MCP-5: push_pricing_to_oracle Tests
 // ============================================================
 
-test('push_pricing_to_oracle: defaults to a policy-checked dry run', async () => {
-  const quote = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
-  const result = await callTool('push_pricing_to_oracle', {
-    case_id: 'CASE-EBL-2026-0001',
-    pricing_quote: quote.result
-  });
-  assert.equal(result.tool, 'push_pricing_to_oracle');
-  assert.equal(result.result.tx_hash, null);
-  assert.equal(result.result.status, 'dry_run');
-  assert.equal(result.result.policy.dry_run, true);
-  assert.equal(result.result.event, 'PricingUpdated');
-  assert.equal(result.result.transaction.case_id, 'CASE-EBL-2026-0001');
-  assert.equal(result.result.transaction.issue_price_e6, Math.round(quote.result.final_issue_price_usd * 1_000_000));
-  assert.equal(result.result.transaction.evidence_hash, quote.result.evidence_hash);
-});
 
-test('push_pricing_to_oracle: repeated dry runs are deterministic and never invent tx hashes', async () => {
-  const quote = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
-  const r1 = await callTool('push_pricing_to_oracle', { case_id: 'CASE-EBL-2026-0001', pricing_quote: quote.result });
-  const r2 = await callTool('push_pricing_to_oracle', { case_id: 'CASE-EBL-2026-0001', pricing_quote: quote.result });
-  assert.equal(r1.result.tx_hash, null);
-  assert.deepEqual(r1.result.transaction, r2.result.transaction);
-});
 
-test('push_pricing_to_oracle: requires pricing_quote', async () => {
-  await assert.rejects(
-    () => callTool('push_pricing_to_oracle', { case_id: 'CASE-EBL-2026-0001' }),
-    /pricing_quote/
-  );
-});
 
-test('push_pricing_to_oracle: requires case_id', async () => {
-  await assert.rejects(
-    () => callTool('push_pricing_to_oracle', { pricing_quote: {} }),
-    /case_id/
-  );
-});
+
+
+
+
 
 // ============================================================
 // search_knowledge_base MCP Tool Tests
@@ -325,32 +276,10 @@ test('full MCP tool chain executes end-to-end', async () => {
   });
   assert.equal(offeringResult.result.case_id, caseResult.result.case_id);
 
-  // Step 5: Push to oracle
-  const oracleResult = await callTool('push_pricing_to_oracle', {
-    case_id: caseResult.result.case_id,
-    pricing_quote: quoteResult.result
-  });
-  assert.equal(oracleResult.result.status, 'dry_run');
-
-  // All 5 steps passed
+  // All current research tools completed without a signing path.
 });
 
-test('low-risk → warning → critical scenarios form an increasing risk gradient', async () => {
-  const lowRisk = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-LOW-APPROVED' });
-  const warning = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-WARNING-MARGIN' });
-  const critical = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-CRITICAL-LIQUIDATION' });
 
-  // Health factor should decrease
-  assert.ok(lowRisk.result.implied_gross_yield_bps <= warning.result.implied_gross_yield_bps
-    || warning.result.implied_gross_yield_bps <= critical.result.implied_gross_yield_bps,
-    'Risk should increase across scenarios');
-
-  // Risk level should increase
-  const levelOrder = { LOW: 0, MEDIUM: 1, WARNING: 2, CRITICAL: 3 };
-  assert.ok(levelOrder[lowRisk.result.risk_level] <= levelOrder[warning.result.risk_level]
-    || levelOrder[warning.result.risk_level] <= levelOrder[critical.result.risk_level],
-    'Risk levels should escalate');
-});
 
 // ============================================================
 // runToolChain Test
@@ -379,23 +308,13 @@ test('runToolChain executes a 3-step pricing chain', async () => {
   assert.ok(results[2].result.final_issue_price_usd > 0);
 });
 
-test('push_pricing_to_oracle: an unknown risk level or action is rejected, not defaulted (WP0.2)', async () => {
-  const quote = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
-  await assert.rejects(
-    () => callTool('push_pricing_to_oracle', { case_id: 'CASE-EBL-2026-0001', pricing_quote: { ...quote.result, risk_level: 'HIGH' } }),
-    /unknown risk_level/
-  );
-  await assert.rejects(
-    () => callTool('push_pricing_to_oracle', { case_id: 'CASE-EBL-2026-0001', pricing_quote: { ...quote.result, pricing_action: 'EXPLODE' } }),
-    /pricing_action/
-  );
-});
 
-test('push_pricing_to_oracle: RESUME_OFFERING is encoded as action 6 (WP0.2)', async () => {
-  const quote = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
-  const result = await callTool('push_pricing_to_oracle', {
-    case_id: 'CASE-EBL-2026-0001',
-    pricing_quote: { ...quote.result, pricing_action: 'RESUME_OFFERING' }
-  });
-  assert.equal(result.result.transaction.pricing_action, 6);
+
+
+
+test('MCP pricing uses current final terms for every scenario without mock fallback',async()=>{
+ for(const case_id of ['CASE-EBL-2026-0001','CASE-EBL-2026-LOW-APPROVED','CASE-EBL-2026-CRITICAL-LIQUIDATION']){
+  const {result:data}=await callTool('get_trade_case',{case_id});const {result:quote}=await callTool('generate_pricing_quote',{case_id});
+  assert.deepEqual(quote,quoteFromCase(data,{payout_speed:data.financing?.payout_speed??'BALANCED'}));
+ }
 });

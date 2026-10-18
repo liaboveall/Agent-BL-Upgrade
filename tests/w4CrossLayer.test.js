@@ -120,7 +120,7 @@ test('W4 actual anchor contract binds encrypted runtime evidence; version regist
     input_snapshot: { original: 'PRIVATE-W4-SOURCE-CONTENT' }, evidence_hash: id('input'), quote_hash: id('quote') };
   const adapter = createAnchorChainAdapter({ confirmations: 1, allowedChainIds: [31337], chainConfig: { chainIdDecimal: 31337,
     explorerBase: 'http://local.invalid', contracts: { AgentDecisionLog: await log.getAddress() }, deployments: { AgentDecisionLog: { deployTx: log.deploymentTransaction().hash } } },
-  getContext: async () => ({ provider, decisionLog: log, signers: { PRICING_UPDATER: await signer.getAddress() } }) });
+  getContext: async () => ({ provider, decisionLog: log, signers: { ANCHORER: await signer.getAddress() } }) });
   const journal = new DecisionAnchoring({ file: path.join(directory, 'anchors.json'), version, config, archive, schema: 'agentbl-decision-anchor-v2',
     getMode: () => 'live', logger: { list: async () => [decision] }, adapter }); t.after(() => journal.stop());
   await journal.tick(); assert.equal(journal.status().last_error, 'anchor_preflight_failed'); assert.equal(await log.batchCount(), 0n);

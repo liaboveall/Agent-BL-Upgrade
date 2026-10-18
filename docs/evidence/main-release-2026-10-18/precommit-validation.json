@@ -1,0 +1,43 @@
+{
+  "schema": "agentbl-main-release-precommit-v1",
+  "checked_at": "2026-10-18T09:21:17.654Z",
+  "source_sha256": "ff0f988ec90a563bc8ff667e497e999a56bc059bd683efd51b7541c09a606680",
+  "source_file_count": 577,
+  "git_filtered_bytes_match_working_source": true,
+  "local_application": {
+    "tests": 1112,
+    "passed": 1110,
+    "skipped": 2,
+    "failed": 0,
+    "coverage": {
+      "lines": 92.5,
+      "branches": 84.14,
+      "functions": 90.54
+    }
+  },
+  "solidity_passed": 66,
+  "browser": {
+    "startTime": "2026-10-18T09:14:03.573Z",
+    "duration": 19801.972999999998,
+    "expected": 18,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "preflight": {
+    "PASS": 66,
+    "WARN": 0,
+    "SKIP": 4,
+    "FAIL": 0
+  },
+  "docker_controlled_passed": true,
+  "container_recovery_passed": true,
+  "external_transaction_count": 3,
+  "capital_transactions_this_run": 0,
+  "chain_anchor_transaction": "0x30e2b36f17bb807e7fe9dc9dba263e98a50f6f0c7cf149889f36add445a47913",
+  "original_evidence_preserved": true,
+  "ci_status": "to be verified after commit",
+  "public_server_deployment": false,
+  "known_protocol_issues_fixed": false,
+  "passed": true
+}

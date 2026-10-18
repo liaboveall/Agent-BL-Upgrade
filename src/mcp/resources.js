@@ -1,13 +1,10 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { listHarnessCaseFiles } from '../core/scenarioRunner.js';
-import chainConfig from '../../scripts/lib/chain-config.cjs';
+import {loadApplicationConfig} from '../chain/loadApplicationConfig.js';
 import { publicAgentPolicy, externalDecision } from './agentTools.js';
 import { callAgentBackend } from './agentClient.js';
 import { HttpError } from '../app/http.js';
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export const MCP_RESOURCES = Object.freeze([
   Object.freeze({ uri: 'agentbl://agent/policy', name: 'Agent Policy',
@@ -65,37 +62,8 @@ async function caseCatalog() {
 }
 
 async function deploymentEvidence() {
-  const raw = JSON.parse(await fs.readFile(path.join(rootDir, 'public', 'chain-config.json'), 'utf8'));
-  const config = chainConfig.resolveNetworkConfig(raw, 'injective-testnet');
-  // The Wave B evidence file lives under docs/, which is not shipped in the container
-  // image: its absence must not break the whole resource.
-  let gate = null;
-  try {
-    const evidenceDir = process.env.AGENTBL_EVIDENCE_DIR ?? path.join(rootDir, 'docs', 'evidence');
-    gate = JSON.parse(await fs.readFile(path.join(evidenceDir, 'wave-b-gate.json'), 'utf8'));
-  } catch {
-    // optional evidence
-  }
-  const protocol = config.protocol ?? {};
-  return {
-    network: config.network,
-    chainId: config.chainId,
-    chainIdDecimal: config.chainIdDecimal,
-    explorerBase: config.explorerBase,
-    contracts: config.contracts,
-    deployedAt: protocol.deployedAt ?? config.deployedAt,
-    deployTransactions: protocol.deployTransactions ?? { AgentBLRWA: config.deployTx },
-    smoke: protocol.smoke ?? null,
-    latestPaidPricingProof: gate
-      ? {
-        paymentTx: gate.payment?.tx,
-        reportHash: gate.paidReportEnvelope?.report_hash,
-        paymentAttestationTx: gate.paymentAttested?.tx,
-        pricingUpdateTx: gate.pricingUpdated?.tx,
-        finalIssuePriceE6: gate.offering?.final_issue_price_e6
-      }
-      : null
-  };
+ const config=loadApplicationConfig();
+ return {network:config.network,chainId:config.chainId,chainIdDecimal:config.chainIdDecimal,protocolVersion:5,scope:'research_test_assets_only',explorerBase:config.explorerBase,contracts:config.contracts,deployments:config.deployments,rightsConfig:config.rightsConfig};
 }
 
 function riskMethodology() {

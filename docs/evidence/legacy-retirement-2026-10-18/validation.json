@@ -1,0 +1,172 @@
+{
+  "schema": "agentbl-retirement-validation-v1",
+  "verified_at": "2026-10-18T06:29:21.048Z",
+  "baseline_revision": "b8db411de044b1132f14419a432be6da6ff1501b",
+  "source_sha256": "214be96b6f196280b30e28066dc4384746dd73c78d15b1a68d9dd838e5dd1373",
+  "source_file_count": 576,
+  "uncommitted_workspace": true,
+  "retired_files": 119,
+  "core_controlled_contracts_unchanged": [
+    "RightsGovernance",
+    "AssetIdentityHub",
+    "CommittedEBLRegistry",
+    "RightsController",
+    "RWAOfferingPoolV5",
+    "ControlledRWAToken"
+  ],
+  "tracked_historical_evidence_unchanged": true,
+  "application": {
+    "tests": 1110,
+    "pass": 1108,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 2
+  },
+  "coverage_percent": {
+    "lines": 92.5,
+    "branches": 84.13,
+    "functions": 90.54
+  },
+  "solidity": {
+    "compiled_source_files": 14,
+    "current_tests_passed": 66,
+    "observed_in": "preflight-accepted.txt"
+  },
+  "integration": {
+    "w2": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "w3": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "w4": {
+      "tests": 21,
+      "pass": 21,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "w5": {
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  "browser": {
+    "passed": 18,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "screenshots": 28
+  },
+  "preflight": {
+    "PASS": 66,
+    "WARN": 0,
+    "SKIP": 4,
+    "FAIL": 0
+  },
+  "preflight_skips": [
+    {
+      "group": "Environment",
+      "name": "Live mode prerequisites configured",
+      "status": "SKIP",
+      "detail": "not required or exercised in Demo"
+    },
+    {
+      "group": "Live readiness",
+      "name": "Facilitator /supported is reachable",
+      "status": "SKIP",
+      "detail": "Demo Mode"
+    },
+    {
+      "group": "Live readiness",
+      "name": "Injective RPC reports the pinned chain",
+      "status": "SKIP",
+      "detail": "Demo Mode"
+    },
+    {
+      "group": "Live readiness",
+      "name": "Live wallet has readable INJ gas balance",
+      "status": "SKIP",
+      "detail": "Demo Mode"
+    }
+  ],
+  "static_import_audit": {
+    "schema": "agentbl-retirement-static-dependencies-v1",
+    "checked_at": "2026-10-18T06:24:00.683Z",
+    "source_files_parsed": 443,
+    "relative_imports_checked": 1522,
+    "npm_packages_checked": 2,
+    "retired_files_checked": 119,
+    "issues": [],
+    "passed": true,
+    "scope": "Literal static/dynamic imports and requires, direct npm JS command targets; runtime-generated paths are covered by regression tests"
+  },
+  "archive_preservation": {
+    "schema": "agentbl-retirement-preservation-verification-v1",
+    "checked_at": "2026-10-18T03:03:35.4580757Z",
+    "baseline_revision": "b8db411de044b1132f14419a432be6da6ff1501b",
+    "baseline_archive_sha256": "81c3e2865e880d7a5edbe66a9092ec9a4601361bc903811dcc0528395ec3003a",
+    "override_archive_sha256": "b7f759c5005a98cdaa7ad3c89bde5ca34679756fb9109b116ed90593834505e0",
+    "frozen_source_files_checked": 649,
+    "exact_hash_matches": 649,
+    "byte_overrides_used": 3,
+    "retired_archive_entries_checked": 119,
+    "original_assessment_files_verified": 30,
+    "issues": [],
+    "passed": true
+  },
+  "public_chain_read": {
+    "passed": true,
+    "chain_id": "1439",
+    "block": {
+      "number": 144292923,
+      "hash": "0x0b9333ca0f1e4d8102c6e2fdf216054c4c512c699c5e5b4e27e956e01a43c06a"
+    },
+    "checks": [
+      {
+        "name": "PaymentOracle",
+        "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+        "full_runtime_matches": false,
+        "executable_code_matches": true,
+        "runtime_keccak256": "0x7b4df2f160c0b35b24aa5b8e9a04330476af5d862c6c5313ac7aed48904a96a4",
+        "original_runtime_pin_matches": true
+      },
+      {
+        "name": "AgentDecisionLog",
+        "address": "0xA95200a69A62eD9e2A8D024fDeAAc7BB231E05f4",
+        "full_runtime_matches": true,
+        "executable_code_matches": true,
+        "runtime_keccak256": "0x09fc0d12c418d0add186592dd4a9ef34d6a459cee220c5df335b52e48494e5ff"
+      }
+    ]
+  },
+  "production_dependency_vulnerabilities": 0,
+  "contract_toolchain_vulnerabilities": 0,
+  "external_broadcasts": 0,
+  "real_runtime_deleted": false,
+  "commit_created": false,
+  "pushed": false,
+  "remote_deployed": false,
+  "ci_executed": false,
+  "real_payment_executed": false,
+  "known_protocol_issues_fixed": false,
+  "initial_failures_preserved": true,
+  "mcp_fetch_initial_failure": {
+    "log": "coverage-final-verified.txt",
+    "root_cause": "not conclusively identified; blocked ephemeral port is plausible",
+    "mitigation": "use existing listenOnUsablePort helper",
+    "full_regression_after_mitigation_passed": true
+  },
+  "passed": true
+}

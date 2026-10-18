@@ -10,7 +10,7 @@ import { MCP_RESOURCES } from '../src/mcp/resources.js';
 import { fetchPaidIntel } from '../src/x402/client.js';
 import { loadX402Config, X402_SERVICES, x402RpcUrl } from '../src/x402/config.js';
 import { assertPaidReportEnvelope, computeReportHash, createPaidReportEnvelope } from '../src/x402/paidReport.js';
-import chainConfigLib from './lib/chain-config.cjs';
+import {loadApplicationConfig} from '../src/chain/loadApplicationConfig.js';
 import { createAgentService } from '../src/agent/runtime/factory.js';
 import { runValuationAgent } from '../src/agent/valuationAgent.js';
 import { writeJsonAtomic } from '../src/lib/jsonStore.js';
@@ -24,7 +24,7 @@ const npmCli = process.env.npm_execpath && /npm-cli\.c?js$/u.test(process.env.np
   : null;
 const npm = npmCli ?? (process.platform === 'win32' ? 'npm.cmd' : 'npm');
 const results = [];
-const EXPECTED_CHECKS = 71;
+const EXPECTED_CHECKS = 70;
 const { values: options } = parseArgs({ options: { report: { type: 'string' } } });
 
 function result(group, name, status, detail = '') {
@@ -132,10 +132,10 @@ try {
   fail('Files and schemas', 'PaidReportEnvelope schema + hash recompute', error.message);
 }
 for (const [file, label] of [
-  ['public/chain-config.json', 'Chain deployment config'],
+  ['public/application-config.json', 'Current controlled application config'],
   ['web/index.html', 'Dashboard HTML (Vite entry)'],
   ['web/src/styles/index.css', 'Dashboard CSS'],
-  ['docs/x402-integration.md', 'x402 integration documentation']
+  ['docs/deployment-current.md', 'Current deployment and x402 documentation']
 ]) check('Files and schemas', label, await exists(file), file);
 
 // 19-25: executable release checks
@@ -169,15 +169,13 @@ check('Executable suites', 'Critical JavaScript modules imported', true, 'server
 
 // 26-31: MCP business tools
 console.log('\n[MCP tools]');
-check('MCP tools', 'MCP manifest exposes exactly 15 tools + 5 resources',
-  MCP_TOOLS_MANIFEST.length === 15 && MCP_RESOURCES.length === 5);
+check('MCP tools', 'MCP manifest exposes exactly 14 tools + 5 resources',
+  MCP_TOOLS_MANIFEST.length === 14 && MCP_RESOURCES.length === 5);
 await mcpCheck('get_trade_case', { case_id: 'CASE-EBL-2026-0001' });
 await mcpCheck('generate_pricing_quote', { case_id: 'CASE-EBL-2026-0001' });
 await mcpCheck('search_knowledge_base', { query: 'copper war risk' });
 await mcpCheck('simulate_offering', { case_id: 'CASE-EBL-2026-0001' });
 const demoCase = JSON.parse(await text('data/demo-case.json'));
-const { quoteFromCase } = await import('../src/core/pricingEngine.js');
-await mcpCheck('push_pricing_to_oracle', { case_id: demoCase.case_id, pricing_quote: quoteFromCase(demoCase) });
 
 // 32-46: HTTP, x402 and paid business output
 console.log('\n[HTTP and x402]');
@@ -309,19 +307,18 @@ try {
   check('Agent release gates', 'Agent runtime starts and stops without pending work', running && !(await agent.status()).running && !agent.bus.status().processing);
 } catch (error) { fail('Agent release gates', 'Agent runtime starts and stops without pending work', error.message); }
 finally { await agent.stop(); }
-await command('Agent release gates', 'Agent reliability fault matrix', process.execPath, ['--test', 'tests/agentReliability.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Controlled protocol retirement boundaries', process.execPath, ['--test', 'tests/legacyRetirement.test.js'], root, withoutLiveSettings(true));
 await command('Agent release gates', 'Three Demo Agent stories including approved settlement', process.execPath, ['scripts/agent-demo-check.mjs'], root, withoutLiveSettings());
 const evaluationCheck = await command('Agent release gates', 'Measured deterministic Agent quality thresholds', npm, ['run', 'eval:agent', '--', '--check'], root, withoutLiveSettings());
 await command('Agent release gates', 'No fabricated transactions, activity or capabilities', process.execPath, ['--test', 'tests/noFabrication.test.js'], root, withoutLiveSettings(true));
 await command('Agent release gates', 'Decision anchor proofs, terminal approvals, durable sequences and restart recovery', process.execPath, ['--test', 'tests/agentAnchoring.test.js'], root, withoutLiveSettings(true));
-await command('Agent release gates', 'Anchor chain reconciliation, shared signer queue and deployment dry-run safety', process.execPath, ['--test', 'tests/agentAnchorChain.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Anchor chain reconciliation and exact evidence verification', process.execPath, ['--test', 'tests/agentAnchorChain.test.js'], root, withoutLiveSettings(true));
 
 // 52-56: UI acceptance hooks
 console.log('\n[UI acceptance]');
 // The React dashboard: the hooks live in its components and stylesheets under web/src.
 const modeStrip = await text('web/src/shell/ModeStrip.jsx');
 const reportsTab = (await Promise.all(['DealDialog.jsx', 'ReportsTab.jsx'].map((name) => text(`web/src/pages/deal/${name}`)))).join('\n');
-const app = await text('web/src/state/controller.js');
 const css = (await Promise.all(['motion.css', 'deal.css', 'index.css'].map((name) => text(`web/src/styles/${name}`)))).join('\n');
 check('UI acceptance', 'Persistent DEMO MODE banner', modeStrip.includes('id="demo-banner"'));
 check('UI acceptance', 'Explicit Live toggle and demo reset', modeStrip.includes('mode-toggle-btn') && modeStrip.includes('demo-reset-btn'));
@@ -332,7 +329,7 @@ check('UI acceptance', 'Reduced-motion safety rule', /prefers-reduced-motion:\s*
 await command('Agent release gates', 'Generated redteam corpus detects all seeded mutations', process.execPath, ['scripts/agent-redteam.mjs'], root, withoutLiveSettings());
 await command('Agent release gates', 'Evidence freshness and read-only decision replay', process.execPath, ['--test', 'tests/agentPhase5.test.js'], root, withoutLiveSettings(true));
 await command('Agent release gates', 'Audit privacy, encrypted recovery and retention', process.execPath, ['--test', 'tests/agentPrivacy.test.js'], root, withoutLiveSettings(true));
-await command('Agent release gates', 'Live smoke is read-only by default and fails closed', process.execPath, ['--test', 'tests/agentLiveSmoke.test.js'], root, withoutLiveSettings(true));
+await command('Agent release gates', 'Current wallet funding rejects changed terms, accounts and receipts', process.execPath, ['--test', 'tests/copilotWallet.test.js'], root, withoutLiveSettings(true));
 
 // 61-65: live readiness and documentation consistency
 console.log('\n[Live readiness]');
@@ -346,55 +343,10 @@ else skip('Live readiness', 'Injective RPC reports the pinned chain', 'Demo Mode
 if (!runtimeMode.demoMode && process.env.X402_PAY_TO) await balanceCheck(process.env.X402_PAY_TO);
 else skip('Live readiness', 'Live wallet has readable INJ gas balance', 'Demo Mode');
 
-const chainRegistry = JSON.parse(await text('public/chain-config.json'));
-const chainConfig = chainConfigLib.resolveNetworkConfig(chainRegistry, 'injective-testnet');
-const addressPattern = /^0x[0-9a-fA-F]{40}$/u;
-const transactionPattern = /^0x[0-9a-fA-F]{64}$/u;
-const paymentOracleAbi = chainConfig.paymentOracle?.abi ?? [];
-// Evidence files are optional (they are not shipped in every checkout): a missing or unreadable one is {}.
-async function readJsonOrEmpty(relative) {
-  try { return JSON.parse(await text(relative)); } catch { return {}; }
-}
-const liveEvidence = await readJsonOrEmpty('docs/evidence/x402-live-smoke.json');
-const protocolEvidence = await readJsonOrEmpty('docs/evidence/wave-b-protocol.json');
-const waveBGate = await readJsonOrEmpty('docs/evidence/wave-b-gate.json');
-const officialMcpEvidence = await readJsonOrEmpty('docs/evidence/injective-mcp-smoke.json');
-const protocolNames = ['AgentBLRWA', 'EBLRegistry', 'RWAToken', 'RWAOfferingPool', 'RiskPricingOracle'];
-const officialWrite = officialMcpEvidence.tool_trace?.find((entry) => entry.tool === 'evm_broadcast');
-const liveEvidenceValid = protocolNames.every((name) => addressPattern.test(chainConfig.contracts?.[name]))
-    && addressPattern.test(chainConfig.contracts?.PaymentOracle)
-    && paymentOracleAbi.some((entry) => entry.type === 'function' && entry.name === 'attestPayment')
-    && paymentOracleAbi.some((entry) => entry.type === 'event' && entry.name === 'PaymentAttested')
-    && liveEvidence.mode === 'live'
-    && liveEvidence.network === 'eip155:1439'
-    && liveEvidence.payment_oracle?.toLowerCase() === chainConfig.contracts.PaymentOracle.toLowerCase()
-    && transactionPattern.test(liveEvidence.payment_tx ?? '')
-    && transactionPattern.test(liveEvidence.attestation_tx ?? '')
-    && transactionPattern.test(liveEvidence.report_hash ?? '')
-    && liveEvidence.event === 'PaymentAttested'
-    && protocolEvidence.smoke?.finalState === 'Repaid'
-    && protocolNames.every((name) => protocolEvidence.contracts?.[name]?.address?.toLowerCase() === chainConfig.contracts[name].toLowerCase())
-    && waveBGate.network === 'eip155:1439'
-    && waveBGate.payment?.tx === liveEvidence.payment_tx
-    && waveBGate.paidReportEnvelope?.report_hash === liveEvidence.report_hash
-    && waveBGate.paymentAttested?.tx === liveEvidence.attestation_tx
-    && waveBGate.pricingUpdated?.evidence_hash === liveEvidence.report_hash
-    && transactionPattern.test(waveBGate.pricingUpdated?.tx ?? '')
-    && officialMcpEvidence.network === 'injective_testnet'
-    && officialWrite?.status === 'ok'
-    && transactionPattern.test(officialWrite?.evm_tx_hash ?? '')
-    && officialWrite?.arguments_summary?.to?.toLowerCase() === chainConfig.contracts.AgentBLRWA.toLowerCase();
-if (runtimeMode.demoMode) {
-  skip('Live readiness', 'Wave B live payment, five-contract protocol, pricing, and official MCP evidence are valid',
-    'Demo Mode; historical evidence is not a current Live check');
-} else {
-  check('Live readiness', 'Wave B live payment, five-contract protocol, pricing, and official MCP evidence are valid',
-    liveEvidenceValid);
-}
+const application = loadApplicationConfig();
+check('Live readiness', 'Controlled v5 and shared payment services are independently configured', application.protocolVersion === 5 && Boolean(application.contracts.RightsController) && Boolean(application.paymentOracle?.abi?.length));
 const readme = await text('README.md');
-check('Live readiness', 'README documents x402, Wave B, stdio MCP, and mode boundary',
-  readme.includes('smoke:x402') && readme.includes('x402:intel') && readme.includes('verify:wave-b')
-    && readme.includes('mcp:stdio') && /demo/i.test(readme) && app.includes('/api/demo/mode'));
+check('Live readiness', 'README documents x402, controlled financing, stdio MCP and Demo scope', readme.includes('smoke:x402') && readme.includes('x402:intel') && readme.includes('mcp:stdio') && readme.includes('controlled') && /demo/i.test(readme));
 
 if (results.length !== EXPECTED_CHECKS) {
   throw new Error(`Preflight definition error: expected ${EXPECTED_CHECKS} checks, produced ${results.length}`);

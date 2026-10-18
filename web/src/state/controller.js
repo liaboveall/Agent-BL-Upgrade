@@ -507,65 +507,20 @@ export function setFinancing(value) {
   set({ financingUsd: Number(value) || 0 });
 }
 
-function userFacingError(error) {
-  const keyByCode = { NO_CONTRACT: 'err_no_contract', NO_SESSION: 'err_wallet_not_connected', INVALID_PARAMS: 'err_invalid_mint_params', NETWORK_ERROR: 'err_rpc_network' };
-  const key = keyByCode[error?.code];
-  return key ? t(key) : (error?.message || String(error || ''));
-}
+
 
 export async function mint() {
-  const state = get(), quote = selectedQuote(state);
+  const state=get(), quote=selectedQuote(state);
   if (state.busy || state.minting || state.preferencesError || !quote || quote.case_id !== state.caseId || PAUSED_ACTIONS.has(quote.pricing_action)) return;
-  const financing = Number(state.financingUsd) || 0;
-  if (financing <= 0) { toast(t('t_need_financing'), true); return; }
-  const caseId = state.caseId, generation = state.modeGeneration, version = versions.caseVersion;
-  const current = () => get().caseId === caseId && get().modeGeneration === generation && versions.caseVersion === version
-    && get().demoMode === state.demoMode && selectedQuote()?.quote_hash === quote.quote_hash && get().networkKey === state.networkKey;
-  const record = (result) => set((state) => ({ mint: result, poolId: result.poolId && result.poolId !== 'sim' ? result.poolId : state.poolId }));
-  set({ minting: true });
+  if (!state.demoMode) { toast(t('controlled_issuance_required'), true); return; }
+  const financing=Number(state.financingUsd)||0;
+  if(financing<=0){toast(t('t_need_financing'),true);return;}
+  const caseId=state.caseId,generation=state.modeGeneration,hash=quote.quote_hash;
+  set({minting:true});
   try {
-    let result;
-    if (state.demoMode) {
-      result = await web3.simulatedMint(caseId, quote, financing);
-    } else {
-      if (!await web3.isRealChainConfigured()) throw new Error(t('err_no_contract'));
-      if (!current()) return;
-      if (!web3.isWalletConnected()) {
-        await connectWallet();
-      }
-      if (current()) {
-        const wallet = walletAddress();
-        const cfg = await web3.loadChainConfig();
-        if (!current() || !window.confirm(t('mint_lab_confirm', { network: state.networkName, contract: cfg.contracts?.AgentBLRWA ?? cfg.contractAddress,
-          caseId, price: quote.final_issue_price_usd.toFixed(4), financing }))) return;
-        const validateBeforeSend = () => {
-          if (!current() || wallet !== walletAddress()) throw new Error(t('mint_snapshot_changed'));
-        };
-        try {
-          // Fire: tx sent → pending UI. Confirm: background poll → update UI.
-          result = await web3.mintOnChain(quote, financing, (confirmed) => {
-            if (!current() || wallet !== walletAddress()) return;
-            record(confirmed);
-            if (confirmed.mode === 'chain') toast(t('t_mint_confirmed', { block: confirmed.blockNumber }));
-            else if (confirmed.mode === 'chain_failed') toast(t('t_tx_failed', { msg: t('res_execution_failed') }), true);
-            else if (confirmed.mode === 'chain_timeout') toast(t('t_confirm_timeout'), true);
-          }, { validateBeforeSend });
-        } catch (error) {
-          if (error.code === 'REJECTED') { toast(t('t_cancel_mint'), true); return; }
-          throw error;
-        }
-      }
-    }
-    if (!current() || !result) return;
-    record(result);
-    if (result.mode === 'chain') toast(t('t_minted_chain', { n: f.int(result.mintedAmount), network: get().networkName }));
-    else if (result.mode === 'chain_pending') toast(t('t_tx_submitted'));
-    else toast(t('t_minted_sim', { n: f.int(result.mintedAmount) }));
-  } catch (error) {
-    toast(t('t_mint_fail', { msg: userFacingError(error) }), true);
-  } finally {
-    set({ minting: false });
-  }
+    const result=await web3.simulatedMint(caseId,quote,financing);
+    if(get().caseId===caseId && get().modeGeneration===generation && selectedQuote()?.quote_hash===hash) {set({mint:result});toast(t('t_minted_sim',{n:f.int(result.mintedAmount)}));}
+  } finally {set({minting:false});}
 }
 
 // ---------------------------------------------------------------------------------------------

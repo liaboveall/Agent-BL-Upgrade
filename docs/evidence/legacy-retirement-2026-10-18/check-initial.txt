@@ -1,0 +1,20 @@
+npm notice run agentbl-agent-starter@0.1.0 check
+npm notice run node scripts/check.mjs
+file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/schema.js:122
+  if (errors.length > 0) throw new ValidationError(label, errors);
+                               ^
+
+ValidationError: Trade case validation failed: financing.requested_amount_usd must be a finite number; financing.duration_days must be a finite number; financing.expected_yield_bps must be a finite number; financing.initial_ltv must be a finite number; financing.liquidation_threshold must be a finite number
+    at assertNoErrors (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/schema.js:122:32)
+    at assertTradeCase (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/core/schema.js:178:3)
+    at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/check.mjs:28:3 {
+  errors: [
+    'financing.requested_amount_usd must be a finite number',
+    'financing.duration_days must be a finite number',
+    'financing.expected_yield_bps must be a finite number',
+    'financing.initial_ltv must be a finite number',
+    'financing.liquidation_threshold must be a finite number'
+  ]
+}
+
+Node.js v26.8.1

@@ -13,14 +13,12 @@ import { compareSpeeds, quoteFromCase } from '../core/pricingEngine.js';
 import { loadCuratedCase } from '../core/curatedCases.js';
 import { simulateOffering } from '../core/offeringSimulator.js';
 import { simulatePricingWorkflow } from '../core/pricingWorkflow.js';
-import { toOracleUpdate } from '../core/oracle.js';
 import {
   assertPricingQuote,
   normalizePricingQuoteHashes,
   PAYOUT_SPEEDS
 } from '../core/pricingSchema.js';
 import { X402_SERVICES } from '../x402/config.js';
-import { chainStateName } from '../agent/runtime/poolRules.js';
 import { subscriptionAvailability } from '../core/subscription.js';
 import { demoModeController, LiveModeUnavailableError } from '../demo/mode.js';
 import { DEFAULT_MYSTERY_QUOTE_MAX_AGE_SECONDS } from '../mystery/policy.js';
@@ -88,7 +86,6 @@ const publicDir = path.join(rootDir, 'public');
 const distDir = path.join(rootDir, 'dist');
 const dataPath = path.join(rootDir, 'data/demo-case.json');
 const casesDir = path.join(rootDir, 'data/cases');
-const archivedCasesDir = path.join(casesDir, 'archive');
 
 // FE-7 support: human labels + a risk-ladder ordering for the curated demo
 // cases, so the frontend scenario selector can present clean -> warning ->
@@ -104,7 +101,6 @@ const CASE_META = {
   'CASE-EBL-SOY-SSZ-DLC': { label: '大豆 · Santos → Dalian', risk_hint: 'LOW', order: 7 },
   'CASE-EBL-CUCONC-ANF-LYG': { label: '铜精矿 · Antofagasta → Lianyungang', risk_hint: 'LOW', order: 8 },
   'CASE-EBL-ALU-JEA-RTM': { label: '铝 · Jebel Ali → Rotterdam (经霍尔木兹)', risk_hint: 'CRITICAL', order: 9 },
-  'CASE-EBL-2026-CU-SG-SHA': { label: '历史演示池 #2 · 铜 Singapore → Shanghai (2026-06)', risk_hint: null, order: 100 }
 };
 
 // ---------------------------------------------------------------------------
@@ -148,7 +144,7 @@ function getStaticHandler() {
   if (!staticHandler) {
     let registry = null;
     try {
-      registry = JSON.parse(readFileSync(path.join(publicDir, 'chain-config.json'), 'utf8'));
+      registry = JSON.parse(readFileSync(path.join(publicDir, 'application-config.json'), 'utf8'));
     } catch {
       // Without a registry the CSP still allows the built-in RPC hosts.
     }
@@ -184,7 +180,7 @@ async function loadCaseCatalog() {
   };
   await readDir(casesDir);
   // Archived cases stay listed only because a deployed testnet pool still points at them (pool #2).
-  await readDir(archivedCasesDir, { historical: true });
+
 
   // Only curated, explicitly public examples belong here. Uploads remain private working papers.
 
@@ -543,18 +539,7 @@ export const copilotService = new CopilotService({
       details: { amountUsd: result.investment.amountUsd, price: result.investment.price, source: 'COPILOT' } });
     return result;
   },
-  getLiveOffering: async (poolId) => {
-    const agent = getAgentService(); await agent.init();
-    const mapping = agent.registry.get(poolId);
-    if (!mapping?.chain) return null;
-    const live = await agent.getChainContext();
-    if (!live) return null;
-    const [offering, stopped] = await Promise.all([live.pool.offerings(mapping.chain.pool_id), live.pool.emergencyStopped()]);
-    return { pool_id: mapping.chain.pool_id, chain_id: Number(agent.chainConfig.chainIdDecimal), contract: agent.chainConfig.contracts.RWAOfferingPool,
-      price_e6: offering.issuePrice.toString(), remaining_shares: (offering.tokenSupply - offering.subscribed).toString(),
-      protocol_version: Number(agent.chainConfig.protocolVersion), settlement_asset: offering.settlementAsset ?? null,
-      exists: offering.exists, status: chainStateName(offering.state), emergency_stopped: stopped };
-  },
+  getLiveOffering: async () => null,
   file: process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href ? runtimePath('copilot-sessions.json') : null
 });
 const handleCopilotRoute = createCopilotRoutes({ service: copilotService });
@@ -1213,16 +1198,8 @@ async function routeRequest(request, response, url) {
     return;
   }
 
-  // BE-8: on-chain oracle update payload (quote_hash / evidence_hash + terms)
-  // for RiskPricingOracle.updatePricing / RWAOfferingPool.createOffering.
-  if (method === 'POST' && pathname === '/api/oracle/pricing-update') {
-    const body = await readJsonBody(request);
-    const { caseData, options } = await resolvePricingRequest(body, url);
-    const quote = normalizePricingQuoteHashes(quoteFromCase(caseData, quoteOptions(options)));
-    assertPricingQuote(quote, caseData);
-    sendJson(response, 200, toOracleUpdate(quote, { pool_id: options.pool_id }));
-    return;
-  }
+  // Explicit tombstone for the removed unbound Oracle experiment.
+  if (pathname === '/api/oracle/pricing-update') throw new HttpError(410,'oracle_route_retired','Use signed controlled terms');
 
   if (method === 'GET' && pathname === '/api/scenarios') {
     sendJson(response, 200, { ok: true, scenarios: await runHarnessScenarios() });

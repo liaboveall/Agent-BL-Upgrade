@@ -1,5 +1,5 @@
 // Vite builds the React dashboard from web/ into dist/, which src/app/server.js serves.
-// Static assets that keep their names (chain-config.json, vendored ethers/cosmjs, cargo pictures)
+// Static assets that keep their names (application-config.json, vendored ethers/cosmjs, cargo pictures)
 // live in public/ and are copied as-is.
 //
 // `npm run dev:web` serves the app with hot reload on :5173 and forwards /api to the Node server

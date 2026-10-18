@@ -11,7 +11,7 @@ for (const language of ['zh', 'en']) {
     await panel.locator('summary').focus(); await page.keyboard.press('Enter');
     await expect(panel.locator('details')).not.toHaveAttribute('open');
     await page.keyboard.press('Enter'); await expect(panel.locator('details')).toHaveAttribute('open', '');
-    await expect(panel).toContainText(language === 'zh' ? '尚未连接 W3 部署' : 'No W3 deployment is connected');
+    await expect(panel).toContainText(language === 'zh' ? '尚未配置受控融资实例' : 'No controlled financing instance is configured');
     await expect(panel).toContainText(language === 'zh' ? '尚未启用' : 'Disabled');
     await expect(panel).toContainText(language === 'zh' ? '退款和领取权' : 'refund and claim rights');
     for (const width of [1440, 1280]) {
@@ -109,13 +109,14 @@ test('F09: a funded or in-transit pool cannot show an enabled subscription or OP
   await expect(page.locator('#market-detail .detail-badges')).not.toContainText('OPEN');
 });
 
-test('F06: a Live wallet failure remains a failure and never becomes simulated issuance', async ({ page }) => {
+test('retirement: Live issuance requires controlled financing and exposes no old mint action', async ({ page }) => {
   await page.route('**/api/demo/mode', (route) => route.fulfill({ json: { demoMode: false, liveAvailable: true, generation: 1 } }));
   await page.addInitScript(() => { delete window.ethereum; });
-  await ready(page); await page.locator('#mint-btn').click();
-  await expect(page.locator('.toast')).toBeVisible();
+  await page.goto('/#/mint');
+  await page.locator('#case-dropdown').selectOption(copper);
+  await expect(page.locator('#mint-btn')).toBeDisabled();
   await expect(page.locator('.mint-result')).toHaveCount(0);
-  await expect(page.locator('#mint-btn')).toBeEnabled();
+  await expect(page.locator('#controlled-finance')).toBeVisible();
 });
 
 test('F07/F08: a late B preference response cannot overwrite a newer A selection', async ({ page }) => {

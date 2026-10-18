@@ -26,7 +26,7 @@ async function funded(ctx, tag, options = {}) {
 }
 
 describe('protocol v5 capital safety and conservation', () => {
-  it('forwards a version-bound oracle quote to v5 without changing funded debt or paid cost', async () => {
+  it('reprices v5 without changing funded debt or paid cost', async () => {
     const ctx = await deployProtocolV5();
     const { poolId } = await funded(ctx, 'v5-oracle');
     const before = await ctx.pool.outstandingDebt(poolId);

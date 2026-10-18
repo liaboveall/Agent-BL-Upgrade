@@ -27,7 +27,7 @@ export async function rightsDeploymentPlan() {
       'two governors approve operational roles and test-asset allowlist; verify no raw pool executor', 'import reviewed legacy aliases before permitting controlled issuance',
       'verify identities, sign source and valuation credentials, collect holder consent, publish two-reviewer disclosure',
       'authorize a bounded testnet scenario separately, then enable intake through delayed governance', 'retain old configurations, assets, positions, pending transactions and recovery evidence'],
-    untouched: ['public/chain-config.json', 'existing contracts and owner keys', 'existing runtime and ledgers'],
+    untouched: ['public/application-config.json', 'existing contracts and owner keys', 'existing runtime and ledgers'],
     business_enabled: false, broadcast: false, real_asset_and_legal_proof: 'required_before_real_business' };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

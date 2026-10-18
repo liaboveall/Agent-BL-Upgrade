@@ -161,27 +161,6 @@ try {
 }
 
 // ============================================================
-// MCP-5: push_pricing_to_oracle
-// ============================================================
-step('MCP-5: push_pricing_to_oracle');
-try {
-  const result = await callTool('push_pricing_to_oracle', {
-    case_id: CASE_ID,
-    pricing_quote: pricingQuote
-  });
-  const tx = result.result;
-  info('Status', tx.status);
-  info('Transaction Hash', tx.tx_hash ?? '(none — dry run)');
-  info('Contract', tx.transaction?.oracle_address ?? tx.contract_address);
-  console.log('');
-  info('Event', tx.event);
-  info('Payload', JSON.stringify(tx.transaction ?? tx.event_args, null, 2).replace(/^/gm, '    '));
-  success(tx.status === 'dry_run' ? 'Pricing write safely prepared (dry run)' : 'Pricing pushed to oracle');
-} catch (err) {
-  fail(`push_pricing_to_oracle failed: ${err.message}`);
-}
-
-// ============================================================
 // Summary
 // ============================================================
 console.log('');

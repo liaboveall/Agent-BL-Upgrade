@@ -5,8 +5,8 @@ import { AGENT_LOG_ABI, createAnchorChainAdapter } from '../src/agent/runtime/an
 import { createAgentVersion } from '../src/agent/runtime/agentVersion.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
 import { hashSnapshot } from '../src/agent/decisionLogger.js';
-import { ChainExecutor } from '../src/agent/runtime/executors/chainExecutor.js';
-import { deployAgentLog, validateAgentLogPlan } from '../scripts/lib/deploy-agent-log.mjs';
+
+
 
 const version = createAgentVersion(loadAgentConfig({}), {}, hashSnapshot('test source'));
 const address = `0x${'12'.repeat(20)}`, signer = `0x${'34'.repeat(20)}`, other = `0x${'56'.repeat(20)}`;
@@ -29,7 +29,7 @@ function fixture() {
     verifyInclusion: async () => true, queryFilter: async () => state.observations, filters: { DecisionBatchAnchored: () => 'filter' },
     anchorBatch: Object.assign(async () => { state.sent++; events.push('send'); return { hash: txHash, wait: async () => { events.push('wait'); } }; },
       { staticCall: async () => { events.push('static'); } }) };
-  const ctx = { decisionLog: log, signers: { PRICING_UPDATER: signer }, provider: { send: async () => state.network,
+  const ctx = { decisionLog: log, signers: { ANCHORER: signer }, provider: { send: async () => state.network,
     getCode: async () => state.code, getBlockNumber: async () => state.latest, getBlock: async () => state.block,
     getTransaction: async () => state.transaction, getTransactionReceipt: async () => state.receipt } };
   const chainConfig = { chainIdDecimal: 1439, contracts: { AgentDecisionLog: address },
@@ -45,7 +45,7 @@ test('anchor preflight requires the deployed testnet, exact version, explicit si
   const changes = [(f) => { f.state.network = '0x1'; }, (f) => { f.state.code = '0x'; },
     (f) => { f.state.registered.modelId = 'different'; }, (f) => { f.state.registered.policyHash = hashSnapshot('other'); },
     (f) => { f.state.registered.codeCommit = hashSnapshot('other'); }, (f) => { f.state.registered.registeredAt = 0n; },
-    (f) => { f.state.allowed = false; }, (f) => { delete f.ctx.signers.PRICING_UPDATER; },
+    (f) => { f.state.allowed = false; }, (f) => { delete f.ctx.signers.ANCHORER; },
     (f) => { f.state.lastSeq = 2n; }, (f) => { f.state.batchCount = 2n; }, (f) => { delete f.chainConfig.deployments.AgentDecisionLog; }];
   for (const change of changes) { const f = fixture(); change(f); await assert.rejects(f.adapter.prepare(f.batch, version)); assert.equal(f.state.sent, 0); }
 });
@@ -93,28 +93,4 @@ test('chain verification rechecks finality and inclusion instead of trusting a s
   f.ctx.decisionLog.verifyInclusion = async () => true;
   assert.equal(await f.adapter.verify({ ...result, mode: 'demo' }), false);
   assert.equal(await f.adapter.verify({ ...result, batch: { ...f.batch, block_hash: hashSnapshot('old-fork') } }), false);
-});
-
-test('pricing and anchoring serialize by signer and a failed task cannot poison the shared queue', async () => {
-  const executor = new ChainExecutor({ getContext: async () => ({}) }); const events = [];
-  let release;
-  const blocked = new Promise((resolve) => { release = resolve; });
-  const first = executor.withSigner(signer, async () => { events.push('pricing'); await blocked; events.push('receipt'); });
-  const second = executor.withSigner(signer, async () => { events.push('anchor'); });
-  await executor.withSigner(other, async () => { events.push('other'); });
-  assert.deepEqual(events, ['pricing', 'other']); release(); await Promise.all([first, second]);
-  assert.deepEqual(events, ['pricing', 'other', 'receipt', 'anchor']);
-  await assert.rejects(executor.withSigner(signer, async () => { throw new Error('failed'); }));
-  await executor.withSigner(signer, async () => { events.push('recovered'); }); assert.equal(events.at(-1), 'recovered');
-});
-
-test('deployment plan validation rejects altered commitments and its default does not touch chain or files', async () => {
-  const plan = { schema: 'agentbl-anchor-deployment-plan-v1', chain_id: 1439, versions: [version] };
-  const result = await deployAgentLog({ plan }); assert.equal(result.dry_run, true); assert.equal(result.broadcasts, 0);
-  for (const changed of [{ ...plan, chain_id: 1 }, { ...plan, versions: [] },
-    { ...plan, versions: [{ ...version, model_id: 'tampered' }] }]) assert.throws(() => validateAgentLogPlan(changed));
-  const unicode = (size) => createAgentVersion(loadAgentConfig({}), { LLM_MODEL: 'é'.repeat(size) }, hashSnapshot('unicode-model'));
-  assert.doesNotThrow(() => validateAgentLogPlan({ ...plan, versions: [unicode(64)] }));
-  await assert.rejects(deployAgentLog({ confirmed: true, plan: { ...plan, versions: [unicode(65)] },
-    provider: { getNetwork: () => { throw new Error('network must not be called before rejecting an oversized UTF-8 model'); } } }), /Invalid agent version commitment/u);
 });

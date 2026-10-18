@@ -1,0 +1,11 @@
+{
+  "schema": "agentbl-runtime-backup-v1",
+  "file_count": 26,
+  "total_bytes": 138366,
+  "encrypted_sha256": "84e4de1508a9614d843e343a48b359f7e9308826631d9c2f0aaa9e7a1142ffe9",
+  "source_revision": "ff0f988ec90a563bc8ff667e497e999a56bc059bd683efd51b7541c09a606680",
+  "manifest_sha256": "101f2a43591ca34966d73af1d32b089a3b49102fc0ef8814ce11061fbbdba862",
+  "source_sha256": "ff0f988ec90a563bc8ff667e497e999a56bc059bd683efd51b7541c09a606680",
+  "backup_location": "operator .agentbl/backups, outside repository",
+  "checked_at": "2026-10-18T09:10:49.485Z"
+}

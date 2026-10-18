@@ -14,6 +14,7 @@ import { sendRightsPlan } from '../../web/src/lib/rights.js';
 import { IndependentPaymentVerifier, AUTHORIZATION_TYPES } from '../../src/x402/independentVerifier.js';
 import { X402SettlementService, JsonReceiptStore } from '../../src/x402/settlement.js';
 import { releaseSourceSnapshot } from './release-source.mjs';
+import { listenOnUsablePort } from './listen.mjs';
 
 const AAD = 'agentbl-w5-smoke-private-v1';
 const safe = (value) => JSON.parse(JSON.stringify(value, (_k, v) => typeof v === 'bigint' ? String(v) : v));
@@ -36,7 +37,7 @@ export async function runTestnetLifecycle({ state, save, txSend, signers, provid
       res.writeHead(404); res.end();
     } catch (error) { sendError(res, error, { logger: { error() {}, warn() {} } }); }
   });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await listenOnUsablePort(server, '127.0.0.1');
   const base = `http://127.0.0.1:${server.address().port}/api`;
   const request = async (method, route, body, token) => {
     const response = await fetch(`${base}/${route}`, { method, headers: { 'content-type': 'application/json',

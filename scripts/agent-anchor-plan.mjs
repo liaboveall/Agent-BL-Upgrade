@@ -14,7 +14,7 @@ const result = { schema: 'agentbl-anchor-deployment-plan-v1', network: 'injectiv
   deploy_new_contract: 'AgentDecisionLog', existing_contract_mutations: 0,
   confirmation_required: true, versions, transactions: [{ method: 'deploy AgentDecisionLog', signer: 'owner' },
     ...versions.map((version) => ({ method: 'registerAgentVersion', signer: 'owner', version })),
-    { method: 'setAnchorer', signer: 'owner', role: 'existing dedicated PRICING_UPDATER', allowed: true }],
+    { method: 'setAnchorer', signer: 'owner', role: 'existing dedicated ANCHORER', allowed: true }],
   live_finalized_decisions: state.live.records.length, broadcasts: 0 };
 if (values.out) await fs.writeFile(values.out, JSON.stringify(result, null, 2) + '\n', { flag: 'wx' });
 console.log(JSON.stringify(result, null, 2));

@@ -104,17 +104,16 @@ test('resolveSignerKey prefers the dedicated key and only falls back (loudly, on
   assert.equal(warnings.length, 1, 'the fallback warning is printed once per role');
   assert.match(warnings[0], /contract OWNER key/u);
   assert.match(warnings[0], /setAttestor/u);
-  resolveSignerKey('PRICING_UPDATER', ownerOnly, { warn });
-  assert.equal(warnings.length, 2, 'each role warns separately');
+  assert.throws(() => resolveSignerKey('PRICING_UPDATER', ownerOnly, { warn }), /Unknown signer role/);
 
   assert.equal(resolveSignerKey('PAYMENT_ATTESTOR', {}, { warn }), null);
   assert.equal(resolveSignerKey('PAYMENT_ATTESTOR', { ...ownerOnly, SIGNER_KEYS_STRICT: 'true' }, { warn }), null,
     'strict mode forbids the owner-key fallback');
   assert.deepEqual(resolveSignerKey('PAYMENT_ATTESTOR', { SIGNER_KEYS_STRICT: 'true', PAYMENT_ATTESTOR_PRIVATE_KEY: '0xa' }, { warn }).dedicated, true);
   assert.throws(() => resolveSignerKey('SOMETHING_ELSE', {}), /Unknown signer role/u);
-  assert.match(signerKeyRequirement('PRICING_UPDATER'), /PRICING_UPDATER_PRIVATE_KEY.*setUpdater/u);
+  assert.match(signerKeyRequirement('PAYMENT_ATTESTOR'), /PAYMENT_ATTESTOR_PRIVATE_KEY.*setAttestor/u);
   // AGENT_EXECUTOR is the optional, never-owner-fallback role of the agent runtime (plan D2).
-  assert.deepEqual(Object.keys(SIGNER_ROLES).sort(), ['AGENT_EXECUTOR', 'PAYMENT_ATTESTOR', 'PRICING_UPDATER']);
+  assert.deepEqual(Object.keys(SIGNER_ROLES).sort(), ['PAYMENT_ATTESTOR']);
 });
 
 test('recordPaymentEvidence: Demo mode returns a clearly simulated receipt', async () => {
@@ -230,7 +229,8 @@ test('runtime state lives under the project root regardless of the working direc
       import { runtimeDir } from ${JSON.stringify(new URL('../src/runtimePaths.js', import.meta.url).href)};
       import { loadX402Config } from ${JSON.stringify(new URL('../src/x402/config.js', import.meta.url).href)};
       console.log(JSON.stringify({ dir: runtimeDir({}), receipts: loadX402Config({}).receiptStorePath }));`;
-    const run = spawnSync(process.execPath, ['--input-type=module', '-e', probe], { cwd: elsewhere, encoding: 'utf8' });
+    const probeEnv = { ...process.env }; delete probeEnv.AGENTBL_RUNTIME_DIR;
+    const run = spawnSync(process.execPath, ['--input-type=module', '-e', probe], { cwd: elsewhere, encoding: 'utf8', env: probeEnv });
     assert.equal(run.status, 0, run.stderr);
     const out = JSON.parse(run.stdout);
     assert.equal(out.dir, path.join(root, 'data', 'runtime'));
@@ -248,14 +248,16 @@ test('the deployments MCP resource survives a missing docs/ folder (not shipped 
   try {
     const result = await readMcpResource('agentbl://contracts/deployments');
     const evidence = JSON.parse(result.contents[0].text);
-    assert.equal(evidence.latestPaidPricingProof, null);
+    assert.equal(evidence.protocolVersion, 5);
+    assert.equal(evidence.scope, 'research_test_assets_only');
     assert.ok(Object.keys(evidence.contracts).length > 0, 'the rest of the resource is still served');
   } finally {
     if (previous === undefined) delete process.env.AGENTBL_EVIDENCE_DIR; else process.env.AGENTBL_EVIDENCE_DIR = previous;
     await fs.rm(empty, { recursive: true, force: true });
   }
   const withEvidence = JSON.parse((await readMcpResource('agentbl://contracts/deployments')).contents[0].text);
-  assert.ok(withEvidence.latestPaidPricingProof, 'the repository evidence is used when present');
+  assert.equal(withEvidence.protocolVersion, 5);
+  assert.equal(withEvidence.latestPaidPricingProof, undefined);
 });
 
 test('a Wallet-derived payer round-trips through the envelope as a valid address', () => {

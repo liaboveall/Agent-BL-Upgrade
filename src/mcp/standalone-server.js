@@ -36,7 +36,7 @@ export function createAgentBlMcpServer({ context } = {}) {
       description,
       inputSchema,
       annotations: {
-        readOnlyHint: !['push_pricing_to_oracle', 'purchase_premium_analysis', 'submit_agent_event', 'preview_mystery_voyage'].includes(name),
+        readOnlyHint: !['purchase_premium_analysis', 'submit_agent_event', 'preview_mystery_voyage'].includes(name),
         destructiveHint: false,
         idempotentHint: !['purchase_premium_analysis', 'submit_agent_event', 'preview_mystery_voyage'].includes(name),
         openWorldHint: ['purchase_premium_analysis', 'recommend_trade_assets', 'submit_agent_event'].includes(name)

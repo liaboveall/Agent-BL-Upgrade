@@ -16,7 +16,7 @@ const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once
 const port = listener.address().port; await new Promise((resolve) => listener.close(resolve));
 const env = { ...process.env, NODE_TEST_CONTEXT: 'w5-load-offline', DEMO_MODE: 'true', X402_MODE: 'demo', REAL_DATA: 'off',
   AGENTBL_RUNTIME_DIR: runtime, AGENTBL_OPS_INTERVAL_MS: '1000', AGENTBL_RATE_LIMIT_PER_MIN: '0', AGENTBL_WRITE_RATE_LIMIT_PER_MIN: '0',
-  AGENT_ANCHOR_ENABLED: 'false', AGENT_CHAIN_WATCHER_ENABLED: 'false', AGENT_DOCUMENT_LLM: 'false', AGENT_VALUATION_LLM: 'false', PORT: String(port), HOST: '127.0.0.1', AGENTBL_ADMIN_TOKEN: 'w5-isolated-capacity-test-operator' };
+  AGENT_ANCHOR_ENABLED: 'false', AGENT_DOCUMENT_LLM: 'false', AGENT_VALUATION_LLM: 'false', PORT: String(port), HOST: '127.0.0.1', AGENTBL_ADMIN_TOKEN: 'w5-isolated-capacity-test-operator' };
 for (const key of Object.keys(env)) if (/PRIVATE_KEY|API_KEY|AGENTBL_RIGHTS|ALERT_WEBHOOK/u.test(key)) delete env[key];
 const child = spawn(process.execPath, ['src/app/server.js'], { cwd: root, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
 let serverOutput = ''; child.stdout.on('data', (chunk) => { serverOutput += chunk; }); child.stderr.on('data', (chunk) => { serverOutput += chunk; });

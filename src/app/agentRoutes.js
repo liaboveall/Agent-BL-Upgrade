@@ -6,11 +6,9 @@
 // that changes state, and the approval queue itself, needs the admin token -- except that in Demo mode,
 // when no admin token is configured at all, they are open so the Demo works with zero setup.
 
-import { proposeLiveSmoke } from '../agent/runtime/liveSmoke.js';
 import { sanitizeAudit } from '../agent/security/privacy.js';
 import { checkAdminToken, MIN_ADMIN_TOKEN_LENGTH } from './security.js';
 import { HttpError, readJsonBody, sendJson } from './http.js';
-import { createChainReader } from '../agent/runtime/poolRegistry.js';
 import { isRecord } from './shapes.js';
 import { withReferences } from '../agent/runtime/references.js';
 import { publicAgentPolicy } from '../mcp/agentTools.js';
@@ -95,13 +93,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       return true;
     }
 
-    if (method === 'POST' && pathname === '/api/agent/smoke/propose') {
-      authorizeAdmin(request);
-      const body = await readJsonBody(request);
-      if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must contain a smoke action and run_id');
-      sendJson(response, 200, { ok: true, ...(await proposeLiveSmoke(service, body)) });
-      return true;
-    }
+    if (pathname === '/api/agent/smoke/propose') throw new HttpError(410,'signing_route_retired','Use the controlled financing workflow');
 
     if (method === 'POST' && pathname === '/api/agent/events') {
       authorizeAdmin(request);
@@ -341,23 +333,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       return true;
     }
 
-    if (method === 'POST' && pathname === '/api/agent/pools/link') {
-      authorizeAdmin(request);
-      const body = await readJsonBody(request);
-      if (!isRecord(body) || typeof body.case_id !== 'string') throw new HttpError(400, 'invalid_request', 'case_id is required');
-      const context = await service.getChainContext();
-      if (!context) throw new HttpError(503, 'chain_unavailable', 'The chain is not reachable, so the pool cannot be verified');
-      const entry = await service.registry.linkChain({
-        case_id: body.case_id,
-        chain_pool_id: Number(body.chain_pool_id),
-        ebl_id: body.ebl_id === undefined ? undefined : Number(body.ebl_id),
-        protected: body.protected === true,
-        source: 'api-link'
-      }, createChainReader(context));
-      service.activity.append({ type: 'SYSTEM', action: 'POOL_LINKED', caseId: entry.case_id, details: { chain_pool_id: entry.chain.pool_id, protected: entry.protected } });
-      sendJson(response, 200, { ok: true, pool: entry });
-      return true;
-    }
+    if (method === 'POST' && pathname === '/api/agent/pools/link') throw new HttpError(410,'signing_route_retired','Use the controlled financing workflow');
 
     return false;
   };

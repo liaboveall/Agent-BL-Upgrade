@@ -13,7 +13,7 @@ import { maskImmutableBytecode, loadRightsChain } from '../src/rights/chain.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const dir = path.join(root, 'data/runtime/w5-deployment');
-const evidence = path.join(root, 'docs/evidence/w5-2026-10-18/testnet');
+const historicalEvidence = path.join(root, 'docs/evidence/w5-2026-10-18/testnet');
 const names = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5', 'MockAuthorizationUSDC'];
 const roleNames = ['governorB', 'governorC', 'issuer', 'holder', 'valuer', 'operator', 'attestor', 'compliance', 'disposer', 'reviewer', 'guardian', 'investor'];
 const AAD = 'agentbl-w5-research-signers-v1';
@@ -27,8 +27,27 @@ export function deploymentCheckpoint(journalEntry, stateEntry) {
   if (saved && !/^0x[a-fA-F0-9]{64}$/u.test(saved.tx_hash ?? '')) throw new Error('Deployment broadcast checkpoint is incomplete; reconcile without signing again');
   return saved;
 }
+export async function loadDeploymentContinuation({ stateFile, evidenceFile, historicalFile, initialized }) {
+  for (const file of [...new Set([stateFile, evidenceFile, historicalFile])]) {
+    const state = await readJson(file);
+    if (!state) continue;
+    if (state.schema !== 'agentbl-w5-testnet-deployment-v1' || state.chain_id !== 1439
+      || !Array.isArray(state.transactions) || !state.contracts || !state.actors) throw new Error('Invalid deployment history; reconcile before another transaction');
+    return { state, from: file, sha256: sha(await fs.readFile(file)) };
+  }
+  if (initialized) throw new Error('Initialized deployment history is missing; restore it before another transaction');
+  return null;
+}
 export async function runDeployment(action) {
   ensure(['prepare', 'activate', 'status', 'smoke', 'anchor'].includes(action), 'Use --prepare, --activate, --status, --smoke or --anchor');
+  const evidence = process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR
+    ? path.resolve(root, process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR)
+    : path.join(root, 'docs/evidence/current-deployment/runs', new Date().toISOString().replaceAll(/[:.]/gu, '-'));
+  ensure(evidence !== historicalEvidence, 'Historical deployment evidence is immutable; choose a new evidence directory');
+  const stateFile = path.join(dir, 'deployment-state.json');
+  const initializedFile = path.join(dir, 'deployment-initialized.json');
+  const previous = await loadDeploymentContinuation({ stateFile, evidenceFile: path.join(evidence, 'deployment.json'),
+    historicalFile: path.join(historicalEvidence, 'deployment.json'), initialized: Boolean(await readJson(initializedFile)) });
   await fs.mkdir(dir, { recursive: true }); await fs.mkdir(evidence, { recursive: true });
   const keyDirectory = process.env.AGENTBL_W5_KEY_DIR || path.join(os.homedir(), '.agentbl', 'w5-2026-10-18');
   await fs.mkdir(keyDirectory, { recursive: true, mode: 0o700 });
@@ -48,7 +67,7 @@ export async function runDeployment(action) {
     ensure(Number((await provider.getNetwork()).chainId) === 1439, 'Only Injective testnet 1439 is authorized');
     let stored = await readJson(path.join(dir, 'signers.json'));
     if (!stored) {
-      ensure(!await readJson(path.join(evidence, 'deployment.json')), 'Deployment signer history is missing; restore the original encrypted research keys');
+    ensure(!previous, 'Deployment signer history is missing; restore the original encrypted research keys');
       ensure(action === 'prepare', 'Prepare deployment first');
       const values = Object.fromEntries(roleNames.map((name) => [name, Wallet.createRandom().privateKey]));
       values.governorA = owner.privateKey;
@@ -65,9 +84,7 @@ export async function runDeployment(action) {
     const artifactHashes = Object.fromEntries(names.map((name) => [name, sha(JSON.stringify(artifacts[name]))]));
     const stableHashes = Object.fromEntries(names.map((name) => { const a = artifacts[name]; return [name, sha(JSON.stringify({ abi: a.abi, bytecode: a.bytecode,
       deployedBytecode: a.deployedBytecode, immutableRanges: Object.values(a.immutableReferences ?? {}).flat().sort((x, y) => x.start - y.start).map(({ start, length }) => ({ start, length })) }))]; }));
-    let state = await readJson(path.join(evidence, 'deployment.json'));
-    const initializedFile = path.join(dir, 'deployment-initialized.json');
-    if (!state && await readJson(initializedFile)) throw new Error('Initialized deployment history is missing; restore it before another transaction');
+    let state = previous?.state;
     if (!state) {
       ensure(action === 'prepare', 'Deployment has not been prepared');
       state = { schema: 'agentbl-w5-testnet-deployment-v1', chain_id: 1439, scope: 'research_test_assets_only', business_enabled: false,
@@ -81,7 +98,13 @@ export async function runDeployment(action) {
     ensure(JSON.stringify(state.stable_artifact_hashes ?? state.artifact_hashes) === JSON.stringify(state.stable_artifact_hashes ? stableHashes : artifactHashes), 'Contract artifacts changed; do not resume against different code');
     state.stable_artifact_hashes ??= stableHashes;
     ensure(Object.entries(state.actors).every(([role, address]) => same(actors[role], address)), 'Research signer custody differs from the deployed role inventory');
-    const save = () => writeJsonAtomic(path.join(evidence, 'deployment.json'), safe(state), { durable: true });
+    state.continuation ??= { previous_state_sha256: previous?.sha256 ?? null,
+      previous_evidence: previous ? path.relative(root, previous.from).replaceAll('\\', '/') : null };
+    const save = async () => {
+      await writeJsonAtomic(stateFile, safe(state), { durable: true });
+      await writeJsonAtomic(path.join(evidence, 'deployment.json'), safe(state), { durable: true });
+    };
+    await save();
     const txSend = async (label, signer, txRequest) => {
       return journal.withLock('w5-signers', async () => {
         let index = state.transactions.findIndex((tx) => tx.label === label);

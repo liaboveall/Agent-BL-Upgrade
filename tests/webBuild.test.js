@@ -28,7 +28,7 @@ test('the Vite build is CSP-clean and self-contained', async (t) => {
   for (const url of referenced) await fs.access(path.join(outDir, url));
 
   // public/ is copied as-is: the chain registry and the vendored wallet SDKs are served from the build too.
-  for (const file of ['chain-config.json', 'vendor/manifest.json', 'img/cargo/copper.webp']) await fs.access(path.join(outDir, file));
+  for (const file of ['application-config.json', 'vendor/manifest.json', 'img/cargo/copper.webp']) await fs.access(path.join(outDir, file));
 
   const assets = await fs.readdir(path.join(outDir, 'assets'));
   for (const name of assets.filter((file) => file.endsWith('.js'))) {

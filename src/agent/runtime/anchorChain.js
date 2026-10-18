@@ -28,18 +28,18 @@ export function createAnchorChainAdapter({ chainConfig, getContext, runExclusive
   const adapter = {
     async prepare(batch, version) {
       const ctx = await context();
-      if (!ctx.signers?.PRICING_UPDATER || !await ctx.log.anchorers(ctx.signers.PRICING_UPDATER)) throw new Error('Dedicated PRICING_UPDATER is not an anchorer');
+      if (!ctx.signers?.ANCHORER || !await ctx.log.anchorers(ctx.signers.ANCHORER)) throw new Error('Dedicated ANCHORER is not an anchorer');
       const registered = await ctx.log.versions(batch.version_id);
       if (!registered.registeredAt || !equal(registered.policyHash, version.policy_hash) || !equal(registered.codeCommit, version.code_commit)
         || registered.modelId !== version.model_id) throw new Error('Agent version is not registered with matching metadata');
       const lastSeq = Number(await ctx.log.lastSeq()), batchCount = Number(await ctx.log.batchCount());
       if (lastSeq + 1 !== batch.from_seq || batchCount + 1 !== batch.batch_id) throw new Error('Anchor sequence conflicts with chain state');
-      return { chain_id: ctx.chainId, contract_address: address, from_block: await ctx.provider.getBlockNumber(), anchorer: ctx.signers.PRICING_UPDATER };
+      return { chain_id: ctx.chainId, contract_address: address, from_block: await ctx.provider.getBlockNumber(), anchorer: ctx.signers.ANCHORER };
     },
     async send(batch, assertCurrent, onSubmitted) {
       return runExclusive(async () => {
         const ctx = await context(batch);
-        if (!equal(ctx.signers?.PRICING_UPDATER, batch.anchorer)) throw new Error('Anchor signer changed');
+        if (!equal(ctx.signers?.ANCHORER, batch.anchorer)) throw new Error('Anchor signer changed');
         const args = [batch.merkle_root, batch.from_seq, batch.to_seq, batch.count, batch.version_id];
         await ctx.log.anchorBatch.staticCall(...args);
         assertCurrent();

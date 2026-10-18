@@ -39,7 +39,9 @@ try {
   // Preserve the original source data and put it back only after the isolated recovery finishes.
   await fs.rename(offline, source);
 }
-const directory = path.join(releaseRoot, 'docs/evidence/w5-2026-10-18/recovery', at); await fs.mkdir(directory, { recursive: true });
+const evidenceRoot = process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR ? path.resolve(releaseRoot, process.env.AGENTBL_DEPLOYMENT_EVIDENCE_DIR)
+  : path.join(releaseRoot, 'docs/evidence/current-deployment/runs', at);
+const directory = path.join(evidenceRoot, 'recovery'); await fs.mkdir(directory, { recursive: true });
 await fs.writeFile(path.join(directory, 'replacement.log'), stdout + stderr);
 const result = code === 0 ? JSON.parse(stdout.trim().split('\n').at(-1)) : { passed: false, exit_code: code };
 await writeJsonAtomic(path.join(directory, 'receipt.json'), { ...result, source_sha256: sourceManifest.source_sha256, source_platform: process.platform,

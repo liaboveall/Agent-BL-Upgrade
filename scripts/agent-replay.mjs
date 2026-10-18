@@ -8,7 +8,7 @@ if (values.help) console.log('Usage: npm run agent:replay -- --decision <id> [--
 else {
   try {
     if (!values.decision) throw new Error('--decision is required');
-    const logger = new DecisionLogger({ filePath: values.file ?? runtimePath('agent-decisions.json') });
+    const logger = new DecisionLogger({ filePath: values.file ?? runtimePath('research-agent/agent-decisions.json') });
     const decision = await logger.get(values.decision);
     if (!decision) throw new Error('Unknown decision');
     const result = replayDecision(decision);

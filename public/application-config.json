@@ -1,0 +1,556 @@
+{
+  "schema": "agentbl-application-v1",
+  "scope": "research_test_assets_only",
+  "defaultNetwork": "injective-testnet",
+  "networks": {
+    "injective-testnet": {
+      "network": "injective_testnet",
+      "displayName": "Injective EVM Testnet",
+      "chainId": "0x59f",
+      "chainIdDecimal": 1439,
+      "cosmosChainId": "injective-888",
+      "rpcUrls": [
+        "https://k8s.testnet.json-rpc.injective.network/"
+      ],
+      "wsUrls": [
+        "wss://k8s.testnet.ws.injective.network/"
+      ],
+      "cosmosRpcUrl": "https://testnet.sentry.tm.injective.network:443",
+      "cosmosExplorerTxBase": "https://testnet.explorer.injective.network/transaction/",
+      "explorerBase": "https://testnet.blockscout.injective.network",
+      "explorerApi": "https://testnet.blockscout.injective.network/api",
+      "faucetUrl": "https://testnet.faucet.injective.network/",
+      "nativeCurrency": {
+        "name": "Injective",
+        "symbol": "INJ",
+        "decimals": 18
+      },
+      "protocolVersion": 5,
+      "accessModel": "compliance-gated",
+      "confirmations": 3,
+      "rightsConfig": "/rights-instance.json",
+      "contracts": {
+        "RightsGovernance": "0x1Df02ED170bA2367d56F190Cc1b8225f58f6E2e5",
+        "AssetIdentityHub": "0x471c70CAb4166AF7D0261cb0dE9Be26B53C01e88",
+        "CommittedEBLRegistry": "0xee7e8125b92de8fFe5bD4eD82187129c1fDa10d5",
+        "RightsController": "0xD3ccC2FaBBC57611869d93c8701Ee594dB9B8ea4",
+        "MockAuthorizationUSDC": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C",
+        "RWAOfferingPoolV5": "0xfd17Ec1ebDFdd35188adBfCe4ff88Bda61F21A0F",
+        "ControlledRWAToken": "0x20b454e2f926D5ABafa595C2224cB8F82c366696",
+        "PaymentOracle": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+        "AgentDecisionLog": "0xA95200a69A62eD9e2A8D024fDeAAc7BB231E05f4"
+      },
+      "abis": {
+        "RWAOfferingPool": [
+          "function createOfferingWithTerms(uint256,uint256,uint256,uint256,uint256,uint256,address,uint256) returns (uint256)",
+          "function subscribe(uint256,uint256)",
+          "function subscribeWithTerms(uint256,uint256,uint256,uint256,uint256)",
+          "function refundInvestor(uint256,address)",
+          "function refundAllOnFailure(uint256)",
+          "function refundAllOnFailure(uint256,uint256,uint256)",
+          "function disburseToExporter(uint256,uint256,address,bytes32)",
+          "function repay(uint256,uint256)",
+          "function claim(uint256)",
+          "function deductFee(uint256,uint256,address,bytes32)",
+          "function recordAdditionalPayment(uint256,bytes32,uint256)",
+          "function recordLiquidationRecovery(uint256,bytes32,uint256)",
+          "function resolveLiquidation(uint256,bytes32)",
+          "function offerings(uint256) view returns (uint256 eblId,uint256 tokenSupply,uint256 issuePrice,uint256 targetRedemptionValue,uint256 subscribed,uint256 repaymentAmount,bytes32 paymentProof,bytes32 arrivalProof,address settlementAsset,uint256 minRaise,uint256 raisedAtomic,uint8 state,bool exists)",
+          "function protocolVersion() view returns (uint256)",
+          "function quoteVersion(uint256) view returns (uint256)",
+          "function subscriptionDeadline(uint256) view returns (uint256)",
+          "function maturityAt(uint256) view returns (uint256)",
+          "function emergencyStopped() view returns (bool)",
+          "function isInvestorEligible(address,uint256) view returns (bool)",
+          "function claimable(uint256,address) view returns (uint256)",
+          "function finalizeFunding(uint256)",
+          "function recoveredAtomic(uint256) view returns (uint256)",
+          "function fundingFinalized(uint256) view returns (bool)",
+          "function escrowed(uint256,address) view returns (uint256)",
+          "function investorPaid(uint256,address,address) view returns (uint256)",
+          "function investorClaimed(uint256,address,address) view returns (uint256)",
+          "function totalClaimed(uint256) view returns (uint256)",
+          "function feesDeducted(uint256) view returns (uint256)",
+          "function disbursedAtomic(uint256) view returns (uint256)",
+          "event PoolFundingTermsSet(uint256 indexed poolId,address settlementAsset,uint256 minRaise,uint256 maxRaise)",
+          "event Subscribed(uint256 indexed poolId,address indexed investor,uint256 amount,uint256 paidAmount)",
+          "event FundEscrowed(uint256 indexed poolId,address indexed asset,address indexed investor,uint256 amountAtomic,uint256 shares)",
+          "event DisbursedToExporter(uint256 indexed poolId,address indexed asset,uint256 amountAtomic,bytes32 evidenceHash)",
+          "event InvestorRefunded(uint256 indexed poolId,address indexed investor,address indexed asset,uint256 amountAtomic)",
+          "event Claimed(uint256 indexed poolId,address indexed investor,address indexed asset,uint256 amountAtomic,uint256 sharesBurned)",
+          "event FeeDeducted(uint256 indexed poolId,address indexed asset,uint256 feeAtomic,bytes32 feeEvidenceHash)",
+          "event RepaymentReceived(uint256 indexed poolId,address indexed asset,address indexed payer,uint256 amountAtomic)",
+          "event FundingFinalized(uint256 indexed poolId,uint256 raisedAtomic)",
+          "event LiquidationRecoveryRecorded(uint256 indexed poolId,bytes32 paymentProof,uint256 amount,uint256 totalRecovered)",
+          "event AdditionalPaymentRecorded(uint256 indexed poolId,bytes32 paymentProof,uint256 amount,uint256 totalRecovered)"
+        ],
+        "PaymentOracle": [
+          {
+            "inputs": [],
+            "stateMutability": "nonpayable",
+            "type": "constructor"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "paymentTxHash",
+                "type": "bytes32"
+              }
+            ],
+            "name": "DuplicatePaymentTransaction",
+            "type": "error"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "receiptId",
+                "type": "bytes32"
+              }
+            ],
+            "name": "DuplicateReceipt",
+            "type": "error"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "caller",
+                "type": "address"
+              }
+            ],
+            "name": "NotOwner",
+            "type": "error"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "caller",
+                "type": "address"
+              }
+            ],
+            "name": "NotPendingOwner",
+            "type": "error"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "caller",
+                "type": "address"
+              }
+            ],
+            "name": "UnauthorizedAttestor",
+            "type": "error"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "receiptId",
+                "type": "bytes32"
+              }
+            ],
+            "name": "UnknownReceipt",
+            "type": "error"
+          },
+          {
+            "inputs": [],
+            "name": "ZeroAddress",
+            "type": "error"
+          },
+          {
+            "inputs": [],
+            "name": "ZeroAmount",
+            "type": "error"
+          },
+          {
+            "inputs": [],
+            "name": "ZeroHash",
+            "type": "error"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "attestor",
+                "type": "address"
+              },
+              {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "allowed",
+                "type": "bool"
+              }
+            ],
+            "name": "AttestorUpdated",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferStarted",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "previousOwner",
+                "type": "address"
+              },
+              {
+                "indexed": true,
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "OwnershipTransferred",
+            "type": "event"
+          },
+          {
+            "anonymous": false,
+            "inputs": [
+              {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "receiptId",
+                "type": "bytes32"
+              },
+              {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "reportHash",
+                "type": "bytes32"
+              },
+              {
+                "indexed": true,
+                "internalType": "bytes32",
+                "name": "caseIdHash",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "bytes32",
+                "name": "paymentTxHash",
+                "type": "bytes32"
+              },
+              {
+                "indexed": false,
+                "internalType": "address",
+                "name": "payer",
+                "type": "address"
+              },
+              {
+                "indexed": false,
+                "internalType": "address",
+                "name": "asset",
+                "type": "address"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              },
+              {
+                "indexed": false,
+                "internalType": "address",
+                "name": "attestor",
+                "type": "address"
+              },
+              {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+              }
+            ],
+            "name": "PaymentAttested",
+            "type": "event"
+          },
+          {
+            "inputs": [],
+            "name": "acceptOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "receiptId",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "reportHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "caseIdHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "paymentTxHash",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "address",
+                "name": "payer",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "asset",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              }
+            ],
+            "name": "attestPayment",
+            "outputs": [
+              {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "attestationCount",
+            "outputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "receiptId",
+                "type": "bytes32"
+              }
+            ],
+            "name": "getAttestation",
+            "outputs": [
+              {
+                "components": [
+                  {
+                    "internalType": "bytes32",
+                    "name": "reportHash",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "bytes32",
+                    "name": "caseIdHash",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "bytes32",
+                    "name": "paymentTxHash",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "payer",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "asset",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "attestor",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "timestamp",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct PaymentOracle.PaymentAttestation",
+                "name": "",
+                "type": "tuple"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "receiptId",
+                "type": "bytes32"
+              }
+            ],
+            "name": "hasAttestation",
+            "outputs": [
+              {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "name": "isAttestor",
+            "outputs": [
+              {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "owner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "name": "paymentTransactionAttested",
+            "outputs": [
+              {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [],
+            "name": "pendingOwner",
+            "outputs": [
+              {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "attestor",
+                "type": "address"
+              },
+              {
+                "internalType": "bool",
+                "name": "allowed",
+                "type": "bool"
+              }
+            ],
+            "name": "setAttestor",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          },
+          {
+            "inputs": [
+              {
+                "internalType": "address",
+                "name": "newOwner",
+                "type": "address"
+              }
+            ],
+            "name": "transferOwnership",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+          }
+        ]
+      },
+      "deployments": {
+        "RWAOfferingPoolV5": {
+          "address": "0xfd17Ec1ebDFdd35188adBfCe4ff88Bda61F21A0F",
+          "blockNumber": 144210687
+        },
+        "PaymentOracle": {
+          "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+          "deployTx": "0xddaabf1ce27f129966f9d69f75c758ee0d25f1f3c858a93f2f2fd7c689b2faf8",
+          "deployedAt": "2026-10-12T02:28:35.991Z"
+        },
+        "AgentDecisionLog": {
+          "address": "0xA95200a69A62eD9e2A8D024fDeAAc7BB231E05f4",
+          "deployTx": "0x486dd1fc94f25c5a4782d91747eb183b424b464cca1f0b5a3d8a2fc30b0c9242",
+          "blockNumber": 144218776
+        }
+      }
+    }
+  }
+}

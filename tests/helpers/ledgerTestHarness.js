@@ -57,15 +57,15 @@ export async function deployW2(node, t) {
     const { abi, bytecode } = await artifact(name);
     return (await new ContractFactory(abi, bytecode, owner).deploy(...args)).waitForDeployment();
   };
-  const registry = await deploy('EBLRegistry'), usdc = await deploy('MockUSDC'), token = await deploy('RWATokenV5');
+  const registry = await deploy('MockCapitalRegistry'), usdc = await deploy('MockUSDC'), token = await deploy('ControlledRWAToken');
   const pool = await deploy('RWAOfferingPoolV5', [await registry.getAddress(), await token.getAddress()]);
   const send = async (tx) => (await tx).wait();
-  await send(token.setPool(await pool.getAddress()));
+  await send(token.bindPool(await pool.getAddress()));
   const { ledger, dir } = await tmpLedger();
   const network = await provider.getNetwork();
   const cfg = { network: 'hardhat-local', protocolVersion: 5, chainIdDecimal: Number(network.chainId), explorerBase: 'http://local.invalid', rpcUrls: [node.url],
     contracts: { RWAOfferingPool: await pool.getAddress(), RWAToken: await token.getAddress(), EBLRegistry: await registry.getAddress() },
-    abis: { RWAOfferingPool: (await artifact('RWAOfferingPoolV5')).abi, RWAToken: (await artifact('RWATokenV5')).abi },
+    abis: { RWAOfferingPool: (await artifact('RWAOfferingPoolV5')).abi, RWAToken: (await artifact('ControlledRWAToken')).abi },
     deployments: { RWAOfferingPool: { blockNumber: (await pool.deploymentTransaction().wait()).blockNumber } } };
   const getContext = async () => ({ provider, pool, registry, token });
   const capital = new CapitalLedgerService({ ledger, chainConfig: cfg, getContext, getMode: () => 'live' });

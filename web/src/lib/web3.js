@@ -2,7 +2,7 @@
 //
 // Target: Injective EVM Testnet (chainId 1439)
 //
-// Reads /chain-config.json at runtime to determine the target network.
+// Reads /application-config.json at runtime to determine the target network.
 // Wallet connection auto-detects the chain and prompts the user to switch.
 //
 // ethers v6 (and, for Keplr/Leap, @cosmjs/stargate) are loaded lazily, only when the
@@ -11,9 +11,8 @@
 // must not execute third-party scripts fetched from a CDN at runtime, and the CSP
 // only allows same-origin scripts.
 
-import { priceToE6, riskLevelToUint8, actionToUint8 } from './format.js';
-import { pushPricingToOracle } from './api.js';
-
+import { priceToE6 } from './format.js';
+import { resolveApplicationConfig } from '../../../src/chain/applicationConfig.js';
 const ETHERS_MODULE_URL = '/vendor/ethers-6.17.0.min.js';
 const COSMOS_STARGATE_MODULE_URL = '/vendor/cosmjs-stargate-0.33.1.js';
 
@@ -21,11 +20,12 @@ const COSMOS_STARGATE_MODULE_URL = '/vendor/cosmjs-stargate-0.33.1.js';
 const CHAIN_PRESETS = {
   injective_testnet: {
     chainName: 'Injective EVM Testnet',
-    nativeCurrency: { name: 'INJ', symbol: 'INJ', decimals: 18 },
-    rpcUrls: [
-      'https://k8s.testnet.json-rpc.injective.network',
-      'https://testnet.sentry.chain.json-rpc.injective.network'
-    ],
+    nativeCurrency: {
+      name: 'INJ',
+      symbol: 'INJ',
+      decimals: 18
+    },
+    rpcUrls: ['https://k8s.testnet.json-rpc.injective.network', 'https://testnet.sentry.chain.json-rpc.injective.network'],
     blockExplorerUrls: ['https://testnet.blockscout.injective.network'],
     faucetUrl: 'https://testnet.faucet.injective.network/'
   }
@@ -43,34 +43,23 @@ let _cachedProvider = null; // selected EIP-1193 provider
 function injectedEvmProviders() {
   if (typeof window === 'undefined') return null;
   const primary = window.ethereum;
-  const candidates = [
-    ...(Array.isArray(primary?.providers) ? primary.providers : []),
-    primary,
-    window.okxwallet,
-    window.trustwallet,
-    window.bitkeep,
-    window.bitget,
-    window.rabby,
-    window.tokenpocket
-  ];
-  return [...new Set(candidates.filter((provider) => provider?.request))];
+  const candidates = [...(Array.isArray(primary?.providers) ? primary.providers : []), primary, window.okxwallet, window.trustwallet, window.bitkeep, window.bitget, window.rabby, window.tokenpocket];
+  return [...new Set(candidates.filter(provider => provider?.request))];
 }
-
 export function walletAvailability() {
   const providers = injectedEvmProviders() ?? [];
   return {
-    metamask: providers.some((provider) => provider.isMetaMask && !provider.isRabby) || providers.length > 0,
+    metamask: providers.some(provider => provider.isMetaMask && !provider.isRabby) || providers.length > 0,
     keplr: typeof window !== 'undefined' && Boolean(window.keplr?.enable),
     leap: typeof window !== 'undefined' && Boolean(window.leap?.enable)
   };
 }
-
 function providerForWallet(walletType) {
   if (typeof window === 'undefined') return null;
   if (walletType === 'keplr') return window.keplr?.enable ? window.keplr : null;
   if (walletType === 'leap') return window.leap?.enable ? window.leap : null;
   const providers = injectedEvmProviders() ?? [];
-  return providers.find((provider) => provider.isMetaMask && !provider.isRabby) ?? providers[0] ?? null;
+  return providers.find(provider => provider.isMetaMask && !provider.isRabby) ?? providers[0] ?? null;
 }
 
 /** Return the selected EIP-1193 provider; only MetaMask uses this path. */
@@ -86,60 +75,46 @@ export async function loadEthers() {
   if (_ethers) return _ethers;
   if (typeof globalThis !== 'undefined' && globalThis._mockEthers) return globalThis._mockEthers;
   try {
-    _ethers = await import(/* @vite-ignore */ ETHERS_MODULE_URL);
+    _ethers = await import(/* @vite-ignore */ETHERS_MODULE_URL);
     return _ethers;
   } catch (cause) {
-    throw new Error('Failed to load ethers: ' + (cause?.message ?? 'unknown'), { cause });
+    throw new Error('Failed to load ethers: ' + (cause?.message ?? 'unknown'), {
+      cause
+    });
   }
 }
-
 async function loadCosmosStargate() {
   if (_cosmosStargate) return _cosmosStargate;
   try {
-    _cosmosStargate = await import(/* @vite-ignore */ COSMOS_STARGATE_MODULE_URL);
+    _cosmosStargate = await import(/* @vite-ignore */COSMOS_STARGATE_MODULE_URL);
     return _cosmosStargate;
   } catch (cause) {
     throw err('SDK_LOAD', `Failed to load Cosmos signing SDK: ${cause?.message ?? 'unknown'}`);
   }
 }
-
 export function resolveBrowserChainConfig(registry, requestedNetwork) {
-  if (registry?.schema !== 'agentbl-chain-config-v2' || !registry.networks) {
-    return registry;
-  }
-  const key = requestedNetwork || registry.defaultNetwork;
-  const network = registry.networks[key];
-  if (!network) throw err('NETWORK_CONFIG', `Unknown configured network: ${key}`);
-  const abis = network.abis ?? {};
-  return {
-    ...network,
-    key,
-    defaultNetwork: registry.defaultNetwork,
-    abi: abis.AgentBLRWA ?? [],
-    paymentOracle: network.paymentOracle ?? (network.contracts?.PaymentOracle ? {
-      address: network.contracts.PaymentOracle,
-      ...(network.deployments?.PaymentOracle ?? {}),
-      abi: abis.PaymentOracle ?? []
-    } : null)
-  };
+  return resolveApplicationConfig(registry, requestedNetwork);
 }
 
-/** Load /chain-config.json and resolve the active network without discarding the registry. */
+/** Load /application-config.json and resolve the active network without discarding the registry. */
 export async function loadChainConfig(requestedNetwork) {
   const key = requestedNetwork || _activeNetworkKey;
   if (_config && (!key || _config.key === key)) return _config;
   try {
     if (!_registry) {
-      const res = await fetch('/chain-config.json', { cache: 'no-store' });
+      const res = await fetch('/application-config.json', {
+        cache: 'no-store'
+      });
       if (!res.ok) return null;
       _registry = await res.json();
     }
     _activeNetworkKey = key || _registry.defaultNetwork || 'injective-testnet';
     _config = resolveBrowserChainConfig(_registry, _activeNetworkKey);
     return _config;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
-
 export async function configuredNetworks() {
   await loadChainConfig();
   return Object.entries(_registry?.networks ?? {}).map(([key, value]) => ({
@@ -149,7 +124,6 @@ export async function configuredNetworks() {
     deployed: Object.values(value.contracts ?? {}).some(isAddress)
   }));
 }
-
 export async function selectNetwork(networkKey) {
   if (_session) throw err('WALLET_CONNECTED', 'Disconnect the wallet before switching application networks');
   _activeNetworkKey = networkKey;
@@ -170,34 +144,30 @@ function getPreset(cfg) {
   const net = cfg?.network || 'injective_testnet';
   return CHAIN_PRESETS[net] || CHAIN_PRESETS.injective_testnet;
 }
-
-const isAddress = (a) => typeof a === 'string' && /^0x[0-9a-fA-F]{40}$/.test(a);
+const isAddress = a => typeof a === 'string' && /^0x[0-9a-fA-F]{40}$/.test(a);
 
 /** True when a real contract address is configured (deploy script has run). */
 export async function isRealChainConfigured() {
   const cfg = await loadChainConfig();
-  return Boolean(cfg && isAddress(cfg.contracts?.AgentBLRWA));
+  return Boolean(cfg && isAddress(cfg.contracts?.RightsController));
 }
-
 export function hasInjectedWallet() {
   return Object.values(walletAvailability()).some(Boolean);
 }
-
 export function isWalletConnected() {
   return Boolean(_session?.address);
 }
-
 export function connectedAddress() {
   return _session?.address ?? null;
 }
 
 /** Current browser wallet only; never contains a server-side signing key. */
-export function currentWalletSession() { return _session; }
-
+export function currentWalletSession() {
+  return _session;
+}
 export function connectedWalletType() {
   return _session?.walletType ?? null;
 }
-
 function err(code, message) {
   const e = new Error(message);
   e.code = code;
@@ -210,14 +180,13 @@ function err(code, message) {
  */
 export async function restoreWalletSession() {
   let savedType;
-  try { savedType = window.localStorage?.getItem('agentbl.walletType'); } catch { /* */ }
+  try {
+    savedType = window.localStorage?.getItem('agentbl.walletType');
+  } catch {/* */}
   if (!savedType) return null;
-
   const wallet = providerForWallet(savedType);
   if (!wallet) return null;
-
   const cfg = await loadChainConfig();
-
   try {
     if (savedType === 'keplr' || savedType === 'leap') {
       const cosmosChainId = cfg?.cosmosChainId;
@@ -226,8 +195,12 @@ export async function restoreWalletSession() {
       const accounts = await signer.getAccounts();
       if (!accounts[0]?.address) return null;
       _session = {
-        kind: 'cosmos', walletType: savedType, provider: wallet, signer,
-        address: accounts[0].address, cosmosChainId
+        kind: 'cosmos',
+        walletType: savedType,
+        provider: wallet,
+        signer,
+        address: accounts[0].address,
+        cosmosChainId
       };
       if (typeof window !== 'undefined' && !window._agentblCosmosWalletWired) {
         window._agentblCosmosWalletWired = true;
@@ -235,13 +208,22 @@ export async function restoreWalletSession() {
         window.addEventListener('leap_keystorechange', () => clearWalletSession('account'));
       }
     } else {
-      const accounts = await wallet.request({ method: 'eth_accounts' });
+      const accounts = await wallet.request({
+        method: 'eth_accounts'
+      });
       if (!accounts || accounts.length === 0) return null;
       const ethers = await loadEthers();
       _cachedProvider = wallet;
       const provider = new ethers.BrowserProvider(wallet);
       const signer = await provider.getSigner();
-      _session = { kind: 'evm', walletType: 'metamask', provider: wallet, browserProvider: provider, signer, address: await signer.getAddress() };
+      _session = {
+        kind: 'evm',
+        walletType: 'metamask',
+        provider: wallet,
+        browserProvider: provider,
+        signer,
+        address: await signer.getAddress()
+      };
       if (!wallet._agentblWired) {
         wallet._agentblWired = true;
         wallet.on?.('accountsChanged', () => clearWalletSession('account'));
@@ -249,23 +231,33 @@ export async function restoreWalletSession() {
       }
     }
     emitWalletChange('restored');
-    return { address: _session.address, walletType: _session.walletType, kind: _session.kind };
+    return {
+      address: _session.address,
+      walletType: _session.walletType,
+      kind: _session.kind
+    };
   } catch {
     return null;
   }
 }
 
-/** Ensure the wallet is on the target chain (from chain-config.json), adding the network if unknown (EIP-3085). */
+/** Ensure the wallet is on the target chain (from application-config.json), adding the network if unknown (EIP-3085). */
 async function ensureTargetChain(eth) {
   const cfg = await loadChainConfig();
   const preset = getPreset(cfg);
   const targetHex = cfg?.chainId || '0x59F'; // default: Injective Testnet
 
-  const current = await eth.request({ method: 'eth_chainId' });
+  const current = await eth.request({
+    method: 'eth_chainId'
+  });
   if (current === targetHex) return;
-
   try {
-    await eth.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: targetHex }] });
+    await eth.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{
+        chainId: targetHex
+      }]
+    });
   } catch (switchErr) {
     if (switchErr?.code === 4902) {
       await eth.request({
@@ -294,18 +286,21 @@ export async function connectWallet(walletType = 'metamask') {
   const wallet = providerForWallet(walletType);
   if (!wallet) throw err('NO_WALLET', `${walletType} wallet extension was not detected`);
   const cfg = await loadChainConfig();
-
   if (walletType === 'keplr' || walletType === 'leap') {
     const cosmosChainId = cfg?.cosmosChainId;
-    if (!cosmosChainId) throw err('NETWORK_CONFIG', 'Cosmos chain ID is missing from chain-config');
+    if (!cosmosChainId) throw err('NETWORK_CONFIG', 'Cosmos chain ID is missing from application configuration');
     try {
       await wallet.enable(cosmosChainId);
       const signer = wallet.getOfflineSigner(cosmosChainId);
       const accounts = await signer.getAccounts();
       if (!accounts[0]?.address) throw err('NO_ACCOUNT', `${walletType} returned no Injective account`);
       _session = {
-        kind: 'cosmos', walletType, provider: wallet, signer,
-        address: accounts[0].address, cosmosChainId
+        kind: 'cosmos',
+        walletType,
+        provider: wallet,
+        signer,
+        address: accounts[0].address,
+        cosmosChainId
       };
     } catch (error) {
       if (error?.code === 4001 || /reject|denied/iu.test(error?.message ?? '')) {
@@ -321,7 +316,9 @@ export async function connectWallet(walletType = 'metamask') {
   } else {
     const ethers = await loadEthers();
     try {
-      await wallet.request({ method: 'eth_requestAccounts' });
+      await wallet.request({
+        method: 'eth_requestAccounts'
+      });
       await ensureTargetChain(wallet);
     } catch (error) {
       if (error?.code === 4001) throw err('REJECTED', 'User rejected the wallet or network request');
@@ -330,31 +327,46 @@ export async function connectWallet(walletType = 'metamask') {
     _cachedProvider = wallet;
     const provider = new ethers.BrowserProvider(wallet);
     const signer = await provider.getSigner();
-    _session = { kind: 'evm', walletType: 'metamask', provider: wallet, browserProvider: provider, signer, address: await signer.getAddress() };
+    _session = {
+      kind: 'evm',
+      walletType: 'metamask',
+      provider: wallet,
+      browserProvider: provider,
+      signer,
+      address: await signer.getAddress()
+    };
     if (!wallet._agentblWired) {
       wallet._agentblWired = true;
       wallet.on?.('accountsChanged', () => clearWalletSession('account'));
       wallet.on?.('chainChanged', () => clearWalletSession('network'));
     }
   }
-
-  try { window.localStorage?.setItem('agentbl.walletType', walletType); } catch { /* storage optional */ }
+  try {
+    window.localStorage?.setItem('agentbl.walletType', walletType);
+  } catch {/* storage optional */}
   emitWalletChange('connected');
-  return { address: _session.address, walletType: _session.walletType, kind: _session.kind };
+  return {
+    address: _session.address,
+    walletType: _session.walletType,
+    kind: _session.kind
+  };
 }
-
 function emitWalletChange(reason) {
   if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
-  const detail = { reason, address: _session?.address ?? null, walletType: _session?.walletType ?? null };
+  const detail = {
+    reason,
+    address: _session?.address ?? null,
+    walletType: _session?.walletType ?? null
+  };
   const EventConstructor = window.CustomEvent ?? globalThis.CustomEvent;
-  if (EventConstructor) window.dispatchEvent(new EventConstructor('agentbl:walletchange', { detail }));
+  if (EventConstructor) window.dispatchEvent(new EventConstructor('agentbl:walletchange', {
+    detail
+  }));
 }
-
 function clearWalletSession(reason) {
   _session = null;
   emitWalletChange(reason);
 }
-
 export function __resetWeb3ForTests() {
   _ethers = null;
   _cosmosStargate = null;
@@ -377,7 +389,12 @@ export async function disconnect() {
   let revoked = false;
   if (eth?.request) {
     try {
-      await eth.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] });
+      await eth.request({
+        method: 'wallet_revokePermissions',
+        params: [{
+          eth_accounts: {}
+        }]
+      });
       revoked = true;
     } catch {
       // Provider doesn't support revoking (or the user dismissed it) — the local
@@ -385,26 +402,13 @@ export async function disconnect() {
     }
   }
   clearWalletSession('disconnected');
-  try { window.localStorage?.removeItem('agentbl.walletType'); } catch { /* storage optional */ }
-  return { revoked };
+  try {
+    window.localStorage?.removeItem('agentbl.walletType');
+  } catch {/* storage optional */}
+  return {
+    revoked
+  };
 }
-
-async function getContract(write = false) {
-  const cfg = await loadChainConfig();
-  const address = cfg?.contracts?.AgentBLRWA;
-  const hasAbi = Array.isArray(cfg?.abi) && cfg.abi.length > 0;
-  console.log('[mint] chain-config:', { network: cfg?.network, address: address?.slice(0,10)+'…', abiLen: cfg?.abi?.length, hasAbi, session: !!_session });
-  if (!isAddress(address)) throw err('NO_CONTRACT', 'AgentBLRWA 尚未部署（chain-config 无地址）');
-  if (!_session) throw err('NO_SESSION', '钱包未连接');
-  if (_session.kind !== 'evm') {
-    throw err('EVM_WALLET_REQUIRED', 'This EVM contract action requires MetaMask; Keplr/Leap remain available for native Injective transactions');
-  }
-  const ethers = await loadEthers();
-  console.log('[mint] signer address:', await _session.signer.getAddress());
-  console.log('[mint] provider network:', await _session.browserProvider.getNetwork());
-  return new ethers.Contract(address, cfg.abi, write ? _session.signer : _session.browserProvider);
-}
-
 function explorerTx(cfg, hash) {
   const base = cfg?.explorerBase;
   if (!base) return null;
@@ -415,26 +419,6 @@ function explorerTx(cfg, hash) {
 /**
  * Build the on-chain tokenize() arguments from a PricingQuote + financing.
  */
-export function mintArgsFromQuote(quote, financingUsd) {
-  const fixHash = (hash) => {
-    if (typeof hash !== 'string' || !/^0x[0-9a-f]{64}$/iu.test(hash)) {
-      throw err('INVALID_PARAMS', 'Quote commitments must be exact bytes32 hashes');
-    }
-    return hash.toLowerCase();
-  };
-
-  return {
-    blId: quote.bl_id ?? quote.case_id ?? 'EBL-DEMO',
-    issuePriceE6: BigInt(priceToE6(quote.final_issue_price_usd)),
-    tokenSupply: BigInt(Math.max(1, Math.round(quote.recommended_token_supply || 0))),
-    financingUsd: BigInt(Math.max(0, Math.round(financingUsd || 0))),
-    collateralValueUsd: BigInt(Math.max(0, Math.round(quote.ai_verified_collateral_value_usd || 0))),
-    riskScoreBps: Math.max(0, Math.round(quote.risk_score_bps || 0)),
-    riskLevel: riskLevelToUint8(quote.risk_level),
-    quoteHash: fixHash(quote.quote_hash),
-    evidenceHash: fixHash(quote.evidence_hash)
-  };
-}
 
 /** Tokens the merchant would receive (floor(financing / issue price)), capped by supply. */
 export function mintedTokensFor(quote, financingUsd) {
@@ -452,333 +436,83 @@ export function mintedTokensFor(quote, financingUsd) {
  *
  * @param {Function} [onConfirmed] — receives final result with poolId/blockNumber
  */
-export async function mintOnChain(quote, financingUsd, onConfirmed, { validateBeforeSend } = {}) {
-  const cfg = await loadChainConfig();
-  const contract = await getContract(true);
-  const a = mintArgsFromQuote(quote, financingUsd);
-
-  if (a.issuePriceE6 <= 0n || a.tokenSupply <= 0n) throw err('INVALID_PARAMS', 'Invalid mint terms');
-  const session = _session;
-  const chainId = await session.browserProvider.send('eth_chainId', []);
-  if (Number(chainId) !== Number(cfg.chainIdDecimal)) throw err('NETWORK_ERROR', 'Wallet network changed');
-
-  let tx;
-  try {
-    // 手动设置更高的 gas limit 和其他交易参数
-    const gasLimit = 500000n;
-
-    // 获取当前 gas price
-    const feeData = await _session.browserProvider.getFeeData();
-    const gasPrice = feeData.gasPrice || feeData.maxFeePerGas;
-
-    const txOptions = { gasLimit };
-
-    // 如果 gas price 可用，添加到选项中（某些网络需要明确指定）
-    if (gasPrice) {
-      txOptions.gasPrice = gasPrice;
-    }
-
-    validateBeforeSend?.();
-    if (_session !== session) throw err('NO_SESSION', 'Wallet session changed');
-    tx = await contract.tokenize(
-      a.blId, a.issuePriceE6, a.tokenSupply, a.financingUsd,
-      a.collateralValueUsd, a.riskScoreBps, a.riskLevel, a.quoteHash, a.evidenceHash,
-      txOptions
-    );
-
-  } catch (e) {
-    if (e?.code === 'ACTION_REJECTED' || e?.code === 4001) {
-      throw err('REJECTED', '用户在钱包中拒绝了交易');
-    }
-
-    // 给出更友好的错误提示
-    if (e.message?.includes('network') || e.message?.includes('timeout')) {
-      throw err('NETWORK_ERROR', 'RPC 网络连接不稳定，请稍后重试或更换 RPC 节点');
-    }
-
-    throw e;
-  }
-
-  const pending = {
-    mode: 'chain_pending',
-    txHash: tx.hash,
-    poolId: null,
-    mintedAmount: mintedTokensFor(quote, financingUsd),
-    issuePriceE6: Number(a.issuePriceE6),
-    explorerUrl: explorerTx(cfg, tx.hash),
-    address: _session?.address ?? null,
-    blockNumber: null
-  };
-
-  // Background: poll public RPC every 3s until confirmed (max 2min)
-  pollForReceipt(tx.hash, contract, quote, financingUsd, a, cfg, onConfirmed);
-
-  return pending;
-}
-
-async function pollForReceipt(txHash, contract, quote, financingUsd, a, cfg, onConfirmed) {
-  const ethers = await loadEthers();
-
-  // 使用多个 RPC 节点作为备份，优先使用最稳定的 sentry 节点
-  const rpcUrls = [
-    'https://testnet.sentry.chain.json-rpc.injective.network',
-    'https://k8s.testnet.json-rpc.injective.network',
-    ...(cfg.rpcUrls || [])
-  ];
-  const uniqueRpcUrls = [...new Set(rpcUrls)]; // 去重
-  console.log('[mint] 可用的 RPC 节点:', uniqueRpcUrls);
-
-  let pubProvider = new ethers.JsonRpcProvider(uniqueRpcUrls[0]);
-  let currentRpcIndex = 0;
-
-  const deadline = Date.now() + 180000; // 增加到 3 分钟
-  let pollCount = 0;
-  let lastPoolCounter = null;
-  let consecutiveFailures = 0;
-
-  // 预先获取当前的 poolCounter
-  try {
-    lastPoolCounter = await contract.poolCounter();
-    console.log('[mint] 当前 poolCounter:', lastPoolCounter?.toString());
-  } catch (e) {
-    console.warn('[mint] 无法读取初始 poolCounter:', e.message);
-  }
-
-  // RPC 切换函数
-  const switchToNextRpc = () => {
-    if (currentRpcIndex < uniqueRpcUrls.length - 1) {
-      currentRpcIndex++;
-      pubProvider = new ethers.JsonRpcProvider(uniqueRpcUrls[currentRpcIndex]);
-      console.log(`[mint] 🔄 切换到备用 RPC [${currentRpcIndex}]:`, uniqueRpcUrls[currentRpcIndex]);
-      consecutiveFailures = 0;
-      return true;
-    }
-    return false;
-  };
-
-  const poll = async () => {
-    pollCount++;
-    console.log(`[mint] 轮询第 ${pollCount} 次，检查交易状态: ${txHash.slice(0, 10)}... (RPC: ${uniqueRpcUrls[currentRpcIndex]})`);
-
-    try {
-      const receipt = await pubProvider.getTransactionReceipt(txHash);
-
-      if (receipt) {
-        console.log('[mint] 收到 receipt:', receipt);
-        consecutiveFailures = 0; // 重置失败计数
-
-        if (receipt.status === 0) {
-          console.error('[mint] ❌ 交易失败 (status=0)');
-          if (onConfirmed) {
-            onConfirmed({
-              mode: 'chain_failed',
-              txHash,
-              errorCode: 'TX_EXECUTION_FAILED',
-              explorerUrl: explorerTx(cfg, txHash),
-              blockNumber: receipt.blockNumber
-            });
-          }
-          return;
-        }
-
-        if (receipt.blockNumber) {
-          console.log('[mint] ✅ 交易已确认 — block:', receipt.blockNumber);
-          let poolId = null, mintedAmount = null;
-
-          for (const log of receipt.logs ?? []) {
-            try {
-              const parsed = contract.interface.parseLog(log);
-              console.log('[mint] 解析事件:', parsed?.name, parsed?.args);
-              if (parsed?.name === 'Tokenized') {
-                poolId = parsed.args.poolId;
-                mintedAmount = parsed.args.mintedAmount;
-                console.log('[mint] 🎉 找到 Tokenized 事件! poolId:', poolId?.toString(), 'mintedAmount:', mintedAmount?.toString());
-              }
-            } catch (parseErr) {
-              // not our event
-            }
-          }
-
-          const confirmed = {
-            mode: 'chain',
-            txHash,
-            poolId: poolId != null ? poolId.toString() : null,
-            mintedAmount: mintedAmount != null ? Number(mintedAmount) : mintedTokensFor(quote, financingUsd),
-            issuePriceE6: Number(a.issuePriceE6),
-            explorerUrl: explorerTx(cfg, txHash),
-            address: _session?.address ?? null,
-            blockNumber: receipt.blockNumber
-          };
-
-          console.log('[mint] 📤 调用 onConfirmed 回调，更新 UI...', confirmed);
-          if (onConfirmed) {
-            onConfirmed(confirmed);
-          }
-          return;
-        }
-      } else {
-        // 备用方案：如果 receipt 为 null，尝试用 getTransaction 检查
-        console.log('[mint] receipt 为 null，尝试备用方案 getTransaction...');
-        try {
-          const tx = await pubProvider.getTransaction(txHash);
-          if (tx && tx.blockNumber) {
-            console.log('[mint] ✅ getTransaction 返回了 blockNumber:', tx.blockNumber);
-            consecutiveFailures = 0; // 重置失败计数
-
-            // 尝试读取新的 poolCounter 来推断 poolId
-            let poolId = null;
-            try {
-              const currentPoolCounter = await contract.poolCounter();
-              console.log('[mint] 当前 poolCounter:', currentPoolCounter?.toString());
-              if (lastPoolCounter != null && currentPoolCounter > lastPoolCounter) {
-                poolId = currentPoolCounter.toString();
-                console.log('[mint] 🎯 推断 poolId:', poolId);
-              }
-            } catch (e) {
-              console.warn('[mint] 无法读取 poolCounter:', e.message);
-            }
-
-            console.log('[mint] 🔄 使用备用方案确认交易');
-
-            const confirmed = {
-              mode: 'chain',
-              txHash,
-              poolId: poolId,
-              mintedAmount: mintedTokensFor(quote, financingUsd),
-              issuePriceE6: Number(a.issuePriceE6),
-              explorerUrl: explorerTx(cfg, txHash),
-              address: _session?.address ?? null,
-              blockNumber: tx.blockNumber
-            };
-
-            console.log('[mint] 📤 调用 onConfirmed 回调（备用方案），更新 UI...', confirmed);
-            if (onConfirmed) {
-              onConfirmed(confirmed);
-            }
-            return;
-          } else {
-            console.log('[mint] getTransaction 也未返回 blockNumber');
-            consecutiveFailures++;
-          }
-        } catch (txErr) {
-          console.error('[mint] getTransaction 也失败:', txErr.message);
-          consecutiveFailures++;
-        }
-      }
-    } catch (e) {
-      console.error('[mint] ⚠️ 轮询遇到错误:', e.message);
-      consecutiveFailures++;
-    }
-
-    // 如果连续失败 3 次，尝试切换到备用 RPC
-    if (consecutiveFailures >= 3) {
-      console.warn(`[mint] ⚠️ 当前 RPC 连续失败 ${consecutiveFailures} 次`);
-      if (switchToNextRpc()) {
-        console.log('[mint] 🔄 已切换到备用 RPC，继续轮询...');
-      } else {
-        console.error('[mint] ❌ 所有 RPC 节点都已尝试');
-      }
-    }
-
-    if (Date.now() < deadline) {
-      setTimeout(poll, 3000);
-    } else {
-      console.error('[mint] ❌ 轮询超时 (3分钟) — tx:', txHash);
-      console.error('[mint] 请手动在区块链浏览器中检查交易状态');
-      // 超时也通知前端
-      if (onConfirmed) {
-        onConfirmed({
-          mode: 'chain_timeout',
-          txHash,
-          errorCode: 'TX_CONFIRMATION_TIMEOUT',
-          explorerUrl: explorerTx(cfg, txHash),
-          blockNumber: null
-        });
-      }
-    }
-  };
-
-  setTimeout(poll, 2000); // start after 2s
-}
 
 /** Best-effort on-chain reprice for View ②'s in-transit events (non-blocking). */
-export async function repriceOnChain(poolId, newQuote, reason) {
-  const cfg = await loadChainConfig();
-  const contract = await getContract(true);
-  const tx = await contract.reprice(
-    BigInt(poolId),
-    BigInt(priceToE6(newQuote.final_issue_price_usd)),
-    actionToUint8(newQuote.pricing_action),
-    Math.max(0, Math.round(newQuote.risk_score_bps || 0)),
-    riskLevelToUint8(newQuote.risk_level),
-    newQuote.evidence_hash,
-    String(reason || 'in-transit risk event').slice(0, 120)
-  );
-  // Fire and forget — don't block on tx.wait()
-  console.log('[reprice] tx sent:', tx.hash);
-  return { txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash) };
-}
 
 /** Read a pool's RWA balance for an address (returns Number). */
-export async function readBalance(poolId, address) {
-  const contract = await getContract(false);
-  const bal = await contract.balanceOf(BigInt(poolId), address);
-  return Number(bal);
-}
 
 /** Subscribe through the wallet, persisting a v5 funding intent before any signature. */
-export async function subscribeOffering(action, { assertCurrent = () => {}, getSession = () => _session,
-  getConfig = loadChainConfig, ethersFn = loadEthers, prepareIntent = prepareCapitalIntent, attachIntent = attachCapitalIntent, beforeBroadcast = null } = {}) {
+export async function subscribeOffering(action, {
+  assertCurrent = () => {},
+  getSession = () => _session,
+  getConfig = loadChainConfig,
+  ethersFn = loadEthers,
+  prepareIntent = prepareCapitalIntent,
+  attachIntent = attachCapitalIntent,
+  beforeBroadcast = null
+} = {}) {
   assertCurrent();
-  const session = getSession(), cfg = await getConfig(), chain = action.chain;
+  const session = getSession(),
+    cfg = await getConfig(),
+    chain = action.chain;
   if (!session || session.kind !== 'evm') throw err('EVM_WALLET_REQUIRED', 'Connect an EVM wallet before confirming');
-  if (!chain || chain.chain_id !== cfg.chainIdDecimal || chain.contract.toLowerCase() !== cfg.contracts.RWAOfferingPool?.toLowerCase()
-    || !isAddress(chain.contract) || !Array.isArray(cfg.abis?.RWAOfferingPool)) throw err('NETWORK', 'Offering deployment or network changed');
+  if (!chain || chain.chain_id !== cfg.chainIdDecimal || chain.contract.toLowerCase() !== cfg.contracts.RWAOfferingPool?.toLowerCase() || !isAddress(chain.contract) || !Array.isArray(cfg.abis?.RWAOfferingPool)) throw err('NETWORK', 'Offering deployment or network changed');
   const check = async () => {
     assertCurrent();
     if (getSession() !== session) throw err('NO_SESSION', 'Wallet session changed');
-    const [network, accounts] = await Promise.all([session.provider.request({ method: 'eth_chainId' }), session.provider.request({ method: 'eth_accounts' })]);
+    const [network, accounts] = await Promise.all([session.provider.request({
+      method: 'eth_chainId'
+    }), session.provider.request({
+      method: 'eth_accounts'
+    })]);
     assertCurrent();
     if (getSession() !== session || BigInt(network) !== BigInt(chain.chain_id) || accounts[0]?.toLowerCase() !== session.address.toLowerCase()) throw err('NETWORK', 'Wallet account or network changed');
   };
   await check();
   const ethers = await ethersFn();
-  const capital = Number(cfg.protocolVersion) === 5;
-  const abi = capital ? (await import('../../../src/chain/protocolV5Abi.js')).protocolAbi('RWAOfferingPool', cfg.abis.RWAOfferingPool) : cfg.abis.RWAOfferingPool;
+  if (Number(cfg.protocolVersion) !== 5) throw err('PROTOCOL_RETIRED', 'Only controlled v5 subscriptions are supported');
+  const abi = (await import('../../../src/chain/protocolV5Abi.js')).protocolAbi('RWAOfferingPool', cfg.abis.RWAOfferingPool);
   const contract = new ethers.Contract(chain.contract, abi, session.signer);
-  if (capital && Number(await contract.protocolVersion()) !== 5) throw err('PROTOCOL_CHANGED', 'Capital protocol version changed');
-  const [offering, stopped, eligible, version, onChainDeadline] = await Promise.all([
-    contract.offerings(chain.pool_id), contract.emergencyStopped(), contract.isInvestorEligible(session.address, chain.pool_id),
-    contract.quoteVersion ? contract.quoteVersion(chain.pool_id).catch(() => 1n) : Promise.resolve(1n),
-    contract.subscriptionDeadline ? contract.subscriptionDeadline(chain.pool_id).catch(() => 0n) : Promise.resolve(0n)
-  ]);
-  const shares = BigInt(action.shares), price = BigInt(chain.price_e6);
+  if (Number(await contract.protocolVersion()) !== 5) throw err('PROTOCOL_CHANGED', 'Capital protocol version changed');
+  const [offering, stopped, eligible, version, onChainDeadline] = await Promise.all([contract.offerings(chain.pool_id), contract.emergencyStopped(), contract.isInvestorEligible(session.address, chain.pool_id), contract.quoteVersion(chain.pool_id), contract.subscriptionDeadline(chain.pool_id)]);
+  const shares = BigInt(action.shares),
+    price = BigInt(chain.price_e6);
   if (chain.quote_version !== undefined && BigInt(chain.quote_version) !== BigInt(version)) throw err('QUOTE_CHANGED', 'The reviewed quote version has changed');
   if (shares <= 0n || !offering.exists || stopped || !eligible || ![2, 3, 6].includes(Number(offering.state))) throw err('POOL_UNAVAILABLE', 'Offering is no longer available to this wallet');
   if (BigInt(offering.issuePrice) !== price || BigInt(offering.tokenSupply) - BigInt(offering.subscribed) < shares) throw err('QUOTE_CHANGED', 'Price or available shares changed; request a new card');
-  // A08: bind the signature to the price limit, quote version and a user deadline. A v4
-  // deployment enforces this atomically; on a legacy v3 address the call is still made, but the
-  // caller is told that the terms were not bound.
-  const block = await session.provider.request({ method: 'eth_getBlockByNumber', params: ['latest', false] });
+  // Bind payment to the reviewed price, quote version and deadline.
+  const block = await session.provider.request({
+    method: 'eth_getBlockByNumber',
+    params: ['latest', false]
+  });
   const now = Number(BigInt(block?.timestamp ?? '0x0'));
-  const userDeadline = BigInt(action.deadline ?? (now + 600));
+  const userDeadline = BigInt(action.deadline ?? now + 600);
   const deadline = onChainDeadline > 0n && onChainDeadline < userDeadline ? onChainDeadline : userDeadline;
   if (now === 0 || BigInt(now) > deadline) throw err('DEADLINE_PASSED', 'The subscription window has closed; request a new card');
-  const termsBound = typeof contract.subscribeWithTerms === 'function';
-  let intent = null;
-  if (capital) {
+  const termsBound = true;
+  let intent;
+  {
     const asset = offering.settlementAsset;
-    if (!isAddress(asset) || (chain.settlement_asset && asset.toLowerCase() !== chain.settlement_asset.toLowerCase())) throw err('ASSET_CHANGED', 'Settlement asset changed');
+    if (!isAddress(asset) || chain.settlement_asset && asset.toLowerCase() !== chain.settlement_asset.toLowerCase()) throw err('ASSET_CHANGED', 'Settlement asset changed');
     await check();
-    intent = await prepareIntent({ wallet: session.address, chain_pool_id: chain.pool_id, shares: String(shares),
-      max_unit_price: String(price), expected_quote_version: String(version), deadline: String(deadline) });
+    intent = await prepareIntent({
+      wallet: session.address,
+      chain_pool_id: chain.pool_id,
+      shares: String(shares),
+      max_unit_price: String(price),
+      expected_quote_version: String(version),
+      deadline: String(deadline)
+    });
     if (intent.asset.toLowerCase() !== asset.toLowerCase() || intent.amount_atomic !== String(shares * price)) throw err('INTENT_CHANGED', 'Saved funding intent differs from the approved terms');
     const usdc = new ethers.Contract(asset, ['function allowance(address,address) view returns (uint256)', 'function approve(address,uint256) returns (bool)', 'function decimals() view returns (uint8)'], session.signer);
     if (Number(await usdc.decimals()) !== 6) throw err('ASSET_DECIMALS', 'Settlement asset must have six decimals');
     const cost = shares * price;
     const allowance = BigInt(await usdc.allowance(session.address, chain.contract));
     if (allowance < cost) {
-      if (allowance > 0n) { await check(); await (await usdc.approve(chain.contract, 0n)).wait(); }
+      if (allowance > 0n) {
+        await check();
+        await (await usdc.approve(chain.contract, 0n)).wait();
+      }
       await check();
       await (await usdc.approve(chain.contract, cost)).wait();
     }
@@ -786,42 +520,56 @@ export async function subscribeOffering(action, { assertCurrent = () => {}, getS
     const calldata = contract.interface.encodeFunctionData('subscribeWithTerms', [BigInt(chain.pool_id), shares, price, version, deadline]);
     if (intent.calldata.toLowerCase() !== calldata.toLowerCase()) throw err('INTENT_CHANGED', 'Saved transaction differs from wallet calldata');
   }
-  if (termsBound) await contract.subscribeWithTerms.staticCall(BigInt(chain.pool_id), shares, price, version, deadline);
-  else await contract.subscribe.staticCall(BigInt(chain.pool_id), shares);
+  await contract.subscribeWithTerms.staticCall(BigInt(chain.pool_id), shares, price, version, deadline);
   if (intent && beforeBroadcast) intent = await beforeBroadcast(intent);
   await check();
-  const tx = termsBound
-    ? await contract.subscribeWithTerms(BigInt(chain.pool_id), shares, price, version, deadline, ...(intent?.broadcast_nonce === undefined ? [] : [{ nonce: intent.broadcast_nonce }]))
-    : await contract.subscribe(BigInt(chain.pool_id), shares);
+  const tx = await contract.subscribeWithTerms(BigInt(chain.pool_id), shares, price, version, deadline, ...(intent?.broadcast_nonce === undefined ? [] : [{
+    nonce: intent.broadcast_nonce
+  }]));
   try {
     if (intent) await attachIntent(intent.intent_id, tx.hash);
     const receipt = await tx.wait(cfg.confirmations ?? 1);
     if (Number(receipt.status) !== 1 || !/^0x[0-9a-f]{64}$/iu.test(tx.hash)) throw new Error('Subscription receipt was not successful');
-    const subscribed = (receipt.logs ?? []).filter((log) => log.address?.toLowerCase() === chain.contract.toLowerCase()).map((log) => {
-      try { return contract.interface.parseLog(log); } catch { return null; }
-    }).find((event) => event?.name === 'Subscribed' && BigInt(event.args.poolId) === BigInt(chain.pool_id)
-      && event.args.investor.toLowerCase() === session.address.toLowerCase() && BigInt(event.args.amount) === shares);
+    const subscribed = (receipt.logs ?? []).filter(log => log.address?.toLowerCase() === chain.contract.toLowerCase()).map(log => {
+      try {
+        return contract.interface.parseLog(log);
+      } catch {
+        return null;
+      }
+    }).find(event => event?.name === 'Subscribed' && BigInt(event.args.poolId) === BigInt(chain.pool_id) && event.args.investor.toLowerCase() === session.address.toLowerCase() && BigInt(event.args.amount) === shares);
     if (!subscribed || BigInt(subscribed.args.paidAmount) !== shares * price) throw new Error('Subscription event or confirmed price differs from the card');
-    if (capital) {
-      const escrow = (receipt.logs ?? []).filter((log) => log.address?.toLowerCase() === chain.contract.toLowerCase()).map((log) => {
-        try { return contract.interface.parseLog(log); } catch { return null; }
-      }).find((event) => event?.name === 'FundEscrowed' && BigInt(event.args.poolId) === BigInt(chain.pool_id)
-        && event.args.investor.toLowerCase() === session.address.toLowerCase() && event.args.asset.toLowerCase() === offering.settlementAsset.toLowerCase()
-        && BigInt(event.args.amountAtomic) === shares * price && BigInt(event.args.shares) === shares);
+    {
+      const escrow = (receipt.logs ?? []).filter(log => log.address?.toLowerCase() === chain.contract.toLowerCase()).map(log => {
+        try {
+          return contract.interface.parseLog(log);
+        } catch {
+          return null;
+        }
+      }).find(event => event?.name === 'FundEscrowed' && BigInt(event.args.poolId) === BigInt(chain.pool_id) && event.args.investor.toLowerCase() === session.address.toLowerCase() && event.args.asset.toLowerCase() === offering.settlementAsset.toLowerCase() && BigInt(event.args.amountAtomic) === shares * price && BigInt(event.args.shares) === shares);
       if (!escrow) throw new Error('Escrow receipt is missing or differs from the saved funding intent');
       const confirmed = await attachIntent(intent.intent_id, tx.hash);
       if (confirmed?.status !== 'confirmed') throw new Error('Subscription is waiting for canonical confirmations');
     }
     assertCurrent();
-    return { mode: 'chain', txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash), tokenCount: action.shares,
-      amountUsd: Number(subscribed.args.paidAmount) / 1_000_000, blockNumber: receipt.blockNumber,
-      termsBound, quoteVersion: Number(version) };
+    return {
+      mode: 'chain',
+      txHash: tx.hash,
+      explorerUrl: explorerTx(cfg, tx.hash),
+      tokenCount: action.shares,
+      amountUsd: Number(subscribed.args.paidAmount) / 1_000_000,
+      blockNumber: receipt.blockNumber,
+      termsBound,
+      quoteVersion: Number(version)
+    };
   } catch (cause) {
-    const failure = new Error(`Transaction ${tx.hash} was submitted; verify its receipt before trying again: ${cause.message}`, { cause });
-    failure.txHash = tx.hash; failure.code = 'subscription_reconciliation_required'; throw failure;
+    const failure = new Error(`Transaction ${tx.hash} was submitted; verify its receipt before trying again: ${cause.message}`, {
+      cause
+    });
+    failure.txHash = tx.hash;
+    failure.code = 'subscription_reconciliation_required';
+    throw failure;
   }
 }
-
 export async function protocolDeploymentInfo() {
   const cfg = await loadChainConfig();
   return {
@@ -829,7 +577,7 @@ export async function protocolDeploymentInfo() {
     displayName: cfg.displayName,
     accessModel: cfg.accessModel,
     explorerBase: cfg.explorerBase,
-    contracts: Object.fromEntries(Object.entries(cfg.contracts ?? {}).filter(([, address]) => isAddress(address)))
+    contracts: Object.fromEntries(Object.entries(cfg.contracts ?? {}).filter(([name, address]) => !['RWAOfferingPool', 'RWAToken'].includes(name) && isAddress(address)))
   };
 }
 
@@ -837,14 +585,14 @@ export async function protocolDeploymentInfo() {
 // blocks. Keep each request at 10,000 blocks (9,999 block distance) and scan
 // newest-first so callers that only need recent events can stop early.
 const GET_LOGS_BLOCKS_PER_REQUEST = 10_000;
-
-export async function queryFilterInChunks(contract, filter, fromBlock, toBlock, { limit = Infinity } = {}) {
+export async function queryFilterInChunks(contract, filter, fromBlock, toBlock, {
+  limit = Infinity
+} = {}) {
   const start = Math.max(0, Math.trunc(Number(fromBlock)));
   const end = Math.max(0, Math.trunc(Number(toBlock)));
   const parsedLimit = Number(limit);
   const eventLimit = Number.isFinite(parsedLimit) ? Math.max(0, Math.trunc(parsedLimit)) : Infinity;
   if (end < start || eventLimit === 0) return [];
-
   const events = [];
   let chunkTo = end;
   while (chunkTo >= start) {
@@ -854,51 +602,20 @@ export async function queryFilterInChunks(contract, filter, fromBlock, toBlock, 
     if (events.length >= eventLimit || chunkFrom === start) break;
     chunkTo = chunkFrom - 1;
   }
-
   return Number.isFinite(eventLimit) ? events.slice(-eventLimit) : events;
 }
 
 /** Read the latest real PricingUpdated events through the configured public RPC. */
-export async function readPricingUpdatedEvents(limit = 5) {
-  const cfg = await loadChainConfig();
-  const address = cfg.contracts?.RiskPricingOracle;
-  const abi = cfg.abis?.RiskPricingOracle;
-  if (!isAddress(address) || !Array.isArray(abi)) throw err('NO_CONTRACT', 'RiskPricingOracle deployment is missing');
-  const ethers = await loadEthers();
-  const provider = new ethers.JsonRpcProvider(cfg.rpcUrls[0], cfg.chainIdDecimal);
-  const contract = new ethers.Contract(address, abi, provider);
-  const latest = await provider.getBlockNumber();
-  const deployedBlock = Number(cfg.deployments?.RiskPricingOracle?.blockNumber ?? 0);
-  const fromBlock = Math.max(deployedBlock || 0, latest - 25_000);
-  const eventLimit = Math.max(1, Math.min(20, Number(limit) || 5));
-  const events = await queryFilterInChunks(
-    contract,
-    contract.filters.PricingUpdated(),
-    fromBlock,
-    latest,
-    { limit: eventLimit }
-  );
-  return events.reverse().map((event) => ({
-    poolId: event.args.poolId.toString(),
-    issuePriceE6: event.args.issuePrice.toString(),
-    issuePriceUsd: Number(event.args.issuePrice) / 1_000_000,
-    riskLevel: Number(event.args.riskLevel),
-    action: Number(event.args.action),
-    evidenceHash: event.args.evidenceHash,
-    quoteHash: event.args.quoteHash,
-    updater: event.args.updater,
-    blockNumber: event.blockNumber,
-    txHash: event.transactionHash,
-    explorerUrl: explorerTx(cfg, event.transactionHash)
-  }));
-}
 
 /** Send a minimal real self-transfer to prove the selected wallet can sign on Injective. */
 export async function verifyWalletOnChain() {
   if (!_session) throw err('NO_SESSION', 'Connect a wallet first');
   const cfg = await loadChainConfig();
   if (_session.kind === 'evm') {
-    const tx = await _session.signer.sendTransaction({ to: _session.address, value: 0n });
+    const tx = await _session.signer.sendTransaction({
+      to: _session.address,
+      value: 0n
+    });
     const receipt = await tx.wait();
     return {
       walletType: _session.walletType,
@@ -908,18 +625,20 @@ export async function verifyWalletOnChain() {
       explorerUrl: explorerTx(cfg, tx.hash)
     };
   }
-
-  const { SigningStargateClient, GasPrice, calculateFee } = await loadCosmosStargate();
+  const {
+    SigningStargateClient,
+    GasPrice,
+    calculateFee
+  } = await loadCosmosStargate();
   const gasPrice = GasPrice.fromString('500000000inj');
-  const client = await SigningStargateClient.connectWithSigner(cfg.cosmosRpcUrl, _session.signer, { gasPrice });
+  const client = await SigningStargateClient.connectWithSigner(cfg.cosmosRpcUrl, _session.signer, {
+    gasPrice
+  });
   try {
-    const result = await client.sendTokens(
-      _session.address,
-      _session.address,
-      [{ denom: 'inj', amount: '1' }],
-      calculateFee(90_000, gasPrice),
-      `AgentBL ${_session.walletType} verification`
-    );
+    const result = await client.sendTokens(_session.address, _session.address, [{
+      denom: 'inj',
+      amount: '1'
+    }], calculateFee(90_000, gasPrice), `AgentBL ${_session.walletType} verification`);
     if (result.code !== 0) throw err('TX_FAILED', result.rawLog || `Cosmos transaction failed with code ${result.code}`);
     return {
       walletType: _session.walletType,
@@ -935,15 +654,11 @@ export async function verifyWalletOnChain() {
 
 /**
  * Simulated mint fallback: a tx-shaped result from the existing
- * push_pricing_to_oracle MCP tool, so the View renders identically when no
+ * local Demo simulation, so the View renders identically when no
  * wallet / no deployed contract is available.
  */
-export async function simulatedMint(caseId, quote, financingUsd) {
-  let tx = {};
-  try {
-    const res = await pushPricingToOracle(caseId, quote);
-    tx = res.result ?? res ?? {};
-  } catch { /* offline / endpoint missing — synthesize below */ }
+export async function simulatedMint(_caseId, quote, financingUsd) {
+  const tx = {};
   return {
     mode: 'sim',
     // A simulation sends nothing: no hash is better than a hash-shaped placeholder.
@@ -964,14 +679,10 @@ export async function readX402PaymentAttestation(reportOrReceiptId) {
   const address = cfg?.contracts?.PaymentOracle;
   const abi = cfg?.paymentOracle?.abi;
   if (!isAddress(address) || !abi) throw err('NO_CONTRACT', 'PaymentOracle is not deployed');
-
-  const receiptId = String(reportOrReceiptId).startsWith('rpt_')
-    ? `0x${String(reportOrReceiptId).slice(4)}`
-    : String(reportOrReceiptId);
+  const receiptId = String(reportOrReceiptId).startsWith('rpt_') ? `0x${String(reportOrReceiptId).slice(4)}` : String(reportOrReceiptId);
   if (!/^0x[0-9a-fA-F]{64}$/.test(receiptId)) {
     throw err('INVALID_RECEIPT', 'Expected rpt_<sha256> or a bytes32 receipt id');
   }
-
   const ethers = await loadEthers();
   const provider = new ethers.JsonRpcProvider(getPreset(cfg).rpcUrls[0]);
   const oracle = new ethers.Contract(address, abi, provider);
@@ -995,55 +706,96 @@ export async function readX402PaymentAttestation(reportOrReceiptId) {
     explorerUrl: event?.transactionHash ? explorerTx(cfg, event.transactionHash) : null
   };
 }
-
 async function capitalPost(url, body) {
-  const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
   const result = await response.json();
-  if (!response.ok) throw Object.assign(new Error(result.error ?? 'Capital ledger request failed'), { code: result.code });
+  if (!response.ok) throw Object.assign(new Error(result.error ?? 'Capital ledger request failed'), {
+    code: result.code
+  });
   return result.intent;
 }
-function prepareCapitalIntent(body) { return capitalPost('/api/positions/subscription-intents', body); }
-function attachCapitalIntent(id, txHash) { return capitalPost(`/api/positions/subscription-intents/${id}/transaction`, { tx_hash: txHash }); }
-
-export async function claimPosition(position, { assertCurrent = () => {}, getSession = () => _session,
-  getConfig = loadChainConfig, ethersFn = loadEthers, prepareClaim = prepareCapitalClaim, attachIntent = attachCapitalIntent, beforeBroadcast = null } = {}) {
-  const session = getSession(), cfg = await getConfig();
+function prepareCapitalIntent(body) {
+  return capitalPost('/api/controlled/subscription-intents', body);
+}
+function attachCapitalIntent(id, txHash) {
+  return capitalPost(`/api/controlled/intents/${id}/transaction`, {
+    tx_hash: txHash
+  });
+}
+export async function claimPosition(position, {
+  assertCurrent = () => {},
+  getSession = () => _session,
+  getConfig = loadChainConfig,
+  ethersFn = loadEthers,
+  prepareClaim = prepareCapitalClaim,
+  attachIntent = attachCapitalIntent,
+  beforeBroadcast = null
+} = {}) {
+  const session = getSession(),
+    cfg = await getConfig();
   const pi = position.protocol_instance;
-  if (!session?.signer || !position.reconciled || Number(pi?.protocol_version) !== 5
-    || Number(cfg.protocolVersion) !== 5 || Number(cfg.chainIdDecimal) !== Number(pi.chain_id)
-    || cfg.contracts.RWAOfferingPool.toLowerCase() !== pi.pool_address.toLowerCase()) throw err('POSITION_UNAVAILABLE', 'Refresh the confirmed position before claiming');
+  if (!session?.signer || !position.reconciled || Number(pi?.protocol_version) !== 5 || Number(cfg.protocolVersion) !== 5 || Number(cfg.chainIdDecimal) !== Number(pi.chain_id) || cfg.contracts.RWAOfferingPool.toLowerCase() !== pi.pool_address.toLowerCase()) throw err('POSITION_UNAVAILABLE', 'Refresh the confirmed position before claiming');
   const check = async () => {
     assertCurrent();
     if (getSession() !== session || session.address.toLowerCase() !== position.investor.toLowerCase()) throw err('WALLET_CHANGED', 'Wallet changed');
-    const [network, accounts] = await Promise.all([session.provider.request({ method: 'eth_chainId' }), session.provider.request({ method: 'eth_accounts' })]);
+    const [network, accounts] = await Promise.all([session.provider.request({
+      method: 'eth_chainId'
+    }), session.provider.request({
+      method: 'eth_accounts'
+    })]);
     if (BigInt(network) !== BigInt(pi.chain_id) || accounts[0]?.toLowerCase() !== session.address.toLowerCase()) throw err('WALLET_CHANGED', 'Wallet or network changed');
   };
   await check();
   const ethers = await ethersFn();
-  const { protocolAbi } = await import('../../../src/chain/protocolV5Abi.js');
+  const {
+    protocolAbi
+  } = await import('../../../src/chain/protocolV5Abi.js');
   const pool = new ethers.Contract(pi.pool_address, protocolAbi('RWAOfferingPool', cfg.abis.RWAOfferingPool), session.signer);
-  let intent = await prepareClaim({ wallet: session.address, chain_pool_id: position.chain_pool_id });
-  if (intent.calldata.toLowerCase() !== pool.interface.encodeFunctionData('claim', [position.chain_pool_id]).toLowerCase()
-    || intent.asset.toLowerCase() !== position.asset.toLowerCase()) throw err('INTENT_CHANGED', 'Saved claim differs from the reviewed position');
+  let intent = await prepareClaim({
+    wallet: session.address,
+    chain_pool_id: position.chain_pool_id
+  });
+  if (intent.calldata.toLowerCase() !== pool.interface.encodeFunctionData('claim', [position.chain_pool_id]).toLowerCase() || intent.asset.toLowerCase() !== position.asset.toLowerCase()) throw err('INTENT_CHANGED', 'Saved claim differs from the reviewed position');
   await pool.claim.staticCall(position.chain_pool_id);
   if (beforeBroadcast) intent = await beforeBroadcast(intent);
   await check();
-  const tx = await pool.claim(position.chain_pool_id, ...(intent.broadcast_nonce === undefined ? [] : [{ nonce: intent.broadcast_nonce }]));
+  const tx = await pool.claim(position.chain_pool_id, ...(intent.broadcast_nonce === undefined ? [] : [{
+    nonce: intent.broadcast_nonce
+  }]));
   try {
     await attachIntent(intent.intent_id, tx.hash);
     const receipt = await tx.wait(cfg.confirmations ?? 1);
-    const claimed = (receipt.logs ?? []).filter((log) => log.address?.toLowerCase() === pi.pool_address.toLowerCase()).map((log) => {
-      try { return pool.interface.parseLog(log); } catch { return null; }
-    }).find((event) => event?.name === 'Claimed' && BigInt(event.args.poolId) === BigInt(position.chain_pool_id)
-      && event.args.investor.toLowerCase() === session.address.toLowerCase() && event.args.asset.toLowerCase() === position.asset.toLowerCase());
+    const claimed = (receipt.logs ?? []).filter(log => log.address?.toLowerCase() === pi.pool_address.toLowerCase()).map(log => {
+      try {
+        return pool.interface.parseLog(log);
+      } catch {
+        return null;
+      }
+    }).find(event => event?.name === 'Claimed' && BigInt(event.args.poolId) === BigInt(position.chain_pool_id) && event.args.investor.toLowerCase() === session.address.toLowerCase() && event.args.asset.toLowerCase() === position.asset.toLowerCase());
     if (Number(receipt.status) !== 1 || !claimed) throw new Error('Claim receipt is missing or invalid');
     const confirmed = await attachIntent(intent.intent_id, tx.hash);
     if (confirmed?.status !== 'confirmed') throw new Error('Claim is waiting for canonical confirmations');
     assertCurrent();
-    return { txHash: tx.hash, explorerUrl: explorerTx(cfg, tx.hash), amount_atomic: String(claimed.args.amountAtomic) };
+    return {
+      txHash: tx.hash,
+      explorerUrl: explorerTx(cfg, tx.hash),
+      amount_atomic: String(claimed.args.amountAtomic)
+    };
   } catch (cause) {
-    throw Object.assign(new Error(`Transaction ${tx.hash} was submitted; reconcile its receipt before trying again`, { cause }), { code: 'claim_reconciliation_required', txHash: tx.hash });
+    throw Object.assign(new Error(`Transaction ${tx.hash} was submitted; reconcile its receipt before trying again`, {
+      cause
+    }), {
+      code: 'claim_reconciliation_required',
+      txHash: tx.hash
+    });
   }
 }
-
-function prepareCapitalClaim(body) { return capitalPost('/api/positions/claim-intents', body); }
+function prepareCapitalClaim(body) {
+  return capitalPost('/api/controlled/claim-intents', body);
+}

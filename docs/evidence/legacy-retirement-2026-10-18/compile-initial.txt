@@ -1,0 +1,6 @@
+npm notice run agentbl-agent-starter@0.1.0 compile:contracts
+npm notice run npm --prefix hardhat run compile
+npm notice run agentbl-contracts@0.1.0 compile
+npm notice run hardhat build
+
+Compiled 1 Solidity file with solc 0.8.24 (evm target: paris)

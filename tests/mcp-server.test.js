@@ -10,8 +10,8 @@ import { test, describe } from 'node:test';
 import { MCP_TOOLS_MANIFEST, MCP_TOOL_HANDLERS, callTool } from '../src/mcp/mcpServer.js';
 
 describe('MCP Tool Manifest', () => {
-  test('has exactly 15 tools', () => {
-    assert.equal(MCP_TOOLS_MANIFEST.length, 15);
+  test('has exactly 14 tools', () => {
+    assert.equal(MCP_TOOLS_MANIFEST.length, 14);
   });
 
   test('all tools have required fields', () => {
@@ -76,16 +76,7 @@ describe('MCP Tool Handlers', () => {
     assert.ok(result.result.final_state, 'Should have final_state');
   });
 
-  test('push_pricing_to_oracle — produces oracle payload', async () => {
-    const pricing = await MCP_TOOL_HANDLERS.generate_pricing_quote({ case_id: 'CASE-EBL-2026-0001' });
-    const result = await MCP_TOOL_HANDLERS.push_pricing_to_oracle({
-      case_id: 'CASE-EBL-2026-0001',
-      pricing_quote: pricing.result
-    });
-    assert.ok(result.result, 'Should have result');
-    const hasHash = result.result.evidence_hash?.startsWith('0x') || result.result.quote_hash?.startsWith('0x') || result.result.tx_hash?.startsWith('0x');
-    assert.ok(hasHash, 'Should have some hash field');
-  });
+
 });
 
 describe('MCP callTool Dispatcher', () => {

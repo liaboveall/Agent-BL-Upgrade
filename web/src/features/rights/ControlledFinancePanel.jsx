@@ -81,7 +81,7 @@ export function ControlledFinancePanel() {
     try { await controlledRequest(`intents/${pending.intent_id}/transaction`, { tx_hash: originalHash }); await reconcile(); }
     catch (failure) { setError(failure.message); } finally { setBusy(false); }
   };
-  return <aside className="controlled-panel" aria-label={zh ? '受控测试网融资' : 'Controlled testnet financing'}>
+  return <aside id="controlled-finance" className="controlled-panel" aria-label={zh ? '受控测试网融资' : 'Controlled testnet financing'}>
     <details><summary>{zh ? '受控测试网融资与持仓' : 'Controlled testnet financing and positions'}</summary>
       <p>{zh ? '模拟单证、测试代币。资格与条款同意通过后才可认购；募集款进入独立资金池。' : 'Simulated titles and test assets. Eligibility and accepted terms are required; subscription funds enter a dedicated pool.'}</p>
       {!status?.active ? <p role="status">{zh ? '当前未连接可核验的受控融资实例。' : 'No verified controlled financing instance is connected.'}</p> : <>

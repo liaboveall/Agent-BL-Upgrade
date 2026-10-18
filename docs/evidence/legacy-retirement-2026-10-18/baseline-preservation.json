@@ -1,0 +1,28 @@
+{
+  "schema": "agentbl-baseline-byte-preservation-v1",
+  "baseline_revision": "b8db411de044b1132f14419a432be6da6ff1501b",
+  "baseline_archive": "docs/archive/agentbl-before-retirement-b8db411.zip",
+  "base_archive_sha256": "81c3e2865e880d7a5edbe66a9092ec9a4601361bc903811dcc0528395ec3003a",
+  "byte_overrides": "docs/archive/baseline-byte-overrides.zip",
+  "byte_overrides_sha256": "b7f759c5005a98cdaa7ad3c89bde5ca34679756fb9109b116ed90593834505e0",
+  "frozen_files": 649,
+  "base_exact_matches": 646,
+  "verified_overrides": [
+    {
+      "path": "data/evaluation/w4/sources/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "bytes": 11357
+    },
+    {
+      "path": "public/favicon.svg",
+      "sha256": "b1e3716a240b9d08eb398410c992a351c43c8c21d799f1943f9ac8342e18e921",
+      "bytes": 246
+    },
+    {
+      "path": "scripts/lib/chain-config.cjs",
+      "sha256": "d71921bf2ed093228815fe30a9aa379d195b08ffd2b210544eb4442503dd28ab",
+      "bytes": 6842
+    }
+  ],
+  "reason": "Git archive canonicalizes three working-tree text files; verified overrides preserve the exact frozen W5 bytes"
+}

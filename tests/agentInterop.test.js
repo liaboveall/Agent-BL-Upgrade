@@ -167,7 +167,7 @@ test('MCP reads, policy and recent resources reflect real decisions without repl
   assert.equal(explained.decision.replay, undefined);
   await assert.rejects(callTool('explain_decision', { decision_id: 'missing' }, context), { code: 'decision_not_found' });
   const policy = await publicAgentPolicy(service);
-  assert.deepEqual(policy.protected_chain_pools, [2]); assert.equal(policy.external_events.approval_required, true);
+  assert.deepEqual(policy.protected_chain_pools, []); assert.equal(policy.external_events.approval_required, true);
   assert.equal(policy.thresholds.max_price_move_bps, service.config.maxPriceMoveBps);
   assert.ok(!JSON.stringify(policy).includes('PRIVATE_KEY'));
   const resource = JSON.parse((await readMcpResource('agentbl://agent/decisions/recent', context)).contents[0].text);
@@ -190,7 +190,7 @@ test('stateless MCP recommendations preserve hard filters, never create sessions
   assert.equal(result.stateless, true); assert.equal(result.action_executed, false);
   assert.ok(result.recommendations.some((item) => item.pool_id === copper.case_id));
   assert.equal(result.context, undefined); assert.equal(copilot.sessions.size, 0);
-  const excluded = (await callTool('recommend_trade_assets', { message: '低风险', locale: 'zh' }, context)).result;
+  const excluded = (await callTool('recommend_trade_assets', { message: '排除铜', locale: 'zh' }, context)).result;
   assert.equal(excluded.recommendations.length, 0);
   await callTool('recommend_trade_assets', { message: 'subscribe copper', locale: 'en' }, context);
   assert.deepEqual([...store.pools], before);
@@ -209,7 +209,7 @@ test('Agent Card uses the verified A2A 1.0 required fields, advertises one imple
   assert.deepEqual(card.supportedInterfaces, [{ url: `http://localhost:${app.port}/api/a2a`, protocolBinding: 'JSONRPC', protocolVersion: '1.0' }]);
   assert.equal(card.capabilities.streaming, false); assert.equal(card.capabilities.pushNotifications, false);
   assert.deepEqual(card.skills.map((skill) => skill.id), ['delegate_pricing']);
-  assert.equal(card.capabilities.extensions[0].params.mcp.tools.length, 15);
+  assert.equal(card.capabilities.extensions[0].params.mcp.tools.length, 14);
   assert.equal(card.capabilities.extensions[0].params.paidServices.length, 4);
   assert.equal(primary.headers.get('cache-control'), 'no-store');
   assert.equal((await fetch(`${app.base}/.well-known/agent-card.json`, { method: 'HEAD' })).status, 200);

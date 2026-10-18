@@ -1,0 +1,1433 @@
+npm notice run agentbl-agent-starter@0.1.0 test:coverage
+npm notice run node --test --test-concurrency=4 --experimental-test-coverage --test-coverage-include="src/**" --test-coverage-lines=88 --test-coverage-branches=72 --test-coverage-functions=86 tests/*.test.js
+✔ tab keyboard navigation wraps, handles Home/End and skips disabled choices (0.6903ms)
+✔ modifier keys, Tab and keys outside the group are left to the browser (0.1138ms)
+✔ menu arrow keys only move focus, wrap, and ignore other keys (0.0874ms)
+✔ modal Tab and reverse Tab wrap at the edges while ordinary navigation is untouched (0.104ms)
+✔ timeline announcements exclude initial history, unchanged polls and removed decisions (0.7019ms)
+✔ reduced motion selects immediate programmatic scrolling (0.1375ms)
+▶ agent activity feed
+  ✔ a priced quote is recorded as PRICING_QUOTE with its price (97.1633ms)
+  ✔ a subscription is recorded without publishing the full wallet address (59.2272ms)
+  ✔ a document upload and a world-risk escalation are recorded (32.9157ms)
+  ✔ subscribers receive a connected frame, then live activity, filtered by case (37.3368ms)
+  ✔ idle streams get heartbeat comments so proxies do not drop them (64.8949ms)
+[agentbl] 1efb0ebf00dc 503 sse_capacity: Too many live-stream subscribers; retry shortly
+  ✔ the number of concurrent subscribers is capped (16.0808ms)
+  ✔ closed subscribers are removed from the registry (31.2318ms)
+  ✔ closeActivityStreams ends every open stream (graceful shutdown) (4.1895ms)
+✔ agent activity feed (375.2848ms)
+[agentbl] a616e67d17fe 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: X402_PAY_TO is required in live mode
+▶ runtime mode switching requires the admin token
+  ✔ an anonymous caller cannot leave Live mode (the paywall-bypass chain is closed) (37.681ms)
+  ✔ the correct token (Bearer or X-Admin-Token) switches the mode (40.6117ms)
+  ✔ Demo -> Live on a server that is not Live-ready is refused by the controller, token or not (9.0189ms)
+  ✔ no-op requests and invalid modes need no token (28.9856ms)
+  ✔ once Live is configured, entering Live is protected as well (20.6186ms)
+  ✔ demo reset is unavailable in Live mode (11.7329ms)
+  ✔ in Live the legacy upload needs the token, like POST /api/agent/ingest (19.332ms)
+  ✔ in Live the simulated subscription ledger is closed (14.6193ms)
+  ✔ without a configured (or with a too-short) token, leaving Live is impossible at runtime (18.5334ms)
+✔ runtime mode switching requires the admin token (232.3438ms)
+✔ a pure demo deployment (nothing Live configured) keeps the toggle open and harmless (53.7531ms)
+✔ a Demo server with a configured admin token protects the shared reset (23.088ms)
+▶ BE-15: Agent Activity API Tests
+  ✔ GET /api/agent/activity returns empty array initially (47.793ms)
+  ✔ GET /api/agent/activity returns logged activities (3.4608ms)
+  ✔ GET /api/agent/activity filters by case_id (1.2988ms)
+  ✔ GET /api/agent/activity filters by pool_id (1.2456ms)
+  ✔ GET /api/agent/activity/stream establishes SSE connection (109.0972ms)
+  ✔ Agent activities do not expose internal chain-of-thought (5.2823ms)
+✔ BE-15: Agent Activity API Tests (197.6175ms)
+✔ anchor preflight requires the deployed testnet, exact version, explicit signer role and continuous head (17.1556ms)
+✔ anchor broadcast shares the signer lock, static-preflights and persists hash before waiting (1.6096ms)
+✔ confirmed anchors require exact calldata, sender, receipt event, current canonical block and chain batch (26.0521ms)
+✔ pending or underconfirmed anchors are never reported as confirmed; changed deployment bindings fail closed (1.5722ms)
+✔ broadcast recovery uses one exact event in a bounded scan, with no send or inferred hash (1.1915ms)
+✔ chain verification rechecks finality and inclusion instead of trusting a stored ANCHORED label (2.5997ms)
+✔ anchor leaves use canonical JSON, domain separation and explicit terminal fields (8.7106ms)
+✔ approval identity, route, time, outcome and transaction are committed without source text or credentials (4.5269ms)
+✔ Merkle tree proves every leaf in a 1-record batch and rejects alterations (0.5361ms)
+✔ Merkle tree proves every leaf in a 2-record batch and rejects alterations (0.6146ms)
+✔ Merkle tree proves every leaf in a 3-record batch and rejects alterations (1.0197ms)
+✔ Merkle tree proves every leaf in a 5-record batch and rejects alterations (1.7545ms)
+✔ Merkle tree proves every leaf in a 16-record batch and rejects alterations (6.2735ms)
+✔ Merkle tree proves every leaf in a 255-record batch and rejects alterations (171.3972ms)
+✔ Merkle tree proves every leaf in a 256-record batch and rejects alterations (200.6224ms)
+✔ invalid or oversized tree/proof inputs fail closed (0.236ms)
+✔ enabling anchoring does not change the agent version; policy, model and source changes do (3.2438ms)
+✔ anchor model metadata matches provider normalization for absent, empty, whitespace and explicit model names (1.4145ms)
+✔ concurrent finalizations allocate a continuous durable sequence; duplicates and restart keep it (241.0711ms)
+✔ a second OS process cannot take the active anchor sequence lock (97.1873ms)
+✔ a dead process lock is recovered without resetting sequence (91.2693ms)
+✔ failed persistence consumes no finalization sequence and leaves the prior state intact (10.0169ms)
+✔ tampered terminal data fails verification; finalized entries cannot be silently overwritten (5.7003ms)
+✔ corrupted sequence, leaf, version and batch root are rejected on load (14.2291ms)
+✔ legacy journals are explicitly marked with an unrecorded version (1.5644ms)
+✔ Demo and disabled Live form local trees without contacting a chain adapter (4.5254ms)
+✔ minimum batch, interval and version boundaries keep each batch homogeneous and continuous (18.7787ms)
+✔ Live batches persist intent and hash before confirmation; repeat ticks do not broadcast twice (4.5658ms)
+✔ uncertain send survives restart and recovers by observed hash without a repeat broadcast (22.1145ms)
+✔ preflight failure is retryable but a mode change before send never broadcasts (2.6083ms)
+✔ a failed hash checkpoint after broadcast stays uncertain until read-only recovery and never re-sends (21.65ms)
+✔ runtime finalizes actual executed and observe-only decisions immediately, with proof after a tick (91.9431ms)
+▶ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq
+  ✔ EXECUTED (39.5876ms)
+  ✔ REJECTED (23.3885ms)
+  ✔ EXPIRED (26.876ms)
+✔ approved, rejected and expired decisions bind operator/time/outcome, pending approval has no final seq (90.752ms)
+✔ failed approved execution preserves the operator and terminal failure in its commitment (25.1117ms)
+✔ an autonomy override creates a new policy version without relabeling already created decisions (21.5642ms)
+✔ retention preserves independent proofs and live sequences; Demo reset discards only Demo proofs (37.1731ms)
+✔ HTTP exposes public proofs and behavioral tamper failures, with missing IDs returning 404 (113.181ms)
+✔ CLI rechecks a disk audit without reading keys or mutating journals and exits nonzero for tampering (520.2416ms)
+▶ agent API (Demo)
+  ✔ GET /api/agent/status is public and reports the runtime without exposing keys (62.8074ms)
+  ✔ an injected world-risk event produces a decision, an executed simulated reprice and a trace (49.222ms)
+  ✔ the same event again is a duplicate and does not execute twice (65.4862ms)
+  ✔ without ?wait the event is accepted (202) and processed in the background (25.8248ms)
+  ✔ invalid input is refused with a 4xx and a readable reason (76.662ms)
+  ✔ control: autonomy and emergency stop change what the agent does (107.5354ms)
+  ✔ approvals: list, approve and reject over HTTP; conflicting or malformed requests are 4xx (224.6799ms)
+  ✔ the admin token protects control, events and the approval queue once it is configured (122.3969ms)
+  ✔ the activity stream sends an id per event and replays what a reconnecting client missed (53.0681ms)
+  ✔ POST /api/demo/reset clears what the agent recorded in Demo and rebuilds the pools (93.3049ms)
+✔ agent API (Demo) (908.2428ms)
+✔ agent API: in Live the admin token is mandatory even for actions Demo leaves open (20.9788ms)
+✔ approvals: create is idempotent per open decision and rejects bad input (2.9706ms)
+✔ approvals: approve and reject follow the state machine (0.9628ms)
+✔ approvals: a pending approval expires after its ttl and can no longer be approved (0.7151ms)
+✔ approvals: owner-signed steps are recorded in order and complete the approval (0.5583ms)
+✔ approvals: failures keep a bounded reason; an approval awaiting a signature can expire (0.3443ms)
+✔ approvals: state survives a restart and the record cap never drops open approvals (49.1477ms)
+(node:41188) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ console: dynamic values never go through HTML injection (decisions carry event and chain data) (1.6173ms)
+✔ console: a link is only ever built from an https explorer_url, never from a hash or a demo reference (0.9008ms)
+✔ console: a simulated execution is labelled DEMO and has no link path (0.1629ms)
+✔ console: shortId shortens without repeating the value (0.1498ms)
+✔ judge-facing Agent activity does not intercept browser diagnostics (1.2049ms)
+✔ render code does not emit debug logs (the activity panel shows business events only) (0.6466ms)
+✔ measured Agent suites meet every frozen deterministic threshold using real components (2.4183ms)
+✔ scoring rejects missing and non-finite metrics rather than treating them as success (0.2374ms)
+✔ label boundary rejects leaked labels at any depth and freezes the component input (1.3247ms)
+✔ changing gold cannot change subject output, and broken extraction fails the quality gate (2326.7627ms)
+✔ empty or truncated evaluation suites are rejected, never awarded perfect safety scores (0.7736ms)
+✔ NDCG penalizes reversed rankings, irrelevant and duplicate results, and empty output (0.2046ms)
+✔ report shows failures and limits, and never claims an unrun provider evaluation (1319.5624ms)
+✔ events: normalizeEvent fills defaults and derives a stable event_id (4.7371ms)
+✔ events: invalid events are refused with a readable reason (3.7739ms)
+✔ events: payload keys beyond the checked ones are preserved but never trusted blindly (1.2275ms)
+✔ bus: an event is processed once; resubmitting it is a duplicate (4.3041ms)
+✔ bus: events of one case run one at a time in arrival order, other cases run in parallel (64.1821ms)
+✔ bus: concurrency is capped (61.6775ms)
+✔ bus: an event older than the last handled one for the same case and type is STALE and never runs (1.2412ms)
+✔ bus: a failing handler is retried, then the event is dead-lettered with its payload (0.6946ms)
+✔ bus: a handler that recovers on a later attempt ends DONE; a dead event can be retried (0.8163ms)
+✔ bus: state survives a restart; duplicates stay duplicates and STALE detection persists (42.3945ms)
+✔ bus: events that were queued or mid-flight when the process stopped are processed after restart (27.8537ms)
+✔ bus: a bus that is not started keeps events queued and reports them (0.6109ms)
+✔ bus: the index is pruned to its cap without losing unfinished or dead events (2.2246ms)
+✔ bus: the handler receives a copy, so it cannot corrupt the stored event (0.4319ms)
+✔ bus: submit refuses an event that was not normalised (0.2498ms)
+▶ ingest API (Demo)
+  ✔ POST /api/agent/ingest?wait=1 runs the pipeline and the job shows every step (237.1086ms)
+  ✔ uploading the same documents again is a 200 with the same job, not a second decision (44.2914ms)
+  ✔ a document that tries to steer the agent is held, and the answer says so (42.9344ms)
+  ✔ bad uploads are refused with a status and a code, and open no job (77.1389ms)
+  ✔ a document over the size limit is a 413 (34.6383ms)
+  ✔ exporter preferences: PUT validates and stores, GET reads them back, and the next upload uses them (61.109ms)
+  ✔ scenarios: list, run one over HTTP, and the pool and approvals show the result (199.9301ms)
+  ✔ the admin token, once configured, protects scenarios but not Demo uploads (47.8585ms)
+  ✔ the legacy /api/ebl/upload still acknowledges metadata-only uploads, and feeds the pipeline when it carries content for a case (133.3967ms)
+✔ ingest API (Demo) (901.9936ms)
+✔ ingest API: in Live, uploads and preferences need the admin token (72.4982ms)
+✔ document review: corrected bytes re-run all checks, retain the HOLD decision and expose safe field provenance (172.28ms)
+✔ document review: acknowledging a new injected document does not waive the injection hold (51.2102ms)
+✔ document review: restoring previously valid bytes creates a new scoped attempt and repeated submissions are idempotent (96.1785ms)
+✔ ingest pipeline: three clean documents become an opened Demo pool, step by step (21.5917ms)
+✔ ingest pipeline: the same upload twice makes one decision, not two (22.4336ms)
+✔ ingest pipeline: a document set without a case id gets a stable one and still opens (21.6855ms)
+✔ ingest pipeline: the crude case opens too, priced in its own terms (29.725ms)
+✔ ingest pipeline: a failed job runs again when the same documents are uploaded again (44.9967ms)
+✔ ingest pipeline: text that tries to steer the agent holds the case and opens nothing (20.8958ms)
+✔ ingest pipeline: a payment address smuggled into a trade field holds the case (21.7562ms)
+✔ ingest pipeline: a sanctioned counterparty is rejected, not held (22.0011ms)
+✔ compliance v2 pipeline: near entity holds, corrected documents rerun screening and retain old evidence (44.588ms)
+✔ compliance v2 pipeline: unknown ports and dual-use HS both prevent opening (39.5061ms)
+✔ compliance v2 pipeline: a transport port and synthetic IMO block with exact field evidence (39.0246ms)
+✔ compliance v2 pipeline: eBL HS cannot be overwritten by the clean invoice HS (21.0962ms)
+✔ compliance v2 pipeline: a later clean document of the same type cannot hide a blocked source (45.9369ms)
+✔ compliance v2 pipeline: CNY warehouse and incomplete invoice are screened before pricing exits (116.5721ms)
+✔ compliance v2 pipeline: asynchronous provider failure is a review, with no Demo fallback opening (38.9059ms)
+✔ compliance v2 pipeline: versioned report and matching evidence survive a restart (125.0048ms)
+✔ ingest pipeline: documents that disagree on the quantity are held for a person (19.8878ms)
+✔ ingest pipeline: a scanned PDF is stored and held as needing OCR, not guessed at (93.1776ms)
+✔ ingest pipeline: text that is not a trade document is held with a reason (24.4525ms)
+✔ exporter preferences: a floor that no payout speed reaches holds the case; one that some speed reaches switches speed (50.4729ms)
+✔ exporter preferences: stored with the upload, and a later price cut below the floor needs a person (53.9209ms)
+✔ exporter preferences: the setter validates, records activity and clears with the Demo reset (3.3887ms)
+✔ ingest pipeline in Live: an opening is only a proposal, and nothing is faked on-chain (20.6382ms)
+✔ ingest pipeline: a failing pipeline marks the job failed and dead-letters the event instead of hanging (23.2949ms)
+✔ ingest pipeline: state survives a restart without repeating the decision (133.4438ms)
+✔ delegated quotations match the canonical engine at every payout speed, without touching a runtime (96.383ms)
+✔ delegation preserves document mismatch and demo compliance blocks instead of granting execution (10.8272ms)
+✔ delegation rejects ambiguous source selection, missing cases, unsupported fields and unsafe numbers (2.1837ms)
+✔ only unexpired, case-bound server-delivered reports become neutral quote provenance (30.8923ms)
+✔ pricing concurrency is bounded and recovers after a failed lookup (3.9206ms)
+✔ MCP dry-run is side-effect free and invalid approval cannot change the queue (49.5029ms)
+✔ MCP operator events retain Live restrictions even with a valid host token (0.5792ms)
+✔ MCP reads, policy and recent resources reflect real decisions without replaying or exposing private snapshots (35.7159ms)
+✔ stateless MCP recommendations preserve hard filters, never create sessions or execute actions (16.5465ms)
+✔ Agent Card uses the verified A2A 1.0 required fields, advertises one implemented skill and no unsupported transports (71.239ms)
+✔ public origins reject credentials and cleartext remote URLs, and never trust Host or forwarded headers (6.1399ms)
+✔ A2A SendMessage, HTTP delegation and MCP delegation return the same canonical quotation (28.9326ms)
+✔ A2A validates JSON-RPC framing, protocol negotiation, media and structured inputs before pricing (77.6077ms)
+✔ delegation input errors remain JSON-RPC errors without reflecting internal exception messages (5.4308ms)
+✔ discovery and card never publish Live payment accepts while the application is Demo (43.738ms)
+✔ Live discovery, card and 402 header/body derive identical exact V2 requirements from the catalog (1.1201ms)
+✔ interoperability rate limits are applied before delegated work (11.5621ms)
+✔ untrusted JSON rejects reserved keys and complexity before schema traversal (6.6182ms)
+✔ stdio backend adapter rejects redirects, oversized or invalid replies and reports backend loss without local fallback (3.4233ms)
+✔ MCP runtime tools and resources hide unexpected storage or provider exception details (0.3504ms)
+✔ risk tracker: the first look is a baseline, and an unchanged picture is never an event (1.2091ms)
+✔ risk tracker: a new or worse alert is reported with the alerts that are active now (1.4578ms)
+✔ risk tracker: risk counts as cleared only after the configured number of quiet looks in a row (0.5627ms)
+✔ risk tracker: one alert in the middle of the quiet restarts the count (no flapping) (0.221ms)
+✔ risk tracker: state survives a restart, so a restart does not re-announce or forget (16.8778ms)
+✔ insurance: warns inside the window, pauses after expiry, and ignores cases that are not active (1.3184ms)
+✔ insurance monitor: Demo stays silent on the real clock; a scenario clock or Live checks the policy (0.5305ms)
+✔ world-risk monitor: baseline, change, repeat, escalation and clearing, with deterministic event ids (0.7758ms)
+✔ world-risk monitor: live evidence is labelled live, finished pools and unmapped Live pools are skipped, a failing feed is not fatal (0.3142ms)
+✔ runtime: a monitor source feeds the tick; the same fixture does not trigger the same decision twice (77.387ms)
+✔ runtime: a throwing source does not stop the other sources or the tick (2.4442ms)
+✔ redteam corpus is deterministic, covers every planned mutation and leaves source data intact (5.431ms)
+✔ generated mutations reach real screening, consistency, uniqueness and freshness subjects (203.0653ms)
+✔ freshness fails closed at expiry, on invalid/future times, unhealthy sources and stale children (0.3187ms)
+✔ stale evidence creates a review proposal and cannot mutate a pool or be approved (45.9248ms)
+✔ fresh proposal expires between proposal and approval without an execution (22.295ms)
+✔ uploaded evidence retains its observation time across reuse and cannot reopen after expiry (46.6861ms)
+✔ stale or fixture fallback does not advance Live risk hysteresis (0.5227ms)
+✔ monitor replay uses the saved pool and event, even after the current pool changes (30.7648ms)
+✔ ingest replay recomputes a quote from saved structured fields, including held injections (41.8747ms)
+✔ encrypted persistent snapshots replay after restart and CLI reports failures by exit code (1132.8714ms)
+✔ replay API is public in Demo, admin-only in Live, and never writes a second decision (71.538ms)
+✔ policy: demo auto: a reversible action runs unattended (1.323ms)
+✔ policy: demo auto: PAUSE runs unattended (0.1242ms)
+✔ policy: demo propose: needs approval (0.0518ms)
+✔ policy: autonomy off refuses everything (0.0392ms)
+✔ policy: observe only records (0.0455ms)
+✔ policy: live: every action needs approval (0.0379ms)
+✔ policy: live: even PAUSE needs approval (0.0405ms)
+✔ policy: emergency stop refuses a reprice (0.0591ms)
+✔ policy: emergency stop still lets PAUSE through (0.093ms)
+✔ policy: protected pool: SETTLE refused (0.0548ms)
+✔ policy: protected pool: FREEZE refused (0.0471ms)
+✔ policy: protected pool: LIQUIDATE refused (0.0501ms)
+✔ policy: protected pool: CANCEL refused (0.0348ms)
+✔ policy: protected pool: REPRICE is fine (0.031ms)
+✔ policy: protected pool: PAUSE and RESUME are fine (0.0352ms)
+✔ policy: prompt injection → hold for review (0.1007ms)
+✔ policy: compliance REVIEW → hold for review (0.0434ms)
+✔ policy: compliance BLOCK → reject (0.0322ms)
+✔ policy: an unrelated finding changes nothing (0.0465ms)
+✔ policy: a model-only signal is only observed (0.035ms)
+✔ policy: stale evidence needs approval (0.0595ms)
+✔ policy: SETTLE always needs approval (0.0323ms)
+✔ policy: FREEZE always needs approval (0.0369ms)
+✔ policy: RECORD_PAYMENT always needs approval (0.0221ms)
+✔ policy: RECORD_ARRIVAL is reversible enough to run (0.0213ms)
+✔ policy: MARK_IN_TRANSIT runs in demo auto (0.0195ms)
+✔ policy: a price move above the cap needs approval (0.0259ms)
+✔ policy: a price move at the cap is fine (0.0286ms)
+✔ policy: a price below the exporter floor needs approval (0.0332ms)
+✔ policy: a price at the exporter floor is fine (0.0186ms)
+✔ policy: the cooldown blocks the same action on the same pool but not a different one (0.9599ms)
+✔ policy: the cooldown is configurable and the daily limit debounces a flapping signal (0.1499ms)
+✔ policy: the cooldown sits before the Live approval rule so a flapping signal never floods the queue (0.0631ms)
+✔ policy: the first matching rule decides the verdict, every matching rule is listed (0.6551ms)
+✔ policy: the unattended-irreversible exemption works in Demo only (0.0836ms)
+✔ policy: rejects unknown actions, modes and autonomy levels instead of guessing (0.3784ms)
+✔ config: Live never runs above propose, Demo defaults to auto (D1) (0.1687ms)
+✔ config: environment parsing, defaults and bounds (0.3151ms)
+✔ policy: informational actions (WARNING, HOLD_FOR_REVIEW, REJECT) are records and never wait for approval (0.1212ms)
+✔ audit projection scrubs nested secrets, source text and wallets while retaining valid evidence/tx hashes (1.7568ms)
+✔ operational journal keeps exact addresses encrypted and authenticates its public audit projection (13.9378ms)
+✔ runtime audit scan covers decisions, events, queue, activities and traces with adversarial values (100.3185ms)
+✔ retention bounds decisions, rotated activity and trace files while preserving in-flight decisions (62.336ms)
+✔ periodic retention also runs under the injected service clock (22.5452ms)
+✔ authenticated queue snapshots reject plaintext edits and missing encryption keys (10.997ms)
+✔ legacy plaintext audit records migrate on startup without changing decision IDs or chain evidence (10.3681ms)
+✔ SSE sequence remains monotonic after all activity expires and a restart (11.317ms)
+✔ activity: append assigns a monotonic seq, stamps the mode and notifies subscribers (4.2098ms)
+✔ activity: the in-memory buffer is bounded and filterable (0.7285ms)
+✔ activity: persisted records survive a restart and the sequence continues (8.7823ms)
+✔ activity: records appended before persistence is attached are written after the existing ones (5.5409ms)
+✔ activity: since() answers from memory and falls back to the files when the client is far behind (13.13ms)
+✔ activity: clearMode drops one mode from memory and from the files, never the other (27.9824ms)
+✔ activity: a disk failure is reported but never breaks append (3.6239ms)
+✔ trace: spans nest, time themselves and record errors (1.324ms)
+✔ trace: secrets are redacted and LLM calls keep hashes, never text (0.5154ms)
+✔ trace: traces persist to a JSONL file and are found again by decision id (4.8153ms)
+✔ trace: bindDecision attaches the id once it is known (0.282ms)
+✔ scheduler: ticks repeatedly with jitter, never overlaps, and stops cleanly (17.852ms)
+✔ scheduler: a failing task is reported and the schedule continues; setInterval reschedules (0.5884ms)
+✔ scheduler: drain waits for a tick that is in flight (24.0251ms)
+✔ pipeline: world risk that lowers the price proposes a REPRICE with the move in bps (17.3194ms)
+✔ pipeline: a critical event pauses; an already paused or non-active pool does not (4.3011ms)
+✔ pipeline: events that change nothing are ignored with a reason (1.6659ms)
+✔ pipeline: RESUME needs a paused pool and reuses its last verified quote (0.5322ms)
+✔ pipeline: insurance, departure, arrival and payment map to their actions (2.7327ms)
+✔ pipeline: the same event on the same pool always yields the same proposal (2.2403ms)
+✔ pipeline: text inside event data cannot change the proposal (2.4179ms)
+✔ scenarios: the catalog lists every shipped scenario with a bilingual title (46.6896ms)
+✔ copper-typhoon: the whole cargo story runs through the real policy and the simulated executor (146.0447ms)
+✔ copper-typhoon: approving the payment makes the agent propose settlement, and settlement needs its own approval (168.6092ms)
+✔ copper-typhoon: rejecting the payment leaves the pool unsettled and proposes nothing further (132.0227ms)
+✔ copper-typhoon: playing it twice does not duplicate anything; reset gives a clean run (285.2715ms)
+✔ copper-typhoon: can be played one step at a time, and says when it is over (147.1456ms)
+✔ warcrisis-hormuz: a crude cargo is repriced down as war risk rises, paused when the strait closes, and stays paused (53.6866ms)
+✔ scenarios: a case whose pool is already paused ignores a pause, with the reason on record (4.9879ms)
+✔ insurance-gap: a warning a week ahead, then a pause once cover has lapsed (49.2639ms)
+✔ scenarios: Demo only, only known names, and the case must be in the market (9.0332ms)
+✔ Demo: a world-risk event becomes a decision, an executed simulated reprice, activity and a trace (53.1075ms)
+✔ Demo: injecting the same event again never produces a second execution (9.973ms)
+✔ Demo: the full risk cycle reprice → pause → resume restores the previous state (16.5575ms)
+✔ Demo: events that change nothing are ignored with a reason, not turned into decisions (5.6407ms)
+✔ invalid events are refused before they are queued (4.4391ms)
+✔ policy: a price move above the cap waits for approval; approving it executes, rejecting does not (14.2519ms)
+✔ policy: rejecting a pending proposal records it and changes nothing (5.3113ms)
+✔ policy: observe and off modes never execute; set_autonomy changes it at runtime and is logged (15.1903ms)
+✔ policy: an emergency stop blocks a reprice but lets a pause through, and can be lifted (9.5157ms)
+✔ policy: the cooldown stops a flapping signal from acting twice in a row (12.6716ms)
+✔ settlement actions: RECORD_PAYMENT always needs approval, RECORD_ARRIVAL does not (15.655ms)
+✔ a failing action is recorded as FAILED with its reason, and the event itself still completes (8.6486ms)
+✔ status reports mode, autonomy, signers (booleans only) and queue depth (1.9172ms)
+✔ listDecisions filters and paginates; getDecision returns one (15.2732ms)
+✔ Demo reset clears the agent state of Demo mode only (13.9361ms)
+✔ decisions, activity, approvals and event state survive a restart; a duplicate stays a duplicate (79.3363ms)
+✔ a replayed event whose decision already exists does not decide again (67.6012ms)
+▶ PRD Agent APIs use real steps over HTTP and leave all runtime state untouched
+  ✔ extracts real fields with source lines and hashes, without opening a job (84.8078ms)
+  ✔ verifies consistency and exposes a real mismatch and its risk penalty (14.6621ms)
+  ✔ prices the selected speed with exactly the existing engine numbers and hashes (48.0306ms)
+  ✔ brief numbers and risks come from its returned quote, with explicit evidence limits (25.0922ms)
+  ✔ graph commits pricing, actual documents, verification and versioned compliance (25.9363ms)
+  ✔ method, MIME, malformed JSON and unknown operations have bounded errors (17.5469ms)
+✔ PRD Agent APIs use real steps over HTTP and leave all runtime state untouched (238.2027ms)
+▶ stateless input validation and review boundaries
+  ✔ empty source never becomes a clear verification (0.7298ms)
+  ✔ paths, client quotes, forged compliance, unknown keys and malformed document arrays are rejected (2.7417ms)
+  ✔ wrong numeric types, impossible prices, invalid events, dates and unsafe nesting fail before pricing (4.4085ms)
+  ✔ incomplete and CNY trades cannot be converted or priced as USD (4.626ms)
+  ✔ binary magic, UTF-8, base64 and document size share the intake validator (1.2113ms)
+  ✔ unknown or unparseable documents keep explicit review evidence (0.6865ms)
+  ✔ conflicting documents retain evidence when merged fields are overwritten (8.2012ms)
+  ✔ demo BLOCK survives a request and never becomes an executable offering (5.9742ms)
+  ✔ injection is data, marks review, and cannot trigger even optional polish (4.7126ms)
+✔ stateless input validation and review boundaries (34.6876ms)
+✔ graph hash is canonical, repeatable and binds changed input and document bytes (67.646ms)
+▶ stateless image extraction honors its vision switch and preserves review boundaries
+  ✔ enabled vision extracts actual fields and always requires review (7.8876ms)
+  ✔ disabled vision stays offline and requires OCR (0.5041ms)
+  ✔ default vision stays offline and requires OCR (0.2373ms)
+  ✔ unconfigured vision stays offline and requires OCR (0.3205ms)
+  ✔ provider failure remains review evidence without upstream details (0.5554ms)
+✔ stateless image extraction honors its vision switch and preserves review boundaries (10.0528ms)
+▶ stateless extraction screens the entire readable bundle before every model path
+  ✔ later text injection prevents earlier text completion and image transcription (5.409ms)
+  ✔ later PDF injection prevents earlier text completion and image transcription (115.3355ms)
+  ✔ suspicious image transcription also prevents text completion (1.7566ms)
+  ✔ unsafe supplied case data blocks otherwise clean document models (3.5565ms)
+✔ stateless extraction screens the entire readable bundle before every model path (127.0686ms)
+▶ optional brief polish accepts only grounded output and falls back on failure or inventions
+  ✔ explicit output budget (4.3741ms)
+  ✔ default output budget (3.5996ms)
+  ✔ explicit unlimited output (3.5415ms)
+  ✔ grounded (3.7114ms)
+  ✔ new number (3.5352ms)
+  ✔ negative price (3.6476ms)
+  ✔ guarantee (4.0649ms)
+  ✔ unsupported authority (3.5792ms)
+  ✔ provider failure (3.6461ms)
+  ✔ empty (3.7126ms)
+  ✔ the model disable switch prevents optional public polish (3.67ms)
+✔ optional brief polish accepts only grounded output and falls back on failure or inventions (42.5751ms)
+✔ the five operations share one per-client budget including invalid requests (9.1345ms)
+✔ concurrency is bounded globally and a failed request releases its slot (11.7783ms)
+✔ JSON bodies have a byte cap before parsing or model work (3.994ms)
+✔ no route answers a malformed request with a 5xx (6949.1285ms)
+✔ valid input is still accepted after the validation tightening (65.4381ms)
+✔ BE-7: invalid payout_speed is rejected with 400 (38.3155ms)
+✔ BE-7: a non-positive requested_cash_usd is rejected (price/amount not valid) (22.639ms)
+✔ BE-7: a negative subscription_usd is rejected on /api/offering/simulate (5.0087ms)
+✔ BE-7: a case whose target redemption is not 1.00 is rejected (exceeds the fixed target) (5.4204ms)
+✔ BE-7: events must be an array (6.283ms)
+✔ BE-7: a well-formed override still succeeds (validation is not over-eager) (21.4876ms)
+✔ retired Oracle tool cannot be invoked with any supplied commitment (13.6681ms)
+✔ AI-14: six event families map to OPEN/REPRICE/PAUSE/RESUME/SETTLE/WARNING (27.5991ms)
+✔ AI-14: cargo arrival settles only after importer payment is verified (0.2967ms)
+✔ AI-15: bounded retry succeeds and records the real attempt count (1.7409ms)
+✔ AI-15: concurrent and repeated delivery of one event never creates a duplicate tx (0.5225ms)
+✔ AI-15: a completed decision survives process restart and is not resubmitted (12.6299ms)
+✔ AI-15: an EXECUTING record reconciles a prior tx before any resubmission (0.4468ms)
+✔ AI-15: monitoring polls repeatedly while duplicate events remain idempotent (0.4547ms)
+(node:15948) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ every cargo picture the frontend can request exists as WebP (7.3062ms)
+✔ each catalog case maps to the picture of its own cargo (8.7078ms)
+✔ the cargo pictures stay web-sized (0.9075ms)
+✔ there are curated cases to check (0.6996ms)
+✔ fixture demo-case.json prices, scores and re-prices end to end (27.455ms)
+✔ fixture cases/alu-dxb-rtm.case.json prices, scores and re-prices end to end (7.182ms)
+✔ fixture cases/alu-fs-wh-00013.case.json prices, scores and re-prices end to end (5.2062ms)
+✔ fixture cases/alu-fs-wh-00014.case.json prices, scores and re-prices end to end (4.859ms)
+✔ fixture cases/alu-fs-wh-00015.case.json prices, scores and re-prices end to end (5.2906ms)
+✔ fixture cases/copper-sg-shanghai.case.json prices, scores and re-prices end to end (3.5151ms)
+✔ fixture cases/crude-fuj-sin.case.json prices, scores and re-prices end to end (3.6274ms)
+✔ fixture cases/cuconc-anf-lyg.case.json prices, scores and re-prices end to end (3.4327ms)
+✔ fixture cases/ironore-au-tj.case.json prices, scores and re-prices end to end (3.4217ms)
+✔ fixture cases/refined-sg-jkt.case.json prices, scores and re-prices end to end (3.8053ms)
+✔ fixture cases/rubber-bkk-qd.case.json prices, scores and re-prices end to end (4.131ms)
+✔ fixture cases/soybean-ssz-dlc.case.json prices, scores and re-prices end to end (5.2382ms)
+✔ compliance v2: clean facts have versioned, auditable demo evidence and declared standards (45.0186ms)
+✔ compliance v2: exact names, aliases, punctuation, suffixes and fullwidth characters block (7.2821ms)
+✔ compliance v2: near names in 0.85–0.92 require review; unrelated country words do not block (6.5553ms)
+✔ compliance v2: seller, consignee, carrier, notify party, invoice and warehouse parties are screened (4.4715ms)
+✔ compliance v2: each demo jurisdiction derives from a known port, including transshipment (3.4268ms)
+✔ compliance v2: unknown, malformed and conflicting ports require review without substring matches (3.4953ms)
+✔ compliance v2: bundled lookup covers every shipped transport and warehouse location (140.3195ms)
+✔ compliance v2: synthetic IMO and vessel name block; invalid checksums require review (4.095ms)
+✔ compliance v2: HS prefix rules screen all sources and cannot be waived by a clean code (5.8725ms)
+✔ compliance v2: military and dual-use cargo declarations are conservative demo rules (2.5865ms)
+✔ compliance v2: instructions, hidden characters, wallet fields and oversized names never clear (5.8232ms)
+✔ compliance v2: a bare platform name does not prove compliance and warehouse standards are not invented (3.7029ms)
+✔ compliance v2: matcher uses fixed Jaccard/Winkler scores, never a keyword fallback (0.2067ms)
+✔ compliance v2: malformed demo data, duplicate IDs and mismatched country codes fail loading (2.5908ms)
+✔ compliance external: explicit injection sends only structured facts and validates output (19.2314ms)
+✔ compliance external: CLEAR never overrides local BLOCK or REVIEW; provider may escalate (4.8468ms)
+✔ compliance external: timeout aborts even a transport that ignores AbortSignal (9.3341ms)
+✔ compliance external: failed, malformed, oversized and contradictory results retain evidence and review (6.1429ms)
+✔ compliance external: missing transport, URL credentials and invalid timeouts are rejected before a request (0.2651ms)
+✔ contract harness emits pricing oracle evidence for the demo case (5.335ms)
+✔ contract harness aligns event fields with the frozen contract design (1.0326ms)
+✔ contract harness rejects non-permissioned investors (1.3209ms)
+✔ contract harness covers scenario contract actions with oracle events (3.6057ms)
+✔ current v5 pool action codes match the Demo harness (1.5299ms)
+✔ every on-chain offering state is a known lifecycle state, and Repaid keeps its code (0.5341ms)
+(node:33268) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Copilot actions: a message creates a priced card, explicit confirmation records one real Demo position, and retries return the same reference (13.7838ms)
+✔ Copilot actions: ambiguity, missing amounts, model amounts and saved budget breaches cannot create executable cards (3.54ms)
+✔ Copilot actions: cancel, new messages, expiry and runtime changes invalidate old consent (2.9324ms)
+✔ Copilot actions: changed prices, capacity, pauses and unresolved document holds are checked again before mutation (2.142ms)
+✔ Copilot actions: Demo subscriptions accept repriced pools and snapshots persist without wallets (19.3022ms)
+✔ Copilot actions: Live cards use chain price and integer shares; confirmation only prepares the wallet and cannot run twice (2.5804ms)
+✔ Copilot actions: unmapped, paused, empty and tiny Live offerings fail closed without a simulated substitute (2.0019ms)
+✔ Copilot actions: report cards use the paid-service catalogue, enforce budget and become single-use before any payment (1.7648ms)
+✔ Copilot browser actions: generation changes after preparation prevent wallet signing; Demo reports use the existing simulated flow (0.4392ms)
+✔ Copilot actions: decimal and scientific budgets never round up; legacy Demo report hashes are not rendered as transactions (0.1527ms)
+✔ Copilot actions API: the real subscribe route accepts a confirmed card, ignores tampered amounts and records Copilot attribution (634.2953ms)
+(node:32816) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Copilot API: create/read/message/delete session lifecycle and privacy (72.1847ms)
+✔ Copilot API: SSE sends structured results then validated narrative and completion (12.1445ms)
+✔ Copilot API: malformed, oversized and unknown routes return errors before any stream opens (53.7662ms)
+✔ Copilot API: real server routes use latest market pools and positions expose current state (610.4696ms)
+✔ Copilot browser SSE parser: split bytes preserve Chinese text; truncated streams are errors (3.8339ms)
+✔ Copilot browser: a result from another mode generation is never rendered or accepted (0.5283ms)
+✔ Copilot: refine, commodity override, negation and reset preserve exactly the intended dimensions (11.8609ms)
+✔ Copilot: refinement tightens limits; an explicit override can relax a single dimension (0.8942ms)
+✔ Copilot intent: browse investments (1.9673ms)
+✔ Copilot intent: 低风险铜 (0.1621ms)
+✔ Copilot intent: actually aluminium (0.1224ms)
+✔ Copilot intent: compare copper and soybeans (0.123ms)
+✔ Copilot intent: 为什么 (0.0698ms)
+✔ Copilot intent: show my portfolio (0.0701ms)
+✔ Copilot intent: subscribe USD 1000 (0.1007ms)
+✔ Copilot intent: buy a report (0.0628ms)
+✔ Copilot intent: start over (0.0798ms)
+✔ Copilot intent: write code (0.0883ms)
+✔ Copilot intent: 收益至少100001bps (0.6436ms)
+✔ Copilot: Chinese and English commodities, ports, negative terms, units and payout speeds (0.7235ms)
+✔ Copilot: LLM prose interpretation is validated and deterministic numeric constraints win (0.6399ms)
+✔ Copilot: malformed, low-confidence and failing models fall back; a model cannot infer an action or reset (0.6416ms)
+✔ Copilot: history is bounded, immutable, and contains structured deltas only (4.8293ms)
+✔ softer risk wording reweights the ranking without excluding assets, and a bare 投 sets the ticket (0.7776ms)
+(node:30796) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ document upload reads actual bytes as base64 and rejects files beyond the intake limit (1.1089ms)
+✔ Copilot surfaces share the server, contain no client ranking, and never inject dynamic HTML (3.3968ms)
+✔ Copilot rerank: pause drops a rank and resume restores it without another message or LLM call (12.7372ms)
+✔ Copilot rerank: hard filters, explicit pool scope, watchlists and removed recommendations remain consistent (4.8668ms)
+✔ Copilot rerank: recorded proposals retain the actual price, completed actions use the changed price and duplicate notifications are idempotent (1.3746ms)
+✔ Copilot rerank: deletion, expiry and mode invalidation close streams and cannot resurrect a session (0.9151ms)
+✔ Copilot rerank: two subscribers retain the decision baseline when execution beats or follows the first notification (3.4492ms)
+✔ Copilot rerank: messages and notifications serialize; deletion during a snapshot does not restore state (2.6497ms)
+✔ Copilot rerank: persisted snapshots resume after restart and store no private query vocabulary (15.1874ms)
+[agentbl] - 503 sse_capacity: Too many Copilot streams
+✔ Copilot stream: real SSE push, cursor replay, capacity and session deletion have bounded lifecycles (56.7219ms)
+✔ Copilot retrieval: every hard constraint excludes the candidate and gives a specific reason (4.2161ms)
+✔ Copilot retrieval: missing tenor/insurance/risk, closed pools, compliance blocks and Agent holds fail closed (0.6136ms)
+✔ Copilot retrieval: BM25 handles Chinese synonyms and MMR diversifies commodities and routes (2.4699ms)
+✔ Copilot ranking: latest quote/state and data quality change scores with auditable breakdowns (0.8757ms)
+✔ Copilot narrative: numbers must be structured facts, never digits borrowed from an identifier (1.2763ms)
+✔ Copilot narrative: ranking ordinals and rounded real figures are allowed, invented ones are not (0.3982ms)
+✔ Copilot service: multiple turns preserve constraints and return current evidence and exclusions (18.4556ms)
+✔ Copilot service: a decision hold and a changed quote affect the next query, without stale catalogue hints (4.405ms)
+✔ Copilot service: compare/explain/action turns do not silently modify persisted filters or execute (6.5551ms)
+✔ Copilot service: sessions persist only bounded structured context, expire and respect capacity (21.7235ms)
+✔ Copilot service: runtime invalidation persists, so restarting generation numbering cannot revive an old session (5.8733ms)
+✔ Copilot service: concurrent messages serialize and cannot lose a preference update (1.8306ms)
+✔ Copilot service: deletion or runtime change during a model call cannot resurrect stale context (1.4794ms)
+✔ Copilot service: structured recommendations arrive before slow narrative; invalid queries never call a model (2.2856ms)
+✔ Copilot service: the LLM disable switch, output cap and bounded concurrency apply to the new endpoints (3.0939ms)
+✔ Copilot service: unsupported numeric intervals ask for clarification without weakening saved limits (1.3667ms)
+✔ Copilot service: exceeding a cumulative filter limit is rejected without dropping the new hard constraint silently (0.5553ms)
+(node:41024) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Copilot wallet: a matching contract receipt is required for a Live subscription result (146.8997ms)
+✔ Copilot wallet: deployment, account, network, price, capacity, eligibility and stopped pools refuse before signing (7.0753ms)
+✔ Copilot wallet: a wallet or mode change after static simulation prevents broadcast (3.4436ms)
+✔ Copilot wallet: wrong events, failed receipts and price changes during mining remain unconfirmed without automatic retry (6.6747ms)
+▶ BE-13: Dashboard API Tests
+  ✔ GET /api/investors/portfolio returns investments and summary (1.8661ms)
+  ✔ GET /api/exporters/dashboard returns ebl pools (1.2443ms)
+✔ BE-13: Dashboard API Tests (86.0766ms)
+✔ AI-16: decision_id and evidence hashes are reproducible under key reordering (1.0673ms)
+✔ AI-16: decisions persist across logger restarts and remain queryable by idempotency key (13.7302ms)
+✔ AI-16: transaction backfill is persisted without changing the deterministic decision_id (7.7737ms)
+✔ AI-16: repeated record calls upsert one audit record rather than duplicating it (0.3958ms)
+✔ current documentation points to controlled configuration and an immutable historical archive (1.22ms)
+✔ documented current npm commands exist (1.1556ms)
+✔ .env.example documents every variable the server reads and never ships a real key (1.0943ms)
+✔ every AGENT_* variable the runtime reads is documented in .env.example (1.2219ms)
+✔ AI-8: the clean copper fixture passes all consistency checks (1.1253ms)
+✔ AI-8: a quantity mismatch is flagged critical with a penalty (0.2799ms)
+✔ AI-8: an insurance coverage gap and an expired policy are detected (0.1612ms)
+✔ AI-8: incoterms and over-invoicing mismatches raise warnings (0.1284ms)
+✔ AI-8: degrades gracefully when only an eBL is present (legacy case) (0.0944ms)
+✔ PDF: real two-page text PDF preserves values and page-local line provenance (132.9566ms)
+✔ PDF: positioned table cells and plain labels parse without Markdown syntax (217.0376ms)
+✔ PDF: scans, broken PDFs, page limits, text limits and a hard worker timeout are distinct (400.1591ms)
+✔ PDF: worker core releases resources, and table geometry retains cells in reading order (75.7566ms)
+✔ PDF: a mixed PDF with an unreadable page is held even when another page has complete fields (220.8849ms)
+✔ PDF: the stored binary bundle actually opens once, and its bytes and sources survive reload (432.0939ms)
+✔ vision: defaults are offline, and enabling vision without a provider still requires OCR (6.6758ms)
+✔ vision: the actual runtime sends a tool-free image request with strict schema and caps confidence (20.4161ms)
+✔ vision: malformed fields, attempted tools, injection and unavailable providers never open (24.8657ms)
+✔ model transport: the shared compatible client preserves schema and never sends tools (31.4999ms)
+✔ text model: typed, grounded completion retains deterministic values and records conflicts (1.5278ms)
+✔ text model: only incomplete text calls it; prompts delimit and sanitize document data (36.9968ms)
+✔ injection: screen all later documents before any model sees the bundle (16.1477ms)
+✔ injection: Chinese, zero-width, homoglyphs, wallet fields and payTo are flagged (0.3884ms)
+✔ warehouse: bilingual receipt and CNY invoice retain original units and detect mismatches (3.8983ms)
+✔ warehouse: CNY bundles expose fields and consistency but never infer USD financing (89.1287ms)
+✔ model schema rejects duplicate fields, unknown properties and invalid calendar dates (0.6947ms)
+✔ written calendar dates keep the same day in Singapore, UTC and US timezones (409.5822ms)
+✔ AI-17: parses the demo eBL with field-level provenance and confidence (11.8318ms)
+✔ AI-17: parses invoice totals, unit price, parties and shipment references (3.4747ms)
+✔ AI-17: merges a document bundle over a structured template without losing pricing fields (4.8649ms)
+✔ AI-17: PDF/image extraction is injectable and AI failure falls back deterministically (3.7291ms)
+✔ WP2.2: an invalid binary PDF is distinguished from a scan needing OCR (0.9519ms)
+✔ WP2.2: a crude cargo quoted in barrels parses completely, using the tonnes the document states (7.7668ms)
+✔ WP2.2: a barrel quantity with no stated tonnes is left unfilled rather than guessed (3.5331ms)
+▶ BE-14: eBL Document Ingestion Tests
+  ✔ POST /api/ebl/upload accepts valid PDF document (59.4825ms)
+  ✔ POST /api/ebl/upload rejects invalid file type (2.7288ms)
+  ✔ POST /api/ebl/upload rejects oversized file (2.0207ms)
+  ✔ POST /api/ebl/upload is idempotent for same file (3.3086ms)
+  ✔ metadata-only uploads are hashed deterministically and flagged as not content-hashed (3.7525ms)
+  ✔ GET /api/ebl/document-status reports receipt, not verification (3.2595ms)
+  ✔ POST /api/ebl/upload validates the file envelope (6.2397ms)
+  ✔ uploaded file names are reduced to a safe base name (0.9704ms)
+  ✔ GET /api/ebl/document-status only knows documents it issued (1.2922ms)
+  ✔ POST /api/ebl/upload records the case link without claiming orchestration (1.0797ms)
+✔ BE-14: eBL Document Ingestion Tests (110.2842ms)
+✔ .env is loaded for the app but not inside the test runner (0.5759ms)
+✔ the real test runner marks this process, so .env cannot leak into any test (0.0883ms)
+▶ HTTP hardening
+  ✔ a malformed request target answers 400 and never takes the process down (26.7625ms)
+  ✔ malformed percent-encoding is a 400, not a 500 (14.9067ms)
+  ✔ request bodies over the configured limit are rejected with 413 (6.5338ms)
+  ✔ invalid JSON is a 400 with a stable error code (2.1536ms)
+  ✔ unknown API routes are a JSON 404 and non-GET static paths a 405 (8.0345ms)
+  ✔ unexpected failures never leak internal error text (14.5007ms)
+  ✔ every response carries the baseline security headers; the dashboard also gets a CSP (86.6567ms)
+  ✔ the server-side LLM key is never sent to the browser (15.1438ms)
+  ✔ static files: ETag revalidation, per-type caching and HEAD (11.2522ms)
+  ✔ static text assets are served br/gzip-compressed and decode to the exact file bytes (7.2488ms)
+  ✔ large JSON API responses are gzip-compressed on request (17.8753ms)
+  ✔ path traversal attempts never read files outside /public (5.7882ms)
+  ✔ directories and missing files are 404s (3.3638ms)
+✔ HTTP hardening (244.0445ms)
+✔ readBody enforces the limit while streaming and by declared Content-Length (3.5139ms)
+✔ readJsonBody: empty -> null, valid -> parsed, malformed -> 400 invalid_json (2.0829ms)
+✔ configuredBodyLimit honours AGENTBL_MAX_BODY_BYTES and ignores junk (0.1187ms)
+✔ safeDecodeURIComponent turns malformed escapes into a 400 (0.1466ms)
+✔ describeError maps known failures to statuses and hides everything else (0.2368ms)
+✔ clientIp trusts X-Forwarded-For only for the configured number of proxy hops (0.2056ms)
+✔ createRateLimiter counts per key in fixed windows and stays bounded (0.361ms)
+✔ envInt accepts non-negative integers only (0.136ms)
+✔ checkAdminToken: fail closed, constant-time, Bearer or X-Admin-Token (1.2989ms)
+✔ the CSP allows only same-origin scripts and lists the chain hosts the wallet flow needs (0.2498ms)
+✔ connectOriginsFromChainConfig extracts, normalises and de-duplicates origins (0.2628ms)
+(node:41808) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ frontend translation keys have both Chinese and English copy (4.7553ms)
+✔ the document language follows the language switch (0.264ms)
+✔ Chinese UI keeps navigation and key investor information in Chinese (0.0775ms)
+✔ English UI copy contains no accidental Chinese (3.35ms)
+✔ Chinese-native trade data is rendered in English in English mode (0.6381ms)
+✔ ingest: a text document is stored by content and gets a job and a mock ENI record (2.8153ms)
+✔ ingest: the same content for the same case is idempotent and returns the same job (0.9988ms)
+✔ ingest: without a case_id one is derived from the content, so the same upload lands on the same case (0.2909ms)
+✔ ingest: a real PDF and PNG are accepted by their magic bytes, base64 or not (1.6025ms)
+✔ ingest: refuses what it cannot trust, with a code a client can act on (0.8076ms)
+✔ ingest: file names are reduced to a safe base name (0.0977ms)
+✔ ingest: uploads, jobs and built cases survive a restart; an unfinished job is reported as interrupted (26.0706ms)
+✔ ingest: a case id that is not a safe file name is never written to disk (0.7926ms)
+✔ screen: the shipped trade documents are clean (19.7795ms)
+✔ screen: instructions aimed at an automated reader are flagged, in English and Chinese (3.1068ms)
+✔ screen: hidden text and wallet addresses are flagged; ordinary figures are not (0.3168ms)
+✔ screen: a bundle reports which document was the problem (0.2258ms)
+✔ screen: untrusted text is wrapped as data and cannot close its own wrapper (0.0955ms)
+✔ preferences: validated, replaced as a whole, persisted, and cleared by an empty object (7.7767ms)
+✔ preferences: nonsense is refused with the offending field named (1.1191ms)
+✔ AI-19: deterministic fallback filters by low risk (1.0022ms)
+✔ AI-19: deterministic fallback sorts by high yield (0.1211ms)
+✔ AI-19: deterministic fallback filters by commodity (0.1145ms)
+✔ WP0.2: normalizeRiskLevel maps HIGH to WARNING and rejects unknown values (0.5712ms)
+✔ WP0.2: risk_max keeps WARNING cases when the ceiling is WARNING or CRITICAL (0.6529ms)
+✔ WP0.2: risk_max=CRITICAL keeps every market pool, including the WARNING ones (59.5318ms)
+✔ WP0.2: LLM criteria are validated; unknown keys are dropped and invalid values fall back (1.3312ms)
+✔ writeJsonAtomic writes pretty JSON and readJson returns it (WP0.3) (7.757ms)
+✔ readJson returns the fallback for a missing file but throws on corrupt JSON (1.9127ms)
+✔ writeJsonAtomic retries a transient EPERM rename and then succeeds (14.5539ms)
+✔ writeJsonAtomic removes its temp file when the rename keeps failing (29.0881ms)
+✔ writeJsonAtomic does not retry non-transient errors (1.7308ms)
+✔ createWriteQueue runs tasks in order and survives a failed task (30.6076ms)
+✔ appendJsonl appends records and readJsonl returns them oldest-first with tail and filter (6.7811ms)
+✔ appendJsonl rotates by size and keeps at most keepFiles generations (16.7805ms)
+✔ readJsonl skips a torn final line left by a crash (1.5237ms)
+✔ cleanupOrphanTemps removes only old *.tmp files (4.3871ms)
+✔ AI-12: every canonical judge question gets a grounded, cited answer (21.4267ms)
+✔ AI-12: the "guaranteed?" question keeps the non-principal-protection line (1.791ms)
+✔ AI-12: the pricing question explains the profit-share model with real numbers (1.8067ms)
+✔ AI-12: the risk-rises answer cites the pause action from the real engine (1.7066ms)
+✔ AI-12: routing picks the on-chain and collateral intents correctly (0.1148ms)
+✔ AI-12: a configured LLM rephrases, but a failing LLM falls back to grounded (3.9081ms)
+▶ W2 durable capital ledger
+  ✔ retains intent terms and refuses a second transaction hash on restart (49.5864ms)
+  ✔ records deposits, zero/partial claims and refunds without mixing wallets or protocol instances (80.8605ms)
+  ✔ deduplicates concurrent same-process writers and rejects conflicting evidence (142.2802ms)
+  ✔ recovers a committed cash entry after a crash before writing its position snapshot (32.8626ms)
+  ✔ keeps orphaned chain facts in the audit history while rebuilding canonical positions (54.7336ms)
+  ✔ preserves a torn tail for audit, recovers the committed prefix, and rejects interior corruption (37.886ms)
+  ✔ serializes independent processes and recovers a dead writer lease without double counting (290.8665ms)
+  ✔ preserves a successor lease while the previous writer cleans up its released directory (105.4913ms)
+  ✔ retries transient Windows lease retirement errors while preserving the shared lock and committed entry (68.9709ms)
+  ✔ records disbursement, recovery and fee without creating fictitious investor positions (40.1349ms)
+✔ W2 durable capital ledger (905.2ms)
+✔ retirement: old public configuration and Oracle API cannot be used (47.2696ms)
+✔ retirement: public config accepts controlled testnet only and binds the current title instance (4.8523ms)
+✔ retirement: Live analysis does not read historical financing keys or execute an injected chain adapter (5035.9245ms)
+✔ retirement: stable title identity still prevents case-id aliases (0.5452ms)
+✔ the blocked-port list covers the ports that made fetch fail on this kind of host (0.6543ms)
+✔ listenOnUsablePort gives back a bound port and a working server (33.3377ms)
+✔ a blocked port is released and another one is requested (0.314ms)
+✔ listenOnUsablePort gives up instead of looping forever (0.464ms)
+✔ a listen error is reported, not swallowed (1.7034ms)
+✔ AI-20: all succeed and reach consensus (1.6957ms)
+✔ AI-20: single provider fails but others reach consensus (1.3876ms)
+✔ AI-20: extreme outlier causes disagreement fallback (0.7969ms)
+✔ AI-20: all fail triggers fallback (0.7634ms)
+✔ WP0.2: with no provider configured nothing is called and the fallback is used (0.0965ms)
+✔ WP0.2: the default provider list is only the providers with a real key (1.8672ms)
+✔ WP0.2: no placeholder credentials are injected and a custom endpoint cannot hijack a provider (2.3656ms)
+✔ WP0.2: an unconfigured provider fails by itself, it is not called with a fake key (2.1288ms)
+✔ WP0.2: HIGH from a provider is read as WARNING and the consensus uses the engine vocabulary (1.1648ms)
+▶ every provider resolves the project model, including blank overrides and Azure deployment routing
+  ✔ custom (1.1144ms)
+  ✔ tencent (0.1373ms)
+  ✔ deepseek (0.0703ms)
+  ✔ qwen (0.0646ms)
+  ✔ qwen-alias (0.0745ms)
+  ✔ openai (0.071ms)
+  ✔ azure (0.167ms)
+✔ every provider resolves the project model, including blank overrides and Azure deployment routing (2.6699ms)
+▶ direct agent API calls transmit x-test-2 across every provider (intercepted, zero real calls)
+  ✔ custom (2.5265ms)
+  ✔ tencent (0.2779ms)
+  ✔ deepseek (0.1815ms)
+  ✔ qwen (0.1522ms)
+  ✔ qwen-alias (0.1468ms)
+  ✔ openai (0.1649ms)
+  ✔ azure (0.1431ms)
+✔ direct agent API calls transmit x-test-2 across every provider (intercepted, zero real calls) (4.2914ms)
+▶ browser relay transmits x-test-2 across providers and ignores client model injection
+  ✔ custom (36.6224ms)
+  ✔ tencent (6.4373ms)
+  ✔ deepseek (2.984ms)
+  ✔ qwen (2.6063ms)
+  ✔ qwen-alias (2.6438ms)
+  ✔ openai (2.7082ms)
+  ✔ azure (2.9285ms)
+✔ browser relay transmits x-test-2 across providers and ignores client model injection (57.6264ms)
+✔ Copilot model adapter: an explicit token budget reaches the provider; no budget stays omitted (35.8359ms)
+▶ LLM relay
+  ✔ status reveals the provider and model but never the key (9.3034ms)
+  ✔ relays a completion with the server key; model, token cap and shape are server-controlled (4.948ms)
+  ✔ LLM_MAX_TOKENS_CAP raises the output cap, 0 removes it, and a missing or out-of-range value keeps 2048 (213.5814ms)
+  ✔ LLM_REASONING_EFFORT is forwarded only when it is a known level (70.8143ms)
+  ✔ a non-streamed answer carries finish_reason and usage, so a truncated reply is detectable (37.2583ms)
+  ✔ tool calls and tool results round-trip (48.2864ms)
+  ✔ streams server-sent events through unchanged (14.6581ms)
+  ✔ never relays the hidden thinking of a reasoning model, streamed or not (36.7866ms)
+  ✔ rejects malformed requests before touching the provider (113.7064ms)
+  ✔ oversized request bodies are refused with 413 (17.3718ms)
+[agentbl] d15895aebe7a 503 llm_not_configured: No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)
+  ✔ answers 503 when no provider is configured, and 404 when the relay is disabled (30.879ms)
+[agentbl] LLM upstream custom answered HTTP 401: {"error":{"message":"invalid api key sk-LEAKED-UPSTREAM-DETAIL"}}
+[agentbl] a37932c3de72 502 llm_upstream_error: LLM provider returned HTTP 401
+[agentbl] LLM upstream custom answered HTTP 429: {"error":"slow down"}
+[agentbl] 01488f9e8bba 502 llm_upstream_error: The LLM provider returned no message
+[agentbl] LLM upstream custom unreachable: fetch failed
+[agentbl] 16222c293e19 502 llm_upstream_unreachable: The LLM provider could not be reached
+  ✔ upstream failures are mapped without leaking provider details (66.811ms)
+  ✔ caps concurrent upstream calls (288.7201ms)
+  ✔ aborts the upstream request when the browser disconnects mid-stream (36.5097ms)
+✔ LLM relay (994.7489ms)
+✔ normalizeChatRequest clamps and normalises (0.2224ms)
+✔ normalizeChatRequest honours a raised cap and never exceeds it (0.1051ms)
+✔ maxTokensCap and reasoningEffort read their settings strictly (0.0844ms)
+✔ the agent client forwards LLM_REASONING_EFFORT too (5.3785ms)
+▶ BE-11: Market API Tests
+  ✔ GET /api/market/listings returns active pools (48.5435ms)
+  ✔ POST /api/market/search returns AI recommendations (4.8659ms)
+✔ BE-11: Market API Tests (70.0679ms)
+▶ MCP Tool Manifest
+  ✔ has exactly 14 tools (0.4447ms)
+  ✔ all tools have required fields (0.1162ms)
+  ✔ all manifest tools have handlers (0.074ms)
+✔ MCP Tool Manifest (1.3807ms)
+▶ MCP Tool Handlers
+  ✔ get_trade_case — loads demo case (5.848ms)
+  ✔ get_trade_case — throws on missing case_id (0.4095ms)
+  ✔ get_trade_case — throws on unknown case (3.0225ms)
+  ✔ generate_pricing_quote — prices demo case (12.0588ms)
+  ✔ search_knowledge_base — finds results (0.7243ms)
+  ✔ search_knowledge_base — respects limit (0.2327ms)
+  ✔ simulate_offering — runs full lifecycle (1.4057ms)
+✔ MCP Tool Handlers (24.0582ms)
+▶ MCP callTool Dispatcher
+  ✔ dispatches known tool (0.9348ms)
+  ✔ throws on unknown tool (0.1491ms)
+✔ MCP callTool Dispatcher (1.1644ms)
+▶ MCP Tool Chain
+  ✔ pricing chain runs end-to-end (2.2107ms)
+✔ MCP Tool Chain (2.3287ms)
+✔ MCP tools manifest has exactly 14 tools (0.682ms)
+✔ manifest contains all expected tool names (0.147ms)
+✔ each tool in manifest has required fields (0.1049ms)
+✔ each tool in manifest has a registered handler (0.0769ms)
+✔ manifest parameter schemas declare every required field, and status accepts an empty object (0.61ms)
+✔ get_trade_case: returns valid trade case for demo ID (5.6778ms)
+✔ get_trade_case: returns low-risk scenario (2.4965ms)
+✔ get_trade_case: returns critical-liquidation scenario (1.4932ms)
+✔ get_trade_case: throws for unknown case ID (2.8854ms)
+✔ get_trade_case: throws when case_id is missing (0.1884ms)
+✔ generate_pricing_quote: returns full PricingQuote for demo case (14.2977ms)
+✔ generate_pricing_quote: works with inline trade_case (2.9339ms)
+✔ generate_pricing_quote: throws when no case_id or trade_case provided (0.1949ms)
+✔ simulate_offering: returns workflow result (1.694ms)
+✔ simulate_offering: final_state matches workflow expectation (3.3087ms)
+✔ simulate_offering: has all workflow step states (0.8885ms)
+✔ simulate_offering: offers inline trade_case (0.8939ms)
+✔ search_knowledge_base MCP tool returns formatted results (1.0236ms)
+✔ search_knowledge_base MCP tool requires query (0.1062ms)
+✔ search_knowledge_base MCP tool rejects empty query (0.0928ms)
+✔ callTool throws for unknown tool name (0.0612ms)
+✔ callTool error message includes available tools (0.0534ms)
+✔ full MCP tool chain executes end-to-end (2.3106ms)
+✔ runToolChain executes a 3-step pricing chain (1.9771ms)
+✔ MCP pricing uses current final terms for every scenario without mock fallback (12.7665ms)
+✔ MCP/WP6: official SDK stdio lifecycle executes 14 tools + reads 5 resources against the shared backend (1221.6842ms)
+✔ MCP-10: dry-run is safe without approval (1.5729ms)
+✔ MCP-10: real write requires explicit human approval (0.9337ms)
+✔ MCP-10: wrong network, excessive amount and unknown contract are rejected (0.6699ms)
+✔ MCP-10: approved, pinned and allowlisted write passes (0.6029ms)
+✔ MCP-10: model-controlled approval cannot replace the out-of-band channel (0.695ms)
+✔ MCP-10: raw EVM smoke rejects every non-allowlisted selector (0.5271ms)
+✔ MBOX-BE-5/X402-1/2/AI-1: preview → 402 → paid reveal → public proof is verifiable (249.1763ms)
+✔ MBOX-BE-5: demo preview refreshes stale deterministic quotes before filtering (22.0293ms)
+✔ MBOX-BE-6: a candidate invalidated before payment aborts without collecting or replacing (57.7769ms)
+✔ MBOX-BE-3: same committed inputs always select the same pool (14.6754ms)
+✔ MBOX-BE-3: candidate, weight, nonce, payment and quote tampering fail verification (4.8664ms)
+✔ MBOX-BE-3: 10,000 deterministic seeds exercise rejection sampling without material bias (507.3714ms)
+(node:45068) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ MBOX-FE: quoted document evidence retains exact source text and marks only the original fields (1.3241ms)
+✔ MBOX-FE-5: browser verifier reproduces the backend reveal selection (45.9813ms)
+✔ MBOX-FE-5: proof and binding tampering fails closed (18.1596ms)
+✔ MBOX-FE-6: independent subscription guard requires amount, acknowledgement and selected pool binding (0.1504ms)
+✔ MBOX-FE-7: Passport share card uses a strict public whitelist (5.7545ms)
+✔ MBOX-FE-7: public transaction disclosure requires both advanced confirmations (0.1941ms)
+✔ MBOX-FE-1~6: signing order, subscription binding and reveal motion are kept (the DOM contract is in webDom.test.js) (3.7969ms)
+✔ MBOX-MCP-1: preview enforces budget and never authorizes payment (64.7612ms)
+✔ MBOX-MCP-1: verifier recomputes proof and fails closed on report binding tamper (10.599ms)
+✔ MBOX-BE-7/FE-7: verified reveal issues a signed, sanitized Discovery credential (65.1245ms)
+✔ MBOX-BE-7: mystery source is bound into portfolio without changing quote-derived price or yield (20.8649ms)
+✔ MBOX-FE-7: Investor Journey stamp requires a mystery-attributed subscription (15.5886ms)
+✔ MBOX-BE-2: the three Risk Passport tiers apply deterministic ceilings (3.8807ms)
+✔ MBOX-BE-2: compliance, lifecycle, capacity and freshness fail closed (0.6598ms)
+✔ MBOX-BE-2: cargo, route and jurisdiction exclusions are enforced (0.9408ms)
+✔ MBOX-BE-2: filtering returns an explicit zero-candidate result (0.5824ms)
+✔ MBOX-BE-4: preview persists commitment, restores after restart and hides secret/candidates (16.4636ms)
+✔ MBOX-BE-4: idempotency is scoped to wallet and payment receipts cannot be replayed (10.8675ms)
+✔ MBOX-BE-4: concurrent payment attempts yield one reveal and one fail-closed result (6.4759ms)
+✔ MBOX-BE-4/6: expiry and post-payment invalidation are terminal and auditable (8.0178ms)
+(node:35960) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ WP0.1: no source builds a hex hash out of Math.random() (7.4431ms)
+✔ WP0.1: randomBytes(32) is only used for secrets, commitment salts and signature challenges (1.259ms)
+✔ WP0.1: no source claims behaviour that does not exist (5.1808ms)
+✔ WP0.1: the browser never builds an explorer link by itself (0.4898ms)
+✔ WP0.1: the Demo wallet x402 flow no longer shows a link or a "your wallet" claim (0.3104ms)
+✔ WP0.1: a simulated mint has no hash-shaped placeholder (0.1035ms)
+✔ WP0.1: a Demo subscription gets a demo: reference and no transaction hash (0.6012ms)
+✔ WP0.1: /api/x402/smoke labels every step as a Demo simulation (51.3402ms)
+✔ WP0.1: with no activity the assistant says so instead of inventing decisions (0.7445ms)
+✔ WP0.1: the assistant only shows a transaction when the server recorded one (0.3095ms)
+✔ WP0.1: the assistant portfolio comes from the server and labels subscriptions as Demo (0.392ms)
+✔ BE-4: a healthy offering runs Created -> ... -> Redeemed (7.6716ms)
+✔ BE-4: an in-transit risk shock reprices the pool down (1.406ms)
+✔ BE-4: a critical case never opens — it pauses (0.7537ms)
+✔ BE-4: subscription never mints more than the recommended supply (0.682ms)
+✔ AI-13: orchestrator runs parse/check/value/three-speed-price/decision as one pipeline (33.9866ms)
+✔ AI-13: the same eBL produces exactly the same deterministic opening decision (3.0526ms)
+✔ AI-13: a critical document mismatch pauses instead of auto-opening (1.5595ms)
+✔ AI-13: optional execution and decision logging use the same decision_id (2.4928ms)
+✔ X402-7: schema manifest contains every required envelope field (0.7878ms)
+✔ X402-7: creates a valid immutable-delivery envelope with deterministic IDs (2.2128ms)
+✔ MBOX-X402-2: Mystery envelope canonically binds payment, case, pool, passport and reveal proof (0.518ms)
+✔ X402-7: report hash is stable under object key reordering (0.2598ms)
+✔ X402-7: payload tampering invalidates the canonical report hash (0.5155ms)
+✔ X402-7: malformed identities, amount, network and expiry are rejected (0.8647ms)
+✔ X402-7: creator strips chain-of-thought, private keys and raw documents (0.5778ms)
+✔ X402-7: manually supplied sensitive fields fail validation even with a recomputed hash (0.3023ms)
+✔ X402-7: demo receipt identifiers are explicit while fake transaction hashes are rejected (0.3288ms)
+✔ X402-7: expiry is deterministic at and after the TTL boundary (0.2824ms)
+✔ X402-7: envelope creation does not mutate the caller snapshot (0.291ms)
+✔ Phase 4: full playback parses actual files and preserves separate payment and settlement approval (370.7697ms)
+✔ Phase 4: repeated playback has no duplicate event, job, subscription or execution (309.8235ms)
+✔ Phase 4: two starts and manual steps cannot race a paced run; stop drains and preserves progress (32.1455ms)
+✔ Phase 4: playback rejects invalid speed/name, Live and non-auto autonomy (2.9786ms)
+✔ Phase 4: speed only changes pacing; virtual event times, decisions and quote commitments stay deterministic (257.6589ms)
+✔ Phase 4: a mode generation change cancels playback before another step or subscription (3.6677ms)
+✔ Phase 4: references distinguish report payment from decision execution; Demo never inherits a transaction (0.7062ms)
+✔ Phase 4 HTTP: historical quote stays saved while latest market, timeline and portfolio share references (144.9205ms)
+✔ Phase 4 HTTP: playback is asynchronous, admin-protected when configured, and rejects Live (237.8735ms)
+✔ Phase 4: actual provider usage reaches valuation metadata without changing or leaking into chat messages (2.0481ms)
+✔ Phase 4: mode switching during event initialization rejects the old scenario before bus submission (2.2554ms)
+▶ BE-12: Pool API Tests
+  ✔ POST /api/pool/subscribe works for valid amount (25.4648ms)
+  ✔ GET /api/pool/status returns correct subscription state (1.4243ms)
+  ✔ POST /api/pool/subscribe rejects over-subscription (1.5564ms)
+  ✔ POST /api/pool/subscribe rejects missing, non-numeric and non-finite amounts without corrupting the pool (4.9491ms)
+  ✔ POST /api/pool/subscribe validates the request envelope (2.3563ms)
+  ✔ POST /api/pool/subscribe refuses wallet strings that could carry markup (4.4104ms)
+  ✔ GET /api/pool/status answers 404 for an unknown pool (0.8554ms)
+✔ BE-12: Pool API Tests (109.3206ms)
+✔ AI-2: base issue price is set by payout speed (FAST cheapest, LOW_COST dearest) (12.0616ms)
+✔ AI-3: the more urgent the payout, the lower the price and the bigger the urgency discount (0.6125ms)
+✔ profit-grounded: FAST costs ~60% of margin, LOW_COST ~30% (the reasonable ratio) (0.3611ms)
+✔ higher trade risk lowers the price (investors paid more to take it) (0.4164ms)
+✔ AI-5: redemption exposure never exceeds safe collateral coverage (0.7864ms)
+✔ AI-1: every produced quote passes the PricingQuote schema validator (5.6522ms)
+✔ AI-6: quotes carry investor and exporter explanations (0.292ms)
+✔ quoteFromCase derives the copper headline deterministically (0.4409ms)
+✔ the annual-rate cap prices short tenors: no more 100% upside on a 3-day voyage (0.6134ms)
+✔ tenorFromCase reads payment terms and voyage dates (0.469ms)
+✔ compareSpeeds returns all three speeds plus a recommendation (1.2003ms)
+✔ scoreRisk reads macro + shipment events into bps and a level (0.1226ms)
+✔ BASE_PROFIT_SHARE encodes the reasonable ratio per speed (0.0496ms)
+✔ AI-7: every quote carries an evidence graph mapping discounts to evidence (0.4354ms)
+✔ BE-8: quote_hash and evidence_hash are distinct, stable 0x sha256 hashes (1.2246ms)
+✔ AI-4/AI-8: document inconsistency raises the risk discount and lowers the price (0.9478ms)
+✔ BE-10: the grounded narrative cites price, yield, risk and the not-guaranteed nuance (0.8487ms)
+✔ BE-10: narratePricing without an LLM returns the deterministic narrative (0.2358ms)
+✔ BE-10: disabling the project LLM switch prevents narrator requests (0.1179ms)
+✔ BE-10: a failing LLM falls back to the grounded narrative (0.4075ms)
+✔ BE-10: a working LLM rephrase is used and reports the Tencent provider (0.1808ms)
+✔ AI-4/AI-10: all bundled pricing scenarios pass and cover the demo arc (0.6381ms)
+✔ AI-4: fast vs balanced open cleanly with the urgency-monotone price (0.1224ms)
+✔ AI-10: an in-transit risk shock reprices the pool but it still settles (0.0639ms)
+✔ AI-10: a critical war-crisis case is paused, never opened (0.0618ms)
+✔ AI-4/AI-10: the scenario set covers both an opening and a pausing action (0.072ms)
+✔ BE-2: a well-formed PricingQuote passes (with and without case cross-check) (1.161ms)
+✔ BE-2: a non-object is rejected (0.3269ms)
+✔ BE-2: missing / non-finite numeric fields are rejected (0.297ms)
+✔ BE-2: out-of-set enums are rejected (0.2629ms)
+✔ BE-2 invariant (AI-5): redemption exposure must not exceed safe collateral coverage (0.1853ms)
+✔ BE-2 invariant: base - urgency - risk must reconstruct the indicative price (0.1255ms)
+✔ BE-2 invariant: the collateral floor can only lift the price (final >= indicative) (0.1201ms)
+✔ BE-2 invariant: cash advanced cannot exceed cash requested (0.1012ms)
+✔ BE-2: evidence graph and 0x sha256 oracle hashes are required (BE-8) (0.204ms)
+✔ BE-2: case_id / bl_id are cross-checked against the case (0.1341ms)
+✔ BE-6: merged workflow carries pricing_quote + risk_report + offering that agree (13.2371ms)
+✔ BE-6: a war-crisis case merges to a paused offering (2.0333ms)
+✔ BE-6: risk_report surfaces document-consistency findings and risk factors (1.102ms)
+✔ BE-6: an in-transit risk shock is reflected in the merged final_state (1.7227ms)
+✔ knowledge base has correct number of categories (1.3353ms)
+✔ knowledge base has at least 3 entries per category (0.4892ms)
+✔ validateKnowledgeBase returns zero errors (0.4367ms)
+✔ every entry has all required fields (0.1632ms)
+✔ every entry has a valid category (0.0982ms)
+✔ every entry has a valid severity (0.0829ms)
+✔ every entry has at least 3 keywords (0.0741ms)
+✔ every entry has a valid ISO date string (0.1164ms)
+✔ no duplicate IDs in knowledge base (0.1089ms)
+✔ all IDs follow the XXX-NNN pattern (0.1974ms)
+✔ search returns entries matching exact keywords (0.9314ms)
+✔ search returns relevant results for "copper" (0.2905ms)
+✔ search for "monsoon" returns weather-related results (0.2109ms)
+✔ search returns empty array for completely unrelated query (0.1937ms)
+✔ search returns empty array for empty query string (0.05ms)
+✔ search is case-insensitive (0.3468ms)
+✔ search respects category filter (0.139ms)
+✔ search respects limit parameter (0.1788ms)
+✔ search with limit=1 returns at most 1 result (0.225ms)
+✔ search ranks critical entries above info entries when scores are tied (0.5723ms)
+✔ search returns entries with _score and _matchedTokens (0.2318ms)
+✔ searchByRoute finds route-relevant results (0.2427ms)
+✔ searchByCommodity finds commodity-relevant results (0.1989ms)
+✔ fullRiskSweep returns results for all 6 risk dimensions (1.5711ms)
+✔ Judge Q&A has exactly 4 pairs (0.0873ms)
+✔ each Judge Q&A pair has required fields (0.1346ms)
+✔ getAllQAPairs returns all 4 pairs (0.1399ms)
+✔ getQAById returns correct pair (0.0943ms)
+✔ getQAById returns null for unknown ID (0.0342ms)
+✔ searchQA finds relevant Q&A by keywords (0.2412ms)
+✔ searchQA returns empty for unrelated query (0.0522ms)
+✔ searchQA respects limit parameter (0.0513ms)
+▶ per-IP rate limiting
+  ✔ API requests beyond the per-minute budget get 429 with Retry-After; health and static are exempt (81.6327ms)
+  ✔ writes have a tighter budget than reads (111.5444ms)
+[agentbl] 44add34be93d 503 llm_not_configured: No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)
+[agentbl] 02adee3f6277 503 llm_not_configured: No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)
+  ✔ the LLM relay is throttled separately (and counted even when it answers an error) (12.315ms)
+  ✔ X-Forwarded-For is ignored unless TRUST_PROXY is set (cannot be used to dodge the limit) (115.5744ms)
+✔ per-IP rate limiting (343.9529ms)
+✔ demo dates: every ISO date moves by the same number of days, other text does not (2.0132ms)
+✔ demo dates: today is pinned by AGENTBL_DEMO_TODAY, is the anchor under tests, else the clock (0.2732ms)
+✔ demo dates: a curated case keeps voyage, cover and tenor on any day; fixed facts keep their day (5.5508ms)
+✔ demo dates: documents move with their case (1.2021ms)
+✔ real data: on by default, off under tests unless asked, off when switched off (0.2103ms)
+✔ real data: the cache shares one request, keeps values for their window and serves the last good one on failure (0.6549ms)
+✔ real data: HTTP errors and non-JSON bodies are errors (0.5744ms)
+✔ sources: PortWatch transits become a 7-day average against the same week a year earlier (6.9335ms)
+✔ sources: Google News RSS items keep title, outlet, time and link (0.7086ms)
+✔ sources: Polymarket keeps open YES/NO markets with their YES price (0.3905ms)
+✔ sources: sea state is the highest forecast wave; futures quotes carry the month move (0.5976ms)
+✔ mapping: transits, waves, odds and price moves map to severities at fixed thresholds (0.1526ms)
+✔ mapping: the disruption market is the first to resolve after the cargo needs the route (0.2882ms)
+✔ mapping: marking to market moves only the market block, in the cargo's own unit (0.2321ms)
+✔ snapshot: real values with their own dates, used whenever live data is off (1.6405ms)
+✔ live: a working source is labelled live; a failing one falls back to the labelled snapshot (1.8374ms)
+✔ curated cases: the Hormuz-transit cargo pauses on the snapshot; the adjacent one only warns; a clean route stays clean (18.2891ms)
+✔ curated cases: invoice totals equal quantity x unit price and every margin funds its financing (12.0983ms)
+✔ world risk: public sources replace fixtures; headlines are capped and never double a measured risk (7.7431ms)
+✔ F01: final rounded terms reject the independently reproduced loss, zero profit and negative profit (13.0266ms)
+✔ F01: every openable rounded quote satisfies profit, annual rate, cash and collateral invariants (30.7683ms)
+✔ F02: pricing is orthogonal to every active lifecycle, including full funding and in-transit (0.4572ms)
+✔ F04: partial recovery and missing debt terms cannot discharge an offering (0.3938ms)
+✔ F05: workspace ownership isolates uploads and cross-case identical documents are rejected (3.9322ms)
+✔ F09: full funding, transit and unknown states are closed through the shared eligibility rule (0.2584ms)
+✔ subscription precision: integer shares conserve six-decimal amounts and leave the unspent budget explicit (7.9558ms)
+✔ F10: null sea heights stay missing and filtering retains the correct observation date (1.6757ms)
+✔ F10: missing prices are rejected; null closes are omitted; old observations stay stale after a successful fetch (2.8909ms)
+✔ F11: a newer same-source observation can downgrade or resolve risk; empty/stale feeds cannot (0.344ms)
+✔ W3 uses stable issuer/original identity and salted commitments; public projection rejects arbitrary data (4.2911ms)
+✔ W3 wallet-bound sessions reject wrong signer/replay/expiry and survive restart with immediate revocation (198.2611ms)
+✔ W3 vault fails closed without separate key, wrong key or tampered ciphertext; no material/token/wallet plaintext persists (96.4469ms)
+✔ W3 enforces same-object authorization over HTTP/download/SSE/MCP/A2A and keeps public projection independent (613.5828ms)
+✔ W3 concurrent process-scoped writers do not overwrite subjects or permit two independent sessions from one challenge (340.0079ms)
+✔ W3 HTTP admin bootstrap, RPC adapters, private download and session-revoked SSE share the same checks (413.8721ms)
+✔ W3 expired sessions and retention cannot read private materials after policy expiry (125.3448ms)
+✔ W3 missing initialized vault refuses reinitialization and status reports unavailable chain controls (78.6292ms)
+✔ risk engine returns a structured report for the demo case (4.6866ms)
+✔ risk engine becomes more conservative when price drops further (0.9458ms)
+✔ AI-11: corpus loads from the risk-intel feed (0.8088ms)
+✔ AI-11: copper case retrieves the Hormuz war + copper volatility intel (0.6755ms)
+✔ AI-11: retrieval eval keeps precision@k high (>= 0.8 mean) (0.4327ms)
+✔ AI-11: free-text query surfaces policy notes for the Q&A assistant (0.7903ms)
+✔ AI-11: a custom corpus can be supplied (no hidden global state) (0.1597ms)
+✔ case retrieval only cites intel that shares the commodity, a region or a global risk type (5.6303ms)
+✔ scenario harness validates expected contract actions across core cases (5.277ms)
+✔ scenario harness exposes concise summaries for downstream agents and UI (2.2564ms)
+✔ smoke: mock API supports the main demo flow (58.6905ms)
+✔ smoke: invalid case payload is rejected as a client error (11.5644ms)
+✔ BE-3/BE-4: pricing quote and offering simulate endpoints work end to end (74.3097ms)
+✔ BE-3: an invalid payout_speed is rejected as a client error (5.4467ms)
+OpenTelemetry API not installed: spans are no-ops
+✔ tracing helpers work whether or not @opentelemetry/api is installed (3.5291ms)
+✔ LLM and chain metrics are recorded as span attributes (0.2202ms)
+✔ span attributes are sanitised: secrets redacted, long strings truncated, PII hashed (0.752ms)
+✔ computeCargoValuation takes the conservative minimum and applies the haircut (0.7556ms)
+✔ suggestHaircut sums war + volatility macro risk into 5% for the copper case (0.1292ms)
+✔ runValuationAgent (deterministic) returns market valuation + historical comparables (4.6948ms)
+✔ resolveProvider selects by env key and returns null when none set (0.6213ms)
+✔ resolveProvider wires Tencent to the shared project model and wins on tie (0.17ms)
+✔ AI-9: a configured LLM that errors falls back to the deterministic valuation (0.6759ms)
+✔ AI-9: a working injected LLM drives the tool loop and reports its provider (0.3919ms)
+✔ public/vendor matches its manifest (hashes, versions, no unlisted files) (7.7428ms)
+✔ the vendored ethers build is the version the backend pins (29.9381ms)
+✔ the cosmjs bundle exports exactly what web3.js uses and imports no Node built-ins (4.839ms)
+✔ no frontend source loads code from a third-party origin (37.3939ms)
+✔ the browser code never reads an API key from the page or talks to an LLM provider directly (32.1244ms)
+(node:16808) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+﹣ W2 real EVM + HTTP + wallet lifecycle (0.4389ms) # SKIP
+▶ position view
+  ✔ merges demo and live positions (0.788ms)
+  ✔ falls back to ledger shares when no chain balance is supplied (0.1339ms)
+  ✔ prefers chain balance when supplied (0.1382ms)
+✔ position view (2.0019ms)
+▶ confirmed position boundaries
+  ✔ exposes only the requested wallet and uses exact atomic claim amounts (0.163ms)
+  ✔ does not invent paid cost or claimable proceeds for unknown chain balances (0.1328ms)
+  ✔ does not infer current claimable money from a stale ledger snapshot or a balance mismatch (0.1453ms)
+✔ confirmed position boundaries (0.563ms)
+(node:21624) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ W2 wallet saves the funding intent before approval, then simulates with allowance and verifies escrow (12.6423ms)
+✔ W2 wallet refuses version, asset and decimal changes before a subscription signature (15.8855ms)
+✔ W2 wallet rechecks the session after approval and never broadcasts a failed preflight (10.184ms)
+✔ W2 wallet keeps missing escrow and insufficient canonical confirmations unresolved after one broadcast (11.2805ms)
+﹣ W3 actual EVM + business-session HTTP + wallet plans (0.4561ms) # SKIP
+✔ W4 browser saves the exact authorization before sending; lost response/reload never asks for another payment signature (59.915ms)
+✔ W4 browser storage corruption/quota prevents sending a signed payment without a recovery checkpoint (6.4529ms)
+﹣ W4 actual ERC-3009 EVM + HTTP: exact receipt, wrong terms, failed delivery, expiry, restart, reorg and unknown recovery (0.6222ms) # SKIP
+﹣ W4 actual anchor contract binds encrypted runtime evidence; version registration, local inclusion and reorg are independent (0.1032ms) # SKIP
+✔ W4 evidence canonical encoding rejects lossy values and domain confusion; private salts stay out of projection (6.5099ms)
+✔ W4 every evidence kind has typed amounts, explicit nullable execution, UTC/version/ref boundaries (7.4866ms)
+✔ W4 full private evidence preserves documents above the short-label limit and rejects oversized material (220.7476ms)
+✔ W4 authorization, encrypted restart, new-process verification, missing dependency and initialized-vault loss fail explicitly (829.6131ms)
+✔ W4 manual handover binds material revision and runtime version, excludes self-review and retains rejection (300.8049ms)
+✔ W4 fake facilitator success, missing verifier and canonical receipt failure never unlock (4.4909ms)
+✔ W4 nonce identity survives signature changes, rejects changed value/request and concurrent cross-resource replay (0.9491ms)
+✔ W4 unknown settlement, expired authorization and restart recover read-only without another charge (159.6402ms)
+✔ W4 independently confirmed payment losing its receipt blocks repeat delivery and keeps prior proof (0.7863ms)
+✔ W4 facilitator verify retries reads; settle never repeats an unknown broadcast (0.4581ms)
+✔ W4 two independent processes cannot settle the same authorization twice (591.9874ms)
+✔ W4 CLI restart reuses the encrypted signed request; wrong keys and missing initialized history stop new payments (54.9414ms)
+✔ W4 market rejects missing/stale/conflicting/closed/extreme/unit/grade/region data without a false clear (1.3994ms)
+✔ W4 official-list adapter handles quoted fields and rejects truncated/schema-invalid sources; no-match never clears eligibility (1.7686ms)
+✔ W4 ACT/365 uses actual remaining time, exact atomic amounts and explicit fee-adjusted yield (1.2138ms)
+✔ W4 pricing commits complete source inputs and policy/calibration versions with stable key order (17.9599ms)
+✔ W4 frozen corpus isolates labels, records actual failures/unsupported evidence/version drift, and refuses changed manifest (23.0458ms)
+✔ W5 explicit controlled financing can select Live independently of paid-report configuration (1.06ms)
+✔ W5 deployment recovers a missing CLI journal from the durable signed-hash ledger and never accepts conflicting checkpoints (0.7249ms)
+✔ W5 runtime lease prevents a second OS writer, survives SIGKILL and refuses unknown remote owners (331.9655ms)
+✔ W5 readiness separates storage, RPC/reorg uncertainty, queues and startup; alerts arrive, deduplicate and recover (77.8777ms)
+✔ W5 low disk and failed atomic rename are observable without modifying existing runtime data (8.9534ms)
+[agentbl] 2d0d33c6e3c6 503 operations_not_ready: New intake is paused. Preserve existing records and reconcile operational health.
+✔ W5 operations HTTP keeps liveness separate, authenticates diagnostics and blocks new intake while keeping claims reachable (75.9996ms)
+✔ W5 initialized private history detects missing stores and wrong keys; a configured monitor verifies without a signer (24.2192ms)
+✔ W5 encrypted stopped-service backup restores ledger, business session and evidence in a new OS process with source offline (607.2882ms)
+✔ W5 restore authenticates every byte before writing, rejects traversal, collisions, wrong keys and interrupted restores (5.4199ms)
+✔ W5 a degraded operation blocks new x402 settlement but permits original paid-authorization recovery (2.1723ms)
+(node:4260) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ WEB3-20: event reads stay within the Injective eth_getLogs block limit (1.5425ms)
+✔ WEB3-18: detects MetaMask, Keplr and Leap independently (0.2998ms)
+✔ WEB3-18: keplr connects through the native injective-888 signer (0.6108ms)
+✔ WEB3-18: leap connects through the native injective-888 signer (0.1406ms)
+✔ WEB3-19: browser resolver switches network-specific contract ABI without flattening registry (0.3836ms)
+✔ WEB3-18: MetaMask network switching (wallet_switchEthereumChain) (0.4325ms)
+✔ WEB3-18: MetaMask signing rejection (ACTION_REJECTED) (0.3099ms)
+✔ WEB3-18: MetaMask permission revocation (wallet_revokePermissions) (0.2924ms)
+✔ WEB3-18: restoreWalletSession for MetaMask using eth_accounts (0.3227ms)
+✔ WEB3-18: restoreWalletSession for Keplr restores native signer (0.1665ms)
+✔ the Vite build is CSP-clean and self-contained (593.982ms)
+(node:30796) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ every navigation tab owns a named panel and exactly one is selected (25.8928ms)
+✔ every dialog has an accessible name that exists in the document (4.5524ms)
+✔ the Demo / Live boundary is always visible with its controls (2.587ms)
+✔ the Agent console announces decision changes in a polite live region (1.0139ms)
+✔ server data is rendered as text, never as markup (1.4772ms)
+✔ MBOX-FE-1~6: the Mystery Voyage flow keeps its tiers, five steps, reveal, verifier and guarded subscribe (3.1104ms)
+✔ the English UI has no leftover Chinese on any page (5.7485ms)
+✔ XAPI: offline fallback (no key) yields valid macro_risk_events (9.0852ms)
+✔ XAPI: derived events raise the cargo risk score fed to the pricing engine (1.4499ms)
+✔ XAPI: an injected live executor produces live signals and the right risk types (8.7323ms)
+✔ XAPI: an auth failure falls back to fixtures without throwing (1.1651ms)
+✔ XAPI: re-pricing with world risk lowers the issue price or escalates the action (9.2517ms)
+✔ XAPI: scoreWorldSignals maps a prediction-market probability to severity (0.3596ms)
+▶ x402 Config
+  ✔ exports network identifiers (1.4006ms)
+  ✔ has at least 2 services (0.1761ms)
+✔ x402 Config (2.4608ms)
+▶ x402 Server
+  ✔ buildPaymentRequiredResponse returns valid 402 body (0.6765ms)
+  ✔ createX402Route returns handler function (0.2361ms)
+✔ x402 Server (1.0116ms)
+▶ x402 Client
+  ✔ createPaidFetch returns fetch-compatible function (1.8049ms)
+  ✔ fetchPaidIntel detects free endpoints (130.3956ms)
+  ✔ a purchased report is re-readable via GET /api/x402/report/:id within TTL (60.5581ms)
+✔ x402 Client (193.1363ms)
+▶ x402 Settlement
+  ✔ generatePaymentReceipt returns txHash + receipt (0.543ms)
+  ✔ buildPaymentEvidence returns structured evidence (0.1525ms)
+  ✔ recordPaymentEvidence returns full payment record (0.2069ms)
+✔ x402 Settlement (1.0333ms)
+▶ x402 Endpoints (integration)
+  ✔ GET /api/x402/config returns services (8.5038ms)
+  ✔ GET /api/x402/intel/premium-risk returns 402 without payment (3.7061ms)
+  ✔ POST /api/x402/smoke returns full flow (8.979ms)
+✔ x402 Endpoints (integration) (21.4238ms)
+✔ the EIP-712 type list matches the official client field for field (1.1784ms)
+✔ typed data and authorization window match the official construction (41.608ms)
+✔ a browser-signed authorization is a valid EIP-3009 signature by the paying wallet (17.9903ms)
+✔ the PAYMENT-SIGNATURE header decodes with the official decoder to the same payload (11.9232ms)
+✔ pickRequirement refuses anything unexpected before a signature is requested (0.6494ms)
+✔ decodeAbiString / readTokenName read the on-chain token name (10.4903ms)
+✔ payV2WithWallet signs only after validating the challenge, and never signs a wrong price (8.2386ms)
+✔ payV2WithWallet passes through a free / pre-payment rejection untouched (8.3205ms)
+✔ X402-5: a 402 challenge is signed by a demo signer and the retry unlocks the report (174.3739ms)
+✔ X402-5: the signer private key is used locally and never sent to the server (9.3386ms)
+✔ X402-5: a non-402 response passes through untouched without payment (0.8933ms)
+✔ X402-5: a price above the budget is refused before any signature (0.7737ms)
+✔ X402-5: a payment on an unexpected network is refused (0.3556ms)
+✔ X402-5: a cancelled wallet signature is reported as recoverable (0.3893ms)
+✔ X402-5: a transport failure surfaces a recoverable network error (0.1509ms)
+✔ X402-5: a hung request aborts with a recoverable timeout (51.1785ms)
+✔ X402-5: an underfunded signer is refused before signing (0.7098ms)
+✔ X402-5: a funded signer passes the balance guard and settles (0.4475ms)
+✔ X402-5: live mode without a signer refuses to invent one (0.2973ms)
+✔ X402-5: a server settlement failure is classified with a recoverable hint (7.1084ms)
+✔ X402-5: classifyPaidFailure maps known settlement errors to recoverable codes (0.1394ms)
+✔ X402-3: demo mode has safe deterministic testnet defaults and four priced endpoints (1.8864ms)
+✔ X402-3: live mode fails fast when payTo or facilitator URL is missing (0.4833ms)
+✔ X402-3: unsupported CAIP-2 identifiers are rejected (0.223ms)
+✔ X402-3: malformed, non-canonical, and wrongly-scaled USDC configuration is rejected (0.2665ms)
+✔ X402-3: prices must be positive integer atomic units with no precision ambiguity (0.5105ms)
+✔ X402-3: live mainnet always requires HTTPS (0.2394ms)
+✔ X402-3: insecure HTTP is limited to an explicit testnet opt-in (0.276ms)
+✔ X402-3: demo mode skips facilitator network I/O (0.3343ms)
+✔ X402-3: live startup accepts exact/V2 testnet USDC EIP-3009 support (23.3116ms)
+✔ X402-3: live startup fails closed on wrong network, asset, or transfer metadata (1.3718ms)
+✔ X402-8/MBOX-X402-1: catalog exposes four distinct paid business reports (7.6439ms)
+✔ X402-8: premium risk report reuses world-risk repricing (19.08ms)
+✔ X402-8: premium valuation report reuses valuation tools and comparables (1.3912ms)
+✔ X402-8: fraud review reuses consistency checker, pricing and scenario runner (1.4852ms)
+✔ WP6: a v2 financing case delivers fraud review without legacy LTV fields or an invented contract action (4.7345ms)
+✔ X402-8/MBOX-X402-1: all four business endpoints return HTTP 402 before payment (44.4217ms)
+✔ X402-8: premium-risk unlocks after a signed demo payment (106.6918ms)
+✔ X402-8: premium-valuation unlocks after a signed demo payment (33.166ms)
+✔ X402-8: fraud-review unlocks after a signed demo payment (35.3025ms)
+✔ X402-13/14: client rejects a challenge above its budget before signing (1.1791ms)
+✔ X402-14: client refuses a challenge on an unapproved network (0.4744ms)
+✔ X402-14: wallet cancellation is a recoverable typed error (0.4051ms)
+[agentbl] 26ce37f07dbe 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: X402_PAY_TO is required in live mode
+✔ X402-14: live client fails safely when no signer is configured (4.1578ms)
+✔ X402-14: network timeout becomes a recoverable typed error (10.6673ms)
+✔ DEMO-1: mode endpoint defaults to explicit demo and supports deterministic reset (42.9992ms)
+✔ DEMO-1: live toggle fails explicitly when live infrastructure is absent (4.8074ms)
+✔ usdcToAtomic rounds instead of truncating (0.7522ms)
+✔ resolveSignerKey prefers the dedicated key and only falls back (loudly, once) to the owner key (1.1334ms)
+✔ recordPaymentEvidence: Demo mode returns a clearly simulated receipt (2.06ms)
+✔ recordPaymentEvidence: Live mode fails closed instead of degrading to a fake receipt (3.0422ms)
+✔ recordPaymentEvidence: Live attestation writes the PaymentOracle once and is idempotent on retry (2.1755ms)
+✔ recordPaymentEvidence: Live attestation rejects a payer mismatch and wraps chain failures (1.5345ms)
+✔ runtime state lives under the project root regardless of the working directory (77.347ms)
+✔ the deployments MCP resource survives a missing docs/ folder (not shipped in the container image) (2.8554ms)
+✔ a Wallet-derived payer round-trips through the envelope as a valid address (37.151ms)
+▶ Demo x402 transport
+  ✔ a signed request unlocks a clearly-simulated report (92.3461ms)
+  ✔ a client-claimed X402-TxHash is never treated as a verified, settled payment (33.055ms)
+  ✔ a malformed X402-TxHash is a 400 (27.6142ms)
+  ✔ an oversized request body is refused with 413 (18.4793ms)
+  ✔ a signature from a different wallet than the claimed signer is a 401 (22.7835ms)
+  ✔ invalid input is rejected before the (simulated) payment is recorded (27.5441ms)
+  ✔ a case the engine cannot price is refused BEFORE payment, without leaking engine internals (22.9766ms)
+✔ Demo x402 transport (303.2309ms)
+[agentbl] d61d584d7dff 503 x402_v2_live_transport_required: The x402 V2 live gateway is unavailable: Facilitator /supported returned HTTP 503
+▶ x402 live gateway on the real app server
+  ✔ an unavailable facilitator is a 503, and the gateway recovers once it is back (173.414ms)
+  ✔ unpaid requests get a decodable V2 challenge priced from the service catalog (42.0272ms)
+  ✔ the personal-sign (demo) headers do not unlock anything in Live mode (2.5167ms)
+  ✔ a verified payment settles once, delivers the report, and attests it on-chain (188.8451ms)
+  ✔ replaying the same signed authorization re-delivers without a second charge or attestation (30.5792ms)
+  ✔ the paid report can be re-read from the cache without paying again (25.6119ms)
+  ✔ payments that do not match the protected resource never reach the facilitator (37.798ms)
+  ✔ a facilitator settlement failure never delivers the report (93.7272ms)
+  ✔ malformed input is refused BEFORE the buyer is charged (8.2586ms)
+[agentbl] x402 live gateway error: { code: 'payment_oracle_write_failed' }
+  ✔ a failure after settlement says the payment went through and that a retry is free (189.4431ms)
+[agentbl] x402 live gateway error: { code: 'payment_oracle_unavailable' }
+  ✔ without a configured attestor the report is not delivered (Live never fakes a receipt) (105.1934ms)
+  ✔ Mystery Voyage: invalid reveals are rejected before payment, a valid one completes after it (214.5762ms)
+  ✔ the OFFICIAL x402 client (real EIP-3009 signing) can pay the gateway (207.6359ms)
+  ✔ the repo CLI client pays a Live endpoint, but enforces budget, network and signer BEFORE signing (197.1882ms)
+  ✔ the BROWSER wallet flow (eth_signTypedData_v4) pays the gateway like the official client (159.4884ms)
+  ✔ the browser flow completes a Mystery Voyage reveal (wallet = previewing wallet) (145.7631ms)
+  ✔ a wrong-wallet Mystery payment is refused before the browser wallet is even asked to sign (36.1534ms)
+✔ x402 live gateway on the real app server (1910.5946ms)
+✔ X402-10: a paid envelope adds provenance without changing any risk or price result (14.7716ms)
+✔ X402-10: paid report is a clearly neutral evidence-graph node (1.4607ms)
+✔ X402-10: tampered report hash cannot enter pricing (2.4384ms)
+✔ X402-10: expired report cannot enter pricing (1.1464ms)
+✔ X402-10: report from another trade case cannot enter pricing (1.109ms)
+✔ X402-10: duplicate report ids are idempotent in the evidence graph (1.2941ms)
+✔ X402-11: a saved report is re-readable within its TTL without re-payment (6.9847ms)
+✔ X402-11: an unknown report id is a clean miss (0.3793ms)
+✔ X402-11: an expired report is pruned and no longer readable (0.232ms)
+✔ X402-11: a report without a valid expires_at is not cached (0.0997ms)
+✔ X402-11: cached reports survive a process restart within TTL (3.5703ms)
+✔ X402-11: expired entries are dropped when the store is reloaded (3.1503ms)
+✔ X402-11: list returns identity metadata for unexpired reports only (0.2242ms)
+✔ X402-4: unpaid request returns a decodable V2 PAYMENT-REQUIRED challenge (44.2711ms)
+✔ X402-4: matching payment settles, exposes receipt metadata, and unlocks after 2xx (10.4483ms)
+✔ X402-4: malformed payment header is rejected before settlement (4.2928ms)
+✔ X402-4: expired, future, and overlong authorizations are rejected (12.286ms)
+✔ X402-4: wrong network is rejected (4.2927ms)
+✔ X402-4: wrong amount is rejected in both accepted terms and signed authorization (5.6405ms)
+✔ X402-4: wrong recipient is rejected in accepted terms and signed authorization (4.7835ms)
+✔ X402-4: settlement failure never releases the protected handler (4.0543ms)
+✔ X402-4: middleware leaves unprotected routes untouched (3.5837ms)
+✔ X402-6: concurrent duplicate submissions verify and settle exactly once (6.1704ms)
+✔ X402-6: settled and unlocked receipts survive process restart without re-settlement (113.76ms)
+✔ X402-6: verification failure persists FAILED and can never unlock (1.0136ms)
+✔ X402-6: transient facilitator errors retry with bounded attempts (4.3472ms)
+✔ X402-6: the same authorization cannot unlock a different resource (1.0802ms)
+✔ X402-6: restart converts an ambiguous SETTLING record to fail-closed reconciliation (35.2919ms)
+✔ X402-6: demo settlement is explicit, non-onchain, and has no fake tx hash (0.4305ms)
+ℹ tests 1113
+ℹ suites 14
+ℹ pass 1111
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 2
+ℹ todo 0
+ℹ duration_ms 25815.851
+ℹ start of coverage report
+ℹ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ file                          | line % | branch % | funcs % | uncovered lines
+ℹ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ src                           |        |          |         | 
+ℹ  agent                        |        |          |         | 
+ℹ   api.js                      | 100.00 |    93.42 |  100.00 | 
+ℹ   autonomousAgent.js          |  89.75 |    74.19 |   82.35 | 31-32 35-36 41-42 75-83 251-256 261-265 277-279
+ℹ   compliance                  |        |          |         | 
+ℹ    data.js                    | 100.00 |   100.00 |  100.00 | 
+ℹ    external.js                | 100.00 |   100.00 |  100.00 | 
+ℹ    index.js                   | 100.00 |    96.15 |  100.00 | 
+ℹ    matcher.js                 | 100.00 |    97.62 |  100.00 | 
+ℹ   complianceChecker.js        | 100.00 |   100.00 |  100.00 | 
+ℹ   decisionLogger.js           |  98.35 |    86.24 |  100.00 | 56-57 59-60
+ℹ   documentConsistency.js      | 100.00 |    98.78 |  100.00 | 
+ℹ   documentParser.js           |  98.58 |    89.68 |   98.53 | 128 470-471 476 500-502 504-505
+ℹ   evaluation                  |        |          |         | 
+ℹ    dataset.js                 | 100.00 |   100.00 |  100.00 | 
+ℹ    evaluationReport.js        | 100.00 |    72.22 |  100.00 | 
+ℹ    goldDataset.js             | 100.00 |   100.00 |  100.00 | 
+ℹ    runner.js                  |  99.67 |    86.23 |   94.64 | 253
+ℹ   executionReliability.js     |  93.41 |    63.89 |   70.00 | 8-9 71-72 85-86
+ℹ   ingest                      |        |          |         | 
+ℹ    extractionError.js         | 100.00 |   100.00 |  100.00 | 
+ℹ    ingestService.js           |  99.73 |    90.66 |   93.88 | 58
+ℹ    injectionScreen.js         | 100.00 |    89.19 |  100.00 | 
+ℹ    modelExtraction.js         |  94.87 |    81.03 |   91.67 | 56-58 62 78-79
+ℹ    pdfText.js                 | 100.00 |    87.50 |   85.71 | 
+ℹ    pdfWorker.js               |  80.28 |    86.36 |  100.00 | 58-71
+ℹ   investmentAdvisor.js        |  96.11 |    78.43 |   84.62 | 71-72 84 126-127 136-137
+ℹ   judgeAssistant.js           |  97.91 |    79.59 |   91.67 | 30-31 51 172-174
+ℹ   llm                         |        |          |         | 
+ℹ    openaiCompatClient.js      |  98.59 |    88.46 |   85.71 | 197-199
+ℹ   llmConsensus.js             |  93.58 |    88.00 |  100.00 | 68-74
+ℹ   orchestrator.js             |  93.27 |    79.77 |   89.66 | 39-40 63-64 70-76 133-136 183-186 384-389 409-412 415-416 472-475 559-563 637-639
+ℹ   pipelines                   |        |          |         | 
+ℹ    ingestPipeline.js          | 100.00 |    71.43 |  100.00 | 
+ℹ    monitorPipeline.js         |  96.02 |    74.36 |  100.00 | 134-143
+ℹ   pricingNarrator.js          | 100.00 |    86.36 |  100.00 | 
+ℹ   redteam                     |        |          |         | 
+ℹ    generator.js               | 100.00 |   100.00 |  100.00 | 
+ℹ    runner.js                  | 100.00 |   100.00 |  100.00 | 
+ℹ   riskIntel.js                |  98.95 |    89.33 |  100.00 | 22-23
+ℹ   runtime                     |        |          |         | 
+ℹ    activityLog.js             |  99.44 |    93.33 |   96.55 | 174
+ℹ    agentService.js            |  92.52 |    77.25 |   86.36 | 163-164 211 214 256 272 453-454 482-489 507-512 514-519 521-525 597-599 669-672 707-709 868-872 886-888 891-895 898-900 902-906 931-935 951 954 957 960 966 1197-1222 1268 1383-1385
+ℹ    agentVersion.js            | 100.00 |    93.33 |  100.00 | 
+ℹ    anchorChain.js             |  95.92 |    92.59 |   82.35 | 95-98
+ℹ    anchoring.js               |  96.90 |    93.13 |   94.44 | 154-155 186-190
+ℹ    anchorProof.js             | 100.00 |    89.74 |   92.31 | 
+ℹ    anchorStore.js             | 100.00 |    90.00 |   80.00 | 
+ℹ    approvals.js               | 100.00 |    90.43 |   96.77 | 
+ℹ    config.js                  | 100.00 |    91.67 |  100.00 | 
+ℹ    eventBus.js                |  97.22 |    96.55 |   88.57 | 165-171 288-289
+ℹ    events.js                  | 100.00 |    95.65 |  100.00 | 
+ℹ    executors                  |        |          |         | 
+ℹ     simExecutor.js            |  96.77 |    82.46 |   85.71 | 48-50 63-64
+ℹ    factory.js                 |  91.11 |    92.00 |   50.00 | 130-133 146-156 159-161 223-224
+ℹ    freshness.js               | 100.00 |    80.65 |  100.00 | 
+ℹ    policy.js                  |  98.90 |    96.10 |  100.00 | 91-92
+ℹ    poolRegistry.js            |  86.05 |   100.00 |   84.62 | 58-67 76-77
+ℹ    poolRules.js               |  69.35 |    60.98 |   83.33 | 20-23 53 55 57-59 68-71 85-88 90-92 94-96 98-99 101-102 104-106 108-110 112-113 115-116 122
+ℹ    preferences.js             | 100.00 |    96.97 |  100.00 | 
+ℹ    references.js              | 100.00 |    80.00 |   88.89 | 
+ℹ    replay.js                  |  96.30 |    67.74 |  100.00 | 49-50
+ℹ    retention.js               | 100.00 |    92.86 |  100.00 | 
+ℹ    scheduler.js               | 100.00 |   100.00 |   85.71 | 
+ℹ    sources                    |        |          |         | 
+ℹ     riskTracker.js            | 100.00 |    85.00 |  100.00 | 
+ℹ     scenarioPlayer.js         |  98.01 |    80.15 |   90.32 | 41-42 73-74 166-167 265
+ℹ     voyageMonitor.js          | 100.00 |    94.12 |  100.00 | 
+ℹ     worldRiskMonitor.js       | 100.00 |    86.11 |  100.00 | 
+ℹ    trace.js                   |  98.86 |    86.54 |  100.00 | 157-158
+ℹ   security                    |        |          |         | 
+ℹ    dataFreshness.js           |  31.44 |    30.77 |   37.50 | 17-18 24-34 44-51 60-61 64-65 71-75 77-78 87-95 103-150 157-205 211-229
+ℹ    privacy.js                 | 100.00 |    97.44 |  100.00 | 
+ℹ    privateStore.js            | 100.00 |    96.00 |  100.00 | 
+ℹ    promptInjectionDefense.js  |  60.00 |    50.00 |   33.33 | 90-91 100-118 124-170
+ℹ   tools                       |        |          |         | 
+ℹ    copperValuationTools.js    |  78.90 |    50.00 |   47.06 | 30 48-58 70-79 82-89 91-93 99 102-109 140-162
+ℹ    worldRiskTools.js          |  91.70 |    54.84 |   93.10 | 24-25 55 112 136 155 165-175 186 211
+ℹ   tracing                     |        |          |         | 
+ℹ    tracer.js                  |  98.99 |    79.63 |  100.00 | 151-152
+ℹ   valuationAgent.js           |  86.61 |    57.69 |   77.78 | 72-76 98-114 161-167 218
+ℹ   worldRiskAgent.js           |  98.22 |    80.31 |  100.00 | 34-35 148-150 155-156
+ℹ   xapi                        |        |          |         | 
+ℹ    xapiClient.js              |  64.52 |    35.29 |   42.86 | 32-36 38-40 42-53 68-69 74 91-100 105 115-124
+ℹ  app                          |        |          |         | 
+ℹ   agentApiRoutes.js           | 100.00 |    95.00 |  100.00 | 
+ℹ   agentRoutes.js              |  98.82 |    93.20 |  100.00 | 33 332-334
+ℹ   controlledRoutes.js         |  30.23 |    37.50 |   28.57 | 13-17 22-34 38-39 41-45 47-81
+ℹ   copilotRoutes.js            |  87.95 |    88.41 |   87.50 | 10-13 22-25 48-49
+ℹ   eniAdapter.js               |  93.81 |    91.43 |   87.50 | 34-35 40-42 96-97
+ℹ   evidenceRoutes.js           |  78.95 |    27.27 |   66.67 | 9-12
+ℹ   http.js                     |  97.86 |    94.12 |  100.00 | 134-137
+ℹ   interopRoutes.js            | 100.00 |    98.08 |  100.00 | 
+ℹ   llmProxy.js                 | 100.00 |    89.13 |   86.36 | 
+ℹ   operationsRoutes.js         |  95.83 |    85.00 |  100.00 | 16
+ℹ   rightsRoutes.js             |  89.66 |    52.17 |   88.89 | 22-25 49-50 73-75
+ℹ   security.js                 | 100.00 |    95.92 |  100.00 | 
+ℹ   server.js                   |  92.58 |    89.83 |   81.55 | 149-150 280-281 285-286 350-352 476-477 626-627 657-658 795-798 801-804 807-810 813-816 819-822 825-828 1139-1143 1151-1154 1222-1225 1268-1271 1620-1621 1634-1647 1649-1671 1674-1690 1697-1711
+ℹ   shapes.js                   | 100.00 |   100.00 |  100.00 | 
+ℹ   static.js                   | 100.00 |    93.22 |  100.00 | 
+ℹ   store.js                    |  84.89 |    77.42 |   75.00 | 58-59 63-64 66-67 71-72 86-87 129-139
+ℹ   workspaceAccess.js          | 100.00 |    91.30 |  100.00 | 
+ℹ   x402Services.js             | 100.00 |    73.91 |  100.00 | 
+ℹ  chain                        |        |          |         | 
+ℹ   applicationConfig.js        |  93.55 |    85.00 |  100.00 | 14-15
+ℹ   cargoIdentity.js            |  73.91 |    85.71 |   75.00 | 18-23
+ℹ   loadApplicationConfig.js    | 100.00 |   100.00 |  100.00 | 
+ℹ   protocolV5Abi.js            | 100.00 |    66.67 |  100.00 | 
+ℹ   signerKeys.js               | 100.00 |    94.74 |  100.00 | 
+ℹ  copilot                      |        |          |         | 
+ℹ   actions.js                  | 100.00 |    78.57 |   90.00 | 
+ℹ   context.js                  | 100.00 |    94.44 |  100.00 | 
+ℹ   intentRouter.js             | 100.00 |    96.59 |   90.00 | 
+ℹ   narrative.js                | 100.00 |    92.41 |  100.00 | 
+ℹ   ranking.js                  | 100.00 |    91.49 |  100.00 | 
+ℹ   retrieval.js                | 100.00 |    94.94 |  100.00 | 
+ℹ   service.js                  | 100.00 |    93.43 |   92.86 | 
+ℹ   snapshot.js                 | 100.00 |    89.47 |  100.00 | 
+ℹ  core                         |        |          |         | 
+ℹ   caseDates.js                | 100.00 |    97.83 |  100.00 | 
+ℹ   contractHarness.js          |  99.10 |    84.62 |  100.00 | 55-56
+ℹ   curatedCases.js             | 100.00 |   100.00 |  100.00 | 
+ℹ   offeringSimulator.js        |  79.83 |    76.67 |   80.00 | 40-42 86-117 198-209
+ℹ   pricingEngine.js            |  99.54 |    95.30 |  100.00 | 417-419
+ℹ   pricingScenarioRunner.js    |  88.00 |    67.35 |  100.00 | 45-47 72-73 75-76 78-79 87-88 94-97
+ℹ   pricingSchema.js            |  94.85 |    82.69 |  100.00 | 70-71 74-77 98-99 117-118 200-201
+ℹ   pricingWorkflow.js          | 100.00 |   100.00 |  100.00 | 
+ℹ   riskEngine.js               |  98.47 |    80.85 |  100.00 | 23-24
+ℹ   scenarioRunner.js           |  97.47 |    85.71 |  100.00 | 39-40
+ℹ   schema.js                   |  90.82 |    78.48 |  100.00 | 101-102 104-105 117-118 191-192 213-214 217-218 236 250-251 258-259 272-273 275-276 278-279 281-282 284-285
+ℹ   subscription.js             | 100.00 |    57.14 |  100.00 | 
+ℹ   workflow.js                 | 100.00 |    66.67 |  100.00 | 
+ℹ   worldRiskPricing.js         | 100.00 |    90.32 |  100.00 | 
+ℹ  data                         |        |          |         | 
+ℹ   desensitizationStore.js     |  51.40 |   100.00 |    0.00 | 19-38 44-45 51-52 58-59 65-66 73-81 88-100 106-107
+ℹ  demo                         |        |          |         | 
+ℹ   mode.js                     | 100.00 |   100.00 |  100.00 | 
+ℹ  env.js                       |  34.78 |    66.67 |   33.33 | 8-20 22-31 40-46
+ℹ  evidence                     |        |          |         | 
+ℹ   archive.js                  |  34.92 |    85.71 |   37.50 | 18-33 36-51 54-62
+ℹ   schema.js                   |  97.60 |    84.52 |  100.00 | 109-111
+ℹ  interop                      |        |          |         | 
+ℹ   agentCard.js                | 100.00 |   100.00 |  100.00 | 
+ℹ   delegation.js               | 100.00 |    93.10 |   85.71 | 
+ℹ   validation.js               | 100.00 |    92.50 |  100.00 | 
+ℹ  ledger                       |        |          |         | 
+ℹ   ledger.js                   |  90.12 |    82.56 |   87.50 | 93-100 115-117 144-146 169-171
+ℹ   positionView.js             | 100.00 |    96.30 |  100.00 | 
+ℹ   rebuilder.js                |  12.59 |   100.00 |   20.00 | 9-11 20-134
+ℹ   service.js                  |  28.03 |    33.33 |   26.67 | 18-26 29-34 40-62 68-82 87-89 91-94 98-110 113-123 126-133 136-156
+ℹ   writer.js                   |  98.11 |    91.84 |   82.35 | 93-94
+ℹ  lib                          |        |          |         | 
+ℹ   jsonStore.js                |  95.17 |    90.79 |  100.00 | 30-31 140-141 150-151 191-192 203-204
+ℹ  mcp                          |        |          |         | 
+ℹ   agentClient.js              | 100.00 |    87.10 |   50.00 | 
+ℹ   agentTools.js               |  99.01 |    91.89 |  100.00 | 88
+ℹ   mcpServer.js                |  95.65 |    93.33 |   28.57 | 231-232 285-290 306-311
+ℹ   resources.js                |  95.65 |    77.78 |  100.00 | 57-59 95-96
+ℹ   security.js                 |  95.10 |    76.19 |  100.00 | 28-29 46-47 67 102-103
+ℹ   standalone-server.js        |  95.74 |    84.62 |   77.78 | 79-80 91-92
+ℹ   tools.js                    |  95.83 |    66.20 |  100.00 | 54-55 133-134 240-251
+ℹ  mystery                      |        |          |         | 
+ℹ   analytics.js                | 100.00 |    69.57 |  100.00 | 
+ℹ   fairness.js                 |  89.00 |    67.19 |   95.83 | 42-43 51-52 77-78 93-94 102-104 115 122-123 126-127 170-171 192-193 198-199
+ℹ   passport.js                 |  86.52 |    32.69 |  100.00 | 31-32 43-44 46-47 53-54 57-58 61-62 64-68 114-115 123-124 163 172-173
+ℹ   policy.js                   |  98.82 |    58.21 |  100.00 | 147-148
+ℹ   riskPassport.js             | 100.00 |    18.75 |  100.00 | 
+ℹ   service.js                  |  93.81 |    63.38 |   95.65 | 55-56 84-85 93-94 144-145 147-148 154-155 175-176
+ℹ   store.js                    |  92.17 |    73.33 |   95.83 | 64-69 135-136 152-156 161-162 164-165 167-168 227-228 230-231 284-285 287-288
+ℹ  ops                          |        |          |         | 
+ℹ   backup.js                   | 100.00 |    98.08 |  100.00 | 
+ℹ   lease.js                    |  93.75 |    74.07 |   66.67 | 42-44
+ℹ   monitor.js                  | 100.00 |    83.54 |   89.29 | 
+ℹ   runtime.js                  |  77.94 |    77.50 |   88.89 | 33-42 55-56 61-63
+ℹ  provenance                   |        |          |         | 
+ℹ   evaluation.js               | 100.00 |    76.36 |   96.00 | 
+ℹ   market.js                   | 100.00 |    95.59 |  100.00 | 
+ℹ   screening.js                | 100.00 |    90.38 |  100.00 | 
+ℹ  rag                          |        |          |         | 
+ℹ   judgeQA.js                  | 100.00 |    90.00 |  100.00 | 
+ℹ   knowledgeBase.js            |  97.00 |    52.94 |   50.00 | 544-545 548-549 558-559 566-567 572-573 577-578 582-583 587-588 595-596
+ℹ   search.js                   |  76.32 |    86.96 |   70.83 | 11-27 37-39 44-98 178-180 189-191 270-271 356-357
+ℹ  realdata                     |        |          |         | 
+ℹ   http.js                     | 100.00 |    89.19 |   90.00 | 
+ℹ   index.js                    |  99.48 |    88.83 |   93.02 | 63-64
+ℹ   sources.js                  | 100.00 |    80.70 |  100.00 | 
+ℹ  rights                       |        |          |         | 
+ℹ   chain.js                    |  21.23 |   100.00 |    0.00 | 20-27 32-33 35-65 67-94 96-110 112-130 135-146
+ℹ   service.js                  |  84.13 |    79.25 |   91.23 | 83-84 138-141 280-281 286-303 306-322 324-333
+ℹ   typedData.js                | 100.00 |    77.78 |   66.67 | 
+ℹ   vault.js                    | 100.00 |    80.00 |  100.00 | 
+ℹ  runtimePaths.js              | 100.00 |   100.00 |  100.00 | 
+ℹ  skill                        |        |          |         | 
+ℹ   demoOperator.js             |  86.96 |    48.48 |  100.00 | 23-24 58-61 76-79 94-97 105-111
+ℹ   pricingAnalyst.js           |  91.34 |    68.42 |  100.00 | 25-26 66-70 86-89
+ℹ  x402                         |        |          |         | 
+ℹ   client.js                   |  93.73 |    76.47 |   95.00 | 39-40 42-46 51-52 65-66 71-72 82 146-147 205-206 305-306 335-336
+ℹ   clientRecovery.js           | 100.00 |    85.71 |   66.67 | 
+ℹ   config.js                   |  93.22 |    82.00 |   90.91 | 80 86-87 115-116 118-119 147-148 171-172 236 248-249 286-292 299-300
+ℹ   delivery.js                 | 100.00 |    89.47 |  100.00 | 
+ℹ   discovery.js                | 100.00 |   100.00 |  100.00 | 
+ℹ   endpoints.js                |  98.55 |    56.76 |   90.00 | 130-131
+ℹ   independentVerifier.js      |  28.74 |   100.00 |    0.00 | 15 21-23 25-30 32-43 45-51 53-62 64-86
+ℹ   liveGateway.js              |  94.30 |    62.32 |   91.67 | 34-35 47-48 64-65 73-74 194-198
+ℹ   paidReport.js               |  95.24 |    65.22 |   95.00 | 130-132 198-199 210-211 232-233 262-263 277-278 286-287
+ℹ   reportEvidence.js           | 100.00 |    96.00 |   85.71 | 
+ℹ   reportStore.js              | 100.00 |    93.62 |  100.00 | 
+ℹ   server.js                   |  95.13 |    78.95 |   95.24 | 113-114 125-126 129-130 132-133 135-136 163-164 309-310 318-325
+ℹ   settlement.js               |  94.63 |    82.56 |   96.77 | 96-97 152-154 195-200 203-207 239-240 425-427 450-454 456-457 459-460 462-463 587-588 600-605 725-726
+ℹ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ all files                     |  92.55 |    84.03 |   90.60 | 
+ℹ ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ℹ end of coverage report

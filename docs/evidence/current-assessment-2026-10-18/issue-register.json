@@ -1,0 +1,78 @@
+{
+  "schema": "agentbl-current-assessment-issues-v1",
+  "assessment_date": "2026-10-18",
+  "source_revision": "b8db411de044b1132f14419a432be6da6ff1501b",
+  "report": "docs/project-current-assessment-2026-10-18.md",
+  "product_changes": false,
+  "external_broadcasts": 0,
+  "issues": [
+    {
+      "id": "CA-01", "priority": "P1", "status": "OPEN",
+      "title": "到期后授权操作员仍可首次放款",
+      "evidence_level": "local_evm_reproduced", "probe_id": "A01",
+      "evidence": "contract-probes.json",
+      "source": ["hardhat/contracts/RightsController.sol:199", "hardhat/contracts/RWAOfferingPoolV5.sol:526"],
+      "dependency": "明确放款截止、估值过期/撤销和未放款本金退出规则",
+      "acceptance": "到期前后和部分放款边界直接调用测试；过期放款被拒绝，未放款资金在有界流程内合法退出"
+    },
+    {
+      "id": "CA-02", "priority": "P1", "status": "OPEN",
+      "title": "一原子单位回款可反复打断违约分配",
+      "evidence_level": "local_evm_reproduced", "probe_id": "A02",
+      "evidence": "contract-probes.json",
+      "source": ["hardhat/contracts/RightsController.sol:229", "hardhat/contracts/RightsController.sol:256", "hardhat/contracts/RWAOfferingPoolV5.sol:543"],
+      "dependency": "明确结算快照与迟到回款归属，保留资金守恒",
+      "acceptance": "连续敌对微额及正常大额迟到回款下，原分配仍可有界完成，新增回款不会遗漏或不公平分配"
+    },
+    {
+      "id": "CA-03", "priority": "P1", "status": "OPEN",
+      "title": "相同证据可重开治理已经处理的争议",
+      "evidence_level": "local_evm_reproduced", "probe_id": "A03",
+      "evidence": "contract-probes.json",
+      "source": ["hardhat/contracts/RightsController.sol:238"],
+      "dependency": "明确争议轮次、新证据门槛、受理期与终局权",
+      "acceptance": "重复证据和伪新 hash 不形成无界冻结；真正新证据保留有界救济，多方轮流争议不能永久阻断"
+    },
+    {
+      "id": "CA-04", "priority": "P2", "status": "DECISION_REQUIRED",
+      "title": "治理扣费与投资者领取存在顺序竞争",
+      "evidence_level": "local_evm_reproduced", "probe_id": "A04",
+      "evidence": "contract-probes.json",
+      "source": ["hardhat/contracts/RWAOfferingPoolV5.sol:640", "hardhat/contracts/RWAOfferingPoolV5.sol:658"],
+      "dependency": "决定费用是可选还是必须按条款可靠收取",
+      "acceptance": "必要费用在领取开放前确定，或明确披露免费/可选政策；多投资者领取顺序不改变各自净额，满足费用上限与守恒"
+    },
+    {
+      "id": "CA-05", "priority": "P1", "status": "OPEN",
+      "title": "条款确认缺乏完整可读业务条款",
+      "evidence_level": "source_confirmed",
+      "source": ["web/src/features/rights/ControlledFinancePanel.jsx:108", "src/app/controlledRoutes.js:49"],
+      "dependency": "固定责任主体、债权、费用、募集/放款和处置规则并提供对应内容",
+      "acceptance": "用户可读并复算具体条款；内容与链上承诺匹配；缺内容、不匹配或报价变化时阻止旧确认"
+    },
+    {
+      "id": "CA-06", "priority": "P2", "status": "OPEN",
+      "title": "融资列表未消费分页游标，默认仅前十池",
+      "evidence_level": "source_confirmed_not_observed_on_two_pool_testnet",
+      "source": ["src/app/controlledRoutes.js:49", "web/src/features/rights/ControlledFinancePanel.jsx:28"],
+      "dependency": "超过十个池的本地数据集与列表交互方案",
+      "acceptance": "后续页和指定池均可访问；刷新、排序、钱包切换与失败重试不遗漏或重复池"
+    },
+    {
+      "id": "CA-07", "priority": "P2", "status": "OPEN",
+      "title": "390px 视口下整页最小宽度仍为1100px",
+      "evidence_level": "ui_measured_and_source_confirmed",
+      "evidence": "ui-mobile.png",
+      "source": ["web/src/styles/base.css:9"],
+      "dependency": "明确桌面课程展示或完整移动产品的支持范围",
+      "acceptance": "若声明支持移动端，全页390/768/1280px均可到达关键操作，并实际验收移动钱包；仅桌面则明确标注支持范围"
+    }
+  ],
+  "product_and_research_gates": [
+    { "id": "CG-01", "status": "VALIDATION_REQUIRED", "topic": "真实单证、债权与实物处置责任", "acceptance": "参与组织、权利基础、来源真实性、估值和处置可执行性有独立业务证据" },
+    { "id": "CG-02", "status": "DECISION_REQUIRED", "topic": "资方风险补偿下限与借款人支付上限", "acceptance": "可解释参数与敏感性分析；无可行区间时拒绝或降额，风险分不冒充违约概率" },
+    { "id": "CG-03", "status": "VALIDATION_REQUIRED", "topic": "完整角色流程与真实人工钱包验收", "acceptance": "未参与开发的人按文档完成正常融资和失败退出并独立验证链上状态" },
+    { "id": "CG-04", "status": "VALIDATION_REQUIRED", "topic": "独立组织治理、身份和授权恢复", "acceptance": "角色由独立主体持有，撤销/失联/轮换/接管和告警有演练；恢复材料不代替签名权恢复" },
+    { "id": "CG-05", "status": "VALIDATION_REQUIRED", "topic": "多池 Live RPC 性能和外部服务故障", "acceptance": "真实查询路径的负载、p95、限流、超时和恢复记录，区别于离线 HTTP 压测" }
+  ]
+}

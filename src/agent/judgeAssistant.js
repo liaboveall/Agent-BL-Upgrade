@@ -136,8 +136,8 @@ const INTENTS = [
     keywords: ['risk rise', 'risk rises', 'risk goes up', 'in transit', 'reprice', 'repriced', 'pause', 'paused', 'war', 'weather', 'escalat', 'default', 'something goes wrong', 'happens if'],
     retrieval: 'risk escalates in transit reprice pause collateral coverage guardrail',
     answer: (ctx, docs) =>
-      `The AI re-scores risk and the RiskPricingOracle acts on it. Price decomposes as base − urgency − risk = indicative, floored by collateral. `
-      + `As risk rises the risk discount grows and the price falls (REPRICE_DOWN → the pool's Repriced state). If risk hits CRITICAL or the profit share blows past 85%, the AI PAUSES: `
+      `The Agent re-scores risk and records a recommendation; Live financing is signed through RightsController. Price decomposes as base − urgency − risk = indicative, floored by collateral. `
+      + `As risk rises the risk discount grows and the price falls (a new quote version; existing funded debt stays fixed). If risk hits CRITICAL or the profit share blows past 85%, the research policy recommends review or pause: `
       + `escalate this case to a Hormuz war crisis and it scores ${ctx.stressed.risk_score_bps}bps → ${ctx.stressed.pricing_action}. `
       + `Throughout, collateral coverage caps redemption exposure at ${usd(ctx.numbers.max_safe_redemption_usd)} so the pool can never over-issue. ${cites(docs)}`
   },
@@ -148,7 +148,7 @@ const INTENTS = [
     retrieval: 'quote hash evidence hash oracle on-chain pricing update offering states',
     answer: (ctx, docs) =>
       `Each quote emits two hashes: evidence_hash anchors the INPUTS (valuation, risk score, document checks) and quote_hash anchors the TERMS (price, supply, action). `
-      + `RiskPricingOracle.updatePricing(poolId, issuePrice, riskLevel, action, evidenceHash) writes the AI decision on-chain; RWAOfferingPool runs createOffering → subscribe → settle/pause. `
+      + `RightsController validates signed title, valuation and terms; RWAOfferingPoolV5 escrows test assets and handles subscribe → disburse → repay → claim/refund. `
       + `The lifecycle is Created → Priced → Open → Subscribed → Funded → InTransit → (Repriced | Paused | Frozen) → Repaid → Redeemed. `
       + `For this offering quote_hash = ${ctx.headline.quote_hash.slice(0, 18)}… and evidence_hash = ${ctx.headline.evidence_hash.slice(0, 18)}… ${cites(docs)}`
   },

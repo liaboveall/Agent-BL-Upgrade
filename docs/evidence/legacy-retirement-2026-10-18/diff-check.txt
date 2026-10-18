@@ -1,0 +1,6 @@
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/PRD.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/background.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/contracts.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/real-data.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/w5-delivery-operations.md', LF will be replaced by CRLF the next time Git touches it

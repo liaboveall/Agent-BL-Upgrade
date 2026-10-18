@@ -1,13 +1,10 @@
 import crypto from 'node:crypto';
-import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createFacilitatorRequest } from '@injectivelabs/x402/protocol';
 import { SettleResponseSchema, VerifyResponseSchema } from '@injectivelabs/x402/schemas';
 import { createWriteQueue, writeFileAtomic } from '../lib/jsonStore.js';
 import { x402Network, x402PayTo, x402RpcUrl, x402Usdc } from './config.js';
-import chainConfig from '../../scripts/lib/chain-config.cjs';
+import { loadApplicationConfig } from '../chain/loadApplicationConfig.js';
 import { resolveSignerKey, signerKeyRequirement } from '../chain/signerKeys.js';
 import { IndependentPaymentVerifier } from './independentVerifier.js';
 import { LedgerWriter } from '../ledger/writer.js';
@@ -573,7 +570,6 @@ export class X402SettlementService {
 // PaymentOracle compatibility layer used by the paid-report UI and smoke CLI.
 // It supplements the facilitator-backed state machine above with an immutable
 // audit record after a report payment has settled.
-const compatibilityRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 let compatibilityProvider;
 let compatibilityWallet;
 let compatibilityOracle;
@@ -586,8 +582,7 @@ export function setPaymentOracleOverride(oracle) {
 
 function loadPaymentOracleConfig() {
   try {
-    const raw = JSON.parse(fsSync.readFileSync(path.join(compatibilityRoot, 'public', 'chain-config.json'), 'utf8'));
-    return chainConfig.resolveNetworkConfig(raw, 'injective-testnet');
+    return loadApplicationConfig();
   } catch {
     return null;
   }

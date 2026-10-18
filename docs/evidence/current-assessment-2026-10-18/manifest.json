@@ -1,0 +1,172 @@
+{
+  "schema": "agentbl-current-assessment-manifest-v1",
+  "source_revision": "b8db411de044b1132f14419a432be6da6ff1501b",
+  "generated_at": "2026-10-18T02:12:50.117Z",
+  "external_broadcasts": 0,
+  "product_source_changed": false,
+  "original_logs_preserved": true,
+  "excluded": [
+    "manifest.json itself",
+    "*.log originals (byte-identical copies included under logs/*.txt)"
+  ],
+  "validation": {
+    "report_local_links": 38,
+    "link_errors": 0,
+    "unique_issues": 7,
+    "source_manifest_matching_files": 649,
+    "ci_success": 15,
+    "browser_passed": 18
+  },
+  "files": [
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/README.md",
+      "bytes": 6078,
+      "sha256": "17d55b0fddfd31e31b8e1201e0a4768c17b70466b2a1c88f19fe1f9c5744d5ca"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/audit-contract-toolchain.json",
+      "bytes": 385,
+      "sha256": "94b54ca98ffcaa65d18d484e77009999b1d753bb796f615a5909a2b2fcb18e74"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/audit-production.json",
+      "bytes": 387,
+      "sha256": "d65d6b2f2c9fc7b728ceaf39cc69bd9340d8ce13b7a8f36e8cd1eaaf99755475"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/browser-results.json",
+      "bytes": 22572,
+      "sha256": "1ae46face936a6cbe223044b4f305983b001bba8ad30d95f07912b4c679d264b"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/ci-recovery/receipt.json",
+      "bytes": 1054,
+      "sha256": "2da6a7be682d66b496d4f404a54b1a7311931d6b7fe9ff3a6dfe3fa4888a516f"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/contract-probes.json",
+      "bytes": 1669,
+      "sha256": "b30c187d1cc163e880d054d5f11d6fd6d0a95075e394cb614883ee10200da882"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/contract-probes.mjs",
+      "bytes": 4866,
+      "sha256": "740f612451d0a04e35b0182074cd9a91c9195242aaa8bbd48f79f8f41432448b"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/github-checks.json",
+      "bytes": 46699,
+      "sha256": "478f11245bf9cbf22946154459937569fad24e7b8cb5adfc6b045103114b3c26"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/issue-register.json",
+      "bytes": 5461,
+      "sha256": "56b4e3ed4d556f8c414dbfd4bb7a2e032c044a8c1526f38c8e7242343be4fa58"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/application-tests-invocation-skipped.txt",
+      "bytes": 298,
+      "sha256": "7bbeb3c30e05ba2d5440fa2ac46bd7e8636fce9a4c84bc563233c018708dad99"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/application-tests.txt",
+      "bytes": 129544,
+      "sha256": "f54cb1d9ed58d9052b69589f2b435226c1243e1fba8ac7ef53fa8b51f8a3684f"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/browser-tests-edge.txt",
+      "bytes": 3193,
+      "sha256": "cc5424d27cfd7969e429ee5f88534aadb7b81f2ea13dc97bf941d54495e589e7"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/browser-tests.txt",
+      "bytes": 43756,
+      "sha256": "cb47b6686e8f07322661ccb74b2eb57057fb40ac81c9f291f94ffe8528646809"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/build.txt",
+      "bytes": 558,
+      "sha256": "8574024829691e0839f566c7e115bc81bda33aef05985fb553d987060e45da6f"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/check.txt",
+      "bytes": 217,
+      "sha256": "c268257bcea4bbf922c71bc1aeb2c942b0f1b6961764f46de7386245f80e1b68"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/contract-probes.txt",
+      "bytes": 1713,
+      "sha256": "4f1f2fc4a8905a5f7cf75ddc4517344e33eb81db2f9b9278c20b718ec737fce4"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/contract-tests.txt",
+      "bytes": 14058,
+      "sha256": "2911586a84d3c58309373d09f7ed455e2b220f378b93c74c6516eb8c15242583"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/lint.txt",
+      "bytes": 91,
+      "sha256": "8cbccf04ec9a692af57283787aecd0b2ad8d8d57e0a28fc4dfa0601a26a0d614"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/readonly-verification.txt",
+      "bytes": 5033,
+      "sha256": "45049d2c36061bb1d3d62b469668f09cc9fa29d8567276343b9f040a4f1b76b1"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/w2.txt",
+      "bytes": 1209,
+      "sha256": "cf7779f46ab6a739596ec4150bceb5cfd1805a8c732c7ab2fd9f8a14edb2893c"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/w3.txt",
+      "bytes": 740,
+      "sha256": "73098f552dfbe26cf9fab1de4bf4f964d9d3221c19c6f4066f6600f617a052cb"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/w4.txt",
+      "bytes": 2808,
+      "sha256": "ad6a30819389c68dae8f9a9b7df526071170484dbf58401ce7a8d3b32e9f9335"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/logs/w5.txt",
+      "bytes": 2369,
+      "sha256": "987fa8aaa815f3a5e9cb8be978c8c537990c6c3b55042f046fce997845748e4c"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/pricing-probes.json",
+      "bytes": 901,
+      "sha256": "ae05a38f8fa49cb3fee2f892f4d32e0a0b6a2bfa8aa0ae3d6557ebc1592a952b"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/readonly-verification.json",
+      "bytes": 4862,
+      "sha256": "10b1e9ddb1924bf5120cc20f26ff507738810e417c91c3030047e9b9cea98cc0"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/readonly-verification.mjs",
+      "bytes": 3960,
+      "sha256": "4fb151fb3b343aec4d4bb8f5cbd43867b049405da7c815417563f24957028ce4"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/ui-desktop.png",
+      "bytes": 243280,
+      "sha256": "a228fde5573f6dc13defd79066b9ffefee60674f9c0876397f319516234a1461"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/ui-desktop.yaml",
+      "bytes": 22267,
+      "sha256": "4216d16692b25904916a7fefdc0b30da4a35afc8aebc15346543b0931319e2e3"
+    },
+    {
+      "path": "docs/evidence/current-assessment-2026-10-18/ui-mobile.png",
+      "bytes": 75329,
+      "sha256": "546f49263361a67cd72421d14f13d1fe037dc0bf1c1456c0897ac03569faa95d"
+    },
+    {
+      "path": "docs/project-current-assessment-2026-10-18.md",
+      "bytes": 39013,
+      "sha256": "1c4c1dbf341b7a7c51ab205b48dbaaf661338af75cdd41c225cfab047b1f80c2"
+    }
+  ]
+}

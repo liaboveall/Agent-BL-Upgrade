@@ -34,11 +34,11 @@ test('WEB3-20: event reads stay within the Injective eth_getLogs block limit', a
 });
 
 const registry = {
-  schema: 'agentbl-chain-config-v2',
+  schema: 'agentbl-application-v1', scope: 'research_test_assets_only',
   defaultNetwork: 'injective-testnet',
   networks: {
     'injective-testnet': {
-      key: 'injective-testnet', network: 'injective_testnet', displayName: 'Injective EVM Testnet',
+      protocolVersion: 5, accessModel: 'compliance-gated', key: 'injective-testnet', network: 'injective_testnet', displayName: 'Injective EVM Testnet',
       chainId: '0x59F', chainIdDecimal: 1439, cosmosChainId: 'injective-888',
       rpcUrls: ['https://rpc.example'], cosmosRpcUrl: 'https://cosmos.example',
       explorerBase: 'https://explorer.example', contracts: {}, abis: {}
@@ -109,9 +109,7 @@ test('WEB3-19: browser resolver switches network-specific contract ABI without f
       }
     }
   };
-  const selected = resolveBrowserChainConfig(mainnet, 'injective-mainnet');
-  assert.equal(selected.chainIdDecimal, 1776);
-  assert.equal(selected.abi[0].name, 'mainnetOnly');
+  assert.throws(() => resolveBrowserChainConfig(mainnet, 'injective-mainnet'), /controlled Injective testnet/);
   assert.ok(mainnet.networks['injective-testnet']);
 });
 

@@ -1,0 +1,25 @@
+{
+  "schema": "agentbl-retirement-instance-check-v1",
+  "checked_at": "2026-10-18T02:54:44.317Z",
+  "base_revision": "b8db411de044b1132f14419a432be6da6ff1501b",
+  "source_sha256": "5063177580082b829c461be4580b63dff26ef7606cf29fe019b55f74b807b0ea",
+  "external_broadcasts": 0,
+  "checks": [
+    {
+      "name": "PaymentOracle",
+      "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+      "current_runtime_matches": false
+    }
+  ],
+  "controls": {
+    "chain_id": "1439",
+    "controller": "0xD3ccC2FaBBC57611869d93c8701Ee594dB9B8ea4",
+    "pool": "0xfd17Ec1ebDFdd35188adBfCe4ff88Bda61F21A0F",
+    "governance": "0x1Df02ED170bA2367d56F190Cc1b8225f58f6E2e5",
+    "control_version": 1
+  },
+  "block": {
+    "number": 144270217,
+    "hash": "0xbb7a34bf9a54cf42682319b2f007e7a77e7dca15089b2cdaaa832625ac480e62"
+  }
+}

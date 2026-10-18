@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 process.env.NODE_TEST_CONTEXT = 'browser';
 process.env.DEMO_MODE = 'true'; process.env.X402_MODE = 'demo'; process.env.REAL_DATA = 'off';
-process.env.AGENT_ANCHOR_ENABLED = 'false'; process.env.AGENT_CHAIN_WATCHER_ENABLED = 'false';
+process.env.AGENT_ANCHOR_ENABLED = 'false';
 process.env.AGENT_VALUATION_LLM = 'false'; process.env.AGENT_DOCUMENT_LLM = 'false';
 process.env.AGENTBL_RATE_LIMIT_PER_MIN = '0'; process.env.AGENTBL_WRITE_RATE_LIMIT_PER_MIN = '0';
 process.env.AGENTBL_RUNTIME_DIR = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-browser-'));

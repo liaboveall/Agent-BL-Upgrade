@@ -43,7 +43,7 @@ COPY src ./src
 COPY public ./public
 COPY --from=web /app/dist ./dist
 COPY data ./data
-# The server reads the chain registry helper at runtime.
+# Shared loopback-port and transaction recovery helpers are runtime dependencies.
 COPY scripts/lib ./scripts/lib
 COPY --from=contracts /contracts/artifacts/contracts ./hardhat/artifacts/contracts
 

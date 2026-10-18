@@ -37,7 +37,7 @@ export async function anchorTestnetAcceptance({ state, save, txSend, signers, pr
   const chainConfig = { chainIdDecimal: 1439, rpcUrls: ['https://k8s.testnet.json-rpc.injective.network'], explorerBase: 'https://testnet.blockscout.injective.network',
     contracts: { AgentDecisionLog: address }, deployments: { AgentDecisionLog: { deployTx: deployed.tx_hash, blockNumber: deployed.block_number } } };
   const adapter = createAnchorChainAdapter({ chainConfig, confirmations: 3,
-    getContext: async () => ({ provider, log, decisionLog: log, signers: { PRICING_UPDATER: signers.operator.address } }) });
+    getContext: async () => ({ provider, log, decisionLog: log, signers: { ANCHORER: signers.operator.address } }) });
   // Production sequence, proof and confirmation logic, with the same durable signed-hash
   // sender used by the deployment CLI. No hash can be lost between signing and broadcast.
   adapter.send = async (batch, assertCurrent, onSubmitted) => {

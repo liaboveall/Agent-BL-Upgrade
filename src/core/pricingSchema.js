@@ -6,7 +6,7 @@
 // and must stay untouched during the migration (see README "Current vs Target").
 //
 // A PricingQuote is the single structured artifact the AI Pricing & Risk Agent
-// produces. Backend, frontend and the RiskPricingOracle all consume this shape.
+// produces. Backend, frontend and the controlled terms all consume this shape.
 
 import { RISK_LEVELS, ValidationError } from './schema.js';
 

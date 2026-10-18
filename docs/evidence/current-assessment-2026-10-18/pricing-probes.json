@@ -1,0 +1,38 @@
+{
+  "scope": "synthetic policy sensitivity, not real returns",
+  "input": {
+    "payout_speed": "FAST",
+    "requested_cash_usd": 100000,
+    "ai_verified_collateral_value_usd": 250000,
+    "redemption_coverage_limit": 0.9,
+    "risk_score_bps": 500,
+    "tenor_days": 90,
+    "target_redemption_value_usd": 1
+  },
+  "rows": [
+    {
+      "declared_profit": 2000,
+      "price": 0.9874,
+      "annual_yield_bps": 518,
+      "action": "OPEN_WITH_WARNING",
+      "economic_checks": {
+        "ok": true,
+        "failures": [],
+        "max_profit_share_bps": 8500
+      },
+      "financing_cost": 1276.08
+    },
+    {
+      "declared_profit": 10000,
+      "price": 0.9486,
+      "annual_yield_bps": 2198,
+      "action": "OPEN_WITH_WARNING",
+      "economic_checks": {
+        "ok": true,
+        "failures": [],
+        "max_profit_share_bps": 8500
+      },
+      "financing_cost": 5418.49
+    }
+  ]
+}

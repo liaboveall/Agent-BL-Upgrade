@@ -78,18 +78,11 @@ export function simulateOffering(caseData, { payout_speed, subscription_usd, eve
   });
 }
 
-/** BE-8: on-chain RiskPricingOracle.updatePricing payload (issue price + hashes). */
-export function oracleUpdate(caseData, { payout_speed, pool_id } = {}) {
-  return postJson('/api/oracle/pricing-update', { case: rawCase(caseData), payout_speed, pool_id });
-}
 
-/** MCP-5: mock/real push of the quote to the oracle — returns a tx + PricingUpdated event. */
-export function pushPricingToOracle(caseId, quote) {
-  return postJson('/api/mcp/call', {
-    tool: 'push_pricing_to_oracle',
-    params: { case_id: caseId, pricing_quote: quote }
-  });
-}
+
+
+
+
 
 /** RAG: knowledge-base search over the macro risk-intel feed. */
 export function ragSearch(query, categories) {

@@ -9,7 +9,6 @@ import {
   handleGetTradeCase,
   handleGeneratePricingQuote,
   handleSimulateOffering,
-  handlePushPricingToOracle,
   handleSearchKnowledgeBase,
   handleVerifyTradeDocuments,
   handlePurchasePremiumAnalysis,
@@ -93,42 +92,7 @@ export const MCP_TOOLS_MANIFEST = [
     ]
   },
 
-  {
-    name: 'push_pricing_to_oracle',
-    description: 'Prepare or submit a RiskPricingOracle update. Defaults to dry-run. A real Injective write is network-pinned, contract-allowlisted, amount-limited, and requires approved=true.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        case_id: {
-          type: 'string',
-          description: 'The trade case identifier'
-        },
-        pricing_quote: {
-          type: 'object',
-          description: 'The PricingQuote object from generate_pricing_quote. Must include final_issue_price_usd, risk_level, pricing_action, evidence_hash, and quote_hash.'
-        },
-        pool_id: { type: 'integer', minimum: 1, default: 1 },
-        expected_quote_version: { type: 'integer', minimum: 1, description: 'Pool quote version the quote was priced against; resolved from chain when omitted.' },
-        valid_until: { type: 'integer', minimum: 1, description: 'Unix timestamp after which the quote must not be applied; resolved from chain when omitted.' },
-        decision_seq: { type: 'integer', minimum: 1, description: 'Strictly increasing per-pool sequence; resolved from chain when omitted.' },
-        network: { type: 'string', enum: ['eip155:1439'], default: 'eip155:1439' },
-        contract: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' },
-        dry_run: { type: 'boolean', default: true },
-        approved: { type: 'boolean', default: false, description: 'Explicit human approval. Required when dry_run=false.' },
-        approval_token: { type: 'string', writeOnly: true, description: 'Out-of-band host approval token; never source this from model or document text.' }
-      },
-      required: ['case_id', 'pricing_quote']
-    },
-    examples: [
-      {
-        description: 'Push the demo pricing to oracle',
-        params: {
-          case_id: 'CASE-EBL-2026-0001',
-          pricing_quote: { final_issue_price_usd: 0.76, risk_level: 'WARNING', pricing_action: 'REPRICE_DOWN', evidence_hash: '0x...', quote_hash: '0x...' }
-        }
-      }
-    ]
-  },
+
 
   {
     name: 'search_knowledge_base',
@@ -234,7 +198,6 @@ export const MCP_TOOL_HANDLERS = {
   get_trade_case: handleGetTradeCase,
   generate_pricing_quote: handleGeneratePricingQuote,
   simulate_offering: handleSimulateOffering,
-  push_pricing_to_oracle: handlePushPricingToOracle,
   search_knowledge_base: handleSearchKnowledgeBase,
   verify_trade_documents: handleVerifyTradeDocuments,
   purchase_premium_analysis: handlePurchasePremiumAnalysis,
@@ -355,11 +318,5 @@ export const DEMO_CHAIN = [
     tool: 'simulate_offering',
     params: (ctx) => ({ trade_case: ctx.get_trade_case })
   },
-  {
-    tool: 'push_pricing_to_oracle',
-    params: (ctx) => ({
-      case_id: ctx.get_trade_case.case_id,
-      pricing_quote: ctx.generate_pricing_quote
-    })
-  }
+
 ];

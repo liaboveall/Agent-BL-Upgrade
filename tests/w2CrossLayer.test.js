@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { id } from 'ethers';
-import { buildOwnerPlan } from '../src/agent/runtime/ownerTxPlan.js';
+
 import { runHardhatNode, stopHardhatNode, deployW2 } from './helpers/ledgerTestHarness.js';
 import { Ledger } from '../src/ledger/ledger.js';
 import { CapitalLedgerService } from '../src/ledger/service.js';
@@ -155,34 +155,7 @@ describe('W2 real EVM + HTTP + wallet lifecycle', { skip: process.env.AGENTBL_W2
     assert.equal((await app.get(ctx.investor.address)).positions[0].shares, '3');
   });
 
-  it('preflights owner capital plans, refuses forged receipts and waits for canonical confirmation depth', async (t) => {
-    const ctx = await deployW2(node, t), app = await backend(ctx, t);
-    const offering = await ctx.createOffering({ minRaise: 4n * 800_000n });
-    await app.subscribe(offering, ctx.investor, 4n);
-    const common = { chain_pool_id: offering.poolId, chainConfig: ctx.cfg, context: await ctx.getContext() };
-    await assert.rejects(buildOwnerPlan({ ...common, action: 'DISBURSE', params: { amount_atomic: '1', exporter: ctx.exporter.address, evidence: 'before-success' } }));
-    await ctx.advance(offering.deadline + 1n);
-    const closePlan = await buildOwnerPlan({ ...common, action: 'FINALIZE_FUNDING' });
-    assert.equal(closePlan.steps[0].method, 'finalizeFunding');
-    await ctx.send(ctx.pool.finalizeFunding(offering.poolId));
-    const plan = await buildOwnerPlan({ ...common, action: 'DISBURSE', params: { amount_atomic: '3200000', exporter: ctx.exporter.address, evidence: 'approved-drawdown' } });
-    assert.equal(plan.steps[0].event_checks[0].args.amountAtomic, '3200000');
-    await assert.rejects(buildOwnerPlan({ ...common, action: 'DISBURSE', params: { amount_atomic: '-1', exporter: ctx.exporter.address, evidence: 'bad' } }), { code: 'invalid_amount' });
-    await assert.rejects(buildOwnerPlan({ ...common, action: 'REFUND', params: { investor: ctx.investor.address } }));
-    const draftPool = await ctx.createOffering();
-    const block = await ctx.provider.getBlock('latest');
-    const intent = await ctx.capital.prepareSubscription({ wallet: ctx.investor.address, chain_pool_id: draftPool.poolId, shares: '2', max_unit_price: '800000', expected_quote_version: '1', deadline: String(block.timestamp + 300) });
-    const wrongTx = await ctx.send(ctx.usdc.mint(ctx.investor.address, 1_600_000n));
-    await assert.rejects(ctx.capital.attach(intent.intent_id, wrongTx.hash), { code: 'intent_transaction_mismatch' });
-    await ctx.send(ctx.usdc.connect(ctx.investor).approve(await ctx.pool.getAddress(), 1_600_000n));
-    const tx = await ctx.send(ctx.investor.sendTransaction({ to: await ctx.pool.getAddress(), data: intent.calldata }));
-    const strict = new CapitalLedgerService({ ledger: ctx.ledger, chainConfig: ctx.cfg, getContext: ctx.getContext, getMode: () => 'live', confirmations: 2 });
-    const attached = await strict.attach(intent.intent_id, tx.hash);
-    assert.equal(attached.status, 'broadcast');
-    await ctx.provider.send('evm_mine', []);
-    await strict.sync();
-    assert.equal((await ctx.ledger.getIntent(intent.intent_id)).status, 'confirmed');
-  });
+
 
   it('supports liquidation recovery, zero recovery and proportional loss without duplicate payouts', async (t) => {
     const ctx = await deployW2(node, t), app = await backend(ctx, t);

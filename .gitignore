@@ -20,8 +20,6 @@ hardhat/node_modules/
 hardhat/cache/
 hardhat/artifacts/
 hardhat/deployments/*.json
-# Keep the record of the live Injective testnet deployment
-!hardhat/deployments/injective_testnet-agentbl.json
 
 # OS / editor
 .DS_Store

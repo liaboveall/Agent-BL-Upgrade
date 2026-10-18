@@ -13,7 +13,7 @@ const { createServer, closeActivityStreams, setAgentService, activityLog } = awa
 const { createPool, resetStore, storeState } = await import('../src/app/store.js');
 const { quoteFromCase } = await import('../src/core/pricingEngine.js');
 const { loadAgentConfig } = await import('../src/agent/runtime/config.js');
-const { createAgentService, loadChainConfig } = await import('../src/agent/runtime/factory.js');
+const { createAgentService, loadApplicationConfig } = await import('../src/agent/runtime/factory.js');
 const { demoModeController } = await import('../src/demo/mode.js');
 const { createAgentRoutes } = await import('../src/app/agentRoutes.js');
 const { ActivityLog } = await import('../src/agent/runtime/activityLog.js');
@@ -34,7 +34,7 @@ async function freshService(env = {}) {
     ensurePools: async () => {},
     activity: activityLog,
     store: storeState,
-    chainConfig: loadChainConfig(),
+    chainConfig: loadApplicationConfig(),
     sleep: async () => {}
   });
   activityLog.seq = 0;
@@ -212,7 +212,7 @@ test('agent API (Demo)', async (t) => {
     // attach-tx is only for owner-signed approvals
     assert.equal((await api('POST', `/api/agent/approvals/${approval.approval_id}/attach-tx`, {})).status, 400);
     const wrongState = await api('POST', `/api/agent/approvals/${approval.approval_id}/attach-tx`, { tx_hash: `0x${'ab'.repeat(32)}` });
-    assert.equal(wrongState.status, 409);
+    assert.equal(wrongState.status, 410);
     await service.stop();
   });
 
@@ -227,7 +227,6 @@ test('agent API (Demo)', async (t) => {
         ['POST', '/api/agent/control', { action: 'tick' }],
         ['GET', '/api/agent/approvals'],
         ['POST', '/api/agent/approvals/x/approve', {}],
-        ['POST', '/api/agent/pools/link', { case_id: iron.case_id, chain_pool_id: 2 }]
       ]) {
         const res = await api(method, path, body);
         assert.equal(res.status, 401, `${method} ${path}`);

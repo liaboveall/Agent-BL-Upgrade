@@ -18,7 +18,7 @@ function parseTool(result) {
   return JSON.parse(result.content.find((item) => item.type === 'text').text);
 }
 
-test('MCP/WP6: official SDK stdio lifecycle executes 15 tools + reads 5 resources against the shared backend', async (t) => {
+test('MCP/WP6: official SDK stdio lifecycle executes 14 tools + reads 5 resources against the shared backend', async (t) => {
   const { service } = await phase5Runtime(t);
   setAgentService(service);
   const decision = await riskDecision(service);
@@ -52,7 +52,7 @@ test('MCP/WP6: official SDK stdio lifecycle executes 15 tools + reads 5 resource
   await client.connect(transport);
   try {
     const listed = await client.listTools();
-    assert.equal(listed.tools.length, 15);
+    assert.equal(listed.tools.length, 14);
     assert.deepEqual(listed.tools.map((tool) => tool.name).sort(), [
       'delegate_pricing',
       'explain_decision',
@@ -62,7 +62,6 @@ test('MCP/WP6: official SDK stdio lifecycle executes 15 tools + reads 5 resource
       'list_agent_decisions',
       'preview_mystery_voyage',
       'purchase_premium_analysis',
-      'push_pricing_to_oracle',
       'recommend_trade_assets',
       'search_knowledge_base',
       'simulate_offering',
@@ -82,11 +81,6 @@ test('MCP/WP6: official SDK stdio lifecycle executes 15 tools + reads 5 resource
     assert.ok(quote.result.final_issue_price_usd > 0);
     const simulation = parseTool(await client.callTool({ name: 'simulate_offering', arguments: { case_id: caseId } }));
     assert.ok(simulation.result.steps.length > 0);
-    const oracle = parseTool(await client.callTool({
-      name: 'push_pricing_to_oracle',
-      arguments: { case_id: caseId, pricing_quote: quote.result }
-    }));
-    assert.equal(oracle.result.status, 'dry_run');
     const search = parseTool(await client.callTool({
       name: 'search_knowledge_base',
       arguments: { query: 'copper shipping risk', limit: 2 }
