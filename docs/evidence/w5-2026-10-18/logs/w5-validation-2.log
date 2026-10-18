@@ -1,0 +1,37 @@
+npm notice run agentbl-agent-starter@0.1.0 validate:w5
+npm notice run node scripts/validate-w5.mjs
+W5 lint: started
+W5 lint: PASS
+W5 check: started
+W5 check: PASS
+W5 build: started
+W5 build: PASS
+W5 contracts: started
+W5 contracts: PASS
+W5 application: started
+W5 application: PASS
+W5 coverage: started
+W5 coverage: PASS
+W5 w2: started
+W5 w2: PASS
+W5 w3: started
+W5 w3: PASS
+W5 w4: started
+W5 w4: PASS
+W5 w5: started
+W5 w5: PASS
+W5 browser: started
+W5 browser: PASS
+W5 agent-evaluation: started
+W5 agent-evaluation: PASS
+W5 preflight: started
+W5 preflight: PASS
+W5 production-audit: started
+W5 production-audit: PASS
+W5 contracts-audit: started
+W5 contracts-audit: PASS
+W5 clean-build: started
+W5 clean-build: FAIL
+W5 capacity: started
+W5 capacity: PASS
+{"passed":false,"source_unchanged":false,"directory":"E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\docs\\evidence\\w5-2026-10-18\\runs\\2026-10-17T18-24-58-922Z"}

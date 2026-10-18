@@ -17,6 +17,7 @@ import {
   PaymentSettlementError,
   X402SettlementService,
   recordPaymentEvidence,
+  stableStringify,
   usdcToAtomic
 } from './settlement.js';
 
@@ -69,6 +70,7 @@ function sendPaymentRequired(res, body) {
 }
 
 function sendSettlementFailure(res, body, error, paymentId = null) {
+  if (error.code === 'operations_not_ready') return res.status(503).json({ ok: false, code: error.code, error: error.message });
   const receipt = {
     success: false,
     transaction: null,
@@ -111,7 +113,7 @@ export function assertPaymentMatches(paymentPayload, requirement, options = {}) 
     mismatch('payment_time_invalid', 'Payment authorization timestamps must be integers');
   }
   if (validAfter > nowSeconds) mismatch('payment_not_yet_valid', 'Payment authorization is not yet valid');
-  if (validBefore < nowSeconds) mismatch('payment_expired', 'Payment authorization has expired');
+  if (!options.allowExpired && validBefore < nowSeconds) mismatch('payment_expired', 'Payment authorization has expired');
   const maximumValidity = BigInt(requirement.maxTimeoutSeconds + 15);
   if (validBefore - validAfter > maximumValidity || validBefore > nowSeconds + maximumValidity) {
     mismatch('payment_ttl_exceeded', 'Payment authorization exceeds the resource timeout');
@@ -156,7 +158,7 @@ export function createX402PaymentMiddleware(options = {}) {
     let paymentPayload;
     try {
       paymentPayload = decodePaymentSignatureHeader(paymentHeader);
-      assertPaymentMatches(paymentPayload, requirement, { now });
+      assertPaymentMatches(paymentPayload, requirement, { now, allowExpired: config.mode === 'live' });
       if (paymentPayload.resource?.url && paymentPayload.resource.url !== resource.url) {
         mismatch('payment_resource_mismatch', 'Payment payload is bound to a different resource');
       }
@@ -171,7 +173,7 @@ export function createX402PaymentMiddleware(options = {}) {
       const result = await settlementService.process({
         paymentPayload,
         paymentRequirements: requirement,
-        resource: resource.url
+        resource: `${resource.url}#request=${crypto.createHash('sha256').update(stableStringify(req.body ?? null)).digest('hex')}`
       });
       const record = result.record;
       const receipt = {
@@ -195,7 +197,7 @@ export function createX402PaymentMiddleware(options = {}) {
         asset: record.asset,
         payTo: record.pay_to
       };
-      res.once('finish', () => {
+      if (options.unlockOnFinish !== false) res.once('finish', () => {
         if (res.statusCode < 200 || res.statusCode >= 300) return;
         void settlementService.markUnlocked(record.payment_id, {
           resource: resource.url,
@@ -225,7 +227,13 @@ export async function createX402Runtime(options = {}) {
     store,
     clock: options.clock,
     delay: options.delay,
-    baseDelayMs: options.baseDelayMs
+    baseDelayMs: options.baseDelayMs,
+    verifier: options.verifier,
+    rpcUrl: options.rpcUrl,
+    confirmations: options.confirmations,
+    deliveryKey: options.deliveryKey,
+    canSettle: options.canSettle,
+    env: options.env
   });
   await settlementService.init();
   return {
@@ -237,7 +245,8 @@ export async function createX402Runtime(options = {}) {
       settlementService,
       routes: options.routes,
       baseUrl: options.baseUrl,
-      now: options.now
+      now: options.now,
+      unlockOnFinish: options.unlockOnFinish
     })
   };
 }

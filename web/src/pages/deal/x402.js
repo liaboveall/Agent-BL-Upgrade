@@ -8,6 +8,7 @@ import { createStore } from '../../state/store.js';
 import { appStore } from '../../state/app-store.js';
 import * as web3 from '../../lib/web3.js';
 import { payV2WithWallet } from '../../lib/x402-v2.js';
+import { reportAuthorization } from '../../lib/payment-recovery.js';
 import { t } from '../../lib/i18n.js';
 
 export const STEPS = ['challenge', 'pay', 'settle', 'unlock'];
@@ -103,14 +104,15 @@ export async function restorePurchases() {
   if (!entries.length) { set({ purchased: [] }); return; }
   const probes = await Promise.all(entries.map(async (entry) => {
     try {
-      const res = await fetch(`/api/x402/report/${encodeURIComponent(entry.report_id)}`);
+      const authorization = reportAuthorization(entry.report_id);
+      const res = await fetch(`/api/x402/report/${encodeURIComponent(entry.report_id)}`, { headers: authorization ? { 'PAYMENT-SIGNATURE': authorization } : {} });
       return res.ok ? { entry, report: await res.json() } : null;
     } catch {
       return null; // offline — can't re-open right now
     }
   }));
   const surviving = probes.filter(Boolean);
-  savePurchases(surviving.map((item) => item.entry));
+  savePurchases(entries);
   set({ purchased: surviving });
 }
 
@@ -317,6 +319,9 @@ async function purchaseWithWalletLive(priceUSDC, endpoint) {
           step('pay', 'done', t('x402_signed'));
           step('settle', 'active', t('x402_settling_status'));
           log(t('x402_settlement_log'), 'info');
+        } else if (stage === 'reconcile') {
+          step('settle', 'active', t('x402_reconciling'));
+          log(t('x402_recovery_log'), 'info');
         }
       }
     });

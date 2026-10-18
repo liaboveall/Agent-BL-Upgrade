@@ -1,0 +1,12 @@
+file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/ops/lease.js:28
+        if (!dead || !/^[a-f0-9-]{36}$/u.test(owner?.token ?? '')) throw Object.assign(new Error('Runtime is in use; stop its single writer before opening or backing it up'), { code: 'runtime_in_use' });
+                                                                                       ^
+
+Error: Runtime is in use; stop its single writer before opening or backing it up
+    at acquireRuntimeLease (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/ops/lease.js:28:88)
+    at async createRuntimeBackup (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/src/ops/backup.js:35:18)
+    at async file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/remote-recovery-w5.mjs:26:19 {
+  code: 'runtime_in_use'
+}
+
+Node.js v26.8.1

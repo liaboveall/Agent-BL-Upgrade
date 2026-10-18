@@ -1,0 +1,31 @@
+npm notice run agentbl-agent-starter@0.1.0 test:browser
+npm notice run playwright test
+[WebServer] (node:15408) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 18 tests using 1 worker
+
+(node:7420) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 tests\browser\review.spec.js:7:3 › W3 zh: research rights state and unavailable controls are explicit on desktop (658ms)
+  ok  2 tests\browser\review.spec.js:7:3 › W3 en: research rights state and unavailable controls are explicit on desktop (576ms)
+  ok  3 tests\browser\review.spec.js:34:3 › zh: four desktop pages have no overflow, page errors or contrast violations (2.0s)
+  ok  4 tests\browser\review.spec.js:34:3 › en: four desktop pages have no overflow, page errors or contrast violations (1.9s)
+  ok  5 tests\browser\review.spec.js:52:1 › F06: Demo mint never connects or sends through a configured wallet (416ms)
+  ok  6 tests\browser\review.spec.js:67:1 › F07/F08: switching with a delayed preference response removes old terms immediately and isolates preferences (460ms)
+  ok  7 tests\browser\review.spec.js:85:1 › F05: uploaded working documents are absent from public listings and inaccessible to another browser (738ms)
+  ok  8 tests\browser\review.spec.js:100:1 › F09: a funded or in-transit pool cannot show an enabled subscription or OPEN status (409ms)
+  ok  9 tests\browser\review.spec.js:112:1 › F06: a Live wallet failure remains a failure and never becomes simulated issuance (418ms)
+  ok 10 tests\browser\review.spec.js:121:1 › F07/F08: a late B preference response cannot overwrite a newer A selection (400ms)
+  ok 11 tests\browser\review.spec.js:136:3 › W2 zh: confirmed and reconciling Live positions fit a 390px wallet portfolio (520ms)
+  ok 12 tests\browser\review.spec.js:136:3 › W2 en: confirmed and reconciling Live positions fit a 390px wallet portfolio (461ms)
+[WebServer] [agentbl] eb6ee20c0386 503 rights_not_configured: Research identity vault is not configured
+  ok 13 tests\browser\w4.spec.js:5:3 › W4 zh: source boundaries, session failure and mobile download form are accessible (1.6s)
+[WebServer] [agentbl] 8496f2ed6c16 503 rights_not_configured: Research identity vault is not configured
+  ok 14 tests\browser\w4.spec.js:5:3 › W4 en: source boundaries, session failure and mobile download form are accessible (1.5s)
+  ok 15 tests\browser\w5.spec.js:5:3 › W5 zh: readiness, fund rights and recovery remain explicit and keyboard accessible at 1280 and 1440 (1.2s)
+  ok 16 tests\browser\w5.spec.js:27:3 › W5 zh: controlled funding binds reviewed terms, and a wallet change cancels confirmation (941ms)
+  ok 17 tests\browser\w5.spec.js:5:3 › W5 en: readiness, fund rights and recovery remain explicit and keyboard accessible at 1280 and 1440 (1.1s)
+  ok 18 tests\browser\w5.spec.js:27:3 › W5 en: controlled funding binds reviewed terms, and a wallet change cancels confirmation (907ms)
+
+  18 passed (17.9s)

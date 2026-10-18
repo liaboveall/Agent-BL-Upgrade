@@ -1,5 +1,9 @@
 # AgentBL Web3 Contract Interface
 
+> **W5 受控测试网交付**：W3 控制层及独立 v5 资金池以 `public/rights-instance.json` 和 [W5 实际核验](evidence/w5-2026-10-18/testnet/) 为准。新实例的治理、资格与资金运行状态必须实际核对；下方 W3 本地候选段落保留其 2026-10-17 历史语义。
+
+> **W3 本地候选（2026-10-17）**：新增 `RightsGovernance` / `AssetIdentityHub` / `CommittedEBLRegistry` / `RightsController` / `ControlledRWAToken`。控制器独占新 v5 pool owner / oracle，永久固定 minter 和资格 gate，发行需来源与 holder 同意、估值和条款；损失处置需通知、争议和独立审核。尚未部署，不改变下方历史地址。完整接口、权限与真实业务待验边界见 [W3 权利与控制](w3-rights-control.md)。
+
 状态：WEB3-1 ~ WEB3-4 设计冻结  
 命名来源：以 `docs/PRD.md` v0.2 为准  
 范围：先定义可被 JS contract mock、Hardhat 合约和前端共同复用的最小接口，不做公开募资、不做 AMM、不承诺保本收益。

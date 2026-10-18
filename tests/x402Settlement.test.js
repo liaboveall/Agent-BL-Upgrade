@@ -8,9 +8,13 @@ import {
   JsonReceiptStore,
   PaymentSettlementError,
   SETTLEMENT_STATES,
-  X402SettlementService,
+  X402SettlementService as VerifiedSettlementService,
   paymentIdFor
 } from '../src/x402/settlement.js';
+import { syntheticPaymentVerifier } from './helpers/paymentVerifier.js';
+class X402SettlementService extends VerifiedSettlementService {
+  constructor(options) { super({ verifier: syntheticPaymentVerifier, ...options }); }
+}
 
 const PAYER = '0x1111111111111111111111111111111111111111';
 const PAY_TO = '0x2222222222222222222222222222222222222222';
@@ -73,7 +77,7 @@ async function temporaryStore(t) {
 
 test('X402-6: concurrent duplicate submissions verify and settle exactly once', async () => {
   const counters = {};
-  const service = new X402SettlementService({ mode: 'live', adapter: successAdapter(counters) });
+  const service = new X402SettlementService({ mode: 'live', adapter: successAdapter(counters), clock: () => new Date(2_000_000_000 * 1000) });
   const input = { ...fixture(), resource: 'https://agentbl.example/api/x402/smoke' };
   const [first, second] = await Promise.all([service.process(input), service.process(input)]);
   assert.equal(counters.verify, 1);
@@ -194,7 +198,7 @@ test('X402-6: restart converts an ambiguous SETTLING record to fail-closed recon
   });
   await service.init();
   const record = await service.get(paymentId);
-  assert.equal(record.state, SETTLEMENT_STATES.FAILED);
+  assert.equal(record.state, SETTLEMENT_STATES.RECONCILING);
   assert.equal(record.error.code, 'settlement_reconciliation_required');
   await assert.rejects(service.markUnlocked(paymentId), /Cannot unlock/u);
 });

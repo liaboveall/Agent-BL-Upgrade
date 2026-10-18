@@ -47,7 +47,8 @@ export default [
       'hardhat/cache/**',
       'data/runtime/**',
       '.claude/**',
-      'coverage/**'
+      'coverage/**',
+      'test-results/**', 'playwright-report/**'
     ]
   },
   js.configs.recommended,

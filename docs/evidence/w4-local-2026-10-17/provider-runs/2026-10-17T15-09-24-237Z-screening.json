@@ -1,0 +1,17 @@
+{
+  "schema": "agentbl-screening-source-probe-v1",
+  "executed_at": "2026-10-17T15:09:24.237Z",
+  "provider": "OFAC-public-Sanctions-List-Service",
+  "status": "UNAVAILABLE",
+  "business_accepted": false,
+  "attempts": [
+    {
+      "url": "https://sanctionslistservice.ofac.treas.gov/api/download/sdn.csv",
+      "error": "SOURCE_UNAVAILABLE_OR_SCHEMA_INVALID"
+    },
+    {
+      "url": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV",
+      "error": "SOURCE_UNAVAILABLE_OR_SCHEMA_INVALID"
+    }
+  ]
+}

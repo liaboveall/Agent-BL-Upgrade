@@ -1,0 +1,71 @@
+{
+  "schema": "agentbl-screening-source-probe-v1",
+  "executed_at": "2026-10-17T15:25:09.751Z",
+  "provider": "OFAC-public-Sanctions-List-Service",
+  "status": "SOURCE_OBSERVED",
+  "business_accepted": false,
+  "attempts": [
+    {
+      "url": "https://sanctionslistservice.ofac.treas.gov/api/download/sdn.csv",
+      "http_status": 200,
+      "response_host": "wc2h-sls-prod-public-published.s3.us-gov-west-1.amazonaws.com",
+      "source_file": "ofac-sdn-0dee0d2de5e5a240e3e545741ee2903cfa3508666d2f2841d5d1ff2d59f0ce71.csv.gz",
+      "source_sha256": "0dee0d2de5e5a240e3e545741ee2903cfa3508666d2f2841d5d1ff2d59f0ce71"
+    }
+  ],
+  "source_url": "https://sanctionslistservice.ofac.treas.gov/api/download/sdn.csv",
+  "source_sha256": "0dee0d2de5e5a240e3e545741ee2903cfa3508666d2f2841d5d1ff2d59f0ce71",
+  "source_last_modified": "Thu, 15 Oct 2026 16:34:34 GMT",
+  "source_file": "ofac-sdn-0dee0d2de5e5a240e3e545741ee2903cfa3508666d2f2841d5d1ff2d59f0ce71.csv.gz",
+  "rows": 19457,
+  "probes": [
+    {
+      "name": "BANK MELLAT",
+      "status": "MATCH_REVIEW",
+      "entry_ids": [
+        "25019"
+      ],
+      "source_sha256": "0dee0d2de5e5a240e3e545741ee2903cfa3508666d2f2841d5d1ff2d59f0ce71",
+      "scope": "OFAC_SDN_primary_names_only",
+      "human_review_required": true,
+      "eligible": false,
+      "limitations": [
+        "aliases_not_screened",
+        "beneficial_ownership_not_assessed",
+        "non_sdn_and_other_jurisdictions_not_screened",
+        "not_a_legal_determination"
+      ]
+    },
+    {
+      "name": "DCSA CTK",
+      "status": "NO_EXACT_PRIMARY_NAME_MATCH",
+      "entry_ids": [],
+      "source_sha256": "0dee0d2de5e5a240e3e545741ee2903cfa3508666d2f2841d5d1ff2d59f0ce71",
+      "scope": "OFAC_SDN_primary_names_only",
+      "human_review_required": true,
+      "eligible": false,
+      "limitations": [
+        "aliases_not_screened",
+        "beneficial_ownership_not_assessed",
+        "non_sdn_and_other_jurisdictions_not_screened",
+        "not_a_legal_determination"
+      ]
+    },
+    {
+      "name": "Global Retail Imports",
+      "status": "NO_EXACT_PRIMARY_NAME_MATCH",
+      "entry_ids": [],
+      "source_sha256": "0dee0d2de5e5a240e3e545741ee2903cfa3508666d2f2841d5d1ff2d59f0ce71",
+      "scope": "OFAC_SDN_primary_names_only",
+      "human_review_required": true,
+      "eligible": false,
+      "limitations": [
+        "aliases_not_screened",
+        "beneficial_ownership_not_assessed",
+        "non_sdn_and_other_jurisdictions_not_screened",
+        "not_a_legal_determination"
+      ]
+    }
+  ],
+  "scope": "source connectivity and exact primary-name fidelity; not an independent sanctions screening quality evaluation"
+}

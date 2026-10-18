@@ -42,6 +42,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "Added recordLiquidationRecovery + resolveLiquidation; full recovery -> Repaid, shortfall -> LossSettled, no subscribers -> Cancelled; collateral is released only at resolution. Deployment pending."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -76,6 +82,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "Frozen now has explicit exits: cancel without subscribers, settle after full verified recovery, markDefault when overdue, unfreeze with evidence. Frozen stays settleable for late recovery."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -109,6 +121,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "RECORD_PAYMENT / RECORD_ADDITIONAL_PAYMENT / RECORD_ARRIVAL / SETTLE are allowed from Defaulted and Frozen in the shared rules and settlement plans; no unattended path was added for owner-only markDefault/settleLoss."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -139,6 +157,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "SETTLE accepts params.recoveries, verifies every USDC transfer independently, deduplicates by tx+log index, requires the sum to equal the on-chain repayment amount and the primary proof to be included. RECORD_ADDITIONAL_PAYMENT is a separate owner/executor action."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -174,6 +198,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "Opening now uses createOfferingWithTerms with quote tenor and an explicit subscription window in the same transaction; setMaturity emits OfferingTermsSet and shortening maturity also shortens the cutoff."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -209,6 +239,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "subscriptionDeadline is stored per pool and checked on every subscribe/subscribeWithTerms call, independent of debt maturity. Per-pool deadline changes are limited to unsubscribed offerings."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -245,6 +281,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "updatePricing now requires expectedQuoteVersion, bounded validUntil and a strictly increasing decisionSeq; decision ids bind chainId+oracle+pool. Executor/MCP read these from chain and persist them for reconciliation."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -279,6 +321,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "subscribeWithTerms enforces maxUnitPrice, expected quote version and user/offering deadlines atomically. The browser uses it when present and reports termsBound=false on a legacy address instead of pretending the terms were bound."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -322,6 +370,12 @@
         ],
         "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
         "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -360,6 +414,12 @@
         ],
         "deployment_scope": "local source candidate; no broadcast or migration performed",
         "remaining_boundary": "FREEZE now emits OfferingFrozen; terms/deadline/追加回收/违约/损失/清算 events are watched; docs describe the v4 local candidate and distinguish it from the deployed v3. ABI additions are merged for planning/verification without changing deployed-address claims."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -399,6 +459,12 @@
         ],
         "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
         "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -436,6 +502,12 @@
         ],
         "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
         "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -474,6 +546,12 @@
         ],
         "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
         "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -482,15 +560,45 @@
       "kind": "信任模型",
       "title": "可信签发、持有人控制与资产唯一性",
       "batch": "W3",
-      "status": "DECISION_REQUIRED",
+      "status": "IMPLEMENTED",
       "evidence_summary": "S + H + U",
       "acceptance": "同单不同 case、V1 / V2、文档修订、换名、跨部署不能在受控系统重复占用；真实来源验签、背书、交回和失效可验证。MLETR 的核心涉及可识别记录、完整性和可归属的排他控制，并不等于“上链就完成货权法律安排”。具体适用性须由业务伙伴和法律专业人员确认。[UNCITRAL MLETR 官方说明](https://uncitral.un.org/en/texts/ecommerce/modellaw/electronic_transferable_records)",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b04",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+      "verification_receipts": [
+        "docs/evidence/w3-local-2026-10-17/validation.json",
+        "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w3-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "New controlled-instance deployment and explicit transaction scope are still required; existing v3/v5 deployments are not upgraded.",
+        "Real source/title control, legal rights, external valuation/compliance, enterprise identity, independent key custody and off-host recovery remain unverified."
+      ],
+      "closure_note": {
+        "design": "Shared identity reservations, versioned EIP-712 source credentials, per-title invalidation and independent holder terms consent",
+        "files": [
+          "hardhat/contracts/AssetIdentityHub.sol",
+          "hardhat/contracts/CommittedEBLRegistry.sol"
+        ],
+        "source_manifest": "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "deployment_scope": "Local actual EVM + application acceptance only; no testnet broadcast or migration",
+        "remaining_boundary": "Research identities and simulated titles/test assets. Two-reviewer publication is enforced in the application gateway; authorized chain roles retain their documented trust and signing obligations."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W3 local research candidate"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B05",
@@ -498,15 +606,44 @@
       "kind": "能力缺口",
       "title": "抵押处置与损失结清的权利安排",
       "batch": "W3",
-      "status": "DECISION_REQUIRED",
+      "status": "IMPLEMENTED",
       "evidence_summary": "S + U",
       "acceptance": "违约、争议、部分回收、处置失败、超额回收和最终解押都具备对应业务证据；未完成分配不能仅靠 owner 声明抹掉义务。测试网可验证技术处置，真实处置须另有合法控制权和参与方材料。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b05",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+      "verification_receipts": [
+        "docs/evidence/w3-local-2026-10-17/validation.json",
+        "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w3-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "New controlled-instance deployment and explicit transaction scope are still required; existing v3/v5 deployments are not upgraded.",
+        "Real source/title control, legal rights, external valuation/compliance, enterprise identity, independent key custody and off-host recovery remain unverified."
+      ],
+      "closure_note": {
+        "design": "Notified and independently reviewed resolution, disputes, actual-recovery reconciliation, distribution-backed loss and governed refinancing risk lock",
+        "files": [
+          "hardhat/contracts/RightsController.sol"
+        ],
+        "source_manifest": "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "deployment_scope": "Local actual EVM + application acceptance only; no testnet broadcast or migration",
+        "remaining_boundary": "Research identities and simulated titles/test assets. Two-reviewer publication is enforced in the application gateway; authorized chain roles retain their documented trust and signing obligations."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W3 local research candidate"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B06",
@@ -514,15 +651,45 @@
       "kind": "信任模型",
       "title": "可信估值、条款承诺与链上金融边界",
       "batch": "W3",
-      "status": "DECISION_REQUIRED",
+      "status": "IMPLEMENTED",
       "evidence_summary": "S + U",
       "acceptance": "单位 / 精度、过期估值、跨资产复用、超覆盖、极端输入、算术上界和调整条款均拒绝或按批准规则处理；报价承诺可以从保存材料重算。真实业务还需要估值方法、误差和回收成本的业务验证。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b06",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+      "verification_receipts": [
+        "docs/evidence/w3-local-2026-10-17/validation.json",
+        "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w3-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "New controlled-instance deployment and explicit transaction scope are still required; existing v3/v5 deployments are not upgraded.",
+        "Real source/title control, legal rights, external valuation/compliance, enterprise identity, independent key custody and off-host recovery remain unverified."
+      ],
+      "closure_note": {
+        "design": "Domain-bound immutable terms and valuation, collateral exposure limits, price-version acceptance and strict economic/time bounds",
+        "files": [
+          "hardhat/contracts/RightsController.sol",
+          "src/rights/typedData.js"
+        ],
+        "source_manifest": "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "deployment_scope": "Local actual EVM + application acceptance only; no testnet broadcast or migration",
+        "remaining_boundary": "Research identities and simulated titles/test assets. Two-reviewer publication is enforced in the application gateway; authorized chain roles retain their documented trust and signing obligations."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W3 local research candidate"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B07",
@@ -530,15 +697,45 @@
       "kind": "信任模型",
       "title": "治理、密钥、可更换 minter 的供应完整性",
       "batch": "W3",
-      "status": "DECISION_REQUIRED",
+      "status": "IMPLEMENTED",
       "evidence_summary": "S + R + U",
       "acceptance": "低权限账户不能改变角色或供应；旧 key 撤权后无法写入；迁移不改变已有权益；关键变更有事件与可观察等待条件；应急停机不会无理由永久剥夺已确定的领取权。多签本身不证明安全，还需实测执行和接管。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b07",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+      "verification_receipts": [
+        "docs/evidence/w3-local-2026-10-17/validation.json",
+        "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w3-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "New controlled-instance deployment and explicit transaction scope are still required; existing v3/v5 deployments are not upgraded.",
+        "Real source/title control, legal rights, external valuation/compliance, enterprise identity, independent key custody and off-host recovery remain unverified."
+      ],
+      "closure_note": {
+        "design": "Two distinct governance approvals plus delay/expiry/epoch rotation, revocable least-privilege roles and permanently bound share minter",
+        "files": [
+          "hardhat/contracts/RightsGovernance.sol",
+          "hardhat/contracts/ControlledRWAToken.sol"
+        ],
+        "source_manifest": "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "deployment_scope": "Local actual EVM + application acceptance only; no testnet broadcast or migration",
+        "remaining_boundary": "Research identities and simulated titles/test assets. Two-reviewer publication is enforced in the application gateway; authorized chain roles retain their documented trust and signing obligations."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W3 local research candidate"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B08",
@@ -546,15 +743,44 @@
       "kind": "设计决策",
       "title": "投资者资格范围及持续准入",
       "batch": "W3",
-      "status": "DECISION_REQUIRED",
+      "status": "IMPLEMENTED",
       "evidence_summary": "R + S + U",
       "acceptance": "资格过期、钱包变更、撤销、名单变化和服务失效均验证；明确拒绝“新增认购”是否影响已经取得的退款 / 兑付权。不能把一次 KYC 勾选或演示名单当作持续合规证明。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b08",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+      "verification_receipts": [
+        "docs/evidence/w3-local-2026-10-17/validation.json",
+        "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w3-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "New controlled-instance deployment and explicit transaction scope are still required; existing v3/v5 deployments are not upgraded.",
+        "Real source/title control, legal rights, external valuation/compliance, enterprise identity, independent key custody and off-host recovery remain unverified."
+      ],
+      "closure_note": {
+        "design": "Restricted research eligibility with expiry/revocation/current screening trust, separate consent and preserved acquired withdrawal rights",
+        "files": [
+          "hardhat/contracts/RightsController.sol"
+        ],
+        "source_manifest": "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "deployment_scope": "Local actual EVM + application acceptance only; no testnet broadcast or migration",
+        "remaining_boundary": "Research identities and simulated titles/test assets. Two-reviewer publication is enforced in the application gateway; authorized chain roles retain their documented trust and signing obligations."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W3 local research candidate"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B09",
@@ -562,15 +788,45 @@
       "kind": "能力缺口",
       "title": "业务主体身份、权限与发布审批",
       "batch": "W3",
-      "status": "DECISION_REQUIRED",
+      "status": "IMPLEMENTED",
       "evidence_summary": "S + H + U",
       "acceptance": "跨组织 / 工作区、管理员和普通用户、HTTP / SSE / MCP / A2A / 文件下载均按权限矩阵检查；失效会话不再访问；公开摘要不泄漏私人字段。本次未声称已有工作区隔离再次被攻破。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b09",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+      "verification_receipts": [
+        "docs/evidence/w3-local-2026-10-17/validation.json",
+        "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w3-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "New controlled-instance deployment and explicit transaction scope are still required; existing v3/v5 deployments are not upgraded.",
+        "Real source/title control, legal rights, external valuation/compliance, enterprise identity, independent key custody and off-host recovery remain unverified."
+      ],
+      "closure_note": {
+        "design": "Encrypted organization/subject/wallet registry, wallet-bound revocable sessions, two independent publication reviews and shared object authorization across private adapters",
+        "files": [
+          "src/rights/service.js",
+          "src/app/rightsRoutes.js"
+        ],
+        "source_manifest": "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "deployment_scope": "Local actual EVM + application acceptance only; no testnet broadcast or migration",
+        "remaining_boundary": "Research identities and simulated titles/test assets. Two-reviewer publication is enforced in the application gateway; authorized chain roles retain their documented trust and signing obligations."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W3 local research candidate"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B10",
@@ -578,15 +834,46 @@
       "kind": "隐私设计",
       "title": "链上商业字段最小披露",
       "batch": "W3",
-      "status": "DECISION_REQUIRED",
+      "status": "IMPLEMENTED",
       "evidence_summary": "S + U",
       "acceptance": "使用真实单证前完成数据流和字段审查；浏览器、合约 storage / calldata / event、日志、证据下载和错误响应均无未经批准的披露。已经上链的明文不能通过删数据库“撤回”。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b10",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+      "verification_receipts": [
+        "docs/evidence/w3-local-2026-10-17/validation.json",
+        "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w3-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "New controlled-instance deployment and explicit transaction scope are still required; existing v3/v5 deployments are not upgraded.",
+        "Real source/title control, legal rights, external valuation/compliance, enterprise identity, independent key custody and off-host recovery remain unverified."
+      ],
+      "closure_note": {
+        "design": "Commitment-only new title records, salted private material, authenticated encryption and independent allowlisted publication projection",
+        "files": [
+          "hardhat/contracts/CommittedEBLRegistry.sol",
+          "src/rights/vault.js",
+          "src/rights/service.js"
+        ],
+        "source_manifest": "docs/evidence/w3-local-2026-10-17/source-manifest.json",
+        "deployment_scope": "Local actual EVM + application acceptance only; no testnet broadcast or migration",
+        "remaining_boundary": "Research identities and simulated titles/test assets. Two-reviewer publication is enforced in the application gateway; authorized chain roles retain their documented trust and signing obligations."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W3 local research candidate"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B11",
@@ -594,15 +881,53 @@
       "kind": "审计缺口",
       "title": "证据 schema、可取回性和锚定运行验收",
       "batch": "W4",
-      "status": "OPEN",
-      "evidence_summary": "S + R + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + actual local EVM/HTTP + encrypted/offline recovery + real endpoint/source observations; business quality not accepted",
       "acceptance": "另一台机器无需原进程即可重算关键哈希、获取被授权证据并验证包含；材料缺失明确失败；敏感字段不进入公共叶子；版本变更、批次失败、未知广播、重启与备份恢复可核验。首次链上批次按独立授权执行，不能由报告自动触发。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#b11",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "8da9054427e22a4e417f4bbb231a48af639d5ad1f5222aae35ecc7326cd30c77",
+      "verification_receipts": [
+        "docs/evidence/w4-local-2026-10-17/validation.json",
+        "docs/evidence/w4-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w4-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "First testnet code/policy/model registration and batch require separate transaction authorization.",
+        "Independent physical-host recovery is W5; local new-process verification is not off-host disaster recovery."
+      ],
+      "closure_note": {
+        "design": "Versioned complete evidence packages, canonical salted commitments, encrypted authorized retrieval, independent-process verifier, v2 private anchor projection, source-bound runtime archive, coverage and canonical receipt invalidation",
+        "files": [
+          "src/evidence/schema.js",
+          "src/evidence/archive.js",
+          "src/agent/runtime/anchoring.js",
+          "scripts/verify-evidence.mjs"
+        ],
+        "tests": [
+          "tests/w4Evidence.test.js",
+          "tests/w4Provenance.test.js",
+          "tests/w4Payments.test.js",
+          "tests/w4CrossLayer.test.js",
+          "tests/w4BrowserRecovery.test.js"
+        ],
+        "deployment_scope": "Local source candidate; no testnet broadcast/deployment, commit, push or remote CI",
+        "remaining_boundary": "IMPLEMENTED is not VERIFIED. Real source/model/compliance quality and independent operational recovery require their own evidence."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "OPEN",
+          "status": "IMPLEMENTED",
+          "scope": "W4 local implementation; external business acceptance remains open"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "B12",
@@ -641,6 +966,12 @@
         ],
         "deployment_scope": "local v5 source candidate on an isolated Hardhat EVM; no deployment, migration, commit or push by this takeover",
         "remaining_boundary": "IMPLEMENTED is scoped to local source and recorded automated evidence. It is not public release or real-funds acceptance."
+      },
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
       }
     },
     {
@@ -649,15 +980,52 @@
       "kind": "待验证",
       "title": "行情适用性、估值与经济参数校准",
       "batch": "W4",
-      "status": "VALIDATION_REQUIRED",
-      "evidence_summary": "S + H + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + actual local EVM/HTTP + encrypted/offline recovery + real endpoint/source observations; business quality not accepted",
       "acceptance": "缺失、过期、跨源冲突、市场停盘和极端波动不产生虚假 CLEAR / 恢复；独立数据集给出估值误差、拒绝率和经济边界；实际年化和剩余期限使用 A05 的同一时间模型。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c01",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "8da9054427e22a4e417f4bbb231a48af639d5ad1f5222aae35ecc7326cd30c77",
+      "verification_receipts": [
+        "docs/evidence/w4-local-2026-10-17/validation.json",
+        "docs/evidence/w4-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w4-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "Independent net-recovery/cargo valuation error remains unmeasured.",
+        "No business-approved calibration thresholds or payout SLA; source-unverified Live pricing remains paused."
+      ],
+      "closure_note": {
+        "design": "Versioned research calibration, basis/units/calendar/freshness/conflict guards, full input commitments and ACT/365 actual-period calculations; public monthly benchmark baseline is measured separately from cargo valuations",
+        "files": [
+          "src/provenance/market.js",
+          "src/realdata/index.js",
+          "src/core/pricingEngine.js"
+        ],
+        "tests": [
+          "tests/w4Evidence.test.js",
+          "tests/w4Provenance.test.js",
+          "tests/w4Payments.test.js",
+          "tests/w4CrossLayer.test.js",
+          "tests/w4BrowserRecovery.test.js"
+        ],
+        "deployment_scope": "Local source candidate; no testnet broadcast/deployment, commit, push or remote CI",
+        "remaining_boundary": "IMPLEMENTED is not VERIFIED. Real source/model/compliance quality and independent operational recovery require their own evidence."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "VALIDATION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W4 local implementation; external business acceptance remains open"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "C02",
@@ -665,15 +1033,53 @@
       "kind": "待验证",
       "title": "真实单证 / LLM / 合规效果与人工接管",
       "batch": "W4",
-      "status": "VALIDATION_REQUIRED",
-      "evidence_summary": "S + H + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + actual local EVM/HTTP + encrypted/offline recovery + real endpoint/source observations; business quality not accepted",
       "acceptance": "真实提供方评测与本地确定性回归分别记录；关键错误达不到预先约定门槛则保留人工复核；超时、服务失效、版本变化和应急接管有可重放记录。报告不擅自设一个没有业务依据的“99% 即可上线”。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c02",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "8da9054427e22a4e417f4bbb231a48af639d5ad1f5222aae35ecc7326cd30c77",
+      "verification_receipts": [
+        "docs/evidence/w4-local-2026-10-17/validation.json",
+        "docs/evidence/w4-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w4-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "Configured model endpoint responded, but its document outputs were rejected; no model-quality acceptance.",
+        "Public specimens and source probes are not independent real-business/scan-quality or complete enterprise sanctions acceptance."
+      ],
+      "closure_note": {
+        "design": "Pinned official public DCSA specimens and labeled synthetic faults, blind real-endpoint evaluation, official OFAC primary-name source probe, invalid model-output rejection and immutable version-bound independent human review",
+        "files": [
+          "src/provenance/evaluation.js",
+          "src/provenance/screening.js",
+          "src/rights/service.js",
+          "web/src/features/evidence/EvidencePanel.jsx"
+        ],
+        "tests": [
+          "tests/w4Evidence.test.js",
+          "tests/w4Provenance.test.js",
+          "tests/w4Payments.test.js",
+          "tests/w4CrossLayer.test.js",
+          "tests/w4BrowserRecovery.test.js"
+        ],
+        "deployment_scope": "Local source candidate; no testnet broadcast/deployment, commit, push or remote CI",
+        "remaining_boundary": "IMPLEMENTED is not VERIFIED. Real source/model/compliance quality and independent operational recovery require their own evidence."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "VALIDATION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W4 local implementation; external business acceptance remains open"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "C03",
@@ -681,15 +1087,53 @@
       "kind": "信任 / 验证",
       "title": "x402 独立付款核验及失败恢复",
       "batch": "W4",
-      "status": "OPEN",
-      "evidence_summary": "S + H + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "S + actual local EVM/HTTP + encrypted/offline recovery + real endpoint/source observations; business quality not accepted",
       "acceptance": "假成功响应、错误网络 / 资产 / 金额、重复 nonce、已用授权、超时后实际到账、进程重启、报告生成失败及重复取回分别验证；不重复收费、不将支付报告的钱计入 RWA 融资，也不凭任意 tx hash 解锁。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c03",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "8da9054427e22a4e417f4bbb231a48af639d5ad1f5222aae35ecc7326cd30c77",
+      "verification_receipts": [
+        "docs/evidence/w4-local-2026-10-17/validation.json",
+        "docs/evidence/w4-local-2026-10-17/source-manifest.json",
+        "docs/evidence/w4-local-2026-10-17/README.md"
+      ],
+      "external_gates": [
+        "Actual payment tests use local test ERC-3009 tokens and a synthetic facilitator; no new real/testnet payment.",
+        "Production verifier supports direct token calls; an unreviewed wrapper is rejected. Independent RPC/finality and key custody must be operationally configured."
+      ],
+      "closure_note": {
+        "design": "Independent direct ERC-3009 receipt/signature/domain/asset/amount/nonce verification, durable cross-process identity, no settle retry, bounded read-only unknown/reorg reconciliation, encrypted delivery and browser/CLI original-authorization recovery",
+        "files": [
+          "src/x402/independentVerifier.js",
+          "src/x402/settlement.js",
+          "src/x402/clientRecovery.js",
+          "web/src/lib/payment-recovery.js"
+        ],
+        "tests": [
+          "tests/w4Evidence.test.js",
+          "tests/w4Provenance.test.js",
+          "tests/w4Payments.test.js",
+          "tests/w4CrossLayer.test.js",
+          "tests/w4BrowserRecovery.test.js"
+        ],
+        "deployment_scope": "Local source candidate; no testnet broadcast/deployment, commit, push or remote CI",
+        "remaining_boundary": "IMPLEMENTED is not VERIFIED. Real source/model/compliance quality and independent operational recovery require their own evidence."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-17",
+          "previous_status": "OPEN",
+          "status": "IMPLEMENTED",
+          "scope": "W4 local implementation; external business acceptance remains open"
+        }
+      ],
+      "w5_acceptance": {
+        "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+        "evidence": "docs/evidence/w5-2026-10-18/validation.json",
+        "testnet": "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "scope": "Final selected research technical integration; historical closure notes/external gates retained as earlier snapshots"
+      }
     },
     {
       "id": "C04",
@@ -697,15 +1141,46 @@
       "kind": "待验证",
       "title": "运行监控、容量、密钥备份与异机恢复",
       "batch": "W5",
-      "status": "VALIDATION_REQUIRED",
-      "evidence_summary": "S + H + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "Exact-source local/EVM/browser, actual testnet capital/public x402/anchor, isolated Linux recovery; post-commit same-SHA CI required",
       "acceptance": "先定义用户量、事件量、证据体量和延迟目标，再验证；磁盘满、写失败、RPC 中断、重组、提供方限流及源机器丢失都有演练。新机器恢复后可对账和核验权利，不依赖原机器仍在线；告警实际到达值班方。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c04",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+      "verification_receipts": [
+        "docs/evidence/w5-2026-10-18/validation.json",
+        "docs/evidence/w5-2026-10-18/source-manifest.json",
+        "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "docs/evidence/w5-2026-10-18/README.md"
+      ],
+      "external_gates": [
+        "Real business identity/title/valuation/compliance and independent organizational custody remain outside research scope.",
+        "External human duty acknowledgment and a commercial SLA are not proved by an automated receiver or short capacity test.",
+        "Final release checks and independent GitHub host recovery are bound to the final commit in GitHub checks/artifacts."
+      ],
+      "closure_note": {
+        "design": "运行监控、容量、密钥备份与异机恢复",
+        "files": [
+          "src/ops/monitor.js",
+          "src/ops/backup.js",
+          "src/ops/runtime.js",
+          "scripts/recover-w5.mjs",
+          "scripts/remote-recovery-w5.mjs"
+        ],
+        "tests": [
+          "docs/evidence/w5-2026-10-18/validation.json"
+        ],
+        "deployment_scope": "New controlled Injective testnet instance; legacy instances retained read-only",
+        "remaining_boundary": "Selected research technical implementation and local/testnet acceptance complete. IMPLEMENTED tracks this scope; real-business external gates remain closed and same-SHA release results are recorded natively by CI."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-18",
+          "previous_status": "VALIDATION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W5 controlled-testnet technical implementation and local acceptance; release result in same-SHA GitHub checks"
+        }
+      ]
     },
     {
       "id": "C05",
@@ -713,15 +1188,45 @@
       "kind": "交付验证",
       "title": "可复现构建、迁移与同 SHA 发布证据",
       "batch": "W5",
-      "status": "VALIDATION_REQUIRED",
-      "evidence_summary": "S + H + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "Exact-source local/EVM/browser, actual testnet capital/public x402/anchor, isolated Linux recovery; post-commit same-SHA CI required",
       "acceptance": "最终源码、全部必须 CI job、镜像、部署配置、角色和回执对应同一版本；没有依赖绿色历史记录替代当前结果。广播未知先只读对账；回滚应用不得把新资金池误指向旧协议。真实交易计划在完成本地审查后单独取得授权。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c05",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+      "verification_receipts": [
+        "docs/evidence/w5-2026-10-18/validation.json",
+        "docs/evidence/w5-2026-10-18/source-manifest.json",
+        "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "docs/evidence/w5-2026-10-18/README.md"
+      ],
+      "external_gates": [
+        "Real business identity/title/valuation/compliance and independent organizational custody remain outside research scope.",
+        "External human duty acknowledgment and a commercial SLA are not proved by an automated receiver or short capacity test.",
+        "Final release checks and independent GitHub host recovery are bound to the final commit in GitHub checks/artifacts."
+      ],
+      "closure_note": {
+        "design": "可复现构建、迁移与同 SHA 发布证据",
+        "files": [
+          "scripts/clean-build-w5.mjs",
+          "scripts/deploy-w5-testnet.mjs",
+          ".github/workflows/ci.yml",
+          "Dockerfile"
+        ],
+        "tests": [
+          "docs/evidence/w5-2026-10-18/validation.json"
+        ],
+        "deployment_scope": "New controlled Injective testnet instance; legacy instances retained read-only",
+        "remaining_boundary": "Selected research technical implementation and local/testnet acceptance complete. IMPLEMENTED tracks this scope; real-business external gates remain closed and same-SHA release results are recorded natively by CI."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-18",
+          "previous_status": "VALIDATION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W5 controlled-testnet technical implementation and local acceptance; release result in same-SHA GitHub checks"
+        }
+      ]
     },
     {
       "id": "C06",
@@ -729,15 +1234,44 @@
       "kind": "产品改进",
       "title": "三路径、权利、资金状态与操作恢复展示",
       "batch": "W1–W5",
-      "status": "VALIDATION_REQUIRED",
-      "evidence_summary": "S + H + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "Exact-source local/EVM/browser, actual testnet capital/public x402/anchor, isolated Linux recovery; post-commit same-SHA CI required",
       "acceptance": "中英文、1280 / 1440 桌面宽度、键盘 / 焦点 / 对比度、慢请求 / 快切、钱包 / 网络变化、未知广播及失败恢复均实测。已记录 Repaid 但未兑付时不能显示“投资者已到账”。当前约定不以手机适配作为本轮范围。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c06",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+      "verification_receipts": [
+        "docs/evidence/w5-2026-10-18/validation.json",
+        "docs/evidence/w5-2026-10-18/source-manifest.json",
+        "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "docs/evidence/w5-2026-10-18/README.md"
+      ],
+      "external_gates": [
+        "Real business identity/title/valuation/compliance and independent organizational custody remain outside research scope.",
+        "External human duty acknowledgment and a commercial SLA are not proved by an automated receiver or short capacity test.",
+        "Final release checks and independent GitHub host recovery are bound to the final commit in GitHub checks/artifacts."
+      ],
+      "closure_note": {
+        "design": "三路径、权利、资金状态与操作恢复展示",
+        "files": [
+          "web/src/features/operations/OperationsPanel.jsx",
+          "web/src/features/rights/ControlledFinancePanel.jsx",
+          "tests/browser/w5.spec.js"
+        ],
+        "tests": [
+          "docs/evidence/w5-2026-10-18/validation.json"
+        ],
+        "deployment_scope": "New controlled Injective testnet instance; legacy instances retained read-only",
+        "remaining_boundary": "Selected research technical implementation and local/testnet acceptance complete. IMPLEMENTED tracks this scope; real-business external gates remain closed and same-SHA release results are recorded natively by CI."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-18",
+          "previous_status": "VALIDATION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W5 controlled-testnet technical implementation and local acceptance; release result in same-SHA GitHub checks"
+        }
+      ]
     },
     {
       "id": "C07",
@@ -745,15 +1279,45 @@
       "kind": "验证策略",
       "title": "跨层属性、活性与故障注入回归",
       "batch": "W1–W5",
-      "status": "OPEN",
-      "evidence_summary": "S + H + U",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "Exact-source local/EVM/browser, actual testnet capital/public x402/anchor, isolated Linux recovery; post-commit same-SHA CI required",
       "acceptance": "A01–A10 具备修复后会因原缺陷而失败的正式回归；资金版满足第 9 部分不变量。反例观察脚本仍作为历史证据保存，不直接把“缺陷仍存在”的绿色断言当作生产通过门槛。结果包含 seed / 操作轨迹及最小反例。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c07",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+      "verification_receipts": [
+        "docs/evidence/w5-2026-10-18/validation.json",
+        "docs/evidence/w5-2026-10-18/source-manifest.json",
+        "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "docs/evidence/w5-2026-10-18/README.md"
+      ],
+      "external_gates": [
+        "Real business identity/title/valuation/compliance and independent organizational custody remain outside research scope.",
+        "External human duty acknowledgment and a commercial SLA are not proved by an automated receiver or short capacity test.",
+        "Final release checks and independent GitHub host recovery are bound to the final commit in GitHub checks/artifacts."
+      ],
+      "closure_note": {
+        "design": "跨层属性、活性与故障注入回归",
+        "files": [
+          "tests/w5Controlled.integration.js",
+          "tests/w5Operations.test.js",
+          "tests/w4Evidence.test.js",
+          "hardhat/test/protocolV5Hardening.test.js"
+        ],
+        "tests": [
+          "docs/evidence/w5-2026-10-18/validation.json"
+        ],
+        "deployment_scope": "New controlled Injective testnet instance; legacy instances retained read-only",
+        "remaining_boundary": "Selected research technical implementation and local/testnet acceptance complete. IMPLEMENTED tracks this scope; real-business external gates remain closed and same-SHA release results are recorded natively by CI."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-18",
+          "previous_status": "OPEN",
+          "status": "IMPLEMENTED",
+          "scope": "W5 controlled-testnet technical implementation and local acceptance; release result in same-SHA GitHub checks"
+        }
+      ]
     },
     {
       "id": "C08",
@@ -761,15 +1325,43 @@
       "kind": "产品决策",
       "title": "主流程收敛及 Injective 能力取舍",
       "batch": "W0",
-      "status": "DECISION_REQUIRED",
-      "evidence_summary": "产品决策",
+      "status": "IMPLEMENTED",
+      "evidence_summary": "Exact-source local/EVM/browser, actual testnet capital/public x402/anchor, isolated Linux recovery; post-commit same-SHA CI required",
       "acceptance": "W0 有明确保留 / 隔离 / 延后清单；新功能不抢占核心退出、资金、持仓和恢复工作的验收资源。",
       "report_reference": "docs/project-blockchain-comprehensive-report-2026-10-17.md#c08",
       "implemented_commit": null,
-      "verified_source_sha256": null,
-      "verification_receipts": [],
-      "external_gates": [],
-      "closure_note": null
+      "verified_source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+      "verification_receipts": [
+        "docs/evidence/w5-2026-10-18/validation.json",
+        "docs/evidence/w5-2026-10-18/source-manifest.json",
+        "docs/evidence/w5-2026-10-18/testnet/deployment.json",
+        "docs/evidence/w5-2026-10-18/README.md"
+      ],
+      "external_gates": [
+        "Real business identity/title/valuation/compliance and independent organizational custody remain outside research scope.",
+        "External human duty acknowledgment and a commercial SLA are not proved by an automated receiver or short capacity test.",
+        "Final release checks and independent GitHub host recovery are bound to the final commit in GitHub checks/artifacts."
+      ],
+      "closure_note": {
+        "design": "主流程收敛及 Injective 能力取舍",
+        "files": [
+          "docs/w5-delivery-operations.md",
+          "docs/project-acceptance-2026-10-18.md"
+        ],
+        "tests": [
+          "docs/evidence/w5-2026-10-18/validation.json"
+        ],
+        "deployment_scope": "New controlled Injective testnet instance; legacy instances retained read-only",
+        "remaining_boundary": "Selected research technical implementation and local/testnet acceptance complete. IMPLEMENTED tracks this scope; real-business external gates remain closed and same-SHA release results are recorded natively by CI."
+      },
+      "status_history": [
+        {
+          "date": "2026-10-18",
+          "previous_status": "DECISION_REQUIRED",
+          "status": "IMPLEMENTED",
+          "scope": "W5 controlled-testnet technical implementation and local acceptance; release result in same-SHA GitHub checks"
+        }
+      ]
     }
   ],
   "w1_closure": {
@@ -777,5 +1369,13 @@
     "scope": "A01-A08, A10",
     "state": "IMPLEMENTED locally; A09 and W2-W5 remain OPEN",
     "evidence": "docs/evidence/blockchain-comprehensive-2026-10-17/w1-closure.md"
+  },
+  "w5_closure": {
+    "date": "2026-10-18",
+    "source_sha256": "725d539245e2d75d30c67df136234dff570ce1c342bddd95114558a335ec8885",
+    "state": "W5 local and actual testnet technical acceptance complete; final same-SHA release checks are native GitHub evidence",
+    "evidence": "docs/evidence/w5-2026-10-18/README.md",
+    "business_gate": "CLOSED",
+    "local_regression_baseline": "8a9d1ad8a47b41f10bbff720a0891fc6ace993d7fd221205233cfe387a431ea5"
   }
 }

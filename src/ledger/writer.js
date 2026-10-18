@@ -6,6 +6,18 @@ import { appendJsonl, writeJsonAtomic, writeFileAtomic, readJson, createWriteQue
 
 const queues = new Map();
 
+async function retireLease(lock, candidate) {
+  // Windows can briefly deny the rename while a contender reads owner.json.
+  // Keep the nonempty shared lease intact until retirement succeeds.
+  for (let attempt = 0; ; attempt++) {
+    try { await fs.rename(lock, candidate); return; }
+    catch (error) {
+      if (!['EPERM', 'EBUSY', 'EACCES'].includes(error.code) || attempt >= 6) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
+    }
+  }
+}
+
 export class LedgerWriter {
   constructor(baseDir) {
     this.baseDir = path.resolve(baseDir);
@@ -51,7 +63,7 @@ export class LedgerWriter {
       } finally {
         // Retire the entire nonempty lease atomically. Recursive deletion at the shared
         // name could empty it, admit a successor, then delete that successor's lease.
-        if (acquired) await fs.rename(lock, candidate);
+        if (acquired) await retireLease(lock, candidate);
         await fs.rm(candidate, { recursive: true, force: true });
       }
     });

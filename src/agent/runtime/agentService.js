@@ -241,6 +241,11 @@ export class AgentService {
     const autonomy = this.autonomy();
     const roles = this.signerRoles();
     const busStatus = this.bus.status();
+    const observedSources = [...this.store.pools.values()].map((pool) => pool.quote?.data_quality).filter(Boolean);
+    const sources = { observed: observedSources.length > 0, total: observedSources.length,
+      expired_live: observedSources.filter((source) => source.status === 'live' && (!Number.isFinite(Date.parse(source.expires_at)) || Date.parse(source.expires_at) <= this.now().getTime())).length,
+      unavailable: observedSources.filter((source) => ['stale', 'unavailable'].includes(source.status)).length,
+      fixture: observedSources.filter((source) => ['fixture', 'synthetic', 'offline'].includes(source.status)).length };
     return {
       running: this.running,
       enabled: this.config.enabled,
@@ -251,6 +256,7 @@ export class AgentService {
       emergency_stop_sources: { local: this.localEmergencyStopped, chain: this.getMode() === 'live' && this.chainEmergencyStopped,
         chain_unknown: this.getMode() === 'live' && this.chainSafetyUnknown },
       chain_watcher: this.chainWatcher?.status(this.getMode()) ?? { enabled: false, state: 'disabled' },
+      sources,
       anchoring: this.anchoring?.status() ?? { enabled: false },
       scheduler: { interval_sec: this.config.monitorIntervalSec, last_tick_at: this.scheduler.lastRunAt, next_tick_at: this.scheduler.nextRunAt },
       queue: { queued: busStatus.queued, processing: busStatus.processing, counts: busStatus.counts, dead: busStatus.dead },

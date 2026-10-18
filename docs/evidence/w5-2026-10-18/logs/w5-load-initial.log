@@ -1,0 +1,15 @@
+W5 capacity: 2000 requests, 0 failures, p95=46.8ms
+W5 soak: 46 observations, 0 failures
+W5 soak: 91 observations, 0 failures
+W5 soak: 136 observations, 0 failures
+W5 soak: 181 observations, 0 failures
+W5 soak: 226 observations, 0 failures
+W5 soak: 271 observations, 0 failures
+W5 soak: 316 observations, 0 failures
+W5 soak: 361 observations, 0 failures
+W5 soak: 406 observations, 0 failures
+W5 soak: 451 observations, 0 failures
+W5 soak: 496 observations, 0 failures
+W5 soak: 541 observations, 0 failures
+W5 soak: 586 observations, 0 failures
+{"passed":false,"output":"E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\docs\\evidence\\w5-2026-10-18\\load.json"}

@@ -1,0 +1,3 @@
+AgentBL Agent harness running at http://localhost:11113 (listening on 127.0.0.1)
+LLM relay: no provider configured (Copilot uses deterministic preferences, ranking and templates)
+[agentbl] agent runtime started: mode=demo autonomy=auto

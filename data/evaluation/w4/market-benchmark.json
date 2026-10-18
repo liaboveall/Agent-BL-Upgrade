@@ -1,0 +1,24 @@
+{
+  "schema": "agentbl-market-holdout-v1",
+  "version": "2026-10-17.1",
+  "source": {
+    "publisher": "FRED / International Monetary Fund",
+    "series": "PCOPPUSDM",
+    "url": "https://fred.stlouisfed.org/series/PCOPPUSDM",
+    "observed_page_updated_at": "2026-08-17T13:51:00-05:00",
+    "recorded_on": "2026-10-17",
+    "unit": "USD/MT",
+    "frequency": "monthly_average",
+    "scope": "public benchmark observations, not cargo liquidation valuations",
+    "citation": "International Monetary Fund, Global price of Copper [PCOPPUSDM], retrieved from FRED, Federal Reserve Bank of St. Louis"
+  },
+  "observations": [
+    { "month": "2026-03", "price": "12528.70955" },
+    { "month": "2026-04", "price": "12890.68773" },
+    { "month": "2026-05", "price": "13512.15619" },
+    { "month": "2026-06", "price": "13552.04091" },
+    { "month": "2026-07", "price": "13542.82087" }
+  ],
+  "approved_business_thresholds": null,
+  "cargo_valuation_error": null
+}

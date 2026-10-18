@@ -89,6 +89,15 @@ export class Ledger {
   }
 
   markBroadcast(intentId, txHash) { return this.#updateIntent(intentId, 'broadcast', txHash); }
+  checkpointBroadcast(intentId, checkpoint) {
+    return this.writer.exclusive(async () => {
+      const intent = await this.getIntent(intentId);
+      if (!intent || intent.tx_hash || intent.broadcast_nonce !== undefined) throw new Error('Intent already has a broadcast checkpoint; reconcile it before another send');
+      if (!Number.isSafeInteger(checkpoint.nonce) || checkpoint.nonce < 0 || !Number.isSafeInteger(checkpoint.block) || checkpoint.block < 0) throw new Error('Invalid broadcast checkpoint');
+      const updated = { ...intent, status: 'broadcast_prepared', broadcast_nonce: checkpoint.nonce, prepared_block: checkpoint.block };
+      await this.writer.appendIntent(updated); return updated;
+    });
+  }
   confirmIntent(intentId, txHash, blockNumber) { return this.#updateIntent(intentId, 'confirmed', txHash, { block_number: Number(blockNumber) }); }
   reconcileIntent(intentId, txHash) { return this.#updateIntent(intentId, 'reconciliation_required', txHash); }
 

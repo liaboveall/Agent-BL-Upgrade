@@ -1,0 +1,28 @@
+{
+  "schema": "agentbl-w4-provider-schema-probe-v1",
+  "started_at": "2026-10-17T17:33:48.969Z",
+  "timeout_ms": 60000,
+  "corpus_hash": "0xe4f38216d0ed563c4abfc358b5d0beee1efe79cfbb35cc3496ccb425391280db",
+  "sample_id": "dcsa-straight-bl",
+  "input_hash": "0xcd2963a0b6cf9531490a44e7352772d999535b3479ca8c2a97867fd7dd6f634d",
+  "source_version": {
+    "policy_hash": "0x924a08ccd051d77fff534a7dd71966b8f26e1e3e9534b3e69e27fcfe0c45c1f4",
+    "code_commit": "0x6ec7893ae75fcc9f5e54be778d8bba81facb2e50ebc5121474cd2be408705723",
+    "model_id": "x-test-2",
+    "version_id": "0xe92018360b6cd2be8da22c6ebb475e07239fc21839bf2a76bab5a05955276cf6"
+  },
+  "provider": {
+    "provider": "custom",
+    "model": "x-test-2"
+  },
+  "scope": "one public specimen with a longer timeout; not a complete quality evaluation",
+  "business_accepted": false,
+  "status": "REJECTED_OR_UNAVAILABLE",
+  "error": {
+    "code": "MODEL_OUTPUT_INVALID",
+    "category": null
+  },
+  "completed_at": "2026-10-17T17:34:12.120Z",
+  "latency_ms": 23128,
+  "report_hash": "0x5032469c94927e2ecadce0c9525b8d01d404c6300dc4e54c8f34953edd811428"
+}

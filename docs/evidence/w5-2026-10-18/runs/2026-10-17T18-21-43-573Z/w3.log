@@ -1,0 +1,16 @@
+npm notice run agentbl-agent-starter@0.1.0 test:w3
+npm notice run node scripts/test-w3.mjs
+No contracts to compile
+▶ W3 actual EVM + business-session HTTP + wallet plans
+  ✔ walks trusted issuance, private disclosure approval, holder pledge, investor terms, cash flow and claim (9839.9965ms)
+  ✔ rejects wrong-wallet and wrong-calldata receipts and reconciles saved broadcast without sending again (5744.1721ms)
+  ✔ verifies manifest artifacts, refuses code/network tampering, and preserves receipt reorg failures (5664.844ms)
+✔ W3 actual EVM + business-session HTTP + wallet plans (22011.1367ms)
+ℹ tests 3
+ℹ suites 1
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 22217.8105

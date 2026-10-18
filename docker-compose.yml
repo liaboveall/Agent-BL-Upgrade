@@ -1,6 +1,9 @@
 services:
   agentbl:
-    build: .
+    build:
+      context: .
+      args:
+        RELEASE_REVISION: ${AGENTBL_RELEASE_REVISION:-UNRECORDED}
     image: agentbl:local
     ports:
       # Loopback only. To serve it publicly, put a reverse proxy (nginx, Caddy) with TLS in
@@ -13,6 +16,8 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOST: 0.0.0.0
+      AGENTBL_RUNTIME_DIR: /app/data/runtime
+      AGENTBL_RELEASE_REVISION: ${AGENTBL_RELEASE_REVISION:-UNRECORDED}
     volumes:
       # Receipts, cached reports, decision logs and Mystery reveals survive restarts.
       - agentbl-runtime:/app/data/runtime

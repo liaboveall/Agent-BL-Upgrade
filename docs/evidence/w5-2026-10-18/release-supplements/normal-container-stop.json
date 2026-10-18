@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-18T01:17:05.015Z",
+  "container": "agentbl-w5-runtime",
+  "stop_command": "docker stop -t 30 agentbl-w5-runtime",
+  "exit_code": 0,
+  "root_runtime_lease_present": false,
+  "source_owner_retired_only_after_death_proved": true
+}

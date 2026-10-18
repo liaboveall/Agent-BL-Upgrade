@@ -52,7 +52,7 @@ import {
   envInt,
   MIN_ADMIN_TOKEN_LENGTH
 } from './security.js';
-import { cleanupOrphanTemps } from '../lib/jsonStore.js';
+import { cleanupOrphanTemps, writeJsonAtomic } from '../lib/jsonStore.js';
 import { ActivityLog } from '../agent/runtime/activityLog.js';
 import { attachActivityPersistence, createAgentService } from '../agent/runtime/factory.js';
 import { loadAgentConfig } from '../agent/runtime/config.js';
@@ -70,10 +70,19 @@ import { createLiveGateway } from '../x402/liveGateway.js';
 import { createPricingDelegate } from '../interop/delegation.js';
 import { createInteropRoutes } from './interopRoutes.js';
 import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase } from './workspaceAccess.js';
+import { createRightsRoutes } from './rightsRoutes.js';
+import { createEvidenceRoutes } from './evidenceRoutes.js';
+import { handleOperationsRoute, guardNewIntake } from './operationsRoutes.js';
+import { acquireRuntimeLease } from '../ops/lease.js';
+import { createRuntimeMonitor } from '../ops/runtime.js';
+import { createControlledRoutes } from './controlledRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
+const handleRightsRoute = createRightsRoutes({ getVersion: () => getAgentService().anchoring?.version?.version_id });
+const handleEvidenceRoute = createEvidenceRoutes({ getAnchoring: () => getAgentService().anchoring });
+const handleControlledRoute = createControlledRoutes({ getMode: () => demoModeController.snapshot().mode });
 const publicDir = path.join(rootDir, 'public');
 // The React dashboard is built into dist/ (npm run build); public/ keeps the static assets it uses.
 const distDir = path.join(rootDir, 'dist');
@@ -300,7 +309,7 @@ async function resolvePricingRequest(body, url) {
 
 /** Narrow the resolved options to what quoteFromCase / compareSpeeds accept. */
 function quoteOptions(options) {
-  const out = {};
+  const out = { require_source_validation: demoModeController.snapshot().mode === 'live' };
   if (options.payout_speed !== undefined) out.payout_speed = options.payout_speed;
   if (options.requested_cash_usd !== undefined) out.requested_cash_usd = options.requested_cash_usd;
   if (options.paid_report_envelopes !== undefined) out.paid_report_envelopes = options.paid_report_envelopes;
@@ -551,7 +560,7 @@ export const copilotService = new CopilotService({
 const handleCopilotRoute = createCopilotRoutes({ service: copilotService });
 const delegatePricing = createPricingDelegate({
   loadCase: async (id) => (await loadCaseCatalog()).find((entry) => entry.case_id === id)?.case,
-  readReport: async (id) => (await import('../x402/reportStore.js')).getPaidReportCache().read(id)
+  readReport: async (id) => demoModeController.snapshot().mode === 'live' ? null : (await import('../x402/reportStore.js')).getPaidReportCache().read(id)
 });
 const mcpContext = { getService: getAgentService, recommend: (input) => copilotService.query(input), delegate: delegatePricing, env: process.env };
 const handleInteropRoute = createInteropRoutes({ context: mcpContext, runtimeMode: () => demoModeController.snapshot() });
@@ -576,7 +585,8 @@ const quotePoolCase = (caseData) => {
   const quote = normalizePricingQuoteHashes(quoteFromCase(caseData, {
     // A few imported/desensitized fixtures predate the FAST/BALANCED/
     // LOW_COST enum. They still receive a real deterministic quote.
-    payout_speed: PAYOUT_SPEEDS.includes(configuredSpeed) ? configuredSpeed : 'BALANCED'
+    payout_speed: PAYOUT_SPEEDS.includes(configuredSpeed) ? configuredSpeed : 'BALANCED',
+    require_source_validation: demoModeController.snapshot().mode === 'live'
   }));
   assertPricingQuote(quote, caseData);
   return quote;
@@ -643,46 +653,52 @@ const x402Definitions = createX402ServiceDefinitions({
 
 const DEFAULT_LIVE_GATEWAY_RETRY_MS = 5_000; // override: X402_GATEWAY_RETRY_MS
 const liveGatewayState = { promise: null, generation: null, failure: null, failedAt: 0 };
+const serverGatewayOptions = new WeakMap();
+const serverGatewayStates = new WeakMap();
 
 /**
  * The Live gateway is created lazily (it validates the facilitator over the network)
  * and rebuilt when the runtime mode generation changes. A failure is remembered for a
  * few seconds so a down facilitator is not hammered by every request.
  */
-async function getLiveGateway() {
+async function getLiveGateway(server) {
+  if (server && !serverGatewayStates.has(server)) serverGatewayStates.set(server, { promise: null, generation: null, failure: null, failedAt: 0 });
+  const gatewayState = server ? serverGatewayStates.get(server) : liveGatewayState;
   const { generation } = demoModeController.snapshot();
-  if (liveGatewayState.promise && liveGatewayState.generation === generation) return liveGatewayState.promise;
-  if (liveGatewayState.failure
-      && liveGatewayState.generation === generation
-      && Date.now() - liveGatewayState.failedAt < envInt(process.env, 'X402_GATEWAY_RETRY_MS', DEFAULT_LIVE_GATEWAY_RETRY_MS)) {
-    throw liveGatewayState.failure;
+  if (gatewayState.promise && gatewayState.generation === generation) return gatewayState.promise;
+  if (gatewayState.failure
+      && gatewayState.generation === generation
+      && Date.now() - gatewayState.failedAt < envInt(process.env, 'X402_GATEWAY_RETRY_MS', DEFAULT_LIVE_GATEWAY_RETRY_MS)) {
+    throw gatewayState.failure;
   }
 
   const { MysteryStoreError } = await import('../mystery/store.js');
   const { mysteryHttpStatus } = await mysteryService();
-  liveGatewayState.generation = generation;
-  liveGatewayState.failure = null;
-  liveGatewayState.promise = createLiveGateway({
+  gatewayState.generation = generation;
+  gatewayState.failure = null;
+  gatewayState.promise = createLiveGateway({
+    ...(serverGatewayOptions.get(server) ?? {}),
+    canSettle: () => !server?.operations || server.operations.readiness().ok,
     definitions: x402Definitions,
     describeError: (error) => (error instanceof MysteryStoreError
       ? { status: mysteryHttpStatus(error), code: error.code, message: error.message, details: error.details }
       : describeError(error))
   }).catch((cause) => {
-    liveGatewayState.promise = null;
-    liveGatewayState.failedAt = Date.now();
-    liveGatewayState.failure = new HttpError(
+    gatewayState.promise = null;
+    gatewayState.failedAt = Date.now();
+    gatewayState.failure = new HttpError(
       503,
       'x402_v2_live_transport_required',
       `The x402 V2 live gateway is unavailable: ${cause.message}`
     );
-    throw liveGatewayState.failure;
+    throw gatewayState.failure;
   });
-  return liveGatewayState.promise;
+  return gatewayState.promise;
 }
 
 async function handlePaidService(request, response, service) {
   if (process.env.DEMO_MODE === 'false') {
-    const gateway = await getLiveGateway();
+    const gateway = await getLiveGateway(request.socket.server);
     await gateway.handle(request, response);
     return;
   }
@@ -706,6 +722,9 @@ async function handlePaidService(request, response, service) {
 
 async function routeRequest(request, response, url) {
   const { method } = request;
+  if (await handleRightsRoute(request, response, url)) return;
+  if (await handleEvidenceRoute(request, response, url)) return;
+  if (await handleControlledRoute(request, response, url)) return;
   if (await handleInteropRoute(request, response, url)) return;
   const { pathname } = url;
 
@@ -1363,6 +1382,17 @@ async function routeRequest(request, response, url) {
   // pay again. This backs the UI's "purchased reports survive a refresh".
   if (method === 'GET' && pathname.startsWith('/api/x402/report/')) {
     const reportId = safeDecodeURIComponent(pathname.slice('/api/x402/report/'.length));
+    if (demoModeController.snapshot().mode === 'live') {
+      const header = request.headers['payment-signature'] ?? request.headers['x-payment'];
+      if (!header) throw new HttpError(401, 'payment_authorization_required', 'Re-send the original PAYMENT-SIGNATURE to retrieve this paid report without another charge');
+      let data;
+      try {
+        const { decodePaymentSignatureHeader } = await import('@injectivelabs/x402/client');
+        const gateway = await getLiveGateway(request.socket.server);
+        data = await gateway.runtime.settlementService.readDeliveredReport(decodePaymentSignatureHeader(header), reportId);
+      } catch { throw new HttpError(409, 'paid_report_reconciliation_required', 'Report authorization or canonical payment could not be verified; retry the original signed request'); }
+      sendJson(response, 200, { ...data, cached: true }); return;
+    }
     const { getPaidReportCache } = await import('../x402/reportStore.js');
     const cached = await getPaidReportCache().read(reportId);
     if (!cached) {
@@ -1593,6 +1623,9 @@ export async function handleRequest(request, response) {
   try {
     const url = parseRequestUrl(request);
     applySecurityHeaders(response, { isApi: url.pathname.startsWith('/api/') });
+    const operations = request.socket.server?.operations;
+    if (handleOperationsRoute(request, response, url, operations)) return;
+    guardNewIntake(request, url, operations);
     enforceRateLimits(request, response, url);
     await routeRequest(request, response, url);
   } catch (error) {
@@ -1600,8 +1633,9 @@ export async function handleRequest(request, response) {
   }
 }
 
-export function createServer() {
+export function createServer({ x402Options = {}, operations = null } = {}) {
   const server = http.createServer((request, response) => {
+    operations?.recordRequest(response);
     // handleRequest reports its own errors; this is the last line of defence so
     // that no rejection can ever take the process down.
     handleRequest(request, response).catch(() => {
@@ -1614,6 +1648,8 @@ export function createServer() {
   server.headersTimeout = 30_000;
   server.requestTimeout = 60_000;
   server.keepAliveTimeout = 65_000;
+  serverGatewayOptions.set(server, x402Options);
+  server.operations = operations;
   return server;
 }
 
@@ -1632,18 +1668,22 @@ function printStartupNotes(port, host) {
   }
 }
 
-function installGracefulShutdown(server) {
+function installGracefulShutdown(server, unlock) {
   let closing = false;
   const shutdown = (signal) => {
     if (closing) return;
     closing = true;
+    if (server.operations) server.operations.stopping = true;
     console.log(`${signal} received, shutting down...`);
     closeActivityStreams();
     copilotService.closeStreams();
     // Let the agent finish the event it is on and write its state before the process ends.
     const agentStopped = (agentService?.stop() ?? Promise.resolve()).catch(() => {});
     agentStopped.finally(() => activityLog.flush().catch(() => {})).finally(() => {
-      server.close(() => process.exit(0));
+      server.close(async () => {
+        try { await server.operations?.stop(); await handleControlledRoute.close(); await unlock(); process.exit(0); }
+        catch { process.exit(1); }
+      });
       server.closeIdleConnections();
     });
     setTimeout(() => process.exit(1), 10_000).unref();
@@ -1679,9 +1719,15 @@ if (isEntryPoint) {
   const port = Number(process.env.PORT ?? 3000);
   const host = process.env.HOST || undefined;
   // Leftovers of writes that crashed mid-flight (see src/lib/jsonStore.js).
-  cleanupOrphanTemps(runtimeDir()).catch(() => {});
-  const server = createServer();
+  if (process.env.AGENTBL_REQUIRE_EXISTING_RUNTIME === 'true') await fs.access(runtimePath('runtime-initialized.json'));
+  const unlock = await acquireRuntimeLease(runtimeDir());
+  await writeJsonAtomic(runtimePath('runtime-initialized.json'), { schema: 'agentbl-initialized-runtime-v1' }, { durable: true });
+  await cleanupOrphanTemps(runtimeDir());
+  const operations = createRuntimeMonitor({ directory: runtimeDir(), env: process.env, getAgentStatus: () => getAgentService().status(),
+    getCapitalHealth: () => handleControlledRoute.health() });
+  const server = createServer({ operations });
   server.listen(port, host, () => printStartupNotes(port, host));
-  installGracefulShutdown(server);
-  startAgentRuntime().catch((error) => console.error('[agentbl] agent runtime failed to start:', error));
+  installGracefulShutdown(server, unlock);
+  startAgentRuntime().catch(() => { operations.failStartup(); console.error('[agentbl] agent runtime failed to start; new intake is paused'); })
+    .finally(() => operations.start().catch(() => { operations.failStartup(); }));
 }

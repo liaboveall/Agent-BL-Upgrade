@@ -143,6 +143,7 @@ export function proposeFromEvent(event, { pool, mode, now = () => Date.now() }) 
     }
 
     case 'RISK_CLEARED': {
+      if (mode === 'live' && pool.caseData?.real_data?.provenance?.review_required) return ignored('Market provenance still requires human review; risk cannot be cleared');
       if (pool.status !== 'Paused') return ignored(`The pool is ${pool.status}, not Paused; nothing to resume`);
       return {
         proposals: [proposal(event, pool, {

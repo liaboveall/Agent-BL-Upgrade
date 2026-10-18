@@ -11,6 +11,10 @@ import { DiscoverPage } from './pages/discover/DiscoverPage.jsx';
 import { DealDialog } from './pages/deal/DealDialog.jsx';
 import { CopilotLauncher } from './features/copilot/CopilotLauncher.jsx';
 import { VIEWS } from './state/controller.js';
+import { RightsPanel } from './features/rights/RightsPanel.jsx';
+import { EvidencePanel } from './features/evidence/EvidencePanel.jsx';
+import { OperationsPanel } from './features/operations/OperationsPanel.jsx';
+import { ControlledFinancePanel } from './features/rights/ControlledFinancePanel.jsx';
 
 const PAGES = { market: MarketPage, mint: MintPage, agent: AgentPage, discover: DiscoverPage };
 
@@ -41,6 +45,10 @@ export function App() {
           );
         })}
       </main>
+      <RightsPanel />
+      <ControlledFinancePanel />
+      <EvidencePanel />
+      <OperationsPanel />
       <footer className="page-foot">
         <span>{t('footer_left')}</span>
         <span className="muted">{t('footer_right')}</span>

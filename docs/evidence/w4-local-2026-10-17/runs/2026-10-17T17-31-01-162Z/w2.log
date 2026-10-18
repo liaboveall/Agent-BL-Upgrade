@@ -1,0 +1,9 @@
+npm notice run agentbl-agent-starter@0.1.0 test:w2
+npm notice run node scripts/test-w2.mjs
+No contracts to compile
+(node:38276) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ W2 real EVM + HTTP + wallet lifecycle
+  ✔ persists wallet subscriptions, additional purchases, fees and claims through the real HTTP adapter (5130.0626ms)
+  ✔ refunds actual paid capital, isolates Demo holdings and survives an empty position snapshot (2059.2476ms)
+  ✔ recovers a broadcast whose process died before attaching its hash, without signing again (2008.0844ms)

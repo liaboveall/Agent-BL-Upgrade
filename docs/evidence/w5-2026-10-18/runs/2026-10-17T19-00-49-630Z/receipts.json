@@ -1,0 +1,270 @@
+{
+  "schema": "agentbl-w5-command-receipts-v1",
+  "started_at": "2026-10-17T19:00:49.630Z",
+  "completed_at": "2026-10-17T19:17:41.835Z",
+  "source_sha256": "8a9d1ad8a47b41f10bbff720a0891fc6ace993d7fd221205233cfe387a431ea5",
+  "source_unchanged": true,
+  "runtime": {
+    "node": "v26.8.1",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "browser_executable": "C:\\Users\\Mars\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1243\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+  "receipts": [
+    {
+      "name": "lint",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "lint"
+      ],
+      "started_at": "2026-10-17T19:00:49.718Z",
+      "completed_at": "2026-10-17T19:00:52.880Z",
+      "exit_code": 1,
+      "timed_out": false,
+      "log": "lint.log"
+    },
+    {
+      "name": "check",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "check"
+      ],
+      "started_at": "2026-10-17T19:00:52.881Z",
+      "completed_at": "2026-10-17T19:00:53.537Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "check.log"
+    },
+    {
+      "name": "build",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "build"
+      ],
+      "started_at": "2026-10-17T19:00:53.537Z",
+      "completed_at": "2026-10-17T19:00:54.125Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "build.log"
+    },
+    {
+      "name": "contracts",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "test:contracts"
+      ],
+      "started_at": "2026-10-17T19:00:54.126Z",
+      "completed_at": "2026-10-17T19:01:04.822Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "contracts.log"
+    },
+    {
+      "name": "application",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "test"
+      ],
+      "started_at": "2026-10-17T19:01:04.822Z",
+      "completed_at": "2026-10-17T19:01:50.899Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "application.log"
+    },
+    {
+      "name": "coverage",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "test:coverage"
+      ],
+      "started_at": "2026-10-17T19:01:50.899Z",
+      "completed_at": "2026-10-17T19:02:40.721Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "coverage.log"
+    },
+    {
+      "name": "w2",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "test:w2"
+      ],
+      "started_at": "2026-10-17T19:02:40.722Z",
+      "completed_at": "2026-10-17T19:03:08.309Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "w2.log"
+    },
+    {
+      "name": "w3",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "test:w3"
+      ],
+      "started_at": "2026-10-17T19:03:08.310Z",
+      "completed_at": "2026-10-17T19:03:31.135Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "w3.log"
+    },
+    {
+      "name": "w4",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "test:w4"
+      ],
+      "started_at": "2026-10-17T19:03:31.135Z",
+      "completed_at": "2026-10-17T19:03:37.743Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "w4.log"
+    },
+    {
+      "name": "w5",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "test:w5"
+      ],
+      "started_at": "2026-10-17T19:03:37.743Z",
+      "completed_at": "2026-10-17T19:04:10.331Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "w5.log"
+    },
+    {
+      "name": "browser",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "test:browser"
+      ],
+      "started_at": "2026-10-17T19:04:10.332Z",
+      "completed_at": "2026-10-17T19:04:28.727Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "browser.log"
+    },
+    {
+      "name": "agent-evaluation",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "eval:agent",
+        "--",
+        "--check"
+      ],
+      "started_at": "2026-10-17T19:04:28.751Z",
+      "completed_at": "2026-10-17T19:04:31.203Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "agent-evaluation.log"
+    },
+    {
+      "name": "preflight",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "preflight",
+        "--",
+        "--report",
+        "E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\docs\\evidence\\w5-2026-10-18\\runs\\2026-10-17T19-00-49-630Z\\preflight.json"
+      ],
+      "started_at": "2026-10-17T19:04:31.203Z",
+      "completed_at": "2026-10-17T19:05:41.807Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "preflight.log"
+    },
+    {
+      "name": "production-audit",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "audit",
+        "--omit=dev",
+        "--audit-level=high",
+        "--json"
+      ],
+      "started_at": "2026-10-17T19:05:41.807Z",
+      "completed_at": "2026-10-17T19:05:42.861Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "production-audit.log"
+    },
+    {
+      "name": "contracts-audit",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "--prefix",
+        "hardhat",
+        "audit",
+        "--audit-level=high",
+        "--json"
+      ],
+      "started_at": "2026-10-17T19:05:42.861Z",
+      "completed_at": "2026-10-17T19:05:43.928Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "contracts-audit.log"
+    },
+    {
+      "name": "clean-build",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "build:clean",
+        "--",
+        "E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\docs\\evidence\\w5-2026-10-18\\runs\\2026-10-17T19-00-49-630Z\\clean-build"
+      ],
+      "started_at": "2026-10-17T19:05:43.928Z",
+      "completed_at": "2026-10-17T19:07:33.379Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "clean-build.log"
+    },
+    {
+      "name": "capacity",
+      "executable": "node",
+      "args": [
+        "npm-cli.js",
+        "run",
+        "load:w5",
+        "--",
+        "--soak-seconds",
+        "600",
+        "--output",
+        "E:\\NUS\\BlockChain\\Project\\Agent-BL-Upgrade\\docs\\evidence\\w5-2026-10-18\\runs\\2026-10-17T19-00-49-630Z\\capacity.json"
+      ],
+      "started_at": "2026-10-17T19:07:33.380Z",
+      "completed_at": "2026-10-17T19:17:41.753Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "log": "capacity.log"
+    }
+  ],
+  "passed": false
+}

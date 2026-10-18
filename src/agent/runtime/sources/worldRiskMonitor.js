@@ -38,7 +38,7 @@ export function createWorldRiskMonitor({ tracker, assess = assessWorldRisk, env 
       const metadata = evidenceMetadata(assessment, { now: time, mode: assessment.live ? 'live' : 'fixture' });
       const usable = eventFreshness({ ...metadata, data: { events: assessment.events ?? [] } }, time).fresh;
       // Unavailable or old data cannot count towards hysteresis or clear a real risk.
-      if (!usable || mode === 'live' && (!assessment.live || assessment.review_required)) continue;
+      if (!usable || mode === 'live' && (!assessment.live || assessment.review_required || pool.caseData.real_data?.provenance?.review_required)) continue;
       const change = await tracker.observe(caseId, assessment.events ?? []);
       if (!change) continue;
       out.push({

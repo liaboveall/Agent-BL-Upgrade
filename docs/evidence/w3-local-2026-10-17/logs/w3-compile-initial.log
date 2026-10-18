@@ -1,0 +1,34 @@
+
+DeclarationError: Function "mcopy" not found.
+  --> .\node_modules\@openzeppelin\contracts\utils\Bytes.sol:94:13:
+   |
+94 |             mcopy(add(result, 0x20), add(add(buffer, 0x20), start), sub(end, start))
+   |             ^^^^^
+
+DeclarationError: Function "mcopy" not found.
+   --> .\node_modules\@openzeppelin\contracts\utils\Bytes.sol:124:13:
+    |
+124 |             mcopy(add(buffer, 0x20), add(add(buffer, 0x20), start), sub(end, start))
+    |             ^^^^^
+
+DeclarationError: Function "mcopy" not found.
+   --> .\node_modules\@openzeppelin\contracts\utils\Bytes.sol:168:13:
+    |
+168 |             mcopy(add(add(buffer, 0x20), pos), add(add(replacement, 0x20), offset), length)
+    |             ^^^^^
+
+DeclarationError: Function "mcopy" not found.
+   --> .\node_modules\@openzeppelin\contracts\utils\Bytes.sol:195:17:
+    |
+195 |                 mcopy(add(result, offset), add(input, 0x20), mload(input))
+    |                 ^^^^^
+
+DeclarationError: Function "mcopy" not found.
+  --> .\node_modules\@openzeppelin\contracts\utils\cryptography\SignatureChecker.sol:83:13:
+   |
+83 |             mcopy(add(ptr, 0x44), signature, add(length, 0x20))
+   |             ^^^^^
+
+Error HHE910: Compilation failed
+
+For more info go to https://hardhat.org/HHE910 or run Hardhat with --show-stack-traces

@@ -157,6 +157,25 @@ describe('W2 durable capital ledger', () => {
     assert.equal((await ledger.listPositions())[0].shares, '200');
   });
 
+  it('retries transient Windows lease retirement errors while preserving the shared lock and committed entry', async (t) => {
+    const { ledger, dir } = await fixture(t), rename = fs.rename;
+    let attempts = 0;
+    fs.rename = async (from, to) => {
+      if (from === path.join(dir, 'writer.lock')) {
+        attempts++;
+        assert.ok(await fs.stat(path.join(from, 'owner.json')));
+        if (attempts <= 2) throw Object.assign(new Error('transient sharing violation'), { code: attempts === 1 ? 'EPERM' : 'EBUSY' });
+      }
+      return rename(from, to);
+    };
+    try { await ledger.applyEvent(event()); }
+    finally { fs.rename = rename; }
+    assert.equal(attempts, 3);
+    await assert.rejects(fs.access(path.join(dir, 'writer.lock')), { code: 'ENOENT' });
+    await ledger.applyEvent(event());
+    assert.equal((await ledger.writer.readCashEntries()).length, 1);
+  });
+
   it('records disbursement, recovery and fee without creating fictitious investor positions', async (t) => {
     const { ledger } = await fixture(t);
     for (const [index, kind] of ['DISBURSEMENT', 'RECOVERY', 'FEE'].entries()) {

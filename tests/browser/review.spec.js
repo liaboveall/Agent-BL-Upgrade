@@ -3,6 +3,27 @@ import AxeBuilder from '@axe-core/playwright';
 import fs from 'node:fs/promises';
 
 const copper = 'CASE-EBL-CU-SIN-SHA', diesel = 'CASE-EBL-GASOIL-SIN-JKT';
+for (const language of ['zh', 'en']) {
+  test(`W3 ${language}: research rights state and unavailable controls are explicit on desktop`, async ({ page }, testInfo) => {
+    await page.addInitScript((lang) => localStorage.setItem('ts_lang', lang), language);
+    await page.goto('/');
+    const panel = page.locator('.rights-panel'); await panel.locator('summary').click();
+    await panel.locator('summary').focus(); await page.keyboard.press('Enter');
+    await expect(panel.locator('details')).not.toHaveAttribute('open');
+    await page.keyboard.press('Enter'); await expect(panel.locator('details')).toHaveAttribute('open', '');
+    await expect(panel).toContainText(language === 'zh' ? '尚未连接 W3 部署' : 'No W3 deployment is connected');
+    await expect(panel).toContainText(language === 'zh' ? '尚未启用' : 'Disabled');
+    await expect(panel).toContainText(language === 'zh' ? '退款和领取权' : 'refund and claim rights');
+    for (const width of [1440, 1280]) {
+      await page.setViewportSize({ width, height: 1000 });
+      expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    }
+    await panel.screenshot({ path: testInfo.outputPath(`rights-${language}.png`) });
+    await page.route('**/api/rights/status', (route) => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
+    await page.reload(); await page.locator('.rights-panel summary').click();
+    await expect(page.locator('.rights-panel')).toContainText(language === 'zh' ? '暂不可核对' : 'unavailable');
+  });
+}
 test.beforeEach(async ({ request }) => { await request.post('/api/demo/reset'); });
 const ready = async (page) => {
   await page.goto('/#/mint'); await expect(page.locator('#mint-btn')).toBeVisible();

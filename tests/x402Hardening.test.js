@@ -16,10 +16,16 @@ import {
 import { createPaidReportEnvelope } from '../src/x402/paidReport.js';
 import {
   PaymentSettlementError,
-  recordPaymentEvidence,
+  recordPaymentEvidence as attestPaymentEvidence,
   setPaymentOracleOverride,
   usdcToAtomic
 } from '../src/x402/settlement.js';
+// These tests isolate the PaymentOracle stage; real verification is covered by W4 EVM tests.
+const recordPaymentEvidence = (input) => attestPaymentEvidence({ ...input, independentVerification: input.reportEnvelope ? {
+  verified: true, transaction_hash: input.paymentTxHash, network: input.reportEnvelope.network,
+  payer: input.reportEnvelope.payer, payee: input.reportEnvelope.payee, asset: input.reportEnvelope.asset,
+  amount_atomic: input.reportEnvelope.amount, block_hash: `0x${'ba'.repeat(32)}`, confirmations: 2
+} : null });
 import { readMcpResource } from '../src/mcp/resources.js';
 import { runtimeDir, runtimePath } from '../src/runtimePaths.js';
 import { loadX402Config } from '../src/x402/config.js';

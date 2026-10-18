@@ -1,0 +1,259 @@
+{
+  "schema": "agentbl-provider-evaluation-v1",
+  "corpus_hash": "0xe4f38216d0ed563c4abfc358b5d0beee1efe79cfbb35cc3496ccb425391280db",
+  "scope": "real_provider_public_specimens",
+  "provider": {
+    "provider": "custom",
+    "model": "x-test-2"
+  },
+  "independence": "public standards specimens plus developer-created faults; not an independent business acceptance dataset",
+  "approved_thresholds": null,
+  "metrics": {
+    "samples": 8,
+    "scored_fields": 17,
+    "field_errors": 0,
+    "false_clear": 0,
+    "false_reject": 0,
+    "provider_attempts": 7,
+    "successful_provider_responses": 0,
+    "review_positive_samples": 8,
+    "clear_negative_samples": 0,
+    "provider_quality_measurable": false,
+    "extraction_false_clear": 0,
+    "human_review_rate": 1,
+    "provider_failures": 7,
+    "version_drift": 0,
+    "supported_field_failures": 0
+  },
+  "rows": [
+    {
+      "sample_id": "dcsa-straight-bl",
+      "origin": "public_specimen_transformed_to_text",
+      "input_hash": "0xcd2963a0b6cf9531490a44e7352772d999535b3479ca8c2a97867fd7dd6f634d",
+      "output_hash": "0xbaf53413378cf14042366483bb82ec7e476861e399cb1bed19963d7bb7c21c43",
+      "latency_ms": 15012,
+      "field_errors": [],
+      "scored_fields": 4,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": true,
+      "provider_error": {
+        "code": "MODEL_UNAVAILABLE",
+        "category": "TIMEOUT",
+        "http_status": null
+      },
+      "findings": [
+        "MODEL_EXTRACTION_FAILED"
+      ],
+      "failure_code": "MODEL_UNAVAILABLE",
+      "provider_failed": true
+    },
+    {
+      "sample_id": "dcsa-negotiable-bl",
+      "origin": "public_specimen_transformed_to_text",
+      "input_hash": "0x6c55eb5f89be8b262a489d383974730ae749df9d94455c114e97d1c8badf5323",
+      "output_hash": "0xbb2a3a80661bd351e3b2684d2f540d1805f608fe183680df2f3f514dc24b00f9",
+      "latency_ms": 15004,
+      "field_errors": [],
+      "scored_fields": 3,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": true,
+      "provider_error": {
+        "code": "MODEL_UNAVAILABLE",
+        "category": "TIMEOUT",
+        "http_status": null
+      },
+      "findings": [
+        "MODEL_EXTRACTION_FAILED"
+      ],
+      "failure_code": "MODEL_UNAVAILABLE",
+      "provider_failed": true
+    },
+    {
+      "sample_id": "dcsa-dg",
+      "origin": "public_specimen_transformed_to_text",
+      "input_hash": "0x381815c6ef006b2adc51a9e35d0a2874dd9e9491d40aa20efb0124fdd84ba017",
+      "output_hash": "0x39b5907027838356f6c256026a8c9de808819d9881d9900535e5de52dde825ae",
+      "latency_ms": 15017,
+      "field_errors": [],
+      "scored_fields": 4,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": true,
+      "provider_error": {
+        "code": "MODEL_UNAVAILABLE",
+        "category": "TIMEOUT",
+        "http_status": null
+      },
+      "findings": [
+        "MODEL_EXTRACTION_FAILED"
+      ],
+      "failure_code": "MODEL_UNAVAILABLE",
+      "provider_failed": true
+    },
+    {
+      "sample_id": "missing-cost",
+      "origin": "synthetic_fault",
+      "input_hash": "0x5ab79977509c82cc65680314179539a279a7148531e9dd856b17ce9ae09a41a5",
+      "output_hash": "0xe621c3e46c5c46955f12a34f6facd3782623f426a3bb6d4495bf8f39c0bea89c",
+      "latency_ms": 15005,
+      "field_errors": [],
+      "scored_fields": 2,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": true,
+      "provider_error": {
+        "code": "MODEL_UNAVAILABLE",
+        "category": "TIMEOUT",
+        "http_status": null
+      },
+      "findings": [
+        "MODEL_EXTRACTION_FAILED"
+      ],
+      "failure_code": "MODEL_UNAVAILABLE",
+      "provider_failed": true
+    },
+    {
+      "sample_id": "zh-missing",
+      "origin": "synthetic_fault",
+      "input_hash": "0x56e4e6b5dae03386c40dadb0719294696ff04a5e60519ea48c105ce1663723a9",
+      "output_hash": "0x65a195dfcd9d663994c7e7e7f3bb44c53e4f065958906d63ddf2469af40ba035",
+      "latency_ms": 2711,
+      "field_errors": [],
+      "scored_fields": 0,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": true,
+      "provider_error": {
+        "code": "MODEL_OUTPUT_INVALID",
+        "category": null,
+        "http_status": null
+      },
+      "findings": [
+        "MODEL_EXTRACTION_FAILED"
+      ],
+      "failure_code": "MODEL_OUTPUT_INVALID",
+      "provider_failed": true
+    },
+    {
+      "sample_id": "injection",
+      "origin": "synthetic_fault",
+      "input_hash": "0x69233923d12cbbf7067f9fe6ddb604161f17b2f33dc80deaf90f9b682ec55389",
+      "output_hash": "0x4fca582d952bc9c0899dd69ab2299e538f0f4406d3dead1cc41203dd282c5300",
+      "latency_ms": 2,
+      "field_errors": [],
+      "scored_fields": 4,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": false,
+      "provider_error": null,
+      "findings": [
+        "PROMPT_INJECTION_SUSPECTED"
+      ],
+      "failure_code": null,
+      "provider_failed": false
+    },
+    {
+      "sample_id": "page-conflict",
+      "origin": "synthetic_fault",
+      "input_hash": "0xdfa811334bd63db2242f1de03582a37d955855b0ca927451e2aecc0db4d470c7",
+      "output_hash": "0xb257dc9f994cfb7795b07c2a991107214e4f42cb2a0ae106bc9497e38b10e221",
+      "latency_ms": 15003,
+      "field_errors": [],
+      "scored_fields": 0,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": true,
+      "provider_error": {
+        "code": "MODEL_UNAVAILABLE",
+        "category": "TIMEOUT",
+        "http_status": null
+      },
+      "findings": [
+        "MODEL_EXTRACTION_FAILED"
+      ],
+      "failure_code": "MODEL_UNAVAILABLE",
+      "provider_failed": true
+    },
+    {
+      "sample_id": "damaged-text",
+      "origin": "synthetic_fault",
+      "input_hash": "0x92f962edeca7306f9626a1858848d006943585943472e4f58017abf003cdda63",
+      "output_hash": "0x21b6c496db097a8d5c4508c4ad17745485602bd2174ac6ba806993a3f30f1425",
+      "latency_ms": 9323,
+      "field_errors": [],
+      "scored_fields": 0,
+      "unsupported_fields": [],
+      "extraction_requires_review": true,
+      "extraction_false_clear": false,
+      "false_clear": false,
+      "false_reject": false,
+      "review_required": true,
+      "provider_called": false,
+      "provider_version_drift": false,
+      "provider_attempted": true,
+      "provider_error": {
+        "code": "MODEL_OUTPUT_INVALID",
+        "category": null,
+        "http_status": null
+      },
+      "findings": [
+        "MODEL_EXTRACTION_FAILED"
+      ],
+      "failure_code": "MODEL_OUTPUT_INVALID",
+      "provider_failed": true
+    }
+  ],
+  "business_accepted": false,
+  "human_review_required": true,
+  "report_hash": "0x939827781eb5169294e9ba086821d90eac309535b987ada3c7f4c9118c4d1942",
+  "executed_at": "2026-10-17T15:19:08.032Z",
+  "live_requested": true,
+  "compliance": {
+    "status": "NOT_CONFIGURED",
+    "business_accepted": false
+  }
+}

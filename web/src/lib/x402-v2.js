@@ -7,6 +7,8 @@
 // Everything except payV2WithWallet's network/wallet calls is a pure function so it can
 // be unit-tested in Node (see tests/x402BrowserV2.test.js).
 
+import { paymentRecoveryStorage, paymentRequestKey, readPaymentRecovery, savePaymentRecovery } from './payment-recovery.js';
+
 export const SUPPORTED_NETWORKS = Object.freeze(['eip155:1439', 'eip155:1776']);
 
 export const TRANSFER_WITH_AUTHORIZATION_TYPE = Object.freeze([
@@ -169,13 +171,30 @@ export async function payV2WithWallet({
   onStage,
   fetchImpl = globalThis.fetch.bind(globalThis),
   now = () => Math.floor(Date.now() / 1000),
-  nonce = randomNonce
+  nonce = randomNonce,
+  recoveryStore = paymentRecoveryStorage()
 }) {
   const request = (headers = {}) => fetchImpl(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...headers },
     body: JSON.stringify(body ?? {})
   });
+  const recoveryKey = recoveryStore ? await paymentRequestKey(endpoint, from, body) : null;
+  const previous = recoveryStore ? readPaymentRecovery(recoveryStore, recoveryKey, endpoint, from) : null;
+  const finish = async (response, saved) => {
+    if (recoveryStore && response.ok) {
+      const report = await response.clone().json().catch(() => null);
+      savePaymentRecovery(recoveryStore, recoveryKey, { ...saved, completed: true, report_id: report?.report_envelope?.report_id ?? null });
+    }
+    return response;
+  };
+  if (previous) {
+    onStage?.('reconcile');
+    const response = await request({ 'PAYMENT-SIGNATURE': previous.header, 'X-PAYMENT': previous.header });
+    await finish(response, previous);
+    return { response, challenge: { x402Version: 2, accepts: [previous.requirement] }, requirement: previous.requirement,
+      authorization: previous.authorization, replayed: true };
+  }
 
   onStage?.('challenge');
   const unpaid = await request();
@@ -194,6 +213,9 @@ export async function payV2WithWallet({
 
   onStage?.('settle');
   const header = encodePaymentHeader(buildPaymentPayload({ requirement, authorization, signature }));
+  const recovery = { endpoint, from: from.toLowerCase(), requirement, authorization, header, completed: false };
+  savePaymentRecovery(recoveryStore, recoveryKey, recovery);
   const response = await request({ 'PAYMENT-SIGNATURE': header, 'X-PAYMENT': header });
-  return { response, challenge, requirement, authorization };
+  await finish(response, recovery);
+  return { response, challenge, requirement, authorization, replayed: false };
 }

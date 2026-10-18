@@ -1,0 +1,13 @@
+{
+  "schema": "agentbl-provider-connectivity-v1",
+  "executed_at": "2026-10-17T15:04:10.130Z",
+  "provider": "custom",
+  "model": "x-test-2",
+  "status": "FAILED",
+  "probe": "public_document_schema",
+  "error_type": "DocumentParseError",
+  "error_code": "MODEL_OUTPUT_INVALID",
+  "http_status": null,
+  "document_error": {},
+  "latency_ms": 6616
+}

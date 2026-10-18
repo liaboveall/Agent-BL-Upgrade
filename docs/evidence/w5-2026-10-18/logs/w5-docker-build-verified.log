@@ -1,0 +1,220 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.16kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 ...
+
+#3 [auth] docker/dockerfile:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 2.1s
+
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#4 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#4 CACHED
+
+#5 [internal] load metadata for docker.io/library/node:22-alpine
+#5 ...
+
+#6 [auth] library/node:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#7 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#7 ...
+
+#5 [internal] load metadata for docker.io/library/node:22-alpine
+#5 DONE 1.5s
+
+#7 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#7 DONE 1.5s
+
+#8 [internal] load .dockerignore
+#8 transferring context: 483B 0.0s done
+#8 DONE 0.0s
+
+#9 [web 1/9] FROM docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+#9 resolve docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 0.0s done
+#9 DONE 0.0s
+
+#10 [contracts 1/7] FROM docker.io/library/node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+#10 resolve docker.io/library/node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 0.0s done
+#10 DONE 0.0s
+
+#11 [internal] load build context
+#11 transferring context: 1.42MB 0.2s done
+#11 DONE 0.2s
+
+#12 [web 2/9] WORKDIR /app
+#12 CACHED
+
+#13 [contracts 2/7] WORKDIR /contracts
+#13 CACHED
+
+#14 [web 3/9] COPY package.json package-lock.json ./
+#14 DONE 0.1s
+
+#15 [contracts 3/7] COPY hardhat/package.json hardhat/package-lock.json ./
+#15 DONE 0.1s
+
+#16 [deps 4/4] RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+#16 ...
+
+#17 [web 4/9] RUN npm ci --ignore-scripts
+#17 ...
+
+#18 [contracts 4/7] RUN npm ci --ignore-scripts
+#18 10.12 
+#18 10.12 added 97 packages, and audited 98 packages in 10s
+#18 10.12 
+#18 10.12 30 packages are looking for funding
+#18 10.12   run `npm fund` for details
+#18 10.12 
+#18 10.12 found 0 vulnerabilities
+#18 10.12 npm notice
+#18 10.12 npm notice New major version of npm available! 10.9.9 -> 12.2.0
+#18 10.12 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+#18 10.12 npm notice To update run: npm install -g npm@12.2.0
+#18 10.12 npm notice
+#18 DONE 10.6s
+
+#17 [web 4/9] RUN npm ci --ignore-scripts
+#17 ...
+
+#19 [contracts 5/7] COPY hardhat/contracts ./contracts
+#19 DONE 0.1s
+
+#20 [contracts 6/7] COPY hardhat/hardhat.config.js ./hardhat.config.js
+#20 DONE 0.0s
+
+#21 [contracts 7/7] RUN npm run compile
+#21 0.310 
+#21 0.310 > agentbl-contracts@0.1.0 compile
+#21 0.310 > hardhat build
+#21 0.310 
+#21 ...
+
+#16 [deps 4/4] RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+#16 11.13 
+#16 11.13 added 121 packages, and audited 122 packages in 11s
+#16 11.13 
+#16 11.13 47 packages are looking for funding
+#16 11.13   run `npm fund` for details
+#16 11.13 
+#16 11.13 found 0 vulnerabilities
+#16 11.13 npm notice
+#16 11.13 npm notice New major version of npm available! 10.9.9 -> 12.2.0
+#16 11.13 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+#16 11.13 npm notice To update run: npm install -g npm@12.2.0
+#16 11.13 npm notice
+#16 11.25 npm warn using --force Recommended protections disabled.
+#16 DONE 11.5s
+
+#21 [contracts 7/7] RUN npm run compile
+#21 1.228 Downloading solc 0.8.24
+#21 ...
+
+#22 [stage-3  3/11] COPY --from=deps /app/node_modules ./node_modules
+#22 CACHED
+
+#23 [stage-3  4/11] COPY package.json package-lock.json ./
+#23 DONE 0.1s
+
+#24 [stage-3  5/11] COPY src ./src
+#24 DONE 0.1s
+
+#21 [contracts 7/7] RUN npm run compile
+#21 ...
+
+#25 [stage-3  6/11] COPY public ./public
+#25 DONE 0.1s
+
+#17 [web 4/9] RUN npm ci --ignore-scripts
+#17 12.64 
+#17 12.64 added 255 packages, and audited 256 packages in 12s
+#17 12.64 
+#17 12.64 77 packages are looking for funding
+#17 12.64   run `npm fund` for details
+#17 12.65 
+#17 12.65 found 0 vulnerabilities
+#17 12.65 npm notice
+#17 12.65 npm notice New major version of npm available! 10.9.9 -> 12.2.0
+#17 12.65 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+#17 12.65 npm notice To update run: npm install -g npm@12.2.0
+#17 12.65 npm notice
+#17 DONE 12.7s
+
+#26 [web 5/9] COPY web ./web
+#26 DONE 0.2s
+
+#21 [contracts 7/7] RUN npm run compile
+#21 ...
+
+#27 [web 6/9] COPY public ./public
+#27 DONE 0.0s
+
+#28 [web 7/9] COPY src/core ./src/core
+#28 DONE 0.0s
+
+#29 [web 8/9] COPY src/chain ./src/chain
+#29 DONE 0.0s
+
+#30 [web 9/9] RUN npm run build
+#30 0.309 
+#30 0.309 > agentbl-agent-starter@0.1.0 build
+#30 0.309 > vite build --config web/vite.config.js
+#30 0.309 
+#30 0.573 vite v8.3.2 building client environment for production...
+#30 0.587 transforming...
+#30 0.744 ✓ 238 modules transformed.
+#30 0.843 rendering chunks...
+#30 0.929 computing gzip size...
+#30 0.937 dist/index.html                          0.50 kB │ gzip:   0.31 kB
+#30 0.937 dist/assets/index-DGYH714a.css          65.11 kB │ gzip:  13.44 kB
+#30 0.937 dist/assets/protocolV5Abi-T5zB0abl.js   61.43 kB │ gzip:  18.72 kB
+#30 0.937 dist/assets/index-DHn-nzAG.js          663.69 kB │ gzip: 208.37 kB
+#30 0.937 
+#30 0.937 ✓ built in 363ms
+#30 DONE 1.0s
+
+#21 [contracts 7/7] RUN npm run compile
+#21 ...
+
+#31 [stage-3  7/11] COPY --from=web /app/dist ./dist
+#31 DONE 0.0s
+
+#32 [stage-3  8/11] COPY data ./data
+#32 DONE 0.1s
+
+#33 [stage-3  9/11] COPY scripts/lib ./scripts/lib
+#33 DONE 0.0s
+
+#21 [contracts 7/7] RUN npm run compile
+#21 6.086 Downloading solc 0.8.24 (WASM build)
+#21 39.18 
+#21 39.18 Compiled 20 Solidity files with solc 0.8.24 (evm target: paris)
+#21 DONE 39.2s
+
+#34 [stage-3 10/11] COPY --from=contracts /contracts/artifacts/contracts ./hardhat/artifacts/contracts
+#34 DONE 0.1s
+
+#35 [stage-3 11/11] RUN mkdir -p /app/data/runtime && chown -R node:node /app/data/runtime
+#35 DONE 0.2s
+
+#36 exporting to image
+#36 exporting layers
+#36 exporting layers 0.6s done
+#36 exporting manifest sha256:161362416f5f987921f3015decccc3e3a712a95f8ad65c28e77ce81b8c3e8a2c 0.0s done
+#36 exporting config sha256:ecb18d327c95904a36a0196244a880d8a22bc3d7f2a24ff57da0ae8e0dd51fea 0.1s done
+#36 exporting attestation manifest sha256:de2a2d328a49057ed69d4d6022a583e1871f6e119ef058580c6ef1f9cb1c196f
+#36 exporting attestation manifest sha256:de2a2d328a49057ed69d4d6022a583e1871f6e119ef058580c6ef1f9cb1c196f 0.0s done
+#36 exporting manifest list sha256:43184d967f0d947395c5af52a26e304ec13e5e6ac083fad2239abed3cdca3089 0.0s done
+#36 naming to docker.io/library/agentbl:w5-verified done
+#36 unpacking to docker.io/library/agentbl:w5-verified
+#36 unpacking to docker.io/library/agentbl:w5-verified 0.3s done
+#36 DONE 1.2s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/rzxf7qyf99kf2mbli1vc2ejv4

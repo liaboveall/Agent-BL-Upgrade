@@ -1,0 +1,18 @@
+npm notice run agentbl-agent-starter@0.1.0 build:clean
+npm notice run node scripts/clean-build-w5.mjs E:\NUS\BlockChain\Project\Agent-BL-Upgrade\docs\evidence\w5-2026-10-18\runs\2026-10-17T18-32-04-572Z\clean-build
+Clean build 1: install-app PASS
+Clean build 1: install-contracts PASS
+Clean build 1: web PASS
+Clean build 1: contracts PASS
+Clean build 2: install-app PASS
+Clean build 2: install-contracts PASS
+Clean build 2: web PASS
+Clean build 2: contracts PASS
+file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/clean-build-w5.mjs:64
+  if (!passed) throw new Error('Clean builds or source revision differ');
+                     ^
+
+Error: Clean builds or source revision differ
+    at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/clean-build-w5.mjs:64:22
+
+Node.js v26.8.1

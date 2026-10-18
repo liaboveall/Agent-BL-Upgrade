@@ -24,7 +24,6 @@
 //
 // 1.00 USD per token is a TARGET redemption value, not a capital guarantee.
 
-import crypto from 'node:crypto';
 import { computeCargoValuation } from '../agent/tools/copperValuationTools.js';
 import { suggestHaircut } from '../agent/valuationAgent.js';
 import { checkDocumentConsistency } from '../agent/documentConsistency.js';
@@ -32,6 +31,8 @@ import { retrieveRiskIntel } from '../agent/riskIntel.js';
 import { injectPaidReportEvidence } from '../x402/reportEvidence.js';
 import { PAYOUT_SPEEDS } from './pricingSchema.js';
 import { ValidationError } from './schema.js';
+import { CALIBRATION, CALIBRATION_HASH, actualFinancingPeriod } from '../provenance/market.js';
+import { evidenceHash, snapshotForEvidence } from '../evidence/schema.js';
 
 export { PAYOUT_SPEEDS };
 
@@ -225,7 +226,7 @@ function pickPricingAction({ riskLevel, paused, profitShare, payoutSpeed, bindin
 }
 
 function hashEvidence(payload) {
-  return '0x' + crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  return evidenceHash('agentbl-pricing-snapshot-v2', snapshotForEvidence(payload));
 }
 
 function pct(value) {
@@ -359,7 +360,8 @@ export function priceRwaOffering(input) {
   const effectiveShare = Math.min(totalShare, MAX_PROFIT_SHARE);
 
   // Tenor-aware cap: each cost is the lower of the profit share and the annual rate over the tenor.
-  const tenorDays = Math.max(MIN_TENOR_DAYS, Number(input.tenor_days) || DEFAULT_TENOR_DAYS);
+  const tenorDays = input.actual_period === true ? Number(input.tenor_days) : Math.max(MIN_TENOR_DAYS, Number(input.tenor_days) || DEFAULT_TENOR_DAYS);
+  if (!Number.isFinite(tenorDays) || tenorDays <= 0) throw new TypeError('A positive financing tenor is required');
   const rateCost = (speedKey, risk) => cash * annualRateCap(speedKey, risk) * tenorDays / 365;
   const costOf = (share, speedKey, risk) => Math.min(share * Math.max(0, profit), rateCost(speedKey, risk));
 
@@ -472,7 +474,12 @@ export function priceRwaOffering(input) {
   // BE-8: two hashes for the on-chain RiskPricingOracle.
   //   evidence_hash anchors the INPUTS behind the price (valuation, risk, docs);
   //   quote_hash anchors the TERMS the pool opens with (price, supply, action).
+  core.evidence_schema = 'agentbl-pricing-evidence-v2';
+  core.calibration = { version: CALIBRATION.version, hash: CALIBRATION_HASH, status: CALIBRATION.status,
+    risk_score_semantics: CALIBRATION.risk_score_semantics, payout_sla: null };
   core.evidence_hash = hashEvidence({
+    schema: core.evidence_schema, calibration_hash: CALIBRATION_HASH,
+    input,
     collateral: core.ai_verified_collateral_value_usd,
     max_safe: core.max_safe_redemption_exposure_usd,
     gross_profit: core.exporter_gross_profit_usd,
@@ -482,6 +489,7 @@ export function priceRwaOffering(input) {
     intel: (evidence.intel ?? []).map((i) => i.id)
   });
   core.quote_hash = hashEvidence({
+    schema: 'agentbl-pricing-terms-v2', evidence_hash: core.evidence_hash,
     case_id: core.case_id,
     bl_id: core.bl_id,
     payout_speed: core.payout_speed,
@@ -489,7 +497,9 @@ export function priceRwaOffering(input) {
     recommended_token_supply: core.recommended_token_supply,
     target_redemption_exposure_usd: core.target_redemption_exposure_usd,
     target_redemption_value_usd: core.target_redemption_value_usd,
-    pricing_action: core.pricing_action
+    pricing_action: core.pricing_action,
+    tenor_days: core.tenor_days,
+    annual_rate_cap_bps: core.annual_rate_cap_bps
   });
 
   return core;
@@ -578,6 +588,8 @@ export function quoteFromCase(caseData, options = {}) {
   const risk = scoreRisk(caseData);
   const intel = retrieveRiskIntel(caseData, { k: 3 });
   const financing = caseData.financing ?? {};
+  const period = options.funded_at !== undefined || options.maturity_at !== undefined ? actualFinancingPeriod({ fundedAt: options.funded_at,
+    maturityAt: options.maturity_at, priceAtomic: '1', redemptionAtomic: '1' }) : null;
 
   const quote = priceRwaOffering({
     case_id: caseData.case_id,
@@ -596,11 +608,19 @@ export function quoteFromCase(caseData, options = {}) {
     risk_level: risk.risk_level,
     risk_factors: risk.risk_factors,
     risk_components: risk.risk_components,
-    data_review_required: ['stale', 'mixed', 'unavailable'].includes(caseData.real_data?.status),
+    data_review_required: ['stale', 'mixed', 'unavailable'].includes(caseData.real_data?.status)
+      || options.require_source_validation === true && caseData.real_data?.provenance?.review_required !== false,
     data_quality: caseData.real_data ? { status: caseData.real_data.status, observed_at: caseData.real_data.observed_at ?? null, expires_at: caseData.real_data.expires_at ?? null } : null,
-    tenor_days: tenorFromCase(caseData),
-    evidence: { documents: risk.document_checks, intel }
+    tenor_days: period?.remaining_days ?? tenorFromCase(caseData), actual_period: Boolean(period),
+    financing_clock: period ? { funded_at: period.funded_at, maturity_at: period.maturity_at, source: 'caller_supplied_requires_receipt_binding' } : null,
+    evidence: { documents: risk.document_checks, intel, source_case_hash: hashEvidence(caseData),
+      provenance: caseData.real_data?.provenance ?? null }
   });
+  if (options.funded_at !== undefined || options.maturity_at !== undefined) {
+    quote.actual_financing_period = actualFinancingPeriod({ fundedAt: options.funded_at, maturityAt: options.maturity_at,
+      priceAtomic: String(Math.round(quote.final_issue_price_usd * 1000000)), redemptionAtomic: '1000000', feeAtomic: String(options.fee_atomic ?? '0') });
+    quote.quote_hash = hashEvidence({ schema: 'agentbl-funded-terms-v1', indicative_quote_hash: quote.quote_hash, actual_period: quote.actual_financing_period });
+  }
   const paidReports = options.paid_report_envelopes ?? options.paid_report_envelope;
   return injectPaidReportEvidence(quote, paidReports, {
     caseId: caseData.case_id,

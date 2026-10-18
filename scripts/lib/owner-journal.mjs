@@ -13,7 +13,7 @@ export function createOwnerJournal(dir) {
     read: (id, index) => readJson(`${name(id, index)}.json`, null),
     write: async (id, index, value) => {
       await fs.mkdir(root, { recursive: true });
-      await writeJsonAtomic(`${name(id, index)}.json`, { approval_id: id, step_index: index, ...value, updated_at: new Date().toISOString() });
+      await writeJsonAtomic(`${name(id, index)}.json`, { approval_id: id, step_index: index, ...value, updated_at: new Date().toISOString() }, { durable: true });
     },
     async withLock(id, task) {
       await fs.mkdir(root, { recursive: true });

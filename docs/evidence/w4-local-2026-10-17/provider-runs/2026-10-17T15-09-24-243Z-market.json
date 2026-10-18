@@ -1,0 +1,55 @@
+{
+  "schema": "agentbl-market-evaluation-v1",
+  "executed_at": "2026-10-17T15:09:24.243Z",
+  "dataset_hash": "0xc0554550f1647566be99abbd0413583f9ab88de3d23334d00a1071c1ef5cc48c",
+  "source": {
+    "publisher": "FRED / International Monetary Fund",
+    "series": "PCOPPUSDM",
+    "url": "https://fred.stlouisfed.org/series/PCOPPUSDM",
+    "observed_page_updated_at": "2026-08-17T13:51:00-05:00",
+    "recorded_on": "2026-10-17",
+    "unit": "USD/MT",
+    "frequency": "monthly_average",
+    "scope": "public benchmark observations, not cargo liquidation valuations",
+    "citation": "International Monetary Fund, Global price of Copper [PCOPPUSDM], retrieved from FRED, Federal Reserve Bank of St. Louis"
+  },
+  "scope": "one_month_persistence_benchmark_only; not a cargo valuation model",
+  "samples": 4,
+  "mape": 0.0194244413831147,
+  "rmse_usd_per_mt": 360.1829568420625,
+  "current_observation_rejection_rate": 1,
+  "errors": [
+    {
+      "month": "2026-04",
+      "previous_month_baseline": 12528.70955,
+      "actual": 12890.68773,
+      "error_usd_per_mt": -361.97818000000007,
+      "absolute_percentage_error": 0.028080594890029197
+    },
+    {
+      "month": "2026-05",
+      "previous_month_baseline": 12890.68773,
+      "actual": 13512.15619,
+      "error_usd_per_mt": -621.46846,
+      "absolute_percentage_error": 0.04599328569484217
+    },
+    {
+      "month": "2026-06",
+      "previous_month_baseline": 13512.15619,
+      "actual": 13552.04091,
+      "error_usd_per_mt": -39.884720000000016,
+      "absolute_percentage_error": 0.0029430784827818245
+    },
+    {
+      "month": "2026-07",
+      "previous_month_baseline": 13552.04091,
+      "actual": 13542.82087,
+      "error_usd_per_mt": 9.220040000000154,
+      "absolute_percentage_error": 0.0006808064648055966
+    }
+  ],
+  "cargo_valuation_error": null,
+  "business_accepted": false,
+  "approved_thresholds": null,
+  "human_review_required": true
+}

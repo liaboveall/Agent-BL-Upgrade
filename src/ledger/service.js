@@ -102,9 +102,56 @@ export class CapitalLedgerService {
       || !same(intent.protocol_instance.pool_address, this.chainConfig.contracts.RWAOfferingPool)) fail('protocol_identity_mismatch', 'Intent belongs to another protocol instance');
     const tx = await ctx.provider.getTransaction(txHash);
     if (!tx || !same(tx.to, intent.protocol_instance.pool_address) || !same(tx.from, intent.investor)
-      || !same(tx.data, intent.calldata) || BigInt(tx.value) !== 0n) fail('intent_transaction_mismatch', 'Transaction does not match the saved wallet intent');
+      || !same(tx.data, intent.calldata) || BigInt(tx.value) !== 0n || Number(tx.chainId) !== Number(intent.protocol_instance.chain_id)
+      || intent.broadcast_nonce !== undefined && tx.nonce !== intent.broadcast_nonce) fail('intent_transaction_mismatch', 'Transaction does not match the saved wallet intent');
     await this.ledger.markBroadcast(intentId, txHash);
     await this.sync();
     return this.ledger.getIntent(intentId);
+  }
+
+  async prepareRefund({ wallet, chain_pool_id: poolId }) {
+    if (this.getMode() !== 'live') fail('live_mode_required', 'Switch to Live before preparing a wallet transaction');
+    if (!isAddress(wallet) || !Number.isSafeInteger(Number(poolId)) || Number(poolId) < 1) fail('invalid_refund', 'A wallet and pool are required', 400);
+    const ctx = await this.context(), cfg = this.chainConfig;
+    const offering = await ctx.pool.offerings(poolId);
+    await ctx.pool.refundInvestor.staticCall(poolId, wallet, { from: wallet });
+    const amount = await ctx.pool.investorPaid(poolId, offering.settlementAsset, wallet);
+    const token = new Contract(cfg.contracts.RWAToken, ['function balanceOf(uint256,address) view returns (uint256)'], ctx.provider);
+    return this.ledger.recordIntent({ protocol_instance: { chain_id: Number(cfg.chainIdDecimal), pool_address: cfg.contracts.RWAOfferingPool.toLowerCase(), protocol_version: 5 },
+      chain_pool_id: Number(poolId), operation: 'REFUND', investor: wallet, asset: offering.settlementAsset, amount_atomic: String(amount),
+      shares: String(await token.balanceOf(poolId, wallet)), calldata: ctx.pool.interface.encodeFunctionData('refundInvestor', [poolId, wallet]) });
+  }
+
+  async checkpointBroadcast(intentId) {
+    if (this.getMode() !== 'live') fail('live_mode_required', 'Switch to Live before preparing a wallet transaction');
+    const intent = await this.ledger.getIntent(intentId), ctx = await this.context();
+    if (!intent || !same(intent.protocol_instance.pool_address, this.chainConfig.contracts.RWAOfferingPool)
+      || Number(intent.protocol_instance.chain_id) !== Number(this.chainConfig.chainIdDecimal)) fail('invalid_intent', 'Intent belongs to another protocol');
+    await ctx.provider.call({ from: intent.investor, to: intent.protocol_instance.pool_address, data: intent.calldata, value: 0n });
+    const [nonce, block] = await Promise.all([ctx.provider.getTransactionCount(intent.investor, 'pending'), ctx.provider.getBlockNumber()]);
+    return this.ledger.checkpointBroadcast(intentId, { nonce, block });
+  }
+
+  async recoverIntent(intentId) {
+    const intent = await this.ledger.getIntent(intentId);
+    if (!intent) fail('invalid_intent', 'Saved transaction not found', 404);
+    const ctx = await this.context();
+    if (intent.tx_hash) {
+      if (!await ctx.provider.getTransaction(intent.tx_hash)) return this.ledger.reconcileIntent(intentId, intent.tx_hash);
+      return this.attach(intentId, intent.tx_hash);
+    }
+    if (intent.broadcast_nonce === undefined) return intent;
+    const latest = await ctx.provider.getBlockNumber();
+    if (latest - intent.prepared_block > 500) fail('manual_reconciliation_required', 'Saved transaction is outside the bounded scan; attach its original wallet hash');
+    for (let n = intent.prepared_block; n <= latest; n++) {
+      const block = await ctx.provider.getBlock(n, true); if (!block) fail('chain_unavailable', 'A recovery block is unavailable', 503);
+      for (const hash of block.transactions) {
+        const tx = await ctx.provider.getTransaction(hash); if (!tx) fail('chain_unavailable', 'A recovery transaction is unavailable', 503);
+        if (!same(tx.from, intent.investor) || tx.nonce !== intent.broadcast_nonce) continue;
+        if (!same(tx.to, intent.protocol_instance.pool_address) || !same(tx.data, intent.calldata) || tx.value !== 0n) fail('nonce_consumed_by_other_transaction', 'Another transaction used the saved nonce; reconcile in the wallet');
+        return this.attach(intentId, hash);
+      }
+    }
+    return { ...intent, reconciliation_required: true };
   }
 }

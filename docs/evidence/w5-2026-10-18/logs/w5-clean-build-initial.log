@@ -1,0 +1,14 @@
+npm notice run agentbl-agent-starter@0.1.0 build:clean
+npm notice run node scripts/clean-build-w5.mjs docs/evidence/w5-2026-10-18/clean-build-initial
+Clean build 1: install-app PASS
+Clean build 1: install-contracts PASS
+Clean build 1: web PASS
+Clean build 1: contracts PASS
+file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/clean-build-w5.mjs:51
+      if (JSON.stringify(normalized) !== JSON.stringify({ abi: current.abi, bytecode: current.bytecode, deployedBytecode: current.deployedBytecode, immutableReferences: current.immutableReferences })) throw new Error(`${name} clean artifact differs from the deployed-source build`);
+                                                                                                                                                                                                               ^
+
+Error: RightsGovernance clean artifact differs from the deployed-source build
+    at file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/clean-build-w5.mjs:51:208
+
+Node.js v26.8.1

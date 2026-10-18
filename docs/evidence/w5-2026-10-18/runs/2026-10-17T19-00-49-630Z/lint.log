@@ -1,0 +1,9 @@
+npm notice run agentbl-agent-starter@0.1.0 lint
+npm notice run eslint . --max-warnings=0
+
+E:\NUS\BlockChain\Project\Agent-BL-Upgrade\docs\evidence\w5-2026-10-18\testnet\public-gateway-smoke.mjs
+  64:23  warning  'replayed' is never reassigned. Use 'const' instead  prefer-const
+
+✖ 1 problem (0 errors, 1 warning)
+
+ESLint found too many warnings (maximum: 0).

@@ -1,7 +1,7 @@
 // Delivery pipeline shared by both x402 transports (the Demo personal-sign route and
 // the Live V2 gateway): paid report -> PaidReportEnvelope -> (Live) on-chain
 // attestation -> cached, re-readable response body.
-import { createPaidReportEnvelope, hashReportSnapshot } from './paidReport.js';
+import { assertPaidReportEnvelope, createPaidReportEnvelope, hashReportSnapshot } from './paidReport.js';
 import { getPaidReportCache } from './reportStore.js';
 import { recordPaymentEvidence, usdcToAtomic } from './settlement.js';
 
@@ -23,11 +23,13 @@ export async function deliverPaidReport({
   live,
   payment = {},
   report,
+  preparedEnvelope = null,
+  checkpoint = async () => {},
   ttlSeconds = Number(process.env.X402_REPORT_TTL_SECONDS ?? 300),
   attest = recordPaymentEvidence,
   cache = getPaidReportCache
 }) {
-  const reportEnvelope = createPaidReportEnvelope({
+  const reportEnvelope = preparedEnvelope ?? createPaidReportEnvelope({
     kind: report.kind,
     case_id: report.case_id,
     payer,
@@ -47,6 +49,8 @@ export async function deliverPaidReport({
     ...(report.risk_passport_hash ? { risk_passport_hash: report.risk_passport_hash } : {}),
     ...(report.reveal_proof_hash ? { reveal_proof_hash: report.reveal_proof_hash } : {})
   }, { ttlSeconds });
+  assertPaidReportEnvelope(reportEnvelope);
+  await checkpoint({ report, envelope: reportEnvelope });
 
   let settled = payment;
   if (live) {
@@ -56,6 +60,7 @@ export async function deliverPaidReport({
       payer,
       reportEnvelope,
       paymentTxHash: payment.txHash,
+      independentVerification: payment.independent_verification,
       asset,
       responseData: report
     });
@@ -82,10 +87,9 @@ export async function deliverPaidReport({
   // Cache the delivered report so the buyer can re-read it (e.g. after a page
   // refresh) within its TTL without paying again. Best-effort: a cache failure must
   // never block delivering the report the buyer paid for.
-  try {
-    await cache().save({ envelope: reportEnvelope, report: deliveredBody });
-  } catch {
-    // re-read is a convenience layer; settlement remains the source of truth
+  if (!live) {
+    try { await cache().save({ envelope: reportEnvelope, report: deliveredBody }); }
+    catch { /* Demo convenience cache; Live delivery is durably encrypted in its receipt store. */ }
   }
   return { reportEnvelope, deliveredBody, payment: settled };
 }

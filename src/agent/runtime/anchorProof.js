@@ -1,17 +1,18 @@
 // This format is independent of transport and contains only the public audit projection.
 import { concat, keccak256, toUtf8Bytes } from 'ethers';
-import { stableStringify } from '../decisionLogger.js';
+import { hashSnapshot, stableStringify } from '../decisionLogger.js';
 import { sanitizeAudit } from '../security/privacy.js';
 
 export const ANCHOR_SCHEMA = 'agentbl-decision-anchor-v1';
+export const PRIVATE_ANCHOR_SCHEMA = 'agentbl-decision-anchor-v2';
 export const TERMINAL_DECISIONS = ['COMPLETED', 'FAILED', 'REJECTED', 'SKIPPED', 'OBSERVE_ONLY'];
 export const MAX_ANCHOR_BATCH = 256;
 const HASH = /^0x[0-9a-f]{64}$/u;
 
-export function terminalPayload(decision, { seq, versionId, finalizedAt = decision.updated_at }) {
+export function terminalPayload(decision, { seq, versionId, finalizedAt = decision.updated_at, schema = ANCHOR_SCHEMA }) {
   if (!TERMINAL_DECISIONS.includes(decision.status) || !['demo', 'live'].includes(decision.mode)) throw new Error('Only terminal decisions have anchor leaves');
   const approval = decision.approval;
-  return { ...sanitizeAudit({
+  const result = { ...sanitizeAudit({
     schema: ANCHOR_SCHEMA, mode: decision.mode, seq, decision_id: decision.decision_id,
     event_id: decision.event_id ?? null, case_id: decision.case_id, pool_id: decision.pool_id ?? null,
     action: decision.action, status: decision.status, policy: { verdict: decision.policy?.verdict ?? null },
@@ -23,6 +24,16 @@ export function terminalPayload(decision, { seq, versionId, finalizedAt = decisi
     evidence_hash: decision.evidence_hash ?? null, quote_hash: decision.quote_hash ?? null,
     finalized_at: finalizedAt
   }), version_id: versionId };
+  if (schema === ANCHOR_SCHEMA) return result;
+  if (schema !== PRIVATE_ANCHOR_SCHEMA) throw new Error('Unsupported anchor schema');
+  result.schema = schema;
+  for (const field of ['event_id', 'case_id', 'pool_id']) result[field] = result[field] === null ? null : hashSnapshot({ domain: `${schema}:${field}`, value: result[field] });
+  if (result.approval) for (const field of ['approval_id', 'decided_by']) result.approval[field] = result.approval[field] === null ? null : hashSnapshot({ domain: `${schema}:${field}`, value: result.approval[field] });
+  result.execution.reference = result.execution.reference === null ? null : hashSnapshot({ domain: `${schema}:reference`, value: result.execution.reference });
+  result.evidence_commitments = [...(decision.evidence_commitments ?? [])];
+  if (result.evidence_commitments.length > 100 || result.evidence_commitments.some((value) => !HASH.test(value))) throw new Error('Invalid evidence commitments');
+  result.replay_commitment = decision.replay_hash ?? null;
+  return result;
 }
 
 // The 0x00 prefix separates JSON leaves from the 64-byte internal-node preimage.
@@ -57,11 +68,14 @@ export function verifyAnchorRecord(result, decision = null) {
   const checks = [];
   const check = (name, passed) => checks.push({ name, passed: Boolean(passed) });
   try {
+    check('supported_schema', [ANCHOR_SCHEMA, PRIVATE_ANCHOR_SCHEMA].includes(result.payload?.schema));
     check('canonical_leaf', result.leaf === anchorLeaf(result.payload));
+    const { version_id: versionId, ...versionMetadata } = result.version ?? {};
+    check('version_metadata', versionId === result.payload.version_id && versionId === keccak256(toUtf8Bytes(stableStringify(versionMetadata))));
     check('decision_binding', result.decision_id === result.payload.decision_id && result.seq === result.payload.seq && result.mode === result.payload.mode);
     if (decision) {
-      check('current_decision', stableStringify(terminalPayload(decision, { seq: result.seq, versionId: result.payload.version_id,
-        finalizedAt: result.payload.finalized_at })) === stableStringify(result.payload));
+      check('current_decision', stableStringify(terminalPayload({ ...decision, evidence_commitments: result.payload.evidence_commitments }, { seq: result.seq, versionId: result.payload.version_id,
+        finalizedAt: result.payload.finalized_at, schema: result.payload.schema })) === stableStringify(result.payload));
       if (decision.agent_version) {
         const { version_id: versionId, ...metadata } = decision.agent_version;
         check('recorded_agent_version', versionId === result.payload.version_id && versionId === keccak256(toUtf8Bytes(stableStringify(metadata))));

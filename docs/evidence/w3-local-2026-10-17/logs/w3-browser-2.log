@@ -1,0 +1,320 @@
+[WebServer] (node:26300) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 1 worker
+
+(node:44380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   1 tests\browser\review.spec.js:7:3 › W3 zh: research rights state and unavailable controls are explicit on desktop (32ms)
+(node:43512) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   2 tests\browser\review.spec.js:7:3 › W3 en: research rights state and unavailable controls are explicit on desktop (28ms)
+(node:21804) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   3 tests\browser\review.spec.js:31:3 › zh: four desktop pages have no overflow, page errors or contrast violations (34ms)
+(node:48144) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   4 tests\browser\review.spec.js:31:3 › en: four desktop pages have no overflow, page errors or contrast violations (27ms)
+(node:23988) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   5 tests\browser\review.spec.js:49:1 › F06: Demo mint never connects or sends through a configured wallet (30ms)
+(node:21772) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   6 tests\browser\review.spec.js:64:1 › F07/F08: switching with a delayed preference response removes old terms immediately and isolates preferences (31ms)
+(node:31292) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   7 tests\browser\review.spec.js:82:1 › F05: uploaded working documents are absent from public listings and inaccessible to another browser (36ms)
+(node:46940) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   8 tests\browser\review.spec.js:97:1 › F09: a funded or in-transit pool cannot show an enabled subscription or OPEN status (30ms)
+(node:45952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   9 tests\browser\review.spec.js:109:1 › F06: a Live wallet failure remains a failure and never becomes simulated issuance (32ms)
+(node:37116) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  10 tests\browser\review.spec.js:118:1 › F07/F08: a late B preference response cannot overwrite a newer A selection (34ms)
+(node:50376) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  11 tests\browser\review.spec.js:133:3 › W2 zh: confirmed and reconciling Live positions fit a 390px wallet portfolio (28ms)
+(node:18776) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  12 tests\browser\review.spec.js:133:3 › W2 en: confirmed and reconciling Live positions fit a 390px wallet portfolio (29ms)
+
+
+  1) tests\browser\review.spec.js:7:3 › W3 zh: research rights state and unavailable controls are explicit on desktop 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-W3-zh-research-righ-e220b-ols-are-explicit-on-desktop\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-W3-zh-research-righ-e220b-ols-are-explicit-on-desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-W3-zh-research-righ-e220b-ols-are-explicit-on-desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests\browser\review.spec.js:7:3 › W3 en: research rights state and unavailable controls are explicit on desktop 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-W3-en-research-righ-b51aa-ols-are-explicit-on-desktop\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-W3-en-research-righ-b51aa-ols-are-explicit-on-desktop\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-W3-en-research-righ-b51aa-ols-are-explicit-on-desktop\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) tests\browser\review.spec.js:31:3 › zh: four desktop pages have no overflow, page errors or contrast violations 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-zh-four-desktop-pag-3f189-rors-or-contrast-violations\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-zh-four-desktop-pag-3f189-rors-or-contrast-violations\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-zh-four-desktop-pag-3f189-rors-or-contrast-violations\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) tests\browser\review.spec.js:31:3 › en: four desktop pages have no overflow, page errors or contrast violations 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-en-four-desktop-pag-92611-rors-or-contrast-violations\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-en-four-desktop-pag-92611-rors-or-contrast-violations\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-en-four-desktop-pag-92611-rors-or-contrast-violations\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) tests\browser\review.spec.js:49:1 › F06: Demo mint never connects or sends through a configured wallet 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-F06-Demo-mint-never-635ac-through-a-configured-wallet\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-F06-Demo-mint-never-635ac-through-a-configured-wallet\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-F06-Demo-mint-never-635ac-through-a-configured-wallet\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) tests\browser\review.spec.js:64:1 › F07/F08: switching with a delayed preference response removes old terms immediately and isolates preferences 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-F07-F08-switching-w-cf4b7-ly-and-isolates-preferences\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-F07-F08-switching-w-cf4b7-ly-and-isolates-preferences\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-F07-F08-switching-w-cf4b7-ly-and-isolates-preferences\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) tests\browser\review.spec.js:82:1 › F05: uploaded working documents are absent from public listings and inaccessible to another browser 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-F05-uploaded-workin-ee54c-cessible-to-another-browser\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-F05-uploaded-workin-ee54c-cessible-to-another-browser\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-F05-uploaded-workin-ee54c-cessible-to-another-browser\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) tests\browser\review.spec.js:97:1 › F09: a funded or in-transit pool cannot show an enabled subscription or OPEN status 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-F09-a-funded-or-in--64ac7-subscription-or-OPEN-status\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-F09-a-funded-or-in--64ac7-subscription-or-OPEN-status\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-F09-a-funded-or-in--64ac7-subscription-or-OPEN-status\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) tests\browser\review.spec.js:109:1 › F06: a Live wallet failure remains a failure and never becomes simulated issuance 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-F06-a-Live-wallet-f-343eb--becomes-simulated-issuance\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-F06-a-Live-wallet-f-343eb--becomes-simulated-issuance\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-F06-a-Live-wallet-f-343eb--becomes-simulated-issuance\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) tests\browser\review.spec.js:118:1 › F07/F08: a late B preference response cannot overwrite a newer A selection 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-F07-F08-a-late-B-pr-9755b-erwrite-a-newer-A-selection\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-F07-F08-a-late-B-pr-9755b-erwrite-a-newer-A-selection\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-F07-F08-a-late-B-pr-9755b-erwrite-a-newer-A-selection\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) tests\browser\review.spec.js:133:3 › W2 zh: confirmed and reconciling Live positions fit a 390px wallet portfolio 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-W2-zh-confirmed-and-f9d53-it-a-390px-wallet-portfolio\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) tests\browser\review.spec.js:133:3 › W2 en: confirmed and reconciling Live positions fit a 390px wallet portfolio 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Mars\AppData\Local\ms-playwright\chromium_headless_shell-1248\chrome-headless-shell-win64\chrome-headless-shell.exe
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results\review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\review-W2-en-confirmed-and-767b0-it-a-390px-wallet-portfolio\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12 failed
+    tests\browser\review.spec.js:7:3 › W3 zh: research rights state and unavailable controls are explicit on desktop 
+    tests\browser\review.spec.js:7:3 › W3 en: research rights state and unavailable controls are explicit on desktop 
+    tests\browser\review.spec.js:31:3 › zh: four desktop pages have no overflow, page errors or contrast violations 
+    tests\browser\review.spec.js:31:3 › en: four desktop pages have no overflow, page errors or contrast violations 
+    tests\browser\review.spec.js:49:1 › F06: Demo mint never connects or sends through a configured wallet 
+    tests\browser\review.spec.js:64:1 › F07/F08: switching with a delayed preference response removes old terms immediately and isolates preferences 
+    tests\browser\review.spec.js:82:1 › F05: uploaded working documents are absent from public listings and inaccessible to another browser 
+    tests\browser\review.spec.js:97:1 › F09: a funded or in-transit pool cannot show an enabled subscription or OPEN status 
+    tests\browser\review.spec.js:109:1 › F06: a Live wallet failure remains a failure and never becomes simulated issuance 
+    tests\browser\review.spec.js:118:1 › F07/F08: a late B preference response cannot overwrite a newer A selection 
+    tests\browser\review.spec.js:133:3 › W2 zh: confirmed and reconciling Live positions fit a 390px wallet portfolio 
+    tests\browser\review.spec.js:133:3 › W2 en: confirmed and reconciling Live positions fit a 390px wallet portfolio 

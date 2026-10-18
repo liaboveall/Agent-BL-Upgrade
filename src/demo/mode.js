@@ -26,7 +26,8 @@ export class DemoModeController {
     if (this.env.X402_MODE !== 'live') missing.push('X402_MODE=live');
     if (!this.env.X402_FACILITATOR_URL) missing.push('X402_FACILITATOR_URL');
     if (!this.env.X402_PAY_TO) missing.push('X402_PAY_TO');
-    return { ready: missing.length === 0, missing };
+    const paidReports = missing.length === 0, controlled = Boolean(this.env.AGENTBL_RIGHTS_CONFIG);
+    return { ready: paidReports || controlled, missing: paidReports || controlled ? [] : missing, paidReports, controlled };
   }
 
   snapshot() {
@@ -36,6 +37,7 @@ export class DemoModeController {
       demoMode: this.mode === 'demo',
       liveAvailable: live.ready,
       liveMissing: live.missing,
+      liveCapabilities: { controlled_financing_configured: live.controlled, paid_reports_configured: live.paidReports },
       generation: this.generation,
       resetCount: this.resetCount,
       startedAt: this.startedAt,

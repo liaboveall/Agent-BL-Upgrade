@@ -51,7 +51,23 @@
     "interop:demo": "node scripts/agent-interop-demo.mjs",
     "agent:verify-anchor": "node scripts/agent-verify-anchor.mjs",
     "agent:anchor-plan": "node scripts/agent-anchor-plan.mjs",
-    "test:w2": "node scripts/test-w2.mjs"
+    "test:w2": "node scripts/test-w2.mjs",
+    "test:w3": "node scripts/test-w3.mjs",
+    "rights:plan": "node scripts/rights-plan.mjs",
+    "test:w4": "node scripts/test-w4.mjs",
+    "eval:w4": "node scripts/eval-w4-providers.mjs",
+    "evidence:verify": "node scripts/verify-evidence.mjs",
+    "evidence:corpus": "node scripts/acquire-w4-corpus.mjs",
+    "eval:w4:market": "node scripts/eval-w4-market.mjs",
+    "eval:w4:screening": "node scripts/eval-w4-screening.mjs",
+    "validate:w4": "node scripts/validate-w4.mjs",
+    "test:w5": "node scripts/test-w5.mjs",
+    "runtime:backup": "node scripts/runtime-backup.mjs",
+    "load:w5": "node scripts/load-w5.mjs",
+    "build:clean": "node scripts/clean-build-w5.mjs",
+    "deploy:w5": "node scripts/deploy-w5-testnet.mjs",
+    "validate:w5": "node scripts/validate-w5.mjs",
+    "recover:w5": "node scripts/recover-w5.mjs"
   },
   "engines": {
     "node": ">=20.11"

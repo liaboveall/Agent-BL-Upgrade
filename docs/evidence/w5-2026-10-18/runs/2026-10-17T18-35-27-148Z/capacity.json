@@ -1,0 +1,47 @@
+{
+  "schema": "agentbl-w5-capacity-v1",
+  "started_at": "2026-10-17T18:42:42.839Z",
+  "scope": "isolated offline Demo HTTP and durable ledger, no provider or chain writes",
+  "machine": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v26.8.1",
+    "cpus": 32
+  },
+  "rate_limits_disabled_for_capacity_measurement": true,
+  "targets": {
+    "concurrency": 20,
+    "requests": 2000,
+    "max_error_ratio": 0.01,
+    "p95_ms": 1000,
+    "soak_seconds": 600,
+    "recovery_rto_seconds": 300
+  },
+  "live_transactions": false,
+  "http": {
+    "requests": 2000,
+    "failures": 0,
+    "duration_ms": 1520.1217000000001,
+    "p50_ms": 10.40449999999987,
+    "p95_ms": 40.07479999999987,
+    "max_ms": 64.22980000000007
+  },
+  "ledger": {
+    "source": "synthetic committed events; live EVM accounting verified separately",
+    "events": 1000,
+    "repeated_events": 1000,
+    "resulting_entries": 1000,
+    "shares": "1000",
+    "cost_atomic": "800000000",
+    "duration_ms": 1715.1549
+  },
+  "soak": {
+    "observations": 600,
+    "failures": 0,
+    "max_rss_bytes": 245440512,
+    "max_request_ms": 39.377000000094995,
+    "duration_ms": 604530.7377
+  },
+  "passed": true,
+  "completed_at": "2026-10-17T18:52:51.250Z"
+}

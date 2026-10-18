@@ -1,0 +1,17 @@
+✔ W5 runtime lease prevents a second OS writer, survives SIGKILL and refuses unknown remote owners (207.777ms)
+✔ W5 readiness separates storage, RPC/reorg uncertainty, queues and startup; alerts arrive, deduplicate and recover (72.3619ms)
+✔ W5 low disk and failed atomic rename are observable without modifying existing runtime data (6.8907ms)
+[agentbl] 9057e868760c 503 operations_not_ready: New intake is paused. Preserve existing records and reconcile operational health.
+✔ W5 operations HTTP keeps liveness separate, authenticates diagnostics and blocks new intake while keeping claims reachable (123.9942ms)
+✔ W5 initialized private history detects missing stores and wrong keys; a configured monitor verifies without a signer (11.4834ms)
+✔ W5 encrypted stopped-service backup restores ledger, business session and evidence in a new OS process with source offline (398.9326ms)
+✔ W5 restore authenticates every byte before writing, rejects traversal, collisions, wrong keys and interrupted restores (3.6605ms)
+✔ W5 a degraded operation blocks new x402 settlement but permits original paid-authorization recovery (1.8348ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1359.8118

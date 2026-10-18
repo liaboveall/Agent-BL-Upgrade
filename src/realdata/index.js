@@ -15,6 +15,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { realDataEnabled, sharedCache } from './http.js';
+import { assessMarketEvidence } from '../provenance/market.js';
 import {
   fetchChokepointTransits,
   fetchFuturesQuote,
@@ -371,6 +372,7 @@ export async function enrichCaseWithRealData(caseData, options = {}) {
       expires_at: risk.expires_at ?? quote?.expires_at ?? null,
       snapshot_captured_at: loadSnapshot().captured_at,
       market: quote ? { benchmark: quote.benchmark, status: quote.status, as_of: quote.as_of, price_usd_per_mt: quote.price_usd_per_mt ?? null, price_usd_per_bbl: quote.price_usd_per_bbl ?? null, change_1m: quote.change_1m } : null,
+      provenance: assessMarketEvidence(caseData, quote, { now: clock(options), alternatives: options.alternativeQuotes ?? [], calendar: options.marketCalendar ?? null }),
       chokepoints: risk.evidence.chokepoints ?? [],
       sea_state: risk.evidence.sea_state ?? [],
       markets: risk.evidence.markets ?? []

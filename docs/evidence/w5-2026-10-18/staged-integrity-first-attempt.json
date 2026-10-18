@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-18T01:09:39.349Z",
+  "source_sha256": "8a9d1ad8a47b41f10bbff720a0891fc6ace993d7fd221205233cfe387a431ea5",
+  "staged_files": 1628,
+  "secret_values_checked": 22,
+  "private_paths_staged": false,
+  "technical_source_blob_mismatches": [
+    "data/uploads/alu-fs-wh-00013/commercial-invoice.md",
+    "data/uploads/alu-fs-wh-00013/warehouse-receipt.md",
+    "data/uploads/alu-fs-wh-00014/commercial-invoice.md",
+    "data/uploads/alu-fs-wh-00014/warehouse-receipt.md",
+    "data/uploads/alu-fs-wh-00015/commercial-invoice.md",
+    "data/uploads/alu-fs-wh-00015/warehouse-receipt.md",
+    "data/uploads/archive/copper-sg-shanghai-2026-06/bill-of-lading.md",
+    "data/uploads/archive/copper-sg-shanghai-2026-06/commercial-invoice.md"
+  ],
+  "secret_hits": [],
+  "passed": false
+}

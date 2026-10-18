@@ -1,5 +1,7 @@
 # AgentBL x402 Integration
 
+> W4 supersedes older Live trust/cache descriptions: independent ERC-3009 canonical receipt verification is required; unknown settlement is reconciled without re-sending. Live delivery and CLI recovery are encrypted under a separately managed `AGENTBL_RIGHTS_KEY`. The original authorization retrieves paid reports for free; browser and CLI retries reuse the original nonce. See [W4 evidence and provenance](w4-evidence-provenance.md).
+
 > **AI pays for premium risk intelligence — on-chain audit trail included.**
 
 ## What is x402?

@@ -1,0 +1,96 @@
+npm notice run agentbl-agent-starter@0.1.0 test:w5
+npm notice run node scripts/test-w5.mjs
+No contracts to compile
+(node:50136) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ W5 actual controlled capital HTTP, wallet and crash recovery
+  ✖ uses the production wallet adapter for actual escrow, fixed exporter, multiple late repayments and a separate confirmed claim (4411.7351ms)
+  ✖ reconciles a crash after nonce-bound broadcast without resending, and detects a canonical reorg (4347.8857ms)
+  ✖ refunds exact paid principal through a saved wallet intent after failed fundraising, preserving Demo isolation (4324.2084ms)
+✖ W5 actual controlled capital HTTP, wallet and crash recovery (16350.9641ms)
+✔ W5 runtime lease prevents a second OS writer, survives SIGKILL and refuses unknown remote owners (220.9705ms)
+✔ W5 readiness separates storage, RPC/reorg uncertainty, queues and startup; alerts arrive, deduplicate and recover (81.6087ms)
+✔ W5 low disk and failed atomic rename are observable without modifying existing runtime data (6.7839ms)
+[agentbl] b0c9101d9017 503 operations_not_ready: New intake is paused. Preserve existing records and reconcile operational health.
+✔ W5 operations HTTP keeps liveness separate, authenticates diagnostics and blocks new intake while keeping claims reachable (124.5325ms)
+✔ W5 initialized private history detects missing stores and wrong keys; a configured monitor verifies without a signer (12.4063ms)
+✔ W5 encrypted stopped-service backup restores ledger, business session and evidence in a new OS process with source offline (393.5616ms)
+✔ W5 restore authenticates every byte before writing, rejects traversal, collisions, wrong keys and interrupted restores (4.2508ms)
+✔ W5 a degraded operation blocks new x402 settlement but permits original paid-authorization recovery (1.4898ms)
+ℹ tests 11
+ℹ suites 1
+ℹ pass 8
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19175.7381
+
+✖ failing tests:
+
+test at tests\w5Controlled.integration.js:53:3
+✖ uses the production wallet adapter for actual escrow, fixed exporter, multiple late repayments and a separate confirmed claim (4411.7351ms)
+  [TypeError: Failed to parse URL from undefinedundefined] {
+    [cause]: TypeError: Invalid URL
+        at new URL (node:internal/url:899:25)
+        at new Request (node:internal/deps/undici/undici:12893:25)
+        at fetch (node:internal/deps/undici/undici:13857:25)
+        at fetch (node:internal/deps/undici/undici:18785:10)
+        at fetch (node:internal/bootstrap/web/exposed-window-or-worker:83:12)
+        at requestJson (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/helpers/http.js:64:26)
+        at get (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:25:41)
+        at fixture (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:43:27)
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:54:15) {
+      code: 'ERR_INVALID_URL',
+      input: 'undefinedundefined'
+    }
+  }
+
+test at tests\w5Controlled.integration.js:75:3
+✖ reconciles a crash after nonce-bound broadcast without resending, and detects a canonical reorg (4347.8857ms)
+  [TypeError: Failed to parse URL from undefinedundefined] {
+    [cause]: TypeError: Invalid URL
+        at new URL (node:internal/url:899:25)
+        at new Request (node:internal/deps/undici/undici:12893:25)
+        at fetch (node:internal/deps/undici/undici:13857:25)
+        at fetch (node:internal/deps/undici/undici:18785:10)
+        at fetch (node:internal/bootstrap/web/exposed-window-or-worker:83:12)
+        at requestJson (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/helpers/http.js:64:26)
+        at get (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:25:41)
+        at fixture (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:43:27)
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:76:15) {
+      code: 'ERR_INVALID_URL',
+      input: 'undefinedundefined'
+    }
+  }
+
+test at tests\w5Controlled.integration.js:90:3
+✖ refunds exact paid principal through a saved wallet intent after failed fundraising, preserving Demo isolation (4324.2084ms)
+  [TypeError: Failed to parse URL from undefinedundefined] {
+    [cause]: TypeError: Invalid URL
+        at new URL (node:internal/url:899:25)
+        at new Request (node:internal/deps/undici/undici:12893:25)
+        at fetch (node:internal/deps/undici/undici:13857:25)
+        at fetch (node:internal/deps/undici/undici:18785:10)
+        at fetch (node:internal/bootstrap/web/exposed-window-or-worker:83:12)
+        at requestJson (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/helpers/http.js:64:26)
+        at get (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:25:41)
+        at fixture (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:43:27)
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async TestContext.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/tests/w5Controlled.integration.js:91:15) {
+      code: 'ERR_INVALID_URL',
+      input: 'undefinedundefined'
+    }
+  }
+file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/test-w5.mjs:7
+  child.on('error', reject); child.on('exit', (code) => code === 0 ? resolve() : reject(new Error(`W5 verification exited ${code}`)));
+                                                                                        ^
+
+Error: W5 verification exited 1
+    at ChildProcess.<anonymous> (file:///E:/NUS/BlockChain/Project/Agent-BL-Upgrade/scripts/test-w5.mjs:7:89)
+    at ChildProcess.emit (node:events:514:20)
+    at ChildProcess._handle.onexit (node:internal/child_process:294:12)
+
+Node.js v26.8.1

@@ -32,6 +32,7 @@ import { Tracer } from './trace.js';
 import { DecisionAnchoring } from './anchoring.js';
 import { createAgentVersion } from './agentVersion.js';
 import { createAnchorChainAdapter } from './anchorChain.js';
+import { DecisionEvidenceArchive } from '../../evidence/archive.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CHAIN_NETWORK = 'injective-testnet';
@@ -162,7 +163,11 @@ export function createAgentService(options = {}) {
   });
 
   const version = options.agentVersion ?? createAgentVersion(config, env);
+  const evidenceArchive = options.evidenceArchive ?? new DecisionEvidenceArchive({ directory: dir ? path.join(dir, 'evidence-archive') : null,
+    env, ownerFor: (caseId) => ingest.caseOwner(caseId), now: () => (options.now?.() ?? new Date()).getTime() });
   const anchoring = options.anchoring ?? new DecisionAnchoring({ file: file('agent-anchors.json'), version, config, logger,
+    schema: 'agentbl-decision-anchor-v2',
+    archive: evidenceArchive,
     getMode, getGeneration, now: options.now,
     adapter: options.anchorAdapter ?? (chainConfig?.contracts?.AgentDecisionLog ? createAnchorChainAdapter({ chainConfig, getContext: getChainContext,
       confirmations: config.chainConfirmations, runExclusive: async (task) => {
@@ -185,6 +190,7 @@ export function createAgentService(options = {}) {
     orchestrator: options.orchestrator
   });
   service.capital = capital;
+  service.evidenceArchive = evidenceArchive;
   return service;
 }
 

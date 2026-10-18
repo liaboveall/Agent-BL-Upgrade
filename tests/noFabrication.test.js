@@ -46,8 +46,10 @@ test('WP0.1: no source builds a hex hash out of Math.random()', () => {
   assert.deepEqual(offenders, []);
 });
 
-test('WP0.1: randomBytes(32) is only used for real secrets (Mystery fairness)', () => {
-  const allowed = new Set(['src/mystery/fairness.js']);
+test('WP0.1: randomBytes(32) is only used for secrets, commitment salts and signature challenges', () => {
+  // W3 random values are private commitment salts, single-use session challenges and
+  // bearer capabilities. Transaction hashes still come exclusively from actual receipts.
+  const allowed = new Set(['src/mystery/fairness.js', 'src/rights/service.js', 'src/rights/typedData.js', 'src/evidence/schema.js']);
   const offenders = [...sources]
     .filter(([file, text]) => /randomBytes\(\s*32\s*\)/u.test(text) && !allowed.has(file))
     .map(([file]) => file);

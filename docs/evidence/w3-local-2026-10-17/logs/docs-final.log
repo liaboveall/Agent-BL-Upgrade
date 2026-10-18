@@ -1,0 +1,13 @@
+✔ the README lists exactly the deployed contract addresses from chain-config.json (0.7303ms)
+✔ every `npm run <script>` in the README and deployment guide exists (1.0312ms)
+✔ the README mentions the commands the release preflight expects (0.2274ms)
+✔ .env.example documents every variable the server reads and never ships a real key (0.6469ms)
+✔ every AGENT_* variable the runtime reads is documented in .env.example (0.4485ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 61.4503

@@ -1,0 +1,31 @@
+{
+  "schema": "agentbl-rights-instance-v1",
+  "scope": "research_test_assets_only",
+  "chain_id": 1439,
+  "rpc_url": "https://k8s.testnet.json-rpc.injective.network",
+  "contracts": {
+    "RightsGovernance": "0x1Df02ED170bA2367d56F190Cc1b8225f58f6E2e5",
+    "AssetIdentityHub": "0x471c70CAb4166AF7D0261cb0dE9Be26B53C01e88",
+    "CommittedEBLRegistry": "0xee7e8125b92de8fFe5bD4eD82187129c1fDa10d5",
+    "RightsController": "0xD3ccC2FaBBC57611869d93c8701Ee594dB9B8ea4",
+    "MockAuthorizationUSDC": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C",
+    "RWAOfferingPoolV5": "0xfd17Ec1ebDFdd35188adBfCe4ff88Bda61F21A0F",
+    "ControlledRWAToken": "0x20b454e2f926D5ABafa595C2224cB8F82c366696"
+  },
+  "actors": {
+    "governorB": "0x3E64950a848BB523b95C85A9ef8b9AF44190071E",
+    "governorC": "0x87f76fe1a07c5ea326819418B3277ed4f2D7eFE3",
+    "issuer": "0x322140Bf8E89620f6f3B8AA0aCAC02295e969b9f",
+    "holder": "0x61B50775195cf7d8b288526D1eC788e42E13e4eA",
+    "valuer": "0x9AbF28BC2d4af34ED512da0d07522BFc52Fc21be",
+    "operator": "0x3380438e25317E9124205224d8C69f27e082Faf7",
+    "attestor": "0xd7B36FD2775FCE21673fB80B9C3Fce2751bacec9",
+    "compliance": "0x6fa9F654928BaEB49676E42dd21224eA67692878",
+    "disposer": "0x6ef22BcEdeF687b31b95f32Ca90B5eaE798d4309",
+    "reviewer": "0xEF4E3d1e99e3551452BA222Db7A83df2D37ab8c5",
+    "guardian": "0x8365c92453A88D299598c5f7DCE0093bd9cbb910",
+    "investor": "0x32ddDf0e99d2375E502350710A809E4223e28098",
+    "governorA": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
+  },
+  "deployment_block": 144210687
+}

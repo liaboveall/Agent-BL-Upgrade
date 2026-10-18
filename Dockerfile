@@ -1,5 +1,13 @@
 # syntax=docker/dockerfile:1
-# AgentBL web app + API (src/app/server.js). Contracts and docs are not part of the image.
+# AgentBL web app + API. Fixed W3 runtime artifacts are built from the same source.
+
+FROM node:22-bookworm-slim AS contracts
+WORKDIR /contracts
+COPY hardhat/package.json hardhat/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY hardhat/contracts ./contracts
+COPY hardhat/hardhat.config.js ./hardhat.config.js
+RUN npm run compile
 
 FROM node:22-alpine AS deps
 WORKDIR /app
@@ -20,10 +28,13 @@ COPY src/chain ./src/chain
 RUN npm run build
 
 FROM node:22-alpine
+ARG RELEASE_REVISION=UNRECORDED
+LABEL org.opencontainers.image.revision=${RELEASE_REVISION}
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
-    AGENTBL_RUNTIME_DIR=/app/data/runtime
+    AGENTBL_RUNTIME_DIR=/app/data/runtime \
+    AGENTBL_RELEASE_REVISION=${RELEASE_REVISION}
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -34,6 +45,7 @@ COPY --from=web /app/dist ./dist
 COPY data ./data
 # The server reads the chain registry helper at runtime.
 COPY scripts/lib ./scripts/lib
+COPY --from=contracts /contracts/artifacts/contracts ./hardhat/artifacts/contracts
 
 # x402 receipts, cached paid reports, decision logs and Mystery reveals live here:
 # mount a volume to keep them across restarts.

@@ -1,0 +1,76 @@
+{
+  "schema": "agentbl-w3-validation-v1",
+  "date": "2026-10-17",
+  "timezone": "Asia/Singapore",
+  "source_sha256": "f64743e1eb6aafdf02285703e503d4ee6a607ba36da92b68a2073dc7d62959ac",
+  "base_head": "e3d926af7b5da078a59436fd1602fe3e4ad38293",
+  "runtime": {
+    "node": "v26.8.1",
+    "platform": "win32",
+    "arch": "x64"
+  },
+  "application": {
+    "tests": 1345,
+    "pass": 1345,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "contracts": {
+    "pass": 151,
+    "fail": 0
+  },
+  "w2_actual_evm_http": {
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "w3_actual_evm_http": {
+    "tests": 3,
+    "pass": 3,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "pass": 12,
+    "fail": 0,
+    "engine": "Windows Chromium 1243",
+    "new_w3_viewports": [
+      1280,
+      1440
+    ]
+  },
+  "coverage": {
+    "lines": 93.37,
+    "branches": 84.55,
+    "functions": 91.41,
+    "thresholds": {
+      "lines": 88,
+      "branches": 72,
+      "functions": 86
+    }
+  },
+  "preflight": {
+    "pass": 66,
+    "warn": 0,
+    "skip": 5,
+    "fail": 0
+  },
+  "lint": "passed",
+  "build": "passed",
+  "check": "passed",
+  "external": {
+    "commit": false,
+    "push": false,
+    "remote_ci": false,
+    "deployment": false,
+    "real_wallet_human": false,
+    "real_asset_legal_control": false,
+    "enterprise_identity": false,
+    "off_host_restore": false
+  },
+  "evidence_scope": "Local real EVM / actual ERC-20 / JS typed signatures / HTTP and browser automation; simulated business documents and research identities"
+}

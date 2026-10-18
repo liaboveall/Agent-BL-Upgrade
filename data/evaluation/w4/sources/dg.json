@@ -1,0 +1,103 @@
+{
+  "NANumber": "9037",
+  "transportDocumentTypeCode": "SWB",
+  "isElectronic": true,
+  "isToOrder": false,
+  "freightPaymentTermCode": "PRE",
+  "isShippedOnBoardType": true,
+  "invoicePayableAt": {
+    "UNLocationCode": "USNYC"
+  },
+  "isCargoDeliveredInICS2Zone": false,
+  "partyContactDetails": [
+    {
+      "name": "DCSA Test Person",
+      "email": "no-reply@dcsa.org"
+    }
+  ],
+  "consignmentItems": [
+    {
+      "carrierBookingReference": "{CBR}",
+      "descriptionOfGoods": [
+        "Lithium Ion Batteries - UN3480"
+      ],
+      "HSCodes": [
+        "85076000"
+      ],
+      "commoditySubReference": "LITHIUM-DG-001",
+      "cargoItems": [
+        {
+          "equipmentReference": "MAEU1234567",
+          "cargoGrossWeight": {
+            "value": 5000,
+            "unit": "KGM"
+          }
+        }
+      ]
+    }
+  ],
+  "utilizedTransportEquipments": [
+    {
+      "isShipperOwned": false,
+      "equipmentReference": "MAEU1234567",
+      "seals": [
+        {
+          "number": "NSL13386"
+        }
+      ]
+    }
+  ],
+  "documentParties": {
+    "shipper": {
+      "partyName": "DCSA CTK",
+      "partyContactDetails": [
+        {
+          "name": "DCSA Test Person",
+          "email": "no-reply@dcsa.org"
+        }
+      ],
+      "address": {
+        "street": "Ruijggoordweg",
+        "city": "Amsterdam",
+        "countryCode": "NL"
+      }
+    },
+    "issueTo": {
+      "partyName": "DCSA CTK",
+      "identifyingCodes": [
+        {
+          "codeListProvider": "GLEIF",
+          "codeListName": "LEI",
+          "partyCode": "529900T8BM49ADCSAO55"
+        }
+      ],
+      "partyContactDetails": [
+        {
+          "name": "DCSA Test Person",
+          "email": "no-reply@dcsa.org"
+        }
+      ]
+    },
+    "consignee": {
+      "partyName": "BatteryTech Inc.",
+      "identifyingCodes": [
+        {
+          "codeListProvider": "GLEIF",
+          "codeListName": "LEI",
+          "partyCode": "111100T8BM49ADCSAO64"
+        }
+      ],
+      "partyContactDetails": [
+        {
+          "name": "Consignee Contact",
+          "email": "final@dcsa.org"
+        }
+      ],
+      "address": {
+        "street": "Consignee Street 1",
+        "city": "Singapore",
+        "countryCode": "SG"
+      }
+    }
+  }
+}

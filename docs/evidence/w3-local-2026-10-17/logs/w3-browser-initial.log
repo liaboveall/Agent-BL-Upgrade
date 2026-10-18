@@ -1,0 +1,4 @@
+npm notice run agentbl-agent-starter@0.1.0 test:browser
+npm notice run playwright test
+'playwright' is not recognized as an internal or external command,
+operable program or batch file.

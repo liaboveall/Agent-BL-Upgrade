@@ -1,0 +1,79 @@
+{
+  "schema": "agentbl-w5-public-gateway-acceptance-v1",
+  "passed": true,
+  "generated_at": "2026-10-17T18:59:24.345Z",
+  "scope": "Official public testnet facilitator, canonical test USDC, production gateway/client/verification/delivery and actual PaymentOracle; deterministic synthetic report, no model quality claim",
+  "network": "eip155:1439",
+  "facilitator": "http://x402-staging-alb-1300061645.us-east-1.elb.amazonaws.com",
+  "asset": "0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d",
+  "payer": "0x8c59dF28bC8107861D100bd6f16b24FB27b2a0E9",
+  "payee": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+  "amount_atomic": "1000",
+  "payer_balance_before": "19998000",
+  "payer_balance_after": "19997000",
+  "payee_balance_before": "2000",
+  "payee_balance_after": "3000",
+  "report": {
+    "kind": "risk-intelligence",
+    "case_id": "W5_PUBLIC_PROVIDER_SYNTHETIC_REPORT",
+    "provider": "deterministic-research-fixture",
+    "scope": "synthetic business report; actual public testnet payment and onchain report attestation",
+    "result": "research acceptance only",
+    "report_envelope": {
+      "kind": "risk-intelligence",
+      "case_id": "W5_PUBLIC_PROVIDER_SYNTHETIC_REPORT",
+      "payer": "0x8c59df28bc8107861d100bd6f16b24fb27b2a0e9",
+      "payee": "0x9da22292d85e2a584ace6bb347d7054486b5ed6b",
+      "network": "eip155:1439",
+      "asset": "0x0c382e685bbeefe5d3d9c29e29e341fee8e84c5d",
+      "amount": "1000",
+      "payment_tx": "0x6e637cccbd5c4fc6359ac19556290429029273b6e057c3d9681c3e5f610ed244",
+      "settled_at": "2026-10-17T18:59:08.813Z",
+      "data_snapshot": {
+        "kind": "risk-intelligence",
+        "case_id": "W5_PUBLIC_PROVIDER_SYNTHETIC_REPORT",
+        "provider": "deterministic-research-fixture",
+        "scope": "synthetic business report; actual public testnet payment and onchain report attestation",
+        "result": "research acceptance only"
+      },
+      "model_provider": "deterministic-research-fixture",
+      "evidence_hash": "0xb9aa48890d863ebf0fdacbcb062916212ce2e71af2184343f90bc7aa8fa277c0",
+      "expires_at": "2026-10-17T19:04:08.813Z",
+      "report_id": "rpt_a9783786594e685ba8d46cee6a2d7e707061e5c167ef97f067f67ad1bd71f746",
+      "report_hash": "0x9e0005a4d13334ceca78e1a4b9f5f63fcb75115ddefd845c39f4bbdb2d625667"
+    },
+    "payment": {
+      "status": "settled",
+      "payer": "0x8c59dF28bC8107861D100bd6f16b24FB27b2a0E9",
+      "txHash": "0x6e637cccbd5c4fc6359ac19556290429029273b6e057c3d9681c3e5f610ed244",
+      "explorerUrl": "https://testnet.blockscout.injective.network/tx/0x6e637cccbd5c4fc6359ac19556290429029273b6e057c3d9681c3e5f610ed244",
+      "attestationTxHash": "0x866cc9555fca1f8b71d838fe362ea8d10491a5a0408a6ef1ad379cea66594215",
+      "attestationExplorerUrl": "https://testnet.blockscout.injective.network/tx/0x866cc9555fca1f8b71d838fe362ea8d10491a5a0408a6ef1ad379cea66594215",
+      "attestation": "recorded",
+      "live": true,
+      "serviceId": "premium-risk",
+      "amountUSDC": 0.001
+    }
+  },
+  "independent_verification": {
+    "schema": "agentbl-independent-payment-v1",
+    "verified": true,
+    "network": "eip155:1439",
+    "asset": "0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d",
+    "payer": "0x8c59dF28bC8107861D100bd6f16b24FB27b2a0E9",
+    "payee": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+    "amount_atomic": "1000",
+    "nonce": "0x497381db585bb99d5303bd2b477b2bb7de1e84cdcb5be694bfd3e8c6795b390b",
+    "transaction_hash": "0x6e637cccbd5c4fc6359ac19556290429029273b6e057c3d9681c3e5f610ed244",
+    "block_number": 144218752,
+    "block_hash": "0xe53fe48897674a2111902168ebd11fd451333d70bf0e1c067f442444dd5613a5",
+    "confirmations": 3
+  },
+  "client_replays": [
+    false,
+    true
+  ],
+  "handler_calls_this_run": 1,
+  "repeated_response_equal": true,
+  "payer_charged_once": true
+}

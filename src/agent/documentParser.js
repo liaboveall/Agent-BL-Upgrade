@@ -130,8 +130,8 @@ function isoDate(value) {
 }
 
 function hsCode(value) {
-  const match = String(value ?? '').match(/\b(\d{4})[.]?(\d{2})\b/u);
-  return match ? `${match[1]}${match[2]}` : null;
+  const match = String(value ?? '').match(/\b(\d{4})[.]?(\d{2})(?:[.]?(\d{2,4}))?\b/u);
+  return match ? `${match[1]}${match[2]}${match[3] ?? ''}` : null;
 }
 
 function vesselVoyage(value) {

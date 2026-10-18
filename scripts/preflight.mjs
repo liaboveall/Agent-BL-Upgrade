@@ -141,13 +141,15 @@ for (const [file, label] of [
 // 19-25: executable release checks
 console.log('\n[Executable suites]');
 await command('Executable suites', 'Repository integrity check', npm, ['run', 'check']);
+// Compile before the full application gate so its real local-EVM tests also run on a fresh checkout.
+await command('Executable suites', 'Solidity contract suite', npm, ['test'], path.join(root, 'hardhat'));
 const nodeTests = await command(
   'Executable suites',
   'Full Node unit/integration suite',
   npm,
   ['test'],
   root,
-  withoutLiveSettings(true),
+  { ...withoutLiveSettings(true), AGENTBL_W4_INTEGRATION: '1' },
   600_000 // Full integration suite on a Windows/WSL-mounted checkout; individual assertions are unchanged.
 );
 // The exit code already decides pass/fail; this also reads the summary line (TAP "# fail N",
@@ -157,8 +159,8 @@ const testSummary = Object.fromEntries([...nodeTests.output.matchAll(/^\s*(?:#|�
 if (nodeTests.ok && (!(testSummary.tests > 0) || testSummary.pass !== testSummary.tests || testSummary.fail !== 0 || testSummary.cancelled !== 0 || testSummary.skipped !== 0)) {
   results.at(-1).status = 'FAIL';
   results.at(-1).detail = `incomplete test execution: ${JSON.stringify(testSummary)}`;
+  console.error(`  ✗ Full Node unit/integration suite — ${results.at(-1).detail}`);
 }
-await command('Executable suites', 'Solidity contract suite', npm, ['test'], path.join(root, 'hardhat'));
 await command('Executable suites', 'Main API smoke flow', npm, ['run', 'smoke'], root, runtimeMode.demoMode ? withoutLiveSettings() : process.env);
 await command('Executable suites', 'Risk/pricing scenario regression', npm, ['run', 'scenarios'], root, withoutLiveSettings());
 if (runtimeMode.demoMode) await command('Executable suites', 'One-minute offline demo', npm, ['run', 'demo:once'], root, withoutLiveSettings());

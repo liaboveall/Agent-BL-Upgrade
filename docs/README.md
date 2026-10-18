@@ -2,6 +2,8 @@
 
 仓库根目录的 [README.md](../README.md) 是总览和快速开始。
 
+本轮交付入口：[W5 运营与恢复](w5-delivery-operations.md)、[项目优化验收](project-acceptance-2026-10-18.md)、[W5 实际收据](evidence/w5-2026-10-18/)。提交后同 SHA CI 与异机恢复结果读取 GitHub checks / artifacts。
+
 ## 产品与设计
 
 | 文档 | 内容 |
@@ -21,6 +23,8 @@
 |---|---|
 | [document-extraction.md](./document-extraction.md) | 单证抽取：PDF 文本层、可选视觉/文本模型、人工复核 |
 | [compliance-screening.md](./compliance-screening.md) | 合规筛查：演示名单、模糊匹配、港口/IMO/HS、三态证据 |
+| [w3-rights-control.md](./w3-rights-control.md) | W3：承诺式资产、holder 同意、估值、治理、资格、组织身份和加密披露 |
+| [w4-evidence-provenance.md](./w4-evidence-provenance.md) | W4：完整证据包、来源适用性、真实端点评测、人工接管、独立付款与免费恢复 |
 | [ai-valuation-tooling.md](./ai-valuation-tooling.md) | AI 估值的 tool calling（行情与历史成交价） |
 | [xapi-integration.md](./xapi-integration.md) | xAPI 世界风险信号接入 |
 | [copilot.md](./copilot.md) | 投资者 Copilot：多轮偏好、检索排序、主动重排、确认动作 |

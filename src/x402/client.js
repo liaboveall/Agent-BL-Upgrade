@@ -1,4 +1,6 @@
 import { x402Network } from './config.js';
+import { ClientPaymentJournal } from './clientRecovery.js';
+import { rightsKey } from '../rights/vault.js';
 
 export class X402ClientError extends Error {
   constructor(code, message, options = {}) {
@@ -195,31 +197,35 @@ export function createPaidFetch(options = {}) {
           { recoverable: false }
         );
       }
-      const [{ createInjectiveClient }, { ethers }] = await Promise.all([import('@injectivelabs/x402/client'), import('ethers')]);
+      const [{ createPayment, encodePaymentSignatureHeader }, { ethers }] = await Promise.all([import('@injectivelabs/x402/client'), import('ethers')]);
       let signerAddress;
       try {
         signerAddress = new ethers.Wallet(privateKey).address;
       } catch (error) {
         throw new X402ClientError('X402_PRIVATE_KEY_INVALID', 'Configured x402 signer key is invalid', { recoverable: false, cause: error });
       }
-      const client = createInjectiveClient({
-        privateKey,
-        rpcUrl: clientRpcUrl(options, v2.network),
-        preferredNetworks: [v2.network]
-      });
       // Settlement goes through a facilitator and can take a few seconds.
       const headers = new Headers(init.headers ?? {});
       headers.set('Accept', 'application/json');
       headers.set('Content-Type', 'application/json');
-      const paid = await client.fetch(url, {
+      const paidInit = {
         ...init,
         method: options.retryMethod ?? 'POST',
         headers,
         body: mergePaidBody(init, { body: {} }, options.payload), // a V2 request carries no AgentBL nonce
         signal: init.signal ?? AbortSignal.timeout(Math.max(timeoutMs, 30_000))
+      };
+      const recovery = options.recoveryStore ?? new ClientPaymentJournal({ directory: options.recoveryDirectory,
+        key: options.recoveryKey ?? rightsKey(options.env ?? process.env) });
+      const result = await recovery.run({ url: String(url), method: paidInit.method, payer: signerAddress.toLowerCase(), body: paidInit.body }, async () => {
+        const payload = await createPayment({ privateKey, rpcUrl: clientRpcUrl(options, v2.network) }, v2.body.accepts[0]);
+        return encodePaymentSignatureHeader(payload);
+      }, async (header) => {
+        const paidHeaders = new Headers(paidInit.headers); paidHeaders.set('PAYMENT-SIGNATURE', header); paidHeaders.set('X-PAYMENT', header);
+        return fetchWithTimeout(fetchImpl, url, { ...paidInit, headers: paidHeaders }, Math.max(timeoutMs, 30000));
       });
-      options.onPayment?.({ challenge: v2, signer: signerAddress, ephemeral: false, response: paid });
-      return paid;
+      options.onPayment?.({ challenge: v2, signer: signerAddress, ephemeral: false, response: result.response, replayed: result.replayed });
+      return result.response;
     }
 
     const challenge = await parseChallenge(unpaid);

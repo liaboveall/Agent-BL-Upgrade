@@ -14,13 +14,13 @@ const equal = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 const matches = (chain, batch) => equal(chain.merkleRoot, batch.merkle_root) && Number(chain.fromSeq) === batch.from_seq
   && Number(chain.toSeq) === batch.to_seq && Number(chain.count) === batch.count && equal(chain.versionId, batch.version_id);
 
-export function createAnchorChainAdapter({ chainConfig, getContext, runExclusive = (task) => task(), confirmations = 1 }) {
+export function createAnchorChainAdapter({ chainConfig, getContext, runExclusive = (task) => task(), confirmations = 1, allowedChainIds = [1439] }) {
   const address = chainConfig?.contracts?.AgentDecisionLog;
   const context = async (batch = null) => {
     if (!/^0x[0-9a-fA-F]{40}$/u.test(address ?? '') || !chainConfig?.deployments?.AgentDecisionLog?.deployTx) throw new Error('AgentDecisionLog has no deployment record');
     const ctx = await getContext();
     const chainId = Number(await ctx.provider.send('eth_chainId', []));
-    if (chainId !== 1439 || chainId !== Number(chainConfig.chainIdDecimal)) throw new Error('Anchor network mismatch');
+    if (!allowedChainIds.includes(chainId) || chainId !== Number(chainConfig.chainIdDecimal)) throw new Error('Anchor network mismatch');
     if (batch && (batch.chain_id !== chainId || !equal(batch.contract_address, address))) throw new Error('Anchor deployment binding changed');
     if (await ctx.provider.getCode(address) === '0x') throw new Error('Anchor contract is not deployed');
     return { ...ctx, log: ctx.decisionLog ?? new Contract(address, AGENT_LOG_ABI, ctx.provider), chainId };

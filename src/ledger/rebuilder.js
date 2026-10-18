@@ -67,11 +67,20 @@ export class ChainEventRebuilder {
       if (parsed.name === 'Claimed') entries.push({ ...base, kind: 'CLAIM', from: poolAddress, to: args.investor, amount_atomic: String(args.amountAtomic), shares: String(args.sharesBurned) });
       if (parsed.name === 'RepaymentReceived') entries.push({ ...base, kind: 'RECOVERY', from: args.payer, to: poolAddress, amount_atomic: String(args.amountAtomic) });
       if (parsed.name === 'DisbursedToExporter' || parsed.name === 'FeeDeducted') {
-        const tx = await provider.getTransaction(log.transactionHash);
-        const decoded = tx && iface.parseTransaction(tx);
-        if (!decoded || !same(tx.to, poolAddress)) throw new Error('Capital transfer transaction unavailable');
+        // W3 calls the pool through its controller (fees may come through governance).
+        // The actual asset Transfer in the canonical receipt identifies the recipient
+        // independently of how many control contracts wrap the outer transaction.
+        const receipt = await provider.getTransactionReceipt(log.transactionHash);
+        if (!receipt || receipt.status !== 1 || !same(receipt.blockHash, log.blockHash)
+          || !receipt.logs.some((item) => number(item.index ?? item.logIndex) === number(log.index ?? log.logIndex)
+            && same(item.address, poolAddress) && item.data === log.data)) throw new Error('Capital transfer receipt unavailable');
+        const erc20 = new Interface(['event Transfer(address indexed from,address indexed to,uint256 value)']);
+        const transfer = receipt.logs.filter((item) => same(item.address, base.asset) && number(item.index ?? item.logIndex) < number(log.index ?? log.logIndex))
+          .map((item) => { try { return erc20.parseLog(item); } catch { return null; } })
+          .filter((item) => item?.name === 'Transfer' && same(item.args.from, poolAddress)).at(-1);
+        if (!transfer || transfer.args.value !== BigInt(args.feeAtomic ?? args.amountAtomic)) throw new Error('Capital cash transfer missing or inconsistent');
         entries.push({ ...base, kind: parsed.name === 'FeeDeducted' ? 'FEE' : 'DISBURSEMENT', from: poolAddress,
-          to: decoded.args[2], amount_atomic: String(args.feeAtomic ?? args.amountAtomic), evidence_hash: args.evidenceHash ?? args.feeEvidenceHash });
+          to: transfer.args.to, amount_atomic: String(args.feeAtomic ?? args.amountAtomic), evidence_hash: args.evidenceHash ?? args.feeEvidenceHash });
       }
     }
     const voided = reorg ? history.filter((entry) => Ledger.protocolInstanceKey(entry.protocol_instance) === key
@@ -102,10 +111,10 @@ export class ChainEventRebuilder {
     const active = Ledger.activeEntries(await this.ledger.writer.readCashEntries());
     for (const intent of latestIntents.values()) {
       if (!intent.protocol_instance || Ledger.protocolInstanceKey(intent.protocol_instance) !== key) continue;
-      const kind = intent.operation === 'CLAIM' ? 'CLAIM' : 'INVESTOR_DEPOSIT';
+      const kind = intent.operation === 'CLAIM' ? 'CLAIM' : intent.operation === 'REFUND' ? 'REFUND' : 'INVESTOR_DEPOSIT';
       const entry = active.find((item) => item.kind === kind && Ledger.protocolInstanceKey(item.protocol_instance) === key && item.chain_pool_id === intent.chain_pool_id
-        && same(kind === 'CLAIM' ? item.to : item.from, intent.investor) && same(item.asset, intent.asset)
-        && (kind === 'CLAIM' || item.amount_atomic === intent.amount_atomic) && item.shares === intent.shares
+        && same(kind === 'INVESTOR_DEPOSIT' ? item.from : item.to, intent.investor) && same(item.asset, intent.asset)
+        && (kind === 'CLAIM' || item.amount_atomic === intent.amount_atomic) && (kind === 'REFUND' || item.shares === intent.shares)
         && (!intent.tx_hash || same(item.source.tx_hash, intent.tx_hash)));
       if (!entry) {
         if (reorg && intent.status === 'confirmed' && intent.tx_hash) await this.ledger.reconcileIntent(intent.intent_id, intent.tx_hash);
@@ -116,7 +125,8 @@ export class ChainEventRebuilder {
       if (!intent.tx_hash) {
         if (!transactions.has(entry.source.tx_hash)) transactions.set(entry.source.tx_hash, await provider.getTransaction(entry.source.tx_hash));
         const tx = transactions.get(entry.source.tx_hash);
-        if (!intent.calldata || !tx || !same(tx.data, intent.calldata) || !same(tx.from, intent.investor) || !same(tx.to, poolAddress)) continue;
+        if (!intent.calldata || !tx || !same(tx.data, intent.calldata) || !same(tx.from, intent.investor) || !same(tx.to, poolAddress)
+          || intent.broadcast_nonce !== undefined && tx.nonce !== intent.broadcast_nonce) continue;
       }
       if (intent.status !== 'confirmed') await this.ledger.confirmIntent(intent.intent_id, entry.source.tx_hash, entry.block_number);
     }

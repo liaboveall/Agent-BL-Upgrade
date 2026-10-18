@@ -195,7 +195,7 @@ export async function chatCompletion({ messages, tools, toolChoice = 'auto', tem
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      throw new Error(`LLM HTTP ${response.status} from ${cfg.provider}: ${text.slice(0, 500)}`);
+      throw Object.assign(new Error(`LLM HTTP ${response.status} from ${cfg.provider}: ${text.slice(0, 500)}`), { code: 'LLM_HTTP_ERROR', provider_status: response.status });
     }
 
     const json = await response.json();
@@ -204,6 +204,7 @@ export async function chatCompletion({ messages, tools, toolChoice = 'auto', tem
     const tokens = Object.fromEntries(['prompt_tokens', 'completion_tokens', 'total_tokens'].filter((key) =>
       Number.isSafeInteger(json.usage?.[key]) && json.usage[key] >= 0).map((key) => [key, json.usage[key]]));
     completionUsage.set(message, { provider: cfg.provider, model: cfg.model,
+      reported_model: typeof json.model === 'string' && /^[A-Za-z0-9_./:-]{1,200}$/u.test(json.model) ? json.model : null,
       latency_ms: Math.max(0, Date.now() - started), tokens: Object.keys(tokens).length ? tokens : null });
     return message;
   } finally {

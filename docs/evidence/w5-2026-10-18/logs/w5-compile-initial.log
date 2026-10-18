@@ -1,0 +1,3 @@
+npm notice run agentbl-contracts@0.1.0 compile
+npm notice run hardhat build
+No contracts to compile

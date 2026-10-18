@@ -1,7 +1,7 @@
 import { keccak256, toUtf8Bytes } from 'ethers';
 import { stableStringify } from '../decisionLogger.js';
 import { createWriteQueue, readJson, writeJsonAtomic } from '../../lib/jsonStore.js';
-import { terminalPayload, anchorLeaf, merkleTree, verifyAnchorRecord, TERMINAL_DECISIONS, MAX_ANCHOR_BATCH } from './anchorProof.js';
+import { terminalPayload, anchorLeaf, merkleTree, verifyAnchorRecord, TERMINAL_DECISIONS, MAX_ANCHOR_BATCH, ANCHOR_SCHEMA } from './anchorProof.js';
 import { lockAnchorStore } from './anchorStore.js';
 import { Scheduler } from './scheduler.js';
 import { LEGACY_AGENT_VERSION } from './agentVersion.js';
@@ -49,8 +49,9 @@ export function decisionAnchorFromState(state, id, decision = null) {
 
 export class DecisionAnchoring {
   constructor({ file = null, version, config, getMode = () => 'demo', getGeneration = () => 1, logger,
-    now = () => new Date(), adapter = null, write = writeJsonAtomic } = {}) {
-    Object.assign(this, { file, version, config, getMode, getGeneration, logger, now, adapter, write });
+    now = () => new Date(), adapter = null, write = writeJsonAtomic, schema = ANCHOR_SCHEMA, archive = null } = {}) {
+    Object.assign(this, { file, version, config, getMode, getGeneration, logger, now, adapter, write, schema, archive });
+    this.coverage = { checked: false, missing: null };
     this.queue = createWriteQueue(); this.state = empty(); this.initialized = false; this.lastError = null;
     this.scheduler = new Scheduler({ task: () => this.tick(), intervalMs: Math.min(15, config.anchorIntervalSec) * 1000,
       onError: () => { this.lastError = 'anchor_processing_failed'; } });
@@ -87,23 +88,33 @@ export class DecisionAnchoring {
       if (!scope) throw new Error('Invalid decision mode');
       const existing = scope.records.find((record) => record.payload.decision_id === decision.decision_id);
       if (existing) {
-        const current = terminalPayload(decision, { seq: existing.seq, versionId: existing.payload.version_id, finalizedAt: existing.payload.finalized_at });
+        if (existing.evidence_commitment && this.archive) {
+          const material = await this.archive.capture(decision);
+          if (material?.commitment !== existing.evidence_commitment) throw new Error('Archived evidence no longer matches the anchor');
+        }
+        const current = terminalPayload({ ...decision, evidence_commitments: existing.payload.evidence_commitments }, { seq: existing.seq, versionId: existing.payload.version_id, finalizedAt: existing.payload.finalized_at, schema: existing.payload.schema });
         if (stableStringify(current) !== stableStringify(existing.payload)
           || decision.agent_version && stableStringify(decision.agent_version) !== stableStringify(existing.version)) throw new Error('Finalized decision changed; anchor journal is immutable');
         return existing.seq;
       }
       const seq = scope.records.length + 1;
       const version = decision.agent_version ?? LEGACY_AGENT_VERSION;
-      const payload = terminalPayload(decision, { seq, versionId: version.version_id });
+      const material = await this.archive?.capture(decision);
+      const payload = terminalPayload({ ...decision, evidence_commitments: [...(decision.evidence_commitments ?? []), ...(material ? [material.commitment] : [])] }, { seq, versionId: version.version_id, schema: this.schema });
       const next = structuredClone(this.state);
-      next[decision.mode].records.push({ seq, payload, leaf: anchorLeaf(payload), version });
+      next[decision.mode].records.push({ seq, payload, leaf: anchorLeaf(payload), version, ...(material ? { evidence_commitment: material.commitment } : {}) });
       await this.#commit(next);
       return seq;
     });
   }
 
   async collect() {
-    for (const decision of await this.logger.list()) await this.capture(decision);
+    const decisions = await this.logger.list();
+    for (const decision of decisions) await this.capture(decision);
+    const terminal = decisions.filter((decision) => TERMINAL_DECISIONS.includes(decision.status));
+    this.coverage = { checked: true, source_terminal: terminal.length,
+      missing: terminal.filter((decision) => !this.state[decision.mode]?.records.some((record) => record.payload.decision_id === decision.decision_id)).length,
+      scope: 'available_source_journal_only; deleted source records cannot be inferred' };
   }
 
   async start() { await this.init(); await this.collect(); this.scheduler.start(); }
@@ -121,7 +132,13 @@ export class DecisionAnchoring {
     const mode = this.getMode(), scope = this.state[mode];
     return { enabled: this.config.anchorEnabled, mode, finalized: scope.records.length, batches: scope.batches.length,
       last_seq: scope.records.length, last_batch_status: scope.batches.at(-1)?.status ?? null,
-      version: this.version, last_error: this.lastError, interval_sec: this.config.anchorIntervalSec };
+      version: this.version, last_error: this.lastError, interval_sec: this.config.anchorIntervalSec,
+      coverage: { ...this.coverage, confirmed_records: scope.batches.filter((batch) => batch.status === 'ANCHORED').reduce((sum, batch) => sum + batch.count, 0),
+        pending_records: scope.records.length - scope.batches.filter((batch) => ['ANCHORED', 'DEMO'].includes(batch.status)).reduce((sum, batch) => sum + batch.count, 0),
+        oldest_unbatched_age_sec: Math.max(0, (this.now().getTime() - Date.parse(scope.records[(scope.batches.at(-1)?.to_seq ?? 0)]?.payload.finalized_at ?? this.now().toISOString())) / 1000),
+        archived_evidence_records: scope.records.filter((record) => record.evidence_commitment).length,
+        archive_configured: this.archive?.configured() ?? false,
+        inclusion_is_availability: false } };
   }
 
   async get(id, decision = null) {
@@ -162,6 +179,16 @@ export class DecisionAnchoring {
         await this.#commit(next);
       }
       if (mode !== 'live' || !this.config.anchorEnabled || !this.adapter) return;
+      for (const previous of this.state.live.batches.filter((item) => item.status === 'ANCHORED')) {
+        let canonical = null;
+        try { canonical = await this.adapter.confirm(previous); } catch {}
+        if (!canonical || canonical.block_hash !== previous.block_hash) {
+          const next = structuredClone(this.state), target = next.live.batches[previous.batch_id - 1];
+          target.receipt_history = [...(target.receipt_history ?? []), { block_number: target.block_number, block_hash: target.block_hash, invalidated_at: this.now().toISOString() }];
+          Object.assign(target, { status: 'RECHECK_REQUIRED', block_number: null, block_hash: null });
+          await this.#commit(next); this.lastError = 'anchor_reconciliation_required'; return;
+        }
+      }
       const batch = this.state.live.batches.find((batch) => batch.status !== 'ANCHORED');
       if (!batch) return;
       const update = async (patch) => {

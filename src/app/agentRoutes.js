@@ -151,11 +151,19 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       return true;
     }
 
-    const decisionMatch = /^\/api\/agent\/decisions\/([^/]+)(?:\/(trace|replay|anchor))?$/u.exec(pathname);
+    const decisionMatch = /^\/api\/agent\/decisions\/([^/]+)(?:\/(trace|replay|anchor|evidence))?$/u.exec(pathname);
     if (method === 'GET' && decisionMatch) {
       const id = pathId(decisionMatch[1]);
       const privateDecision = await service.getDecision(id);
       if (privateDecision) requireWorkspaceCase(service, request, privateDecision.case_id);
+      if (decisionMatch[2] === 'evidence') {
+        if (!service.evidenceArchive) throw new HttpError(503, 'evidence_archive_not_configured', 'Evidence archive is unavailable');
+        const pack = await service.evidenceArchive.get(id, { owner: workspaceOwner(request), admin: checkAdminToken(request).authorized });
+        const anchor = await service.getDecisionAnchor(id);
+        if (anchor?.batch) pack.anchor = anchor;
+        response.setHeader('Cache-Control', 'no-store'); response.setHeader('Content-Disposition', 'attachment; filename="decision-evidence.json"');
+        sendJson(response, 200, pack); return true;
+      }
       if (decisionMatch[2] === 'anchor') {
         sendJson(response, 200, { ok: true, anchor: await service.getDecisionAnchor(id) });
         return true;

@@ -1,0 +1,16 @@
+✔ W3 uses stable issuer/original identity and salted commitments; public projection rejects arbitrary data (3.4256ms)
+✔ W3 wallet-bound sessions reject wrong signer/replay/expiry and survive restart with immediate revocation (127.3793ms)
+✔ W3 vault fails closed without separate key, wrong key or tampered ciphertext; no material/token/wallet plaintext persists (56.9774ms)
+✔ W3 enforces same-object authorization over HTTP/download/SSE/MCP/A2A and keeps public projection independent (431.308ms)
+✔ W3 concurrent process-scoped writers do not overwrite subjects or permit two independent sessions from one challenge (215.5392ms)
+✔ W3 HTTP admin bootstrap, RPC adapters, private download and session-revoked SSE share the same checks (292.5277ms)
+✔ W3 expired sessions and retention cannot read private materials after policy expiry (82.017ms)
+✔ W3 missing initialized vault refuses reinitialization and status reports unavailable chain controls (52.5642ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1441.4691

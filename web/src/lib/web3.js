@@ -191,6 +191,9 @@ export function connectedAddress() {
   return _session?.address ?? null;
 }
 
+/** Current browser wallet only; never contains a server-side signing key. */
+export function currentWalletSession() { return _session; }
+
 export function connectedWalletType() {
   return _session?.walletType ?? null;
 }
@@ -725,7 +728,7 @@ export async function readBalance(poolId, address) {
 
 /** Subscribe through the wallet, persisting a v5 funding intent before any signature. */
 export async function subscribeOffering(action, { assertCurrent = () => {}, getSession = () => _session,
-  getConfig = loadChainConfig, ethersFn = loadEthers, prepareIntent = prepareCapitalIntent, attachIntent = attachCapitalIntent } = {}) {
+  getConfig = loadChainConfig, ethersFn = loadEthers, prepareIntent = prepareCapitalIntent, attachIntent = attachCapitalIntent, beforeBroadcast = null } = {}) {
   assertCurrent();
   const session = getSession(), cfg = await getConfig(), chain = action.chain;
   if (!session || session.kind !== 'evm') throw err('EVM_WALLET_REQUIRED', 'Connect an EVM wallet before confirming');
@@ -750,6 +753,7 @@ export async function subscribeOffering(action, { assertCurrent = () => {}, getS
     contract.subscriptionDeadline ? contract.subscriptionDeadline(chain.pool_id).catch(() => 0n) : Promise.resolve(0n)
   ]);
   const shares = BigInt(action.shares), price = BigInt(chain.price_e6);
+  if (chain.quote_version !== undefined && BigInt(chain.quote_version) !== BigInt(version)) throw err('QUOTE_CHANGED', 'The reviewed quote version has changed');
   if (shares <= 0n || !offering.exists || stopped || !eligible || ![2, 3, 6].includes(Number(offering.state))) throw err('POOL_UNAVAILABLE', 'Offering is no longer available to this wallet');
   if (BigInt(offering.issuePrice) !== price || BigInt(offering.tokenSupply) - BigInt(offering.subscribed) < shares) throw err('QUOTE_CHANGED', 'Price or available shares changed; request a new card');
   // A08: bind the signature to the price limit, quote version and a user deadline. A v4
@@ -784,13 +788,14 @@ export async function subscribeOffering(action, { assertCurrent = () => {}, getS
   }
   if (termsBound) await contract.subscribeWithTerms.staticCall(BigInt(chain.pool_id), shares, price, version, deadline);
   else await contract.subscribe.staticCall(BigInt(chain.pool_id), shares);
+  if (intent && beforeBroadcast) intent = await beforeBroadcast(intent);
   await check();
   const tx = termsBound
-    ? await contract.subscribeWithTerms(BigInt(chain.pool_id), shares, price, version, deadline)
+    ? await contract.subscribeWithTerms(BigInt(chain.pool_id), shares, price, version, deadline, ...(intent?.broadcast_nonce === undefined ? [] : [{ nonce: intent.broadcast_nonce }]))
     : await contract.subscribe(BigInt(chain.pool_id), shares);
   try {
     if (intent) await attachIntent(intent.intent_id, tx.hash);
-    const receipt = await tx.wait();
+    const receipt = await tx.wait(cfg.confirmations ?? 1);
     if (Number(receipt.status) !== 1 || !/^0x[0-9a-f]{64}$/iu.test(tx.hash)) throw new Error('Subscription receipt was not successful');
     const subscribed = (receipt.logs ?? []).filter((log) => log.address?.toLowerCase() === chain.contract.toLowerCase()).map((log) => {
       try { return contract.interface.parseLog(log); } catch { return null; }
@@ -1001,7 +1006,7 @@ function prepareCapitalIntent(body) { return capitalPost('/api/positions/subscri
 function attachCapitalIntent(id, txHash) { return capitalPost(`/api/positions/subscription-intents/${id}/transaction`, { tx_hash: txHash }); }
 
 export async function claimPosition(position, { assertCurrent = () => {}, getSession = () => _session,
-  getConfig = loadChainConfig, ethersFn = loadEthers, prepareClaim = prepareCapitalClaim, attachIntent = attachCapitalIntent } = {}) {
+  getConfig = loadChainConfig, ethersFn = loadEthers, prepareClaim = prepareCapitalClaim, attachIntent = attachCapitalIntent, beforeBroadcast = null } = {}) {
   const session = getSession(), cfg = await getConfig();
   const pi = position.protocol_instance;
   if (!session?.signer || !position.reconciled || Number(pi?.protocol_version) !== 5
@@ -1017,15 +1022,16 @@ export async function claimPosition(position, { assertCurrent = () => {}, getSes
   const ethers = await ethersFn();
   const { protocolAbi } = await import('../../../src/chain/protocolV5Abi.js');
   const pool = new ethers.Contract(pi.pool_address, protocolAbi('RWAOfferingPool', cfg.abis.RWAOfferingPool), session.signer);
-  const intent = await prepareClaim({ wallet: session.address, chain_pool_id: position.chain_pool_id });
+  let intent = await prepareClaim({ wallet: session.address, chain_pool_id: position.chain_pool_id });
   if (intent.calldata.toLowerCase() !== pool.interface.encodeFunctionData('claim', [position.chain_pool_id]).toLowerCase()
     || intent.asset.toLowerCase() !== position.asset.toLowerCase()) throw err('INTENT_CHANGED', 'Saved claim differs from the reviewed position');
   await pool.claim.staticCall(position.chain_pool_id);
+  if (beforeBroadcast) intent = await beforeBroadcast(intent);
   await check();
-  const tx = await pool.claim(position.chain_pool_id);
+  const tx = await pool.claim(position.chain_pool_id, ...(intent.broadcast_nonce === undefined ? [] : [{ nonce: intent.broadcast_nonce }]));
   try {
     await attachIntent(intent.intent_id, tx.hash);
-    const receipt = await tx.wait();
+    const receipt = await tx.wait(cfg.confirmations ?? 1);
     const claimed = (receipt.logs ?? []).filter((log) => log.address?.toLowerCase() === pi.pool_address.toLowerCase()).map((log) => {
       try { return pool.interface.parseLog(log); } catch { return null; }
     }).find((event) => event?.name === 'Claimed' && BigInt(event.args.poolId) === BigInt(position.chain_pool_id)

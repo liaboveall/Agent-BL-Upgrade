@@ -70,7 +70,7 @@ function safeText(text) {
   return text.split(/\r?\n/u).map((line) => sanitizeDocumentInput(line)).join('\n');
 }
 
-export function createDocumentModel({ env = {}, completion = chatCompletion } = {}) {
+export function createDocumentModel({ env = {}, completion = chatCompletion, timeoutMs = 15_000, maxTokens = 4096 } = {}) {
   const provider = resolveProvider(env);
   const request = async ({ text, filename, buffer, mimeType, documentType }) => {
     if (!provider) throw new DocumentParseError('No document model is configured.', 'MODEL_UNAVAILABLE');
@@ -92,11 +92,14 @@ export function createDocumentModel({ env = {}, completion = chatCompletion } = 
       message = await completion({
         messages: [{ role: 'system', content: instruction }, { role: 'user', content }],
         responseFormat: { type: 'json_schema', json_schema: { name: 'trade_document', strict: true, schema: z.toJSONSchema(MODEL_DOCUMENT_SCHEMA) } },
-        temperature: 0, timeoutMs: 15_000, maxTokens: 4096
+        temperature: 0, timeoutMs, maxTokens
       }, env);
-    } catch {
+    } catch (error) {
       // Provider errors can echo prompts or credentials; none of that enters jobs or traces.
-      throw new DocumentParseError('The document model is unavailable or timed out.', 'MODEL_UNAVAILABLE');
+      throw new DocumentParseError('The document model is unavailable or timed out.', 'MODEL_UNAVAILABLE', {
+        category: error?.name === 'AbortError' ? 'TIMEOUT' : error?.code === 'LLM_HTTP_ERROR' ? 'HTTP_ERROR' : 'TRANSPORT_ERROR',
+        http_status: Number.isInteger(error?.provider_status) ? error.provider_status : null
+      });
     }
     if (message.tool_calls?.length || typeof message.content !== 'string' || message.content.length > 100_000) {
       throw new DocumentParseError('The document model returned an unsupported response.', 'MODEL_OUTPUT_INVALID');

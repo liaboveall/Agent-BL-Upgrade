@@ -19,6 +19,7 @@ import { loadX402Config, X402_SERVICES } from './config.js';
 import { deliverPaidReport } from './delivery.js';
 import { createX402Runtime } from './server.js';
 import { paidRouteMap } from './discovery.js';
+import { rightsKey } from '../rights/vault.js';
 
 const JSON_LIMIT = '1mb';
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/u;
@@ -48,6 +49,7 @@ function claimedPayer(req) {
 }
 
 const SETTLEMENT_STATUS = Object.freeze({
+  payment_independent_verification_required: 503,
   payment_oracle_unavailable: 503,
   payment_oracle_write_failed: 502,
   payment_tx_invalid: 502,
@@ -85,6 +87,8 @@ export async function createLiveGateway(options = {}) {
 
   const config = options.config ?? loadX402Config(env, { mode: 'live' });
   if (config.mode !== 'live') throw new TypeError('The live gateway requires a live x402 configuration');
+  const deliveryKey = options.deliveryKey ?? options.settlementService?.deliveryKey ?? rightsKey(env);
+  if (!deliveryKey) throw new Error('Live paid-report recovery requires the separately managed AGENTBL_RIGHTS_KEY');
 
   const runtime = await createX402Runtime({
     config,
@@ -96,12 +100,20 @@ export async function createLiveGateway(options = {}) {
     now: options.now,
     clock: options.clock,
     delay: options.delay,
-    baseDelayMs: options.baseDelayMs
+    baseDelayMs: options.baseDelayMs,
+    verifier: options.verifier,
+    rpcUrl: options.rpcUrl ?? env.X402_RPC_URL ?? env.INJECTIVE_RPC_URL,
+    confirmations: options.confirmations ?? Number(env.X402_CONFIRMATIONS ?? 2),
+    unlockOnFinish: false,
+    deliveryKey,
+    canSettle: options.canSettle,
+    env
   });
 
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', trustedHops(env.TRUST_PROXY));
+  app.use(express.json({ limit: JSON_LIMIT }));
 
   // 1) Reject invalid requests before any money moves.
   for (const service of services) {
@@ -131,13 +143,16 @@ export async function createLiveGateway(options = {}) {
       const receipt = req.x402;
       try {
         const record = await runtime.settlementService.get(receipt.paymentId);
-        const report = await definition.handler({
+        const deliveredBody = await runtime.settlementService.deliver(receipt.paymentId, async (prepared, checkpoint) => {
+        const report = prepared?.report ?? await definition.handler({
           body: req.body ?? null,
           payer: receipt.payer,
           paymentTx: receipt.transaction,
           live: true
         });
-        const { deliveredBody } = await deliverPaidReport({
+        const delivered = await deliverPaidReport({
+          preparedEnvelope: prepared?.envelope ?? null,
+          checkpoint,
           serviceId: service.serviceId,
           priceUSDC: service.priceUSDC,
           payer: receipt.payer,
@@ -148,6 +163,7 @@ export async function createLiveGateway(options = {}) {
           settledAt: record?.settled_at ?? new Date().toISOString(),
           live: true,
           payment: {
+            independent_verification: record.independent_verification,
             txHash: receipt.transaction,
             explorerUrl: `${config.explorerUrl}/tx/${receipt.transaction}`,
             live: true,
@@ -156,6 +172,9 @@ export async function createLiveGateway(options = {}) {
           report,
           attest: options.attest
         });
+        return delivered.deliveredBody;
+        });
+        await runtime.settlementService.markUnlocked(receipt.paymentId, { resource: req.path, delivery: 'durably_available' });
         res.json(deliveredBody);
       } catch (error) {
         // The buyer has already paid: say so, and that a retry is free.
@@ -183,7 +202,7 @@ export async function createLiveGateway(options = {}) {
   // eslint-disable-next-line no-unused-vars
   app.use((error, req, res, next) => {
     const mapped = describeGatewayError(error, options.describeError);
-    if (mapped.status >= 500) logger.error('[agentbl] x402 live gateway error:', error);
+    if (mapped.status >= 500) logger.error('[agentbl] x402 live gateway error:', { code: /^[A-Za-z0-9_]{1,80}$/u.test(error?.code ?? '') ? error.code : 'delivery_failed' });
     if (res.headersSent) { res.end(); return; }
     res.status(mapped.status).json({
       ok: false,

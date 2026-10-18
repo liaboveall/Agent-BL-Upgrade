@@ -3,6 +3,19 @@
 # change a git setting.
 * text=auto
 
+# Reproducible source and compiler metadata must use identical bytes on Windows and CI.
+*.js text eol=lf
+*.mjs text eol=lf
+*.jsx text eol=lf
+*.sol text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.csv text eol=lf
+.env.example text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
 # Always LF, on every platform: shells, containers, make and CI parse these literally.
 *.sh text eol=lf
 Dockerfile text eol=lf
@@ -18,6 +31,8 @@ public/vendor/** -text
 
 # Review receipts are hashed as captured; preserve their bytes across platforms.
 docs/evidence/** -text
+# Source-document fixture hashes must survive checkout without newline conversion.
+data/uploads/** -text
 
 # Binary assets.
 *.png binary

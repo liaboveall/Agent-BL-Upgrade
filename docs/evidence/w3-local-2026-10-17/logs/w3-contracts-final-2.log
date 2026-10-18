@@ -1,0 +1,31 @@
+
+Compiled 1 Solidity file with solc 0.8.24 (evm target: paris)
+Running Mocha tests
+
+
+  W3 committed rights and controlled capital instance
+    √ deploys within standard code/initcode limits and permanently binds ownership, gate and minter (197ms)
+    √ requires distinct governance approvals, visible delay, exact payload and one execution (181ms)
+    √ invalidates queued operations on member rotation and revokes old execution roles (184ms)
+    √ rejects issuance replay, altered holders, expired credentials and cross-chain or registry signatures (202ms)
+    √ preserves one identity through amendments, surrender and across enrolled registries / legacy aliases (223ms)
+    √ requires the independent holder to approve the exact pool and terms, with a revocable unopened pledge (155ms)
+    √ binds JS/Solidity terms and valuation hashes; rejects stale, cross-domain and undercovered finance (169ms)
+    √ fails closed for missing/expired/revoked qualification, screening and changed quote acceptance (203ms)
+    √ keeps refund rights after revoked eligibility, guardian intake stop and issuer suspension (176ms)
+    √ completes real capital disbursement, repayment and claims with fixed recipients and fee caps (214ms)
+    √ requires notification, independent disposal review and disputed recovery reconciliation before loss release (216ms)
+    √ preserves governed cancellation and expiry of queued operations (143ms)
+    √ checks ERC-1271 issuer signatures at execution and honors their revocation (151ms)
+    √ rejects unsupported assets, overlarge supply and policy/fee commitments before creating an offering (182ms)
+    √ stops new subscriptions for expired valuation and revoked valuer without blocking paid recovery (197ms)
+    √ invalidates a reviewed resolution when late recovery changes and refuses self review (183ms)
+    √ completes zero and full liquidation recoveries without duplicate claims (247ms)
+    √ supports per-title source invalidation while retaining the reservation and acquired refund rights (176ms)
+
+
+  18 passing (3s)
+
+
+18 passing (18 mocha)
+

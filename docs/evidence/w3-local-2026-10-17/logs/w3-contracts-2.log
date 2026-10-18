@@ -1,0 +1,24 @@
+
+Compiled 1 Solidity file with solc 0.8.24 (evm target: paris)
+Running Mocha tests
+
+
+  W3 committed rights and controlled capital instance
+    √ deploys within standard code/initcode limits and permanently binds ownership, gate and minter (193ms)
+    √ requires distinct governance approvals, visible delay, exact payload and one execution (161ms)
+    √ invalidates queued operations on member rotation and revokes old execution roles (170ms)
+    √ rejects issuance replay, altered holders, expired credentials and cross-chain or registry signatures (181ms)
+    √ preserves one identity through amendments, surrender and across enrolled registries / legacy aliases (194ms)
+    √ requires the independent holder to approve the exact pool and terms, with a revocable unopened pledge (154ms)
+    √ binds JS/Solidity terms and valuation hashes; rejects stale, cross-domain and undercovered finance (174ms)
+    √ fails closed for missing/expired/revoked qualification, screening and changed quote acceptance (196ms)
+    √ keeps refund rights after revoked eligibility, guardian intake stop and issuer suspension (174ms)
+    √ completes real capital disbursement, repayment and claims with fixed recipients and fee caps (217ms)
+    √ requires notification, independent disposal review and disputed recovery reconciliation before loss release (228ms)
+
+
+  11 passing (2s)
+
+
+11 passing (11 mocha)
+

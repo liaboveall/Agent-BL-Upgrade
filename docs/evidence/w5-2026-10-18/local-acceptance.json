@@ -1,0 +1,116 @@
+{
+  "schema": "agentbl-w5-validation-v1",
+  "generated_at": "2026-10-18T01:07:07.299Z",
+  "source_sha256": "8a9d1ad8a47b41f10bbff720a0891fc6ace993d7fd221205233cfe387a431ea5",
+  "scope": "Research and controlled Injective testnet; real business gate closed",
+  "passed": true,
+  "command_receipts": "runs/2026-10-17T19-00-49-630Z/receipts.json",
+  "original_full_run_passed": false,
+  "original_failure": "Evidence runner prefer-const warning; other 16 commands passed; source_unchanged=true",
+  "supplemental_receipts": [
+    "lint-supplement.json"
+  ],
+  "application": {
+    "tests": 1382,
+    "pass": 1380,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 2
+  },
+  "coverage": {
+    "lines": 93.6,
+    "branches": 84.32,
+    "functions": 91.18,
+    "thresholds": {
+      "lines": 88,
+      "branches": 72,
+      "functions": 86
+    }
+  },
+  "contracts": {
+    "passing": 151
+  },
+  "actual_evm_http": {
+    "w2": {
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "w3": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "w4": {
+      "tests": 21,
+      "pass": 21,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "w5": {
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  },
+  "browser": {
+    "passing": 18,
+    "widths": [
+      1280,
+      1440
+    ],
+    "languages": [
+      "zh",
+      "en"
+    ]
+  },
+  "skipped_scope": "Two W4 EVM tests intentionally skipped in ordinary application suite; all 21 W4 tests including actual EVM/HTTP pass separately with zero skips",
+  "capacity": {
+    "passed": true,
+    "http": {
+      "requests": 2000,
+      "failures": 0,
+      "duration_ms": 1396.3015,
+      "p50_ms": 9.55340000000001,
+      "p95_ms": 37.47159999999997,
+      "max_ms": 49.100799999999936
+    },
+    "ledger": {
+      "source": "synthetic committed events; live EVM accounting verified separately",
+      "events": 1000,
+      "repeated_events": 1000,
+      "resulting_entries": 1000,
+      "shares": "1000",
+      "cost_atomic": "800000000",
+      "duration_ms": 1522.5704999999998
+    },
+    "soak": {
+      "observations": 600,
+      "failures": 0,
+      "failure_observations": [],
+      "max_rss_bytes": 248573952,
+      "max_request_ms": 48.60449999998673,
+      "duration_ms": 604502.2529
+    }
+  },
+  "clean_build": "runs/2026-10-17T19-00-49-630Z/clean-build/result.json",
+  "testnet_financing": "testnet/financing-acceptance.json",
+  "public_x402": "testnet/public-gateway-acceptance.json",
+  "private_evidence_anchor": "testnet/anchor-acceptance.json",
+  "source_offline_linux_recovery": "recovery/2026-10-17T19-01-41-827Z/receipt.json",
+  "recovery_elapsed_ms": 8070,
+  "release_checks": {
+    "scope": "Post-commit same-SHA required CI and independent host recovery",
+    "status": "Read final commit GitHub checks/artifacts; not preclaimed by pre-commit receipt"
+  },
+  "real_business": false,
+  "human_wallet_acceptance": false,
+  "external_human_duty_receiver": false
+}

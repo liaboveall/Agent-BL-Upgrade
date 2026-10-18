@@ -1,0 +1,116 @@
+{
+  "schema": "agentbl-w5-legacy-readonly-inventory-v1",
+  "at": "2026-10-17T18:30:12.072Z",
+  "block": 144215622,
+  "block_hash": "0x301f520b530a7d6846c42022dcf6c89b2c77ca9e56516b67f2f46161d7295a73",
+  "chain_id": 1439,
+  "instances": [
+    {
+      "protocol_version": 3,
+      "contracts": {
+        "AgentBLRWA": {
+          "address": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+          "code_present": true,
+          "runtime_hash": "0xcea9064a5cb2d3547f4ef75d7117df9f4fd4d2724b24c583985ea0679a45c1c0"
+        },
+        "PaymentOracle": {
+          "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+          "code_present": true,
+          "runtime_hash": "0x7b4df2f160c0b35b24aa5b8e9a04330476af5d862c6c5313ac7aed48904a96a4"
+        },
+        "EBLRegistry": {
+          "address": "0xa89D5Bf56F753Ba064EEbE43A222773d0A54E612",
+          "code_present": true,
+          "runtime_hash": "0xd69f1868e14ef8545ab5c4fc5e8cccd1ead4e9e5dc83908db0e6a36c44b3525c"
+        },
+        "RWAToken": {
+          "address": "0x541E3C70347F942e55A98EF76F744b145F88Ab8C",
+          "code_present": true,
+          "runtime_hash": "0x8f12040360b068b49ccd26d96ace312ec65af41cc852ffe87a2cf6547f01942e"
+        },
+        "RWAOfferingPool": {
+          "address": "0xE8FDb7ec3638e84bE43F3f8dbC2d4D3a93E829D6",
+          "code_present": true,
+          "runtime_hash": "0x84643672c362b5362b5e9396f1ba5498f0488bc30047a652c3fbabaceb072bec"
+        },
+        "RiskPricingOracle": {
+          "address": "0x4F0E48634a0811de0bD29f7e2738c69343ab836F",
+          "code_present": true,
+          "runtime_hash": "0x21f945ac9cf4ef759d7738143e9cde0c66aaef3873fb649a9df191f1df4343da"
+        },
+        "AgentDecisionLog": {
+          "address": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+          "code_present": true,
+          "runtime_hash": "0xd640be8fcc656a2c8f1f5aa288f60de77356b202edafd051ade992130943167b"
+        }
+      },
+      "pools": [],
+      "next_pool_id": 1
+    },
+    {
+      "protocol_version": 2,
+      "contracts": {
+        "AgentBLRWA": {
+          "address": "0xEcD538011b889a7f79566d80A835C74cab2b4e0e",
+          "code_present": true,
+          "runtime_hash": "0xcea9064a5cb2d3547f4ef75d7117df9f4fd4d2724b24c583985ea0679a45c1c0"
+        },
+        "PaymentOracle": {
+          "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
+          "code_present": true,
+          "runtime_hash": "0x7b4df2f160c0b35b24aa5b8e9a04330476af5d862c6c5313ac7aed48904a96a4"
+        },
+        "EBLRegistry": {
+          "address": "0x8152FE274497C84850Ce79822feA3B885295cf53",
+          "code_present": true,
+          "runtime_hash": "0xe43e431ab784737c8c1596a37fd6c143a62dd54a96eaa318c008dbacc7022a45"
+        },
+        "RWAToken": {
+          "address": "0x9CD61A8A18b22Ea9a6c4A3C36ba465c1488aC11C",
+          "code_present": true,
+          "runtime_hash": "0x8f12040360b068b49ccd26d96ace312ec65af41cc852ffe87a2cf6547f01942e"
+        },
+        "RWAOfferingPool": {
+          "address": "0x38c52c33FEC5cc430f19F573768671c47E63b310",
+          "code_present": true,
+          "runtime_hash": "0xbf8d5c0510c32322f4f9b767aef742c1247e86be5ee303d0816729dd78814ee3"
+        },
+        "RiskPricingOracle": {
+          "address": "0x5A37286cfb95a0Fc12CDa83d58473E9EC32a6DDC",
+          "code_present": true,
+          "runtime_hash": "0x21f945ac9cf4ef759d7738143e9cde0c66aaef3873fb649a9df191f1df4343da"
+        },
+        "AgentDecisionLog": {
+          "address": "0x6AC3bDDbBc5ab082b7c0dF0C78C2d377578BE6Ec",
+          "code_present": true,
+          "runtime_hash": "0xd640be8fcc656a2c8f1f5aa288f60de77356b202edafd051ade992130943167b"
+        }
+      },
+      "pools": [
+        {
+          "pool_id": 1,
+          "ebl_id": "1",
+          "subscribed": "10000",
+          "state": "9",
+          "repayment_atomic": "10000000000"
+        },
+        {
+          "pool_id": 2,
+          "ebl_id": "2",
+          "subscribed": "0",
+          "state": "6",
+          "repayment_atomic": "0"
+        },
+        {
+          "pool_id": 3,
+          "ebl_id": "3",
+          "subscribed": "0",
+          "state": "2",
+          "repayment_atomic": "0"
+        }
+      ],
+      "next_pool_id": 4
+    }
+  ],
+  "writes": 0
+}

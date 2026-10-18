@@ -275,7 +275,7 @@ test('approved, rejected and expired decisions bind operator/time/outcome, pendi
     if (outcome === 'EXPIRED') { advance(86400001); await service.tick(); }
     const result = await service.getDecisionAnchor(pending.decision_id);
     assert.equal(result.payload.approval.status, outcome);
-    if (outcome !== 'EXPIRED') { assert.equal(result.payload.approval.decided_by, 'test-operator'); assert.ok(result.payload.approval.decided_at); }
+    if (outcome !== 'EXPIRED') { assert.equal(result.payload.approval.decided_by, hashSnapshot({ domain: 'agentbl-decision-anchor-v2:decided_by', value: 'test-operator' })); assert.ok(result.payload.approval.decided_at); }
     assert.equal(service.anchoring.state.demo.records.length, 1);
   });
 });
@@ -287,7 +287,7 @@ test('failed approved execution preserves the operator and terminal failure in i
   await service.approve(pending.approval.approval_id, { by: 'failure-reviewer' });
   const result = await service.getDecisionAnchor(pending.decision_id);
   assert.equal(result.payload.status, 'FAILED'); assert.equal(result.payload.approval.status, 'FAILED');
-  assert.equal(result.payload.approval.decided_by, 'failure-reviewer'); assert.ok(result.payload.approval.decided_at);
+  assert.equal(result.payload.approval.decided_by, hashSnapshot({ domain: 'agentbl-decision-anchor-v2:decided_by', value: 'failure-reviewer' })); assert.ok(result.payload.approval.decided_at);
 });
 
 test('an autonomy override creates a new policy version without relabeling already created decisions', async (t) => {

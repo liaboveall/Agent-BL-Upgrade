@@ -1,0 +1,18 @@
+{
+  "schema": "agentbl-provider-connectivity-v1",
+  "executed_at": "2026-10-17T15:02:01.531Z",
+  "provider": "custom",
+  "model": "x-test-2",
+  "status": "RESPONDED",
+  "metadata": {
+    "provider": "custom",
+    "model": "x-test-2",
+    "latency_ms": 344,
+    "tokens": {
+      "prompt_tokens": 38,
+      "completion_tokens": 39,
+      "total_tokens": 77
+    }
+  },
+  "latency_ms": 344
+}

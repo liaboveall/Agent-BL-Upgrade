@@ -18,6 +18,7 @@ import {
 import { listen, requestJson } from './helpers/http.js';
 import { createPaidFetch, fetchPaidIntel } from '../src/x402/client.js';
 import { payV2WithWallet } from '../web/src/lib/x402-v2.js';
+import { syntheticPaymentVerifier } from './helpers/paymentVerifier.js';
 
 const TESTNET_USDC = '0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d';
 const PAY_TO = '0x2222222222222222222222222222222222222222';
@@ -67,7 +68,7 @@ async function startFacilitator() {
     if (request.url === '/settle') {
       state.settle += 1;
       if (state.settleStatus !== 200) return send(state.settleStatus, { error: 'settlement unavailable' });
-      const transaction = state.nextTx ?? SETTLEMENT_TX; // a real facilitator returns a distinct hash per settlement
+      const transaction = state.nextTx ?? (state.settle === 1 ? SETTLEMENT_TX : uniqueTx());
       state.nextTx = null;
       return send(200, { success: true, payer, transaction, network: 'eip155:1439' });
     }
@@ -162,6 +163,8 @@ Object.assign(process.env, {
 delete process.env.AGENTBL_ADMIN_TOKEN;
 
 const { createServer } = await import('../src/app/server.js');
+const { storeState, createPool } = await import('../src/app/store.js');
+const { quoteFromCase } = await import('../src/core/pricingEngine.js');
 const { setPaymentOracleOverride } = await import('../src/x402/settlement.js');
 const { createUserNonce } = await import('../src/mystery/fairness.js');
 const { assertPaidReportEnvelope } = await import('../src/x402/paidReport.js');
@@ -192,7 +195,7 @@ const post = (base, endpoint, body, headers = {}) => requestJson(base, 'POST', e
 const RISK = '/api/x402/intel/premium-risk';
 
 test('x402 live gateway on the real app server', async (t) => {
-  const app = await listen(createServer());
+  const app = await listen(createServer({ x402Options: { verifier: syntheticPaymentVerifier, deliveryKey: crypto.randomBytes(32) } }));
   const oracle = fakeOracle();
   setPaymentOracleOverride(oracle);
   t.after(async () => {
@@ -297,11 +300,13 @@ test('x402 live gateway on the real app server', async (t) => {
     assert.equal(res.status, 200, res.text);
     assert.deepEqual(counters(), before, 'the facilitator must not be charged again');
     assert.equal(oracle.calls.length, callsBefore, 'the oracle must not be written twice');
-    assert.equal(res.data.payment.attestation, 'already_recorded');
+    assert.equal(res.data.payment.attestation, 'recorded');
   });
 
   await t.test('the paid report can be re-read from the cache without paying again', async () => {
-    const res = await requestJson(app.base, 'GET', `/api/x402/report/${reportId}`);
+    const denied = await requestJson(app.base, 'GET', `/api/x402/report/${reportId}`);
+    assert.equal(denied.status, 401);
+    const res = await requestJson(app.base, 'GET', `/api/x402/report/${reportId}`, undefined, { 'payment-signature': signed.header });
     assert.equal(res.status, 200);
     assert.equal(res.data.cached, true);
     assert.equal(res.data.report_envelope.report_id, reportId);
@@ -377,6 +382,15 @@ test('x402 live gateway on the real app server', async (t) => {
   });
 
   await t.test('Mystery Voyage: invalid reveals are rejected before payment, a valid one completes after it', async () => {
+    // Payment-path fixture only: W4 deliberately pauses source-unverified Live finance.
+    // These public research pools exercise the reveal/payment protocol, not Live eligibility.
+    const blocked = await post(app.base, '/api/mystery/preview', { wallet_address: Wallet.createRandom().address,
+      idempotency_key: 'unverified-live-source', risk_passport: { tier: 'ADVENTUROUS' } });
+    assert.equal(blocked.status, 400); assert.equal(blocked.data.code, 'mystery_no_candidates');
+    for (const pool of [...storeState.pools.values()]) {
+      createPool(pool.poolId, pool.caseData, quoteFromCase(pool.caseData, { payout_speed: pool.quote.payout_speed, require_source_validation: false }),
+        { investorEligible: pool.investorEligible });
+    }
     const wallet = Wallet.createRandom();
     const previewed = await post(app.base, '/api/mystery/preview', {
       wallet_address: wallet.address,
@@ -429,7 +443,7 @@ test('x402 live gateway on the real app server', async (t) => {
       assert.equal(body.payment.payer.toLowerCase(), wallet.address.toLowerCase());
       const receipt = parsePaymentResponseHeader(res);
       assert.equal(receipt.success, true);
-      assert.equal(receipt.transaction, SETTLEMENT_TX);
+      assert.equal(receipt.transaction, body.payment.txHash);
       assert.equal(counters().settle, before.settle + 1);
       assert.deepEqual([...new Set(rpc.calls)], ['eth_call'], 'only read-only RPC calls');
     } finally {
@@ -443,6 +457,7 @@ test('x402 live gateway on the real app server', async (t) => {
       const wallet = Wallet.createRandom();
       const before = counters();
       const result = await fetchPaidIntel(app.base, RISK, {
+        recoveryKey: crypto.randomBytes(32), recoveryDirectory: path.join(directory, 'client-recovery'),
         privateKey: wallet.privateKey,
         rpcUrl: rpc.base,
         budgetUSDC: 0.005,
@@ -451,7 +466,7 @@ test('x402 live gateway on the real app server', async (t) => {
       });
       assert.equal(result.x402_required, true);
       assert.equal(result.paid.kind, 'risk-intelligence');
-      assert.equal(result.paymentTxHash, SETTLEMENT_TX);
+      assert.equal(result.paymentTxHash, result.paid.payment.txHash);
       assert.equal(result.network, 'eip155:1439');
       assert.equal(result.priceUSDC, 0.001);
       assert.equal(counters().settle, before.settle + 1);

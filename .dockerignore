@@ -15,7 +15,11 @@ dist
 npm-debug.log*
 
 # Not needed by the running app (the Dockerfile copies only src, web, public, data and scripts/lib).
-hardhat
+hardhat/*
+!hardhat/package.json
+!hardhat/package-lock.json
+!hardhat/hardhat.config.js
+!hardhat/contracts
 tests
 docs
 patches

@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-17T18:59:20.926Z",
+  "http_status": 200,
+  "payment": {
+    "status": "settled",
+    "payer": "0x8c59dF28bC8107861D100bd6f16b24FB27b2a0E9",
+    "txHash": "0x6e637cccbd5c4fc6359ac19556290429029273b6e057c3d9681c3e5f610ed244",
+    "explorerUrl": "https://testnet.blockscout.injective.network/tx/0x6e637cccbd5c4fc6359ac19556290429029273b6e057c3d9681c3e5f610ed244",
+    "attestationTxHash": "0x866cc9555fca1f8b71d838fe362ea8d10491a5a0408a6ef1ad379cea66594215",
+    "attestationExplorerUrl": "https://testnet.blockscout.injective.network/tx/0x866cc9555fca1f8b71d838fe362ea8d10491a5a0408a6ef1ad379cea66594215",
+    "attestation": "recorded",
+    "live": true,
+    "serviceId": "premium-risk",
+    "amountUSDC": 0.001
+  },
+  "report_id": "rpt_a9783786594e685ba8d46cee6a2d7e707061e5c167ef97f067f67ad1bd71f746"
+}

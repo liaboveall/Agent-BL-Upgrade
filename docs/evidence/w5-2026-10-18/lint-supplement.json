@@ -1,0 +1,9 @@
+{
+  "name": "lint",
+  "command": "npm run lint",
+  "completed_at": "2026-10-18T01:07:07.293Z",
+  "exit_code": 0,
+  "log": "logs/w5-lint-release.log",
+  "supersedes": "runs/2026-10-17T19-00-49-630Z/lint.log",
+  "change": "Only evidence runner array binding changed to const; technical source manifest unchanged"
+}
