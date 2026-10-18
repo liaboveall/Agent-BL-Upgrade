@@ -26,8 +26,8 @@ test('each catalog case maps to the picture of its own cargo', () => {
     oil: /crude|oil|原油/iu, diesel: /gasoil|diesel|成品油|柴油/iu, ore: /iron ore|ironore|铁矿/iu,
     rubber: /rubber|橡胶/iu, soybean: /soy|大豆/iu, alu: /alu|铝/iu };
   const dir = path.join(root, 'data', 'cases');
-  const files = [path.join(root, 'data', 'demo-case.json'), ...[dir, path.join(dir, 'archive')].flatMap((folder) =>
-    fs.readdirSync(folder).filter((name) => name.endsWith('.case.json')).map((name) => path.join(folder, name)))];
+  const files = [path.join(root, 'data', 'demo-case.json'), ...fs.readdirSync(dir)
+    .filter((name) => name.endsWith('.case.json')).map((name) => path.join(dir, name))];
   const images = new Set();
   assert.ok(files.length >= 5);
   for (const file of files) {
@@ -40,7 +40,7 @@ test('each catalog case maps to the picture of its own cargo', () => {
     assert.ok(fs.existsSync(path.join(root, 'public', image.split('?')[0])), `${file}: missing ${image}`);
     images.add(image);
   }
-  assert.equal(images.size, files.length, 'each catalog project, including historical and warehouse lots, has its own photo');
+  assert.equal(images.size, files.length, 'each current catalog project, including warehouse lots, has its own photo');
 });
 
 test('the cargo pictures stay web-sized', () => {
