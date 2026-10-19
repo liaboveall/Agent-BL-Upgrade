@@ -200,14 +200,32 @@ test('snapshot: real values with their own dates, used whenever live data is off
 });
 
 test('live: a working source is labelled live; a failing one falls back to the labelled snapshot', async () => {
-  resetRealDataCaches();
-  const env = { REAL_DATA: 'on' };
-  const live = await getMarketQuote('aluminium', { env, fetchImpl: async () => response({ chart: { result: [{ meta: { regularMarketPrice: 2800, regularMarketTime: 1_792_116_900 }, indicators: { quote: [{ close: [3000, 2800] }] } }] } }) });
+  // The source observation is fixed, so its clock and retrieval cache must be fixed too.
+  const now = Date.parse('2026-10-16T03:00:00Z');
+  const options = { env: { REAL_DATA: 'on' }, now, cache: new TtlCache({ now: () => now }) };
+  const live = await getMarketQuote('aluminium', { ...options, fetchImpl: async () => response({ chart: { result: [{ meta: { regularMarketPrice: 2800, regularMarketTime: 1_792_116_900 }, indicators: { quote: [{ close: [3000, 2800] }] } }] } }) });
   assert.equal(live.status, 'live'); assert.equal(live.price_usd_per_mt, 2800);
-  resetRealDataCaches();
-  const down = await getMarketQuote('aluminium', { env, fetchImpl: async () => { throw new Error('offline'); } });
+  assert.equal(live.observed_at, '2026-10-16T02:15:00.000Z');
+  assert.equal(live.fetched_at, '2026-10-16T03:00:00.000Z');
+  options.cache.clear();
+  const down = await getMarketQuote('aluminium', { ...options, fetchImpl: async () => { throw new Error('offline'); } });
   assert.equal(down.status, 'offline'); assert.equal(down.fetched_at, loadSnapshot().captured_at);
-  resetRealDataCaches();
+});
+
+test('live: a successful fetch cannot renew a quote past its 72-hour observation expiry', async (t) => {
+  const expiresAt = '2026-10-19T02:15:00.000Z';
+  const fetchImpl = async () => response({ chart: { result: [{ meta: { regularMarketPrice: 2800, regularMarketTime: 1_792_116_900 }, indicators: { quote: [{ close: [3000, 2800] }] } }] } });
+  for (const [label, offsetMs, status] of [['before expiry', -1, 'live'], ['at expiry', 0, 'stale'], ['after expiry', 1, 'stale']]) {
+    await t.test(label, async () => {
+      const now = Date.parse(expiresAt) + offsetMs;
+      const quote = await getMarketQuote('aluminium', { env: { REAL_DATA: 'on' }, now, cache: new TtlCache({ now: () => now }), fetchImpl });
+      assert.equal(quote.status, status);
+      assert.equal(quote.observed_at, '2026-10-16T02:15:00.000Z');
+      assert.equal(quote.expires_at, expiresAt);
+      assert.equal(quote.fetched_at, new Date(now).toISOString(), 'a fresh retrieval does not extend the source observation');
+      assert.equal(quote.price_usd_per_mt, 2800);
+    });
+  }
 });
 
 test('curated cases: the Hormuz-transit cargo pauses on the snapshot; the adjacent one only warns; a clean route stays clean', async () => {
