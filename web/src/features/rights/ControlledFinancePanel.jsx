@@ -24,6 +24,12 @@ export function ControlledFinancePanel({ primary = false }) {
   const focusAfterRead = useRef(null);
   const readGeneration = useRef(0);
   const confirmation = useRef(null), reviewOpener = useRef(null);
+  const detailPanel = useRef(null), detailOpener = useRef(null);
+  useEffect(() => {
+    if (selectedPool == null) return;
+    const frame = requestAnimationFrame(() => detailPanel.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [selectedPool]);
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       if (review) confirmation.current?.focus();
@@ -171,47 +177,63 @@ export function ControlledFinancePanel({ primary = false }) {
   };
   return <aside id="controlled-finance" className="controlled-panel" aria-label={zh ? '受控测试网融资' : 'Controlled testnet financing'}>
     <details open={primary || undefined}><summary>{zh ? '受控测试网融资与持仓' : 'Controlled testnet financing and positions'}</summary>
-      <p>{zh ? '模拟单证、测试代币。资格与条款同意通过后才可认购；募集款进入独立资金池。' : 'Simulated titles and test assets. Eligibility and accepted terms are required; subscription funds enter a dedicated pool.'}</p>
-      <div className="controlled-actions"><button type="button" disabled={busy || loading} onClick={() => setRefresh((n) => n + 1)}>{zh ? '重试当前查询' : 'Retry current query'}</button></div>
-      {loading && <p role="status">{zh ? '正在读取链上快照与持仓…' : 'Reading chain snapshot and positions…'}</p>}
+      <div className="finance-panel-lead">
+        <p>{zh ? '核对资金池状态与完整条款，再由钱包确认每一步。仅限模拟单证与测试代币。' : 'Explore pools and verify the full terms before approving a wallet action. Research titles and test assets only.'}</p>
+        <div className="finance-primary-actions">
+          {status?.active && <button type="button" className="finance-button-primary" onClick={connect} disabled={busy}>{wallet ? `${wallet.slice(0, 8)}…${wallet.slice(-4)}` : (zh ? '连接 EVM 钱包' : 'Connect EVM wallet')}</button>}
+          <button type="button" aria-label={zh ? '重试当前查询' : 'Retry current query'} disabled={busy || loading} onClick={() => setRefresh((n) => n + 1)}>{zh ? '刷新数据' : 'Refresh data'}</button>
+        </div>
+      </div>
+      {loading && <p className="finance-loading" role="status">{zh ? '正在读取链上快照与持仓…' : 'Reading chain snapshot and positions…'}</p>}
       {!status?.active ? (!loading && <p role="status">{zh ? '当前未连接可核验的受控融资实例。' : 'No verified controlled financing instance is connected.'}</p>) : <>
-        <p className="controlled-instance">{zh ? '协议实例' : 'Protocol instance'}: <code>{status.config.chainIdDecimal}:{status.config.contracts.RWAOfferingPool}</code></p>
-        <p>{demo ? (zh ? '当前为 Demo；切换至 Live 后可准备钱包操作。' : 'Demo mode. Switch to Live before preparing a wallet action.') : (zh ? 'Live 测试网；每笔操作需钱包确认。' : 'Live testnet. Each action requires wallet confirmation.')}</p>
-        <div className="controlled-actions"><button type="button" onClick={connect} disabled={busy}>{wallet ? `${wallet.slice(0, 8)}…${wallet.slice(-4)}` : (zh ? '连接 EVM 钱包' : 'Connect EVM wallet')}</button>
-          <button type="button" onClick={() => { setReview(null); setError(''); setPage({ from: 1 }); setRefresh((n) => n + 1); }} disabled={busy}>{zh ? '刷新与对账' : 'Refresh and reconcile'}</button></div>
-        <div className="role-entry"><button type="button" aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{zh ? '融资方与审查人：角色待办与操作' : 'Borrowers and reviewers: responsibilities and actions'}</button><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>
-        <nav className="controlled-actions" aria-label={zh ? '资金池分页与查找' : 'Funding pool pages and lookup'}>
-          <button type="button" disabled={busy || loading || !listing?.snapshot || (!page.pool_id && page.from === 1)} onClick={() => navigate(1)}>{zh ? '首页' : 'First page'}</button>
-          <button type="button" disabled={busy || loading || !listing?.snapshot || Boolean(page.pool_id) || (page.from ?? 1) <= 1} onClick={() => navigate(Math.max(1, page.from - 10))}>{zh ? '上一页' : 'Previous page'}</button>
-          <button type="button" disabled={busy || loading || !listing?.next_cursor || !listing?.snapshot} onClick={() => navigate(listing.next_cursor)}>{zh ? '下一页' : 'Next page'}</button>
-          <button type="button" disabled={busy || loading || !listing?.snapshot || !listing?.total_pools || (!page.pool_id && !listing.next_cursor)} onClick={() => navigate(Math.floor((listing.total_pools - 1) / 10) * 10 + 1)}>{zh ? '末页' : 'Last page'}</button>
-          <label>{zh ? '指定池编号' : 'Pool ID'} <input inputMode="numeric" value={lookup} onChange={(event) => setLookup(event.target.value)} /></label><button type="button" disabled={busy || !/^[1-9]\d{0,8}$/u.test(lookup)} onClick={() => { setReview(null); setPage({ from: Number(lookup), pool_id: Number(lookup) }); }}>{zh ? '查找资金池' : 'Find funding pool'}</button>
-        </nav>
-        {listing?.snapshot && <p className="controlled-snapshot" role="status">{zh ? '快照区块 / 总池数' : 'Snapshot block / total pools'}: #{listing.snapshot.block_number} / {listing.total_pools} · <code>{listing.snapshot.block_hash}</code><br />{zh ? '当前范围' : 'Current range'}: {!listing.total_pools ? '—' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`}  · {zh ? '翻页沿用同一快照；刷新与对账回到最新首页以发现新增池。' : 'Pages share one snapshot. Refresh and reconcile returns to the latest first page to discover new pools.'}</p>}
+        <div className="finance-overview" aria-label={zh ? '当前融资概览' : 'Current financing overview'}>
+          <div><span>{zh ? '资金池总数' : 'Funding pools'}</span><strong>{listing?.total_pools ?? '—'}</strong><small>{zh ? '当前协议实例' : 'In this protocol instance'}</small></div>
+          <div><span>{zh ? '当前浏览' : 'Showing'}</span><strong>{!listing ? '—' : !listing.total_pools ? '0' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`}</strong><small>{zh ? '固定区块快照' : 'One consistent snapshot'}</small></div>
+          <div><span>{zh ? '操作模式' : 'Execution mode'}</span><strong className="finance-mode">{demo ? 'Demo' : 'Live'}</strong><small>{demo ? (zh ? '只读浏览 · 无资金操作' : 'Read only · no fund actions') : (zh ? '测试网 · 钱包逐次确认' : 'Testnet · wallet approvals')}</small></div>
+        </div>
+        <div className="role-entry"><div className="finance-role-callout"><div><strong>{zh ? '融资方与审查人' : 'Borrowers and reviewers'}</strong><p>{zh ? '管理单证、材料审核与融资流程。' : 'Manage documents, reviews, and financing responsibilities.'}</p></div><button type="button" aria-label={zh ? '融资方与审查人：角色待办与操作' : 'Borrowers and reviewers: responsibilities and actions'} aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')} <span aria-hidden="true">{rolesOpen ? '−' : '↗'}</span></button></div><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>
+        <div className="finance-directory-toolbar">
+          <div><h2>{zh ? '浏览资金池' : 'Explore funding pools'}</h2><p>{zh ? '查看状态、资金流转与每个池的完整条款。' : 'Review each pool’s status, cash movements, and terms.'}</p></div>
+          <form className="finance-pool-lookup" onSubmit={(event) => { event.preventDefault(); if (!busy && /^[1-9]\d{0,8}$/u.test(lookup)) { setReview(null); setPage({ from: Number(lookup), pool_id: Number(lookup) }); } }}>
+            <label htmlFor="funding-pool-lookup">{zh ? '指定池编号' : 'Pool ID'}</label><div><input id="funding-pool-lookup" inputMode="numeric" placeholder={zh ? '例如 25' : 'e.g. 25'} value={lookup} onChange={(event) => setLookup(event.target.value)} /><button type="submit" aria-label={zh ? '查找资金池' : 'Find funding pool'} disabled={busy || !/^[1-9]\d{0,8}$/u.test(lookup)}>{zh ? '查找' : 'Find pool'}</button></div>
+          </form>
+        </div>
         {listing?.failures?.length > 0 && <p role="alert">{zh ? '尚未读到的池' : 'Unread pools'}: {listing.failures.map((row) => `#${row.pool_id}`).join(', ')}</p>}
         {pending && <div className="controlled-pending"><p role="status">{zh ? '已保存待对账操作，暂停重复发送。' : 'A saved operation needs reconciliation. Repeated sending is paused.'} <button type="button" disabled={busy || !pending.intent_id} onClick={reconcile}>{zh ? '核对原交易' : 'Reconcile original transaction'}</button></p>
           <label>{zh ? '原钱包交易哈希' : 'Original wallet transaction hash'} <input value={originalHash} onChange={(event) => setOriginalHash(event.target.value)} /></label>
           <button type="button" disabled={busy || !pending.intent_id || !/^0x[a-fA-F0-9]{64}$/u.test(originalHash)} onClick={attachOriginal}>{zh ? '附加原交易并核对' : 'Attach and reconcile original transaction'}</button>
           {pending.status === 'draft' && <button type="button" disabled={busy} onClick={() => { localStorage.removeItem(storageKey()); setPending(null); setNotice(zh ? '已取消本地未广播草稿；审计记录保留。' : 'Local unbroadcast draft dismissed; audit history retained.'); }}>{zh ? '取消未广播草稿' : 'Dismiss unbroadcast draft'}</button>}
         </div>}
-        <label className="controlled-shares">{zh ? '认购份额' : 'Subscription shares'} <input inputMode="numeric" value={shares} onChange={(event) => { setShares(event.target.value); setReview(null); }} /></label>
-        <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption>{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份价格 / 兑付' : 'Price / redemption per share'}</th><th>{zh ? '募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
-          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · {stateLabel(offer.state)}<br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{new Date(Number(offer.maturity) * 1000).toISOString().slice(0, 10)}</time></td>
-            <td>{amount(offer.issue_price_atomic)} / {amount(offer.redemption_per_share_atomic)} TEST_USDC</td><td>{amount(offer.raised_atomic)} / {amount(offer.disbursed_atomic)} / {amount(offer.recovered_atomic)}</td>
-            <td><div className="controlled-actions"><button type="button" aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id)}>{zh ? '融资详情' : 'Financing details'} #{offer.pool_id}</button><button type="button" disabled={busy || loading || demo || !wallet || !offer.subscription_open || Boolean(pending)} onClick={() => startReview('acknowledge', offer)}>{zh ? '审阅并同意条款' : 'Review and accept terms'}</button>
-              <button type="button" disabled={busy || loading || demo || !wallet || !offer.subscription_open || Boolean(pending) || !/^[1-9]\d{0,8}$/u.test(shares)} onClick={() => startReview('subscribe', offer)}>{zh ? '审阅认购' : 'Review subscription'}</button></div><p className="small pool-next">{blockedReason(offer)}</p></td></tr>)}</tbody></table></div>
-        {!offers.length && listing && listing.complete !== false && <p>{zh ? '此实例尚无发行。' : 'This instance has no offerings.'}</p>}
-        {offers.filter((offer) => offer.pool_id === selectedPool).map((offer) => <section key={offer.pool_id} id="funding-pool-detail" className="funding-detail" aria-label={zh ? '融资详情' : 'Financing details'}>
-          <h2>{zh ? '资金池' : 'Funding pool'} #{offer.pool_id} · {stateLabel(offer.state)}</h2>
+        {offers.filter((offer) => offer.pool_id === selectedPool).map((offer) => <section ref={detailPanel} tabIndex={-1} key={offer.pool_id} id="funding-pool-detail" className="funding-detail" aria-label={zh ? '融资详情' : 'Financing details'}>
+          <div className="finance-detail-head"><h2>{zh ? '资金池' : 'Funding pool'} #{offer.pool_id} · {stateLabel(offer.state)}</h2><button type="button" onClick={() => { setSelectedPool(null); detailOpener.current?.focus(); }}>{zh ? '关闭详情' : 'Close details'}</button></div>
           <p>{blockedReason(offer)}</p>
           <dl><div><dt>{zh ? '资产与责任' : 'Asset and responsibility'}</dt><dd>{zh ? '以完整公开条款中的货物、路线和责任主体为准；哈希不证明真实货权。' : 'Read the cargo, route and responsible parties in the full public terms. A hash does not prove real title.'}</dd></div>
             <div><dt>{zh ? '募集 / 放款截止 / 到期' : 'Subscription / disbursement deadline / maturity'}</dt><dd>{[offer.subscription_deadline, offer.disbursement_deadline, offer.maturity].map((v) => v ? new Date(Number(v) * 1000).toISOString() : '—').join(' / ')}</dd></div>
             <div><dt>{zh ? '进度' : 'Progress'}</dt><dd>{offer.subscribed} / {offer.shares} {zh ? '份；实收与回款见上表。' : 'shares; actual cash amounts appear above.'}</dd></div>
             <div><dt>{zh ? '退出责任' : 'Cash exit'}</dt><dd>{zh ? '出资人自行退款或领取；融资方实际回款。处置与异议按已签条款执行。' : 'Investors refund or claim for themselves; the borrower sends actual repayments. Resolution and disputes follow the signed terms.'}</dd></div></dl>
           <p>{zh ? '目标兑付不是预测收益；可能损失本金。公开条款在每次钱包授权前独立核验。' : 'Target redemption is not a return forecast; principal may be lost. Full terms are independently checked before wallet authorization.'}</p>
+          <div className="finance-detail-actions">
+        <label className="controlled-shares">{zh ? '认购份额' : 'Subscription shares'} <input inputMode="numeric" value={shares} onChange={(event) => { setShares(event.target.value); setReview(null); }} /></label>
+          <div className="controlled-actions"><button type="button" className="finance-button-primary" disabled={busy || loading || demo || !wallet || !offer.subscription_open || Boolean(pending) || !/^[1-9]\d{0,8}$/u.test(shares)} onClick={() => startReview('subscribe', offer)}>{zh ? '审阅认购' : 'Review subscription'}</button>
+          <button type="button" disabled={busy || loading || demo || !wallet || !offer.subscription_open || Boolean(pending)} onClick={() => startReview('acknowledge', offer)}>{zh ? '审阅并同意条款' : 'Review and accept terms'}</button></div></div>
           <button type="button" disabled={busy || loading} onClick={() => readPublicTerms(offer)}>{zh ? '只读查看完整条款' : 'Read full terms without signing'}</button>
           {publicTerms?.pool_id === offer.pool_id && <ReadableTerms pack={publicTerms.pack} zh={zh} />}
         </section>)}
+        <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份价格 / 兑付' : 'Price / redemption per share'}</th><th>{zh ? '募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
+          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${String(offer.state).toLowerCase()}`}>{stateLabel(offer.state)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{new Date(Number(offer.maturity) * 1000).toISOString().slice(0, 10)}</time></td>
+            <td>{amount(offer.issue_price_atomic)} / {amount(offer.redemption_per_share_atomic)} TEST_USDC</td><td>{amount(offer.raised_atomic)} / {amount(offer.disbursed_atomic)} / {amount(offer.recovered_atomic)}</td>
+            <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '融资详情' : 'Financing details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">↗</span></button></td></tr>)}</tbody></table></div>
+        {!offers.length && listing && listing.complete !== false && <p>{zh ? '此实例尚无发行。' : 'This instance has no offerings.'}</p>}
+        <nav className="finance-pagination" aria-label={zh ? '资金池分页与查找' : 'Funding pool pages and lookup'}>
+          <span>{zh ? '当前范围' : 'Current range'}: {!listing?.total_pools ? '—' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`} / {listing?.total_pools ?? '—'}</span>
+          <div className="controlled-actions"><button type="button" disabled={busy || loading || !listing?.snapshot || (!page.pool_id && page.from === 1)} onClick={() => navigate(1)}>{zh ? '首页' : 'First page'}</button>
+          <button type="button" disabled={busy || loading || !listing?.snapshot || Boolean(page.pool_id) || (page.from ?? 1) <= 1} onClick={() => navigate(Math.max(1, page.from - 10))}>{zh ? '上一页' : 'Previous page'}</button>
+          <button type="button" disabled={busy || loading || !listing?.next_cursor || !listing?.snapshot} onClick={() => navigate(listing.next_cursor)}>{zh ? '下一页' : 'Next page'}</button>
+          <button type="button" disabled={busy || loading || !listing?.snapshot || !listing?.total_pools || (!page.pool_id && !listing.next_cursor)} onClick={() => navigate(Math.floor((listing.total_pools - 1) / 10) * 10 + 1)}>{zh ? '末页' : 'Last page'}</button></div>
+        </nav>
+        <div className="finance-data-context"><p>{zh ? '翻页沿用当前快照。要查看新增资金池，请回到最新首页。' : 'Pages use the same snapshot. Return to the latest first page to discover new pools.'}</p><button type="button" onClick={() => { setReview(null); setError(''); setPage({ from: 1 }); setRefresh((n) => n + 1); }} disabled={busy}>{zh ? '刷新与对账' : 'Refresh and reconcile'}</button></div>
+        <div className="finance-instance-meta"><p className="controlled-instance">{zh ? '协议实例' : 'Protocol instance'} <code>{status.config.chainIdDecimal}:{status.config.contracts.RWAOfferingPool}</code></p>
+        {listing?.snapshot && <p className="controlled-snapshot" role="status">{zh ? '快照区块 / 总池数' : 'Snapshot block / total pools'}: #{listing.snapshot.block_number} / {listing.total_pools} · <code>{listing.snapshot.block_hash}</code></p>}</div>
         <h2 className="positions-heading">{zh ? '我的持仓与退出' : 'My positions and exits'}</h2>
         {!wallet && <p>{zh ? '连接钱包后读取自己的持仓和退出权利。' : 'Connect your wallet to read your positions and exits.'}</p>}
         {wallet && !loading && !positionError && !positions.length && <p>{zh ? '此钱包在当前实例没有已发现的持仓。' : 'No positions were found for this wallet in this instance.'}</p>}
@@ -229,7 +251,7 @@ export function ControlledFinancePanel({ primary = false }) {
           <button type="button" disabled={busy || demo || (Boolean(review.offer) && !termsRead)} onClick={confirm}>{zh ? '确认并前往钱包' : 'Confirm and continue to wallet'}</button><button type="button" disabled={busy} onClick={() => setReview(null)}>{zh ? '取消' : 'Cancel'}</button></section>}
       </>}
       {busy && <p role="status">{zh ? '正在处理，请保留当前交易记录…' : 'Processing. Keep the current transaction record…'}</p>}
-      {error && <p role="alert">{error}</p>}{notice && <p role="status" className="controlled-notice">{notice}</p>}
+      {error && <p role="alert" className="finance-alert">{error}</p>}{notice && <p role="status" className="controlled-notice">{notice}</p>}
     </details>
   </aside>;
 }

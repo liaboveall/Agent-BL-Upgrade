@@ -47,6 +47,7 @@ for (const language of ['zh', 'en']) {
       quote_version: '3', terms_hash: pack.terms_hash, disclosure_hash: pack.disclosure_hash, policy_hash: pack.policy_hash, subscription_open: true }] } }));
     await page.route('**/api/controlled/positions?**', (route) => route.fulfill({ json: { positions: [] } }));
     await page.goto('/#/market'); const panel = page.locator('.controlled-panel'); await panel.locator('summary').click();
+    await panel.getByRole('button', { name: `${language === 'zh' ? '融资详情' : 'Financing details'} #1`, exact: true }).click();
     const review = panel.getByRole('button', { name: language === 'zh' ? '审阅认购' : 'Review subscription', exact: true }); await expect(review).toBeEnabled();
     await panel.locator('.controlled-shares input').fill('2'); await review.click();
     const card = panel.locator('.controlled-confirm'); await expect(card).toContainText('1.600000'); await expect(card).toContainText(pack.terms_hash);
