@@ -54,18 +54,9 @@ A bilingual interface for borrowers, reviewers, and investors, with financing po
 
 ## One workflow, three cash outcomes
 
-```mermaid
-flowchart LR
-    A["Documents and holder consent"] --> B["Terms and wallet subscription"]
-    B --> C["Controlled disbursement"]
-    B --> D["Failed raise: refund"]
-    C --> E["Repayment: claim"]
-    C --> F["Loss: settlement and late recovery"]
-    classDef entry fill:#edf2ff,stroke:#2f5bea,color:#182e69
-    classDef exit fill:#e4f5ec,stroke:#228768,color:#164b37
-    class A,B,C entry
-    class D,E,F exit
-```
+<p align="center">
+  <img src="docs/assets/lifecycle-en.svg" alt="From documents and wallet subscription to disbursement, refunds, repayment, and late recovery" width="100%" />
+</p>
 
 | Outcome | What participants can verify |
 | --- | --- |

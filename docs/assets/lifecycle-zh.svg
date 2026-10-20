@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="350" viewBox="0 0 1280 350" role="img" aria-labelledby="title desc">
+  <title id="title">三种资金结果</title>
+  <desc id="desc">签发、审核与明确授权. 完整条款与参与者逐次确认. 按规则退回出资本金. 出资人分别领取应得分配. 领取当前回收款及后续增量.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1l5 3-5 3" fill="none" stroke="#6782b2" stroke-width="1.5"/></marker></defs>
+  <rect x=".5" y=".5" width="1279" height="349" rx="18" fill="#f7f9fd" stroke="#dce4f0"/>
+  <g fill="none" stroke="#6782b2" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M242 140h64M536 140h64M421 184v62"/>
+    <path d="M830 140h36q14 0 14-14v-24q0-14 14-14h50"/>
+    <path d="M830 140h36q14 0 14 14v84q0 14 14 14h50"/>
+  </g>
+  <g font-family="'Segoe UI', 'Microsoft YaHei', Arial, sans-serif">
+    <g fill="#627492" font-size="12" font-weight="600" letter-spacing="1"><text x="32" y="45">单证与授权</text><text x="306" y="45">融资与资金</text><text x="944" y="29">三种资金结果</text></g>
+    <g fill="#ffffff" stroke="#bccce5"><rect x="32" y="96" width="210" height="88" rx="12"/><rect x="306" y="96" width="230" height="88" rx="12"/><rect x="600" y="96" width="230" height="88" rx="12"/></g>
+    <g fill="#1d3c74" font-size="13" font-weight="700"><text x="49" y="130">01 / 单证与持有人同意</text><text x="323" y="130">02 / 条款与钱包认购</text><text x="617" y="130">03 / 受控放款</text></g>
+    <g fill="#556781" font-size="12"><text x="49" y="156">签发、审核与明确授权</text><text x="323" y="156">完整条款与参与者逐次确认</text><text x="617" y="156">按角色、条件与截止推进</text></g>
+    <rect x="306" y="246" width="230" height="70" rx="12" fill="#fff7e5" stroke="#e3c98c"/>
+    <text x="323" y="274" fill="#805d1a" font-size="13" font-weight="700">募集失败</text><text x="323" y="296" fill="#806f4b" font-size="12">按规则退回出资本金</text>
+    <g fill="#edf8f3" stroke="#b2d8c8"><rect x="944" y="48" width="292" height="80" rx="12"/><rect x="944" y="212" width="292" height="80" rx="12"/></g>
+    <g fill="#185841" font-size="13" font-weight="700"><text x="965" y="80">正常回款</text><text x="965" y="244">损失与迟到回款</text></g>
+    <g fill="#4e7767" font-size="12"><text x="965" y="105">出资人分别领取应得分配</text><text x="965" y="269">领取当前回收款及后续增量</text></g>
+  </g>
+</svg>

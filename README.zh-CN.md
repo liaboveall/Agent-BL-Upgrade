@@ -54,18 +54,9 @@
 
 ## 一条流程，三种资金结果
 
-```mermaid
-flowchart LR
-    A["单证与持有人同意"] --> B["完整条款与钱包认购"]
-    B --> C["受控放款"]
-    B --> D["募集失败：退款"]
-    C --> E["正常回款：领取"]
-    C --> F["发生损失：结算与迟到回款"]
-    classDef entry fill:#edf2ff,stroke:#2f5bea,color:#182e69
-    classDef exit fill:#e4f5ec,stroke:#228768,color:#164b37
-    class A,B,C entry
-    class D,E,F exit
-```
+<p align="center">
+  <img src="docs/assets/lifecycle-zh.svg" alt="从单证和钱包认购到放款、募集失败退款、正常领取及损失与迟到回款" width="100%" />
+</p>
 
 | 结果 | 参与者可以核对什么 |
 | --- | --- |

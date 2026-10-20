@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="350" viewBox="0 0 1280 350" role="img" aria-labelledby="title desc">
+  <title id="title">THREE CASH OUTCOMES</title>
+  <desc id="desc">Title, review, holder consent. Read terms. Authorize each action.. Refund contributed cost. Claim your allocation. Claim current and later recovery.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1l5 3-5 3" fill="none" stroke="#6782b2" stroke-width="1.5"/></marker></defs>
+  <rect x=".5" y=".5" width="1279" height="349" rx="18" fill="#f7f9fd" stroke="#dce4f0"/>
+  <g fill="none" stroke="#6782b2" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M242 140h64M536 140h64M421 184v62"/>
+    <path d="M830 140h36q14 0 14-14v-24q0-14 14-14h50"/>
+    <path d="M830 140h36q14 0 14 14v84q0 14 14 14h50"/>
+  </g>
+  <g font-family="'Segoe UI', 'Microsoft YaHei', Arial, sans-serif">
+    <g fill="#627492" font-size="12" font-weight="600" letter-spacing="1"><text x="32" y="45">DOCUMENTS &amp; CONSENT</text><text x="306" y="45">FINANCING &amp; CAPITAL</text><text x="944" y="29">THREE CASH OUTCOMES</text></g>
+    <g fill="#ffffff" stroke="#bccce5"><rect x="32" y="96" width="210" height="88" rx="12"/><rect x="306" y="96" width="230" height="88" rx="12"/><rect x="600" y="96" width="230" height="88" rx="12"/></g>
+    <g fill="#1d3c74" font-size="13" font-weight="700"><text x="49" y="130">01 / DOCUMENTS</text><text x="323" y="130">02 / TERMS &amp; SUBSCRIPTION</text><text x="617" y="130">03 / DISBURSEMENT</text></g>
+    <g fill="#556781" font-size="12"><text x="49" y="156">Title, review, holder consent</text><text x="323" y="156">Read terms. Authorize each action.</text><text x="617" y="156">Roles, conditions, and deadlines</text></g>
+    <rect x="306" y="246" width="230" height="70" rx="12" fill="#fff7e5" stroke="#e3c98c"/>
+    <text x="323" y="274" fill="#805d1a" font-size="13" font-weight="700">RAISE FAILED</text><text x="323" y="296" fill="#806f4b" font-size="12">Refund contributed cost</text>
+    <g fill="#edf8f3" stroke="#b2d8c8"><rect x="944" y="48" width="292" height="80" rx="12"/><rect x="944" y="212" width="292" height="80" rx="12"/></g>
+    <g fill="#185841" font-size="13" font-weight="700"><text x="965" y="80">REPAID</text><text x="965" y="244">LOSS &amp; LATE RECOVERY</text></g>
+    <g fill="#4e7767" font-size="12"><text x="965" y="105">Claim your allocation</text><text x="965" y="269">Claim current and later recovery</text></g>
+  </g>
+</svg>
