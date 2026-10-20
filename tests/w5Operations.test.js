@@ -25,6 +25,28 @@ import { deploymentCheckpoint } from '../scripts/deploy-w5-testnet.mjs';
 const temporary = async (t) => { const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-w5-')); t.after(() => fs.rm(dir, { recursive: true, force: true })); return dir; };
 const healthyAgent = () => ({ enabled: true, running: true, mode: 'demo', queue: { queued: 0 }, activity: {} });
 const workerFile = path.resolve('tests/helpers/w5RuntimeWorker.js');
+test('W5 shutdown drains a slow monitoring read before releasing the single-writer lease', { timeout: 30000 }, async (t) => {
+  const directory = await temporary(t);
+  const env = { ...process.env, AGENTBL_LOAD_DOTENV: 'false', AGENTBL_RUNTIME_DIR: directory, NODE_TEST_CONTEXT: 'shutdown-regression' };
+  for (const name of Object.keys(env)) if (name.startsWith('AGENTBL_RIGHTS_')) delete env[name];
+  const child = fork(path.resolve('tests/helpers/gracefulShutdownWorker.js'), { env, silent: true });
+  t.after(() => { if (child.exitCode == null) child.kill(); });
+  let output = ''; child.stdout.on('data', (chunk) => { output += chunk; }); child.stderr.on('data', (chunk) => { output += chunk; });
+  const exited = new Promise((resolve) => child.once('exit', (code, signal) => resolve({ code, signal })));
+  await new Promise((resolve, reject) => {
+    child.on('message', (message) => { if (message?.type === 'probe-start') resolve(); });
+    child.once('error', reject); child.once('exit', () => reject(new Error('Worker stopped before pending probe: ' + output)));
+  });
+  await fs.access(path.join(directory, '.runtime-lease/owner.json'));
+  if (process.platform === 'win32') child.send('stop'); else child.kill('SIGTERM');
+  const result = await exited;
+  assert.equal(result.code, 0, output);
+  const events = (await fs.readFile(path.join(directory, 'drain-order.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse);
+  assert.deepEqual(events.map((item) => item.event), ['probe-start', 'probe-done', 'lease-release']);
+  assert.ok(events[1].at - events[0].at >= 11000);
+  await assert.rejects(fs.access(path.join(directory, '.runtime-lease')), { code: 'ENOENT' });
+  const release = await acquireRuntimeLease(directory, 'reopen-after-drain'); await release();
+});
 const startHttp = async (t, server) => {
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(async () => { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); });
@@ -77,6 +99,9 @@ test('W5 readiness separates storage, RPC/reorg uncertainty, queues and startup;
   agent = healthyAgent(); await monitor.sample(); assert.equal(received.at(-1).severity, 'recovery');
   now += 31000; assert.equal(monitor.readiness().ok, false); assert.equal(monitor.readiness().status, 'unknown');
   monitor.failStartup(); await monitor.sample(); assert.equal(monitor.readiness().ok, false);
+  const stoppedSnapshot = monitor.details().observed_at;
+  await monitor.stop(); now += 1000; await monitor.sample(); await monitor.start();
+  assert.equal(monitor.details().observed_at, stoppedSnapshot, 'stopped monitoring must not start a new sample');
   const log = await fs.readFile(path.join(directory, 'ops-alerts.jsonl'), 'utf8'); assert.doesNotMatch(log, /authorization|wallet|privateKey/u);
   assert.match(monitor.metrics(), /agentbl_ready 0/u);
 });

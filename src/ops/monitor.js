@@ -44,6 +44,7 @@ export class OperationsMonitor {
     event_loop_p99_ms: this.loop ? Number((this.loop.percentile(99) / 1e6).toFixed(2)) : null }; }
   async sample() {
     if (this.pending) return this.pending;
+    if (this.stopping) return this.details();
     this.pending = this.#sample().finally(() => { this.pending = null; });
     return this.pending;
   }
@@ -84,6 +85,7 @@ export class OperationsMonitor {
   }
   async start() {
     await this.sample();
+    if (this.stopping) return;
     this.loop = monitorEventLoopDelay({ resolution: 20 }); this.loop.enable();
     this.timer = setInterval(() => this.sample().catch(() => {}), this.intervalMs); this.timer.unref();
   }

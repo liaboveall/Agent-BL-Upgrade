@@ -46,20 +46,20 @@ try {
   assert.equal(inspect.Config.Labels['io.agentbl.source-sha256'], source.source_sha256);
   assert.equal(inspect.Config.User, 'node');
   await docker('volume', ['volume', 'create', volume]);
-  await docker('start', ['run', '-d', '--name', container, '-p', '127.0.0.1::3000', ...hardened, '-e', 'DEMO_MODE=true', '-e', 'REAL_DATA=off', '-e', 'X402_MODE=demo', '-v', `${volume}:/app/data/runtime`, image]);
+  await docker('start', ['run', '-d', '--name', container, '--stop-timeout', '210', '-p', '127.0.0.1::3000', ...hardened, '-e', 'DEMO_MODE=true', '-e', 'REAL_DATA=off', '-e', 'X402_MODE=demo', '-v', `${volume}:/app/data/runtime`, image]);
   const port = (await docker('port', ['port', container, '3000/tcp'])).trim().split(':').at(-1); origin = `http://127.0.0.1:${port}`;
   ready = await waitReady();
   assert.equal((await fetch(origin)).status, 200);
   assert.equal((await fetch(`${origin}/api/health`)).status, 200);
   assert.equal((await docker('uid', ['exec', container, 'id', '-u'])).trim(), '1000');
-  await docker('stop', ['stop', '-t', '30', container]);
+  await docker('stop', ['stop', '-t', '210', container]);
   await docker('lease', ['run', '--rm', ...hardened, '-v', `${volume}:/app/data/runtime`, image, 'node', '-e', "const fs=require('fs');if(fs.existsSync('/app/data/runtime/.runtime-lease'))process.exit(1);fs.accessSync('/app/data/runtime/runtime-initialized.json')"]); cleanStop = true;
   await docker('restart', ['start', container]);
   // Docker can allocate a different host port when restarting a dynamic port binding.
   const restartedPort = (await docker('restarted-port', ['port', container, '3000/tcp'])).trim().split(':').at(-1);
   origin = `http://127.0.0.1:${restartedPort}`;
   restarted = await waitReady();
-  await docker('stop-restarted', ['stop', '-t', '30', container]);
+  await docker('stop-restarted', ['stop', '-t', '210', container]);
   await docker('empty-volume', ['volume', 'create', empty]);
   const missing = await docker('missing-runtime', ['run', '--rm', ...hardened, '-e', 'AGENTBL_REQUIRE_EXISTING_RUNTIME=true', '-v', `${empty}:/app/data/runtime`, image], 'nonzero');
   assert.match(missing, /runtime-initialized\.json/u);

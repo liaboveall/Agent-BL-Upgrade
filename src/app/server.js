@@ -1645,7 +1645,7 @@ function printStartupNotes(port, host) {
   }
 }
 
-function installGracefulShutdown(server, unlock) {
+export function installGracefulShutdown(server, unlock) {
   let closing = false;
   const shutdown = (signal) => {
     if (closing) return;
@@ -1663,7 +1663,9 @@ function installGracefulShutdown(server, unlock) {
       });
       server.closeIdleConnections();
     });
-    setTimeout(() => process.exit(1), 10_000).unref();
+    // A bounded public-ledger read may already be in flight for up to 120 seconds.
+    // Drain it before releasing the writer lease; a 10-second kill left valid runtimes locked.
+    setTimeout(() => process.exit(1), 180_000).unref();
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
