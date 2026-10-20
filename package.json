@@ -54,7 +54,6 @@
     "test:load": "node scripts/load.mjs",
     "build:clean": "node scripts/clean-build.mjs",
     "testnet:legacy": "node scripts/legacy-testnet.mjs",
-    "runtime:restore": "node scripts/restore-runtime.mjs",
     "terms:verify": "node scripts/verify-financing-terms.mjs",
     "test:finance": "node scripts/test-integration.mjs finance",
     "verify:release": "node scripts/verify-release.mjs",
