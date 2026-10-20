@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { loadDeploymentContinuation } from '../scripts/deploy-w5-testnet.mjs';
+import { loadDeploymentContinuation, runDeployment } from '../scripts/legacy-testnet.mjs';
+
+test('legacy maintenance rejects every historical execution action', async () => {
+  for (const action of ['prepare', 'activate', 'smoke', 'anchor', undefined]) {
+    await assert.rejects(runDeployment(action), /exit-only/u);
+  }
+});
 
 test('deployment continuation preserves frozen evidence and prefers the durable current checkpoint', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-deployment-continuation-'));

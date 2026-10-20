@@ -7,13 +7,13 @@ import { pathToFileURL } from 'node:url';
 import { releaseRoot, releaseSourceSnapshot, releaseSourceByteIssues, digest } from './lib/release-source.mjs';
 
 const npmCli = process.env.npm_execpath;
-if (!npmCli || !/npm-cli\.c?js$/u.test(npmCli)) throw new Error('Run through npm run test:n5');
+if (!npmCli || !/npm-cli\.c?js$/u.test(npmCli)) throw new Error('Run through npm run verify:release');
 const source = await releaseSourceSnapshot();
 const byteIssues = await releaseSourceByteIssues(source);
-if (byteIssues.length) throw new Error('Normalize .gitattributes LF sources before N5 verification: ' + byteIssues.join(', '));
-const directory = path.join(releaseRoot, 'artifacts/n5', new Date().toISOString().replaceAll(/[:.]/gu, '-'));
+if (byteIssues.length) throw new Error('Normalize .gitattributes LF sources before release verification: ' + byteIssues.join(', '));
+const directory = path.join(releaseRoot, 'artifacts/releases', new Date().toISOString().replaceAll(/[:.]/gu, '-'));
 await fs.mkdir(directory, { recursive: true });
-const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-n5-'));
+const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-release-'));
 if (!path.resolve(temporary).startsWith(path.resolve(os.tmpdir()) + path.sep)) throw new Error('Unexpected temporary root');
 const checkout = path.join(temporary, 'checkout'), receipts = [];
 // Only OS/runtime discovery settings cross into the clone. No .env, provider, signing or application credentials.
@@ -37,7 +37,7 @@ const run = async (name, executable, args, { cwd = checkout, context = false } =
     || /^(?:# tests |ℹ tests )([1-9]\d*)/mu.test(raw.toString());
   receipts.push({ name, started_at: started, completed_at: new Date().toISOString(), exit_code: code, substantive_execution: substantive, log, log_sha256: digest(raw) });
   await fs.writeFile(path.join(directory, 'progress.json'), JSON.stringify({ source_sha256: source.source_sha256, receipts }, null, 2) + '\n');
-  console.log(`N5 ${name}: ${code === 0 && substantive ? 'PASS' : 'FAIL'}`);
+  console.log(`Release ${name}: ${code === 0 && substantive ? 'PASS' : 'FAIL'}`);
   return code === 0 && substantive;
 };
 const npm = (name, args, options) => run(name, process.execPath, [npmCli, ...args], options);
@@ -56,7 +56,7 @@ try {
   await fs.writeFile(path.join(directory, 'source-manifest.json'), JSON.stringify(source, null, 2) + '\n');
   if (!await npm('install-app', ['ci', '--ignore-scripts']) || !await npm('install-contracts', ['--prefix', 'hardhat', 'ci', '--ignore-scripts'])) throw new Error('Fresh dependency install failed');
   for (const [name, command] of [['lint', 'lint'], ['check', 'check'], ['build', 'build'], ['contracts', 'test:contracts'], ['coverage', 'test:coverage'],
-    ['w2', 'test:w2'], ['w3', 'test:w3'], ['w4', 'test:w4'], ['w5', 'test:w5'], ['n3-evm', 'test:n3:evm'], ['browser', 'test:browser']]) {
+    ['w2', 'test:capital'], ['w3', 'test:rights'], ['w4', 'test:evidence'], ['w5', 'test:operations'], ['n3-evm', 'test:finance'], ['browser', 'test:browser']]) {
     await npm(name, ['run', command]);
   }
   await fs.cp(path.join(checkout, 'test-results'), path.join(directory, 'browser'), { recursive: true });
@@ -65,13 +65,13 @@ try {
   await npm('production-audit', ['audit', '--omit=dev', '--audit-level=high', '--json']);
   await npm('contracts-audit', ['--prefix', 'hardhat', 'audit', '--audit-level=high', '--json']);
   await npm('clean-build', ['run', 'build:clean', '--', path.join(directory, 'clean-build')]);
-  await run('container', process.execPath, ['scripts/verify-n5-container.mjs', path.join(directory, 'container')]);
-  await npm('capacity', ['run', 'load:w5', '--', '--soak-seconds', '600', '--output', path.join(directory, 'capacity.json')]);
+  await run('container', process.execPath, ['scripts/verify-container.mjs', path.join(directory, 'container')]);
+  await npm('capacity', ['run', 'test:load', '--', '--soak-seconds', '600', '--output', path.join(directory, 'capacity.json')]);
   after = await cloned.releaseSourceSnapshot();
 } catch (failure) { error = failure.message; }
 finally {
   const current = await releaseSourceSnapshot();
-  const result = { schema: 'agentbl-n5-local-candidate-v1', source_sha256: source.source_sha256, base_head: source.base_head, file_count: source.file_count,
+  const result = { schema: 'agentbl-release-local-candidate-v1', source_sha256: source.source_sha256, base_head: source.base_head, file_count: source.file_count,
     generated_at: new Date().toISOString(), environment: { node: process.version, platform: process.platform, architecture: process.arch, browser: env.AGENTBL_CHROMIUM_PATH ?? 'Playwright default' },
     fresh_clone_matches: cloneSource?.source_sha256 === source.source_sha256, source_unchanged: after?.source_sha256 === source.source_sha256 && current.source_sha256 === source.source_sha256,
     receipts, ...(error ? { error } : {}), ci_verified: false, public_testnet_deployed: false, human_verified: false, public_broadcasts: 0 };

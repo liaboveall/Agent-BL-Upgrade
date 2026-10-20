@@ -16,7 +16,7 @@ import { loadRightsChain } from '../src/rights/chain.js';
 
 const [action, instanceId, confirmation] = process.argv.slice(2);
 if (!['prepare', 'activate', 'funding', 'capacity', 'status'].includes(action) || !/^[a-z][a-z0-9-]{2,63}$/u.test(instanceId ?? '')
-  || (!['status', 'capacity'].includes(action) && confirmation !== '--execute')) throw new Error('Use deploy-n5-testnet.mjs <prepare|activate|funding|capacity|status> <instance-id> --execute');
+  || (!['status', 'capacity'].includes(action) && confirmation !== '--execute')) throw new Error('Use testnet.mjs <prepare|activate|funding|capacity|status> <instance-id> --execute');
 const directory = path.join(releaseRoot, 'data/runtime/n5-deployment', instanceId);
 const candidateFile = path.join(directory, 'candidate.json');
 const predecessor = await readJson(path.join(releaseRoot, 'public/rights-instance.json'));

@@ -9,7 +9,7 @@ import { createAgentVersion } from '../src/agent/runtime/agentVersion.js';
 import { loadAgentConfig } from '../src/agent/runtime/config.js';
 
 const args = process.argv.slice(2);
-if (args.some((arg) => !['--live'].includes(arg))) throw new Error('Usage: npm run eval:w4 -- [--live]');
+if (args.some((arg) => !['--live'].includes(arg))) throw new Error('Usage: npm run eval:providers -- [--live]');
 if (args.includes('--live')) await import('../src/env.js');
 const corpus = JSON.parse(await fs.readFile('data/evaluation/w4/corpus.json', 'utf8'));
 const config = args.includes('--live') ? resolveProvider(process.env) : null;

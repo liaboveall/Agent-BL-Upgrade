@@ -20,7 +20,7 @@ import { createServer } from '../src/app/server.js';
 import { X402SettlementService } from '../src/x402/settlement.js';
 import { syntheticPaymentVerifier } from './helpers/paymentVerifier.js';
 import { DemoModeController } from '../src/demo/mode.js';
-import { deploymentCheckpoint } from '../scripts/deploy-w5-testnet.mjs';
+import { deploymentCheckpoint } from '../scripts/legacy-testnet.mjs';
 
 const temporary = async (t) => { const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-w5-')); t.after(() => fs.rm(dir, { recursive: true, force: true })); return dir; };
 const healthyAgent = () => ({ enabled: true, running: true, mode: 'demo', queue: { queued: 0 }, activity: {} });

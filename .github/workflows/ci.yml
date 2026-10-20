@@ -66,8 +66,8 @@ jobs:
         if: matrix.os != 'ubuntu-latest' || matrix.node != 24
         run: npm test
 
-  w2-capital:
-    name: W2 capital lifecycle · real EVM and HTTP
+  capital:
+    name: Capital lifecycle · real EVM and HTTP
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -80,10 +80,10 @@ jobs:
             hardhat/package-lock.json
       - run: npm ci
       - run: npm --prefix hardhat ci
-      - run: npm run test:w2
+      - run: npm run test:capital
 
-  w3-rights:
-    name: W3 rights controls · real EVM and business sessions
+  rights:
+    name: Rights controls · real EVM and business sessions
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -96,10 +96,10 @@ jobs:
             hardhat/package-lock.json
       - run: npm ci
       - run: npm --prefix hardhat ci
-      - run: npm run test:w3
+      - run: npm run test:rights
 
-  w4-evidence:
-    name: W4 evidence and provenance · actual ERC-3009 and anchor EVM
+  evidence:
+    name: Evidence and provenance · actual ERC-3009 and anchor EVM
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -112,10 +112,10 @@ jobs:
             hardhat/package-lock.json
       - run: npm ci
       - run: npm --prefix hardhat ci
-      - run: npm run test:w4
-      - run: npm run eval:w4
+      - run: npm run test:evidence
+      - run: npm run eval:providers
 
-  n3-workflow:
+  financing-workflow:
     name: Financing roles and 25 pools · real EVM and HTTP
     runs-on: ubuntu-latest
     steps:
@@ -129,7 +129,7 @@ jobs:
             hardhat/package-lock.json
       - run: npm ci
       - run: npm --prefix hardhat ci
-      - run: npm run test:n3:evm
+      - run: npm run test:finance
         env:
           AGENTBL_N3_EVIDENCE: test-results/n3
       - run: node --test tests/n5Deployment.integration.js
@@ -139,8 +139,8 @@ jobs:
           name: financing-workflow-evidence
           path: test-results/n3/
 
-  w5-operations:
-    name: W5 operations and isolated recovery
+  operations:
+    name: Operations and local recovery
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -150,13 +150,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm --prefix hardhat ci
-      - run: npm run test:w5
+      - run: npm run test:operations
       - run: npm run build
-      - run: npm run load:w5 -- --soak-seconds 600 --output test-results/w5-load.json
+      - run: npm run test:load -- --soak-seconds 600 --output test-results/w5-load.json
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: w5-operations-evidence
+          name: operations-evidence
           path: test-results/
 
   reproducible:
@@ -254,62 +254,3 @@ jobs:
           node-version: 24
       - run: npm audit --omit=dev --audit-level=high
       - run: npm --prefix hardhat audit --audit-level=high
-
-  offhost-recovery:
-    name: W5 independent host recovery
-    if: github.event_name == 'push' && vars.AGENTBL_W5_RECOVERY_COMMIT != '' && github.sha == vars.AGENTBL_W5_RECOVERY_COMMIT
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Reassemble the encrypted snapshot and separate temporary key files
-        env:
-          W5_BACKUP_KEY: ${{ secrets.AGENTBL_W5_RECOVERY_BACKUP_KEY }}
-          W5_VAULT_KEY: ${{ secrets.AGENTBL_W5_RECOVERY_VAULT_KEY }}
-          W5_PAYLOAD_0: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_0 }}
-          W5_PAYLOAD_1: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_1 }}
-          W5_PAYLOAD_2: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_2 }}
-          W5_PAYLOAD_3: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_3 }}
-          W5_PAYLOAD_4: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_4 }}
-          W5_PAYLOAD_5: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_5 }}
-          W5_PAYLOAD_6: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_6 }}
-          W5_PAYLOAD_7: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_7 }}
-          W5_PAYLOAD_8: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_8 }}
-          W5_PAYLOAD_9: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_9 }}
-          W5_PAYLOAD_10: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_10 }}
-          W5_PAYLOAD_11: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_11 }}
-          W5_PAYLOAD_12: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_12 }}
-          W5_PAYLOAD_13: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_13 }}
-          W5_PAYLOAD_14: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_14 }}
-          W5_PAYLOAD_15: ${{ secrets.AGENTBL_W5_RECOVERY_PAYLOAD_15 }}
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs/promises';
-          const dir = `${process.env.RUNNER_TEMP}/w5-recovery`;
-          await fs.mkdir(dir, { recursive: true });
-          for (const name of ['W5_BACKUP_KEY', 'W5_VAULT_KEY']) if (!/^[a-f0-9]{64}$/.test(process.env[name] ?? '')) throw new Error('Temporary recovery key missing');
-          const payload = Array.from({ length: 16 }, (_, i) => process.env[`W5_PAYLOAD_${i}`] ?? '').join('');
-          const data = Buffer.from(payload, 'base64');
-          if (JSON.parse(data).schema !== 'agentbl-encrypted-runtime-backup-v1') throw new Error('Encrypted snapshot missing');
-          await fs.writeFile(`${dir}/backup.json`, data, { mode: 0o600 });
-          await fs.writeFile(`${dir}/backup-key.hex`, process.env.W5_BACKUP_KEY, { mode: 0o600 });
-          await fs.writeFile(`${dir}/rights-key.hex`, process.env.W5_VAULT_KEY, { mode: 0o600 });
-          NODE
-      - run: docker build --build-arg RELEASE_REVISION=${{ github.sha }} -t agentbl:recovery .
-      - name: Restore with source host unavailable, verify evidence and reconcile actual testnet positions
-        run: |
-          mkdir -p test-results/offhost-recovery
-          docker run --rm --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
-            --user "$(id -u):$(id -g)" \
-            --mount "type=bind,src=$RUNNER_TEMP/w5-recovery/backup.json,dst=/restore/backup.json,readonly" \
-            --mount "type=bind,src=$RUNNER_TEMP/w5-recovery/backup-key.hex,dst=/run/secrets/backup-key.hex,readonly" \
-            --mount "type=bind,src=$RUNNER_TEMP/w5-recovery/rights-key.hex,dst=/run/secrets/rights-key.hex,readonly" \
-            agentbl:recovery node scripts/lib/w5-container-recovery.mjs > test-results/offhost-recovery/receipt.json
-          node -e "const r=require('./test-results/offhost-recovery/receipt.json');if(!r.passed||r.snapshot_source_revision!==process.env.GITHUB_SHA||r.source_runtime_mounted||r.broadcasts!==0)process.exit(1)"
-      - uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: w5-independent-host-recovery
-          path: test-results/offhost-recovery/
-      - name: Remove runner-local recovery files
-        if: always()
-        run: rm -rf "$RUNNER_TEMP/w5-recovery"

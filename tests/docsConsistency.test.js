@@ -5,8 +5,8 @@ import path from 'node:path';
 const root = path.join(import.meta.dirname, '..');
 const read = (...segments) => fs.readFileSync(path.join(root, ...segments), 'utf8');
 const readJson = (...segments) => JSON.parse(read(...segments));
-test('current documentation points to controlled configuration and the development entry',()=>{
- const text=read('README.md');assert.ok(text.includes('application-config.json'));assert.ok(text.includes('rights-instance.json'));assert.ok(text.includes('docs/development-plan.md'));assert.ok(!text.includes('verify:wave-b'));
+test('current documentation points to controlled configuration and human acceptance',()=>{
+ const text=read('README.md');assert.ok(text.includes('application-config.json'));assert.ok(text.includes('rights-instance.json'));assert.ok(text.includes('docs/acceptance.md'));assert.ok(!text.includes('verify:wave-b'));
 });
 test('documented current npm commands exist',()=>{
  const scripts=new Set([...Object.keys(readJson('package.json').scripts),...Object.keys(readJson('hardhat','package.json').scripts)]);
