@@ -1,16 +1,18 @@
 {
   "schema": "agentbl-rights-instance-v1",
   "scope": "research_test_assets_only",
+  "control_version": 2,
+  "instance_id": "n5-v2-20261019",
   "chain_id": 1439,
   "rpc_url": "https://k8s.testnet.json-rpc.injective.network",
   "contracts": {
     "RightsGovernance": "0x1Df02ED170bA2367d56F190Cc1b8225f58f6E2e5",
     "AssetIdentityHub": "0x471c70CAb4166AF7D0261cb0dE9Be26B53C01e88",
-    "CommittedEBLRegistry": "0xee7e8125b92de8fFe5bD4eD82187129c1fDa10d5",
-    "RightsController": "0xD3ccC2FaBBC57611869d93c8701Ee594dB9B8ea4",
-    "MockAuthorizationUSDC": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C",
-    "RWAOfferingPoolV5": "0xfd17Ec1ebDFdd35188adBfCe4ff88Bda61F21A0F",
-    "ControlledRWAToken": "0x20b454e2f926D5ABafa595C2224cB8F82c366696"
+    "CommittedEBLRegistry": "0x7cD3485d87b00e4F9154C19750DfCC3C8394C671",
+    "ControlledRWAToken": "0xDbEf424638154AA595308A45f62898CE9aF2aE17",
+    "RWAOfferingPoolV5": "0x53d65a42Df5431157922fE85ab72C2C7abB7AC99",
+    "RightsController": "0xdfF4E824764c6Ff858CAF28d74F026D9E97624aF",
+    "MockAuthorizationUSDC": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C"
   },
   "actors": {
     "governorB": "0x3E64950a848BB523b95C85A9ef8b9AF44190071E",
@@ -27,5 +29,5 @@
     "investor": "0x32ddDf0e99d2375E502350710A809E4223e28098",
     "governorA": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B"
   },
-  "deployment_block": 144210687
+  "deployment_block": 144364667
 }
