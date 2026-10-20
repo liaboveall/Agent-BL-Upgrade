@@ -1,36 +1,38 @@
 # AgentBL
 
-一个贸易融资区块链研究应用，连接单证、持有人同意、融资条款、测试代币托管和投资者退出。前端支持中文与英文，资金操作由参与者钱包逐次授权。
+<a href="README.zh-CN.md"><img src="docs/assets/readme-zh.svg" alt="Read in Simplified Chinese" width="132" height="32"></a>
 
-默认研究场景是虚构铜货物从 Singapore 运往 Shanghai，使用 Injective EVM 测试网的 `TEST_USDC`。应用提供离线 Demo 和受控测试网融资两种体验。
+A blockchain research application for trade finance, connecting shipping documents, holder consent, financing terms, test-token custody, and investor exits. The interface supports English and Chinese, with each fund operation authorized by the participant's wallet.
 
-## 可以做什么
+The default research scenario uses fictional copper shipments from Singapore to Shanghai and `TEST_USDC` on Injective EVM Testnet. The application offers a Demo experience and controlled testnet financing.
 
-- 签发与登记研究单证，确认持有人授权，检查估值、资格和材料审核。
-- 展示并独立复算完整融资条款；条款、钱包或报价变化后重新确认。
-- 用测试代币完成认购、托管、放款、回款、退款、损失结算和领取。
-- 保留份额销毁后的迟到回款权利，支持多投资者分别领取。
-- 分页查询资金池与持仓，核对链上余额，恢复未知交易并重建账本。
-- 提供确定性研究定价、AI 辅助分析、材料证据包和独立的 x402 付费报告。
+## Features
 
-AI 提供分析和解释，不能替参与者签名或自主放款。x402 报告付款与融资资金分别记账。
+- Issue and register research documents, obtain holder consent, and check valuations, eligibility, and material reviews.
+- Display and independently verify complete financing terms; require renewed confirmation when the terms, wallet, or quote changes.
+- Use test tokens for subscriptions, custody, disbursement, repayment, refunds, loss settlement, and claims.
+- Preserve rights to late recoveries after shares are burned, allowing investors to claim separately.
+- Browse paginated pools and positions, reconcile on-chain balances, recover unknown transactions, and rebuild the ledger.
+- Access deterministic research pricing, AI-assisted analysis, evidence packages, and separate x402 paid reports.
 
-## 当前交付状态
+AI provides analysis and explanations. It cannot sign for participants or disburse funds autonomously. Report payments and financing funds are accounted for separately.
 
-新 v2 已完成测试网部署、配置切换、三类资金路径、迟到回款、账本核对和本机容器恢复验证。旧 v1 保留独立退出服务。已有部署在本机运行时，可直接访问：
+## Delivery status
 
-| 入口 | 地址 |
+The current v2 instance has completed testnet deployment, configuration switching, all three funding paths, late recoveries, ledger reconciliation, and local container recovery verification. The legacy v1 instance retains a separate exit service. When the existing local deployment is running, use:
+
+| Service | URL |
 | --- | --- |
-| 当前 v2 融资与持仓 | <http://127.0.0.1:3000/#/finance> |
-| 旧 v1 查询与退出 | <http://127.0.0.1:3001/#/finance> |
+| Current v2 financing and positions | <http://127.0.0.1:3000/#/finance> |
+| Legacy v1 queries and exits | <http://127.0.0.1:3001/#/finance> |
 
-**唯一剩余验收项：由未参与开发的人实际完成钱包操作和余额核对。** 步骤与记录要求见[人工验收](docs/acceptance.md)。自动化钱包和浏览器测试不替代该验收。
+**The only remaining acceptance task is for someone who did not develop the application to operate a wallet and independently verify balances.** See [Human acceptance](docs/acceptance.md) for the procedure and required records. Automated wallets and browser tests do not replace this acceptance.
 
-真实手机、独立主机恢复、签名权接管和商用准入等后续项目已从本次交付范围取消；取消不表示已经验证这些能力。应用仍限研究测试资产，不处理真实贸易融资。
+Follow-up projects for real phones, independent-host recovery, signing authority handover, and commercial admission have been removed from this delivery scope. Cancellation does not mean those capabilities have been verified. The application remains limited to research test assets and does not process real trade financing.
 
-## 本地启动
+## Run locally
 
-需要 Node.js **22.13 或更高版本**及 npm，推荐 Node.js 24。
+Requires Node.js **22.13 or later** and npm. Node.js 24 is recommended.
 
 ```sh
 npm ci
@@ -39,62 +41,66 @@ npm run compile:contracts
 npm run dev
 ```
 
-打开 <http://127.0.0.1:3000/#/finance>。`dev` 会先构建前端；此后可用 `npm start` 启动已构建版本。若已有部署占用 3000，在自己的 `.env` 中设置其他 `PORT`，并使用独立的 `AGENTBL_RUNTIME_DIR`。
+Open <http://127.0.0.1:3000/#/finance>. The `dev` command builds the frontend before starting the server; use `npm start` for an existing build. If a running deployment already occupies port 3000, set another `PORT` in your `.env` and use a separate `AGENTBL_RUNTIME_DIR`.
 
-Demo 无需钱包私钥或模型密钥。需要自定义配置时，将 [.env.example](.env.example) 复制为 `.env`，按实际启用的功能填写。不要覆盖已有 `.env`。
+Demo requires no wallet private key or model API key. For custom configuration, copy [.env.example](.env.example) to `.env` and fill in the settings for the features you enable. Do not overwrite an existing `.env`.
 
-### 受控测试网
+### Controlled testnet
 
-- 网络：Injective EVM Testnet，chain ID **1439**。
-- [application-config.json](public/application-config.json)：前端网络与合约配置。
-- [rights-instance.json](public/rights-instance.json)：受控实例及部署清单。
-- 服务端使用 `AGENTBL_RIGHTS_CONFIG` 选择清单；两份公开配置必须对应同一实例。
-- 连接已登记、具备相应权限的钱包，切换至 Live，按角色工作台完成操作。服务端需配置管理员认证、材料密钥和持久运行目录，见[运行说明](docs/operations.md)。
+- Network: Injective EVM Testnet, chain ID **1439**.
+- [application-config.json](public/application-config.json): frontend network and contract configuration.
+- [rights-instance.json](public/rights-instance.json): controlled instance and deployment manifest.
+- The server selects its manifest through `AGENTBL_RIGHTS_CONFIG`; both public configurations must refer to the same instance.
+- Connect a registered wallet with the required permissions, switch to Live, and follow the role workspace. The server needs administrator authentication, a material encryption key, and a persistent runtime directory. See [Operations](docs/operations.md).
 
-已有实例的材料、交易检查点和账本属于持久业务状态。不要把旧实例数据复制进新池目录，不要删除检查点后重新执行历史交易。
+Instance materials, transaction checkpoints, and ledgers are persistent application state. Do not copy legacy instance data into a new pool directory or delete checkpoints to replay historical transactions.
 
-## 常用命令
+## Common commands
 
-| 命令 | 用途 |
+| Command | Purpose |
 | --- | --- |
-| `npm run build` | 构建 React 页面到 `dist/` |
-| `npm run dev:web` | 单独启动前端开发服务 |
-| `npm run lint` / `npm run check` | 代码、配置、资源及源码一致性检查 |
-| `npm test` / `npm run test:coverage` | 应用回归与覆盖率 |
-| `npm run test:contracts` | Solidity 合约回归 |
-| `npm run test:capital` / `npm run test:rights` | 实际本地 EVM 的资金与权利流程 |
-| `npm run test:evidence` / `npm run test:operations` | 证据、支付、停止及恢复回归 |
-| `npm run test:finance` | 角色流程与 25 池分页集成 |
-| `npm run test:browser` | 双语页面、键盘和钱包上下文回归 |
-| `npm run build:clean` | 两次干净构建及输出比对 |
-| `npm run verify:release` | 新 checkout 的完整本地交付检查 |
-| `npm run terms:verify -- <条款.json>` | 离线复算公开融资条款 |
+| `npm run build` | Build the React interface into `dist/` |
+| `npm run dev:web` | Start the frontend development server separately |
+| `npm run lint` / `npm run check` | Check code, configuration, assets, and source consistency |
+| `npm test` / `npm run test:coverage` | Run application regressions and coverage checks |
+| `npm run test:contracts` | Run Solidity contract regressions |
+| `npm run test:capital` / `npm run test:rights` | Exercise capital and rights flows on a real local EVM |
+| `npm run test:evidence` / `npm run test:operations` | Check evidence, payments, shutdown, and recovery |
+| `npm run test:finance` | Verify role workflows and pagination across 25 pools |
+| `npm run test:browser` | Run bilingual browser, keyboard, and wallet-context regressions |
+| `npm run build:clean` | Compare two clean builds |
+| `npm run verify:release` | Run the complete local delivery checks in a fresh checkout |
+| `npm run terms:verify -- <terms.json>` | Verify public financing terms offline |
+| `npm run mcp:stdio` | Start the MCP interface over standard input/output |
+| `npm run smoke:x402` / `npm run x402:intel` | Use report-payment checks and intelligence utilities |
 
-浏览器测试首次运行前执行 `npx playwright install chromium`，或用 `AGENTBL_CHROMIUM_PATH` 指定可用的 Chrome/Edge。CI 自动执行应用、合约、集成、浏览器、构建、容器和依赖检查；新修改以其自身提交的结果为准。
+Before running browser tests for the first time, run `npx playwright install chromium`, or point `AGENTBL_CHROMIUM_PATH` to an available Chrome/Edge executable. CI checks the application, contracts, integrations, browser behavior, builds, containers, and dependencies. Each change is assessed using its own commit's results.
 
-## 项目结构
+## Repository layout
 
 ```text
-src/          API、资金账本、权利、定价、Agent 与支付
-web/          React 双语界面
-hardhat/      合约、合约测试与编译配置
-public/       公开实例配置与浏览器资源
-data/         研究样本、来源语料及独立持久运行目录
-scripts/      维护、验证、测试网与备份工具
-tests/        应用、集成和浏览器回归
-docs/         当前说明与唯一待办的人工验收
+src/          API, ledger, rights, pricing, Agent, and payments
+web/          Bilingual React interface
+hardhat/      Contracts, contract tests, and compiler configuration
+public/       Public instance configuration and browser assets
+data/         Research samples, source corpora, and separate runtime state
+scripts/      Maintenance, validation, testnet, and backup tools
+tests/        Application, integration, and browser regressions
+docs/         Current references and the remaining human acceptance task
 ```
 
-`data/runtime/`、`.env`、依赖、构建输出和测试产物不进入 Git。历史开发计划、评审报告及阶段性脚手架已移出当前目录，旧版本可通过 Git 历史取回。
+`data/runtime/`, `.env`, dependencies, build output, and test artifacts are excluded from Git. Historical development plans, review reports, and phase-specific scaffolding have been removed from the current tree; older versions remain available in Git history.
 
-## 技术与边界
+## Technology and scope
 
-前端使用 React、Vite、ethers；服务端使用 Node.js、Express；合约使用 Solidity、Hardhat。链下材料加密保存，现金事实追加写入 JSONL，快照可以重建，每个运行目录只允许一个写入进程。
+The frontend uses React, Vite, and ethers; the server uses Node.js and Express; contracts use Solidity and Hardhat. Off-chain materials are encrypted, cash facts are appended to JSONL, snapshots can be rebuilt, and each runtime directory allows one writer.
 
-合约约束已登记对象、授权和进入合约的测试代币。材料哈希不能证明真实货物或债权；登记域外的重复融资不由本系统自动消除。研究角色的多个地址不代表独立组织，测试代币不等于真实美元。份额不可转让，不提供二级交易。
+Contracts constrain registered assets, authorizations, and test tokens deposited into them. Material hashes do not prove real goods or legal claims, and the system does not automatically prevent duplicate financing outside its registry domain. Multiple research addresses do not represent independent organizations, and test tokens are not real dollars. Shares are non-transferable, with no secondary trading.
 
-- [架构与信任边界](docs/architecture-current.md)
-- [合约与资金规则](docs/contracts.md)
-- [运行、备份与维护](docs/operations.md)
-- [研究数据与可选模型](docs/data-sources.md)
-- [人工验收](docs/acceptance.md)
+- [Architecture and trust boundaries](docs/architecture-current.md)
+- [Contracts and funding rules](docs/contracts.md)
+- [Operations, backup, and maintenance](docs/operations.md)
+- [Research data and optional models](docs/data-sources.md)
+- [Human acceptance](docs/acceptance.md)
+
+Supporting documents under `docs/` are currently written in Chinese.
