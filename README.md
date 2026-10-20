@@ -33,14 +33,16 @@ From a fictional copper shipment on the Singapore → Shanghai route to an inves
 
 <table>
   <tr>
-    <td width="33%" valign="top"><h3>01 · Read before signing</h3><p>Complete, downloadable terms. Independent commitment checks. Fresh confirmation when the quote or wallet changes.</p></td>
-    <td width="33%" valign="top"><h3>02 · Keep control of funds</h3><p>Role-based workflows and explicit wallet approvals. The server prepares plans; participants authorize each action.</p></td>
-    <td width="33%" valign="top"><h3>03 · Make exits explicit</h3><p>Repayment, failed-raise refunds, and loss settlement. Late recovery rights survive the burning of shares.</p></td>
+    <td width="50%" valign="top"><h3>01 · Read before signing</h3><p>Complete, downloadable terms. Independent commitment checks. Fresh confirmation when the quote or wallet changes.</p></td>
+    <td width="50%" valign="top"><h3>02 · Keep control of funds</h3><p>Role-based workflows and explicit wallet approvals. The server prepares plans; participants authorize each action.</p></td>
   </tr>
   <tr>
-    <td valign="top"><h3>04 · Trace the evidence</h3><p>Encrypted materials, versioned reviews, authorized exports, and independently verifiable evidence packages.</p></td>
-    <td valign="top"><h3>05 · Recover with context</h3><p>Rebuildable ledgers, fixed-block pagination, and original-transaction recovery that avoids paying twice.</p></td>
-    <td valign="top"><h3>06 · Use AI with limits</h3><p>Deterministic pricing with optional AI analysis. Models explain results; they cannot sign or disburse funds.</p></td>
+    <td width="50%" valign="top"><h3>03 · Make exits explicit</h3><p>Repayment, failed-raise refunds, and loss settlement. Late recovery rights survive the burning of shares.</p></td>
+    <td width="50%" valign="top"><h3>04 · Trace the evidence</h3><p>Encrypted materials, versioned reviews, authorized exports, and independently verifiable evidence packages.</p></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><h3>05 · Recover with context</h3><p>Rebuildable ledgers, fixed-block pagination, and original-transaction recovery that avoids paying twice.</p></td>
+    <td width="50%" valign="top"><h3>06 · Use AI with limits</h3><p>Deterministic pricing with optional AI analysis. Models explain results; they cannot sign or disburse funds.</p></td>
   </tr>
 </table>
 
