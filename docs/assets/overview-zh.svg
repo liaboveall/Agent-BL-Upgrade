@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="title desc">
+  <title id="title">AgentBL</title>
+  <desc id="desc">连接贸易单证与融资 让资金退出清晰可核验 钱包授权 · 链上规则 · 可恢复记录</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1220"/><stop offset="1" stop-color="#152342"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#365de7" stop-opacity=".25"/><stop offset="1" stop-color="#365de7" stop-opacity="0"/></radialGradient>
+    <linearGradient id="line"><stop stop-color="#416cff"/><stop offset="1" stop-color="#62dbc8"/></linearGradient>
+  </defs>
+  <rect width="1280" height="400" rx="24" fill="url(#bg)"/>
+  <ellipse cx="1020" cy="190" rx="450" ry="330" fill="url(#glow)"/>
+  <g fill="none" stroke="#6e8aba" stroke-opacity=".1">
+    <path d="M620 0v400M760 0v400M900 0v400M1040 0v400M1180 0v400M620 70h660M620 170h660M620 270h660M620 370h660"/>
+    <circle cx="1010" cy="202" r="168"/><circle cx="1010" cy="202" r="234"/>
+  </g>
+  <g font-family="'Segoe UI', 'Microsoft YaHei', Arial, sans-serif">
+    <rect x="56" y="46" width="244" height="30" rx="15" fill="#1b2c50" stroke="#355181"/>
+    <circle cx="74" cy="61" r="3" fill="#76d9ce"/>
+    <text x="87" y="66" fill="#c4d4f5" font-size="12" font-weight="600" letter-spacing="1">贸易融资 / 研究应用</text>
+    <text x="56" y="156" fill="#f3f6ff" font-size="39" font-weight="700" letter-spacing="-1">连接贸易单证与融资</text>
+    <text x="56" y="211" fill="#9dbaff" font-size="39" font-weight="700" letter-spacing="-1">让资金退出清晰可核验</text>
+    <text x="57" y="261" fill="#b0bfd9" font-size="16">钱包授权 · 链上规则 · 可恢复记录</text>
+    <path d="M57 306h48" stroke="#6ed6ca" stroke-width="3" stroke-linecap="round"/>
+    <text x="57" y="347" fill="#c9d5ea" font-size="12" font-weight="600" letter-spacing="1">仅限研究测试资产</text>
+    <text x="290" y="347" fill="#8197bc" font-size="12" letter-spacing="1">INJECTIVE EVM / 1439</text>
+    <g fill="none" stroke="url(#line)" stroke-width="2">
+      <path d="M1010 142v22q0 18-18 18h-46"/>
+      <path d="M895 263v35q0 18 18 18h88"/>
+      <circle cx="1010" cy="152" r="4" fill="#9ab7ff" stroke="none"/>
+      <circle cx="958" cy="316" r="4" fill="#78dbca" stroke="none"/>
+    </g>
+    <rect x="875" y="48" width="340" height="94" rx="14" fill="#172844" stroke="#3a5277"/>
+    <g transform="translate(895 68)" fill="none" stroke="#a7c1ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 0h19l7 7v31H1zM19 0v8h8M7 15h14M7 21h14M7 27h9"/>
+    </g>
+    <text x="944" y="85" fill="#dbe6ff" font-size="14" font-weight="600">01 / 单证与材料</text>
+    <text x="944" y="111" fill="#93a9ca" font-size="13">签发 · 登记 · 审核</text>
+    <rect x="755" y="169" width="332" height="94" rx="14" fill="#182d50" stroke="#4c6d9b"/>
+    <g transform="translate(777 192)" fill="none" stroke="#b0c8ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 22c5-13 12-17 12-9s-10 18-12 12c-2-5 13-9 18-7 5 3 7-2 10-2M3 31h29"/>
+    </g>
+    <text x="823" y="206" fill="#e0eaff" font-size="14" font-weight="600">02 / 条款与授权</text>
+    <text x="823" y="232" fill="#9cb2d2" font-size="13">完整披露，逐次签名</text>
+    <rect x="1001" y="280" width="234" height="88" rx="14" fill="#15323c" stroke="#377079"/>
+    <text x="1021" y="313" fill="#b4f1e8" font-size="14" font-weight="600">03 / 资金退出</text>
+    <text x="1021" y="340" fill="#90c2c4" font-size="13">回款 · 退款 · 损失分配</text>
+  </g>
+</svg>
