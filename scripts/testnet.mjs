@@ -10,13 +10,19 @@ import { releaseRoot, releaseSourceSnapshot } from './lib/release-source.mjs';
 import { executeCandidate } from './lib/n5-deployment.mjs';
 import { runCandidateFunding } from './lib/n5-funding.mjs';
 import { measureCandidateCapacity } from './lib/n5-capacity.mjs';
+import { ACCEPTANCE_STAGES, acceptancePlan, runAcceptance } from './lib/n5-acceptance.mjs';
 import { unseal } from '../src/rights/vault.js';
 import { readJson, writeJsonAtomic } from '../src/lib/jsonStore.js';
 import { loadRightsChain } from '../src/rights/chain.js';
 
-const [action, instanceId, confirmation] = process.argv.slice(2);
-if (!['prepare', 'activate', 'funding', 'capacity', 'status'].includes(action) || !/^[a-z][a-z0-9-]{2,63}$/u.test(instanceId ?? '')
-  || (!['status', 'capacity'].includes(action) && confirmation !== '--execute')) throw new Error('Use testnet.mjs <prepare|activate|funding|capacity|status> <instance-id> --execute');
+const [action, instanceId, ...rest] = process.argv.slice(2);
+// acceptance takes a stage: plan is a keyless dry run, the other stages sign like funding.
+const stage = action === 'acceptance' ? rest.shift() : null, [confirmation] = rest;
+if (!['prepare', 'activate', 'funding', 'capacity', 'status', 'acceptance'].includes(action) || !/^[a-z][a-z0-9-]{2,63}$/u.test(instanceId ?? '')
+  || (action === 'acceptance' && !ACCEPTANCE_STAGES.includes(stage))
+  || (!['status', 'capacity'].includes(action) && stage !== 'plan' && confirmation !== '--execute')) {
+  throw new Error('Use testnet.mjs <prepare|activate|funding|capacity|status> <instance-id> --execute, or testnet.mjs acceptance <instance-id> <plan|prepare|screening|repay> [--execute]');
+}
 const directory = path.join(releaseRoot, 'data/runtime/n5-deployment', instanceId);
 const candidateFile = path.join(directory, 'candidate.json');
 const predecessor = await readJson(path.join(releaseRoot, 'public/rights-instance.json'));
@@ -34,6 +40,10 @@ try {
     if (!state) throw new Error('Candidate state missing');
     console.log(JSON.stringify({ instance_id: instanceId, active: state.active, ready_after: state.ready_after,
       confirmed_transactions: state.transactions.filter((tx) => tx.status === 'CONFIRMED').length, contracts: state.contracts }));
+  } else if (stage === 'plan') {
+    const [state, candidate, input] = await Promise.all(['deployment-state.json', 'candidate.json', 'acceptance-input.json'].map((name) => readJson(path.join(directory, name))));
+    if (!state || !candidate || !input) throw new Error('Deployment state, candidate and acceptance-input.json are required');
+    console.log(JSON.stringify(await acceptancePlan({ state, candidate, provider, input }), null, 2));
   } else {
     if (execFileSync('git', ['status', '--porcelain'], { cwd: releaseRoot }).toString().trim()) throw new Error('Commit and verify the release before external signing');
     const source = await releaseSourceSnapshot();
@@ -65,11 +75,18 @@ try {
       await fs.writeFile(path.join(directory, 'predecessor-rights.json'), JSON.stringify(predecessor, null, 2) + '\n', { flag: 'wx' });
       await fs.copyFile(path.join(releaseRoot, 'public/application-config.json'), path.join(directory, 'predecessor-application.json'), fs.constants.COPYFILE_EXCL);
     }
-    const run = await executeCandidate({ directory, candidate, provider, signers, action: action === 'funding' ? 'status' : action });
+    const run = await executeCandidate({ directory, candidate, provider, signers, action: ['funding', 'acceptance'].includes(action) ? 'status' : action });
     const { state } = run;
     if (action === 'funding') {
       const rightsKey = (await fs.readFile(path.join(keyDirectory, 'rights-key.hex'), 'utf8')).trim();
       await runCandidateFunding({ ...run, directory, candidate, provider, signers, rightsKey });
+    }
+    if (action === 'acceptance') {
+      const input = await readJson(path.join(directory, 'acceptance-input.json'));
+      if (!input) throw new Error('Write acceptance-input.json in the instance directory first');
+      // Only prepare writes the rights vault, so only prepare reads its key.
+      const rightsKey = stage === 'prepare' ? (await fs.readFile(path.join(keyDirectory, 'rights-key.hex'), 'utf8')).trim() : null;
+      await runAcceptance({ ...run, directory, candidate, provider, signers, rightsKey, input, stage });
     }
     const evidence = path.join(releaseRoot, 'artifacts/n5-deployment', instanceId, new Date().toISOString().replaceAll(/[:.]/gu, '-'));
     await fs.mkdir(evidence, { recursive: true });
@@ -84,8 +101,12 @@ try {
       refund: scenarios.refund?.passed === true, loss: scenarios.loss?.passed === true,
       pending: [['refund', scenarios.refund?.wait_until], ['loss', scenarios.loss?.notice_until ?? scenarios.loss?.maturity_wait_until]]
         .filter(([name, until]) => !scenarios[name]?.passed && until).map(([path, not_before]) => ({ path, not_before })) } : undefined;
+    const acceptance = action === 'acceptance' ? Object.fromEntries(Object.entries(state.acceptance.runs).map(([key, value]) => [key, {
+      pools: Object.fromEntries(Object.entries(value.scenarios).map(([tag, p]) => [tag, p.pool_id ?? null])),
+      subjects: Object.fromEntries(Object.entries(value.investors).map(([label, investor]) => [label, investor.subject_id])), normal_settled: value.scenarios.normal?.settled === true }])) : null;
     console.log(JSON.stringify({ directory, evidence, active: state.active, ready_after: state.ready_after, transactions: state.transactions.length,
-      ...(funding ? { funding, funding_status: funding.passed ? 'VERIFIED' : funding.pending.length ? 'WAITING_FOR_CHAIN_TIME' : 'IN_PROGRESS' } : {}) }));
+      ...(funding ? { funding, funding_status: funding.passed ? 'VERIFIED' : funding.pending.length ? 'WAITING_FOR_CHAIN_TIME' : 'IN_PROGRESS' } : {}),
+      ...(acceptance ? { acceptance } : {}) }));
   }
 } catch (error) {
   // Do not serialize provider request objects or configuration containing credentials.

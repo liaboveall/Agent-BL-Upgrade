@@ -74,6 +74,15 @@ npm run runtime:backup -- restore --directory <新目标目录> --key-file <独�
 
 测试网工具 `npm run testnet -- status n5-v2-20261019` 只查询原部署记录。`prepare` / `activate` / `funding` 需要 `--execute` 和相同提交 CI 收据，未知交易先找原 nonce/hash，不能自动重发；历史已结清样例不应重新广播。`npm run testnet:legacy -- status` 仅查询旧部署。
 
+人工验收的新池由 `npm run testnet -- acceptance n5-v2-20261019 <阶段>` 准备，输入为实例目录中的 `acceptance-input.json`：批次名、两个验收钱包、两个池的认购截止，以及可选的审查截止。各阶段如下：
+
+- `plan` 不读密钥，列出每个阶段将发送的交易及其原交易状态。
+- `prepare` 建立正常兑付池和失败募集池，登记出资身份，并发放资格、测试代币和 gas。执行前先停止该实例应用；执行期间持有运行租约，独占写材料 vault。
+- `screening` 刷新审查，有效期不超过 24 小时。
+- `repay` 在两个钱包认购满额后放款、回款并结清。
+
+签名阶段与 `funding` 相同，需要 `--execute` 和同提交 CI 收据。认购、领取和退款只由验收者自己的钱包完成。
+
 运行告警写入对应 runtime 的 `ops-alerts.jsonl`。可选 webhook 由操作者配置；自动 HTTP 接收测试不表示真实值班人员已经确认。日常维护保留上述能力，但不新增交付门槛。
 
 执行产物使用忽略的 `artifacts/` 或 `test-results/`，不再建立阶段计划、日报、评审报告树。当前文档只维护 README、架构、合约、数据来源、运行说明与人工验收。
