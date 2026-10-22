@@ -27,7 +27,7 @@ function FinanceIntro() {
       <li><strong>{zh ? '审查角色' : 'Reviewers'}</strong><span>{zh ? '独立双审 → 估值与资格 → 发行' : 'Independent review → valuation and eligibility → issuance'}</span></li>
       <li><strong>{zh ? '出资人' : 'Investor'}</strong><span>{zh ? '阅读条款 → 钱包认购 → 自行退款或领取' : 'Read terms → subscribe with wallet → refund or claim'}</span></li>
     </ol>
-    <p className="small muted">{zh ? '报告服务的 x402 付款只购买报告，不进入融资池，也不取得融资份额。手机布局可用性与真实手机钱包签名分别验收。' : 'An x402 payment buys a report; it does not fund a pool or purchase shares. Mobile layout and real mobile wallet signing are assessed separately.'}</p>
+    <p className="small muted">{zh ? '报告服务的 x402 付款只购买报告，不进入融资池，也不取得融资份额。真实手机钱包签名不在本次交付范围内，未经验证。' : 'An x402 payment buys a report; it does not fund a pool or purchase shares. Real mobile wallet signing is outside this delivery and has not been verified.'}</p>
   </header>;
 }
 const PAGES = { finance: FinanceIntro, market: MarketPage, mint: MintPage, agent: AgentPage, discover: DiscoverPage };

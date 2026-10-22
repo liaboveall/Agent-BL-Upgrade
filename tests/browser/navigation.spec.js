@@ -27,7 +27,7 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
     const from = Number(url.searchParams.get('from') ?? 1), id = /offerings\/(\d+)$/u.exec(url.pathname)?.[1];
     const block = Number(url.searchParams.get('block_number') ?? snapshot), count = block === 500 ? 25 : total;
     const ids = id ? [Number(id)] : Array.from({ length: Math.max(0, Math.min(10, count - from + 1)) }, (_, i) => from + i);
-    return route.fulfill({ json: { snapshot: { block_number: block, block_hash: `0x${'ab'.repeat(32)}` }, total_pools: count,
+    return route.fulfill({ json: { snapshot: { block_number: block, block_hash: `0x${'ab'.repeat(32)}`, block_timestamp: 1891000000 }, total_pools: count,
       complete: !partial, failures: partial ? [{ pool_id: from + 1 }] : [], next_cursor: !id && from + 10 <= count ? from + 10 : null,
       offerings: ids.filter((value) => !partial || value !== from + 1).map((value) => ({ pool_id: value, state: 'Open', shares: '10', subscribed: '0',
         maturity: '1900000000', subscription_deadline: '1890000000', disbursement_deadline: '1895000000', subscription_open: false,
@@ -38,6 +38,8 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   const panel = page.locator('.controlled-panel'), rows = panel.locator('tbody tr');
   await expect(page.getByRole('tab', { name: zh ? '融资与退出' : 'Finance & exits' })).toHaveAttribute('aria-selected', 'true');
   await expect(rows).toHaveCount(10);
+  // An Open chain state past its deadline at the snapshot block is shown as closed, never as open.
+  await expect(rows.first().locator('.finance-state')).toHaveText(zh ? '募集已截止' : 'Subscription ended');
   const next = panel.getByRole('button', { name: zh ? '下一页' : 'Next page', exact: true });
   await next.focus(); await page.keyboard.press('Enter'); await expect(rows.first()).toContainText('#11 ·');
   await expect(next).toBeFocused();

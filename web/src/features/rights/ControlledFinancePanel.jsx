@@ -104,6 +104,11 @@ export function ControlledFinancePanel({ primary = false }) {
     : pending ? (zh ? '先核对原交易，避免重复发送。' : 'Reconcile the original transaction before another send.')
     : !offer.subscription_open ? (zh ? '当前不接受新认购；核对募集截止、状态和实例版本。已有持仓仍可按条件退出。' : 'New subscriptions are closed. Check the deadline, state and instance version. Existing positions retain their exits.')
     : (zh ? '下一步：完整阅读并同意条款，再审阅认购；链上仍核验资格与额度。' : 'Next: read and accept the full terms, then review a subscription. Eligibility and limits are checked on chain.');
+  // A subscribable chain state is not an open subscription: the server closes it at the snapshot block's deadline or at full supply.
+  const closedLabel = (offer) => offer.subscription_open !== false || !['Open', 'Subscribed', 'Repriced'].includes(offer.state) ? null
+    : Number(offer.subscription_deadline) < Number(listing?.snapshot?.block_timestamp) ? (zh ? '募集已截止' : 'Subscription ended')
+    : BigInt(offer.subscribed) >= BigInt(offer.shares) ? (zh ? '已募满' : 'Fully subscribed') : (zh ? '不接受认购' : 'Not accepting subscriptions');
+  const offerLabel = (offer) => closedLabel(offer) ?? stateLabel(offer.state);
   const storageKey = () => `agentbl.controlled-intent:${status.config.contracts.RWAOfferingPool.toLowerCase()}:${wallet.toLowerCase()}`;
   const onIntent = (intent) => { const value = { intent_id: intent.intent_id, operation: intent.operation }; localStorage.setItem(storageKey(), JSON.stringify(value)); setPending(value); };
   const connect = async () => { try { await connectWallet('metamask'); setError(''); } catch (failure) { setError(failure.message); } };
@@ -205,7 +210,7 @@ export function ControlledFinancePanel({ primary = false }) {
           {pending.status === 'draft' && <button type="button" disabled={busy} onClick={() => { localStorage.removeItem(storageKey()); setPending(null); setNotice(zh ? '已取消本地未广播草稿；审计记录保留。' : 'Local unbroadcast draft dismissed; audit history retained.'); }}>{zh ? '取消未广播草稿' : 'Dismiss unbroadcast draft'}</button>}
         </div>}
         {offers.filter((offer) => offer.pool_id === selectedPool).map((offer) => <section ref={detailPanel} tabIndex={-1} key={offer.pool_id} id="funding-pool-detail" className="funding-detail" aria-label={zh ? '融资详情' : 'Financing details'}>
-          <div className="finance-detail-head"><h2>{zh ? '资金池' : 'Funding pool'} #{offer.pool_id} · {stateLabel(offer.state)}</h2><button type="button" onClick={() => { setSelectedPool(null); detailOpener.current?.focus(); }}>{zh ? '关闭详情' : 'Close details'}</button></div>
+          <div className="finance-detail-head"><h2>{zh ? '资金池' : 'Funding pool'} #{offer.pool_id} · {offerLabel(offer)}</h2><button type="button" onClick={() => { setSelectedPool(null); detailOpener.current?.focus(); }}>{zh ? '关闭详情' : 'Close details'}</button></div>
           <p>{blockedReason(offer)}</p>
           <dl><div><dt>{zh ? '资产与责任' : 'Asset and responsibility'}</dt><dd>{zh ? '以完整公开条款中的货物、路线和责任主体为准；哈希不证明真实货权。' : 'Read the cargo, route and responsible parties in the full public terms. A hash does not prove real title.'}</dd></div>
             <div><dt>{zh ? '募集 / 放款截止 / 到期' : 'Subscription / disbursement deadline / maturity'}</dt><dd>{[offer.subscription_deadline, offer.disbursement_deadline, offer.maturity].map((v) => v ? new Date(Number(v) * 1000).toISOString() : '—').join(' / ')}</dd></div>
@@ -220,7 +225,7 @@ export function ControlledFinancePanel({ primary = false }) {
           {publicTerms?.pool_id === offer.pool_id && <ReadableTerms pack={publicTerms.pack} zh={zh} />}
         </section>)}
         <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份价格 / 兑付' : 'Price / redemption per share'}</th><th>{zh ? '募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
-          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${String(offer.state).toLowerCase()}`}>{stateLabel(offer.state)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{new Date(Number(offer.maturity) * 1000).toISOString().slice(0, 10)}</time></td>
+          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{new Date(Number(offer.maturity) * 1000).toISOString().slice(0, 10)}</time></td>
             <td>{amount(offer.issue_price_atomic)} / {amount(offer.redemption_per_share_atomic)} TEST_USDC</td><td>{amount(offer.raised_atomic)} / {amount(offer.disbursed_atomic)} / {amount(offer.recovered_atomic)}</td>
             <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '融资详情' : 'Financing details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">↗</span></button></td></tr>)}</tbody></table></div>
         {!offers.length && listing && listing.complete !== false && <p>{zh ? '此实例尚无发行。' : 'This instance has no offerings.'}</p>}
