@@ -69,6 +69,6 @@ for (const language of ['zh', 'en']) test(`N2 ${language}: pricing interval and 
   const panel = page.locator('.research-constraints');
   await expect(panel).toContainText(language === 'zh' ? '资方补偿下限' : 'Investor compensation floor');
   await expect(panel).toContainText(language === 'zh' ? '不是概率预测' : 'not probability forecasts');
-  await expect(panel).toContainText('fixture'); await expect(panel.locator('tbody tr')).toHaveCount(4);
+  await expect(panel).toContainText(language === 'zh' ? '演示数据' : 'Demo data'); await expect(panel.locator('tbody tr')).toHaveCount(4);
   await panel.screenshot({ path: info.outputPath(`research-pricing-${language}.png`) });
 });

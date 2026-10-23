@@ -6,7 +6,8 @@ for (const language of ['zh', 'en']) {
   test(`W5 ${language}: readiness, fund rights and recovery remain explicit and keyboard accessible at 1280 and 1440`, async ({ page }, info) => {
     await page.addInitScript((lang) => localStorage.setItem('ts_lang', lang), language);
     await page.route('**/api/ready', (route) => route.fulfill({ json: { ok: true, status: 'ready', scope: 'research_test_assets_only', business_enabled: false, revision: '1234567890abcdef' } }));
-    await page.goto('/#/market'); const panel = page.locator('.operations-panel'), summary = panel.locator('summary');
+    await page.goto('/#/market'); await page.locator('.research-tools > summary').click();
+    const panel = page.locator('.operations-panel'), summary = panel.locator('summary');
     await summary.focus(); await page.keyboard.press('Enter');
     await expect(panel.locator('details')).toHaveAttribute('open', '');
     await expect(panel).toContainText(language === 'zh' ? '运行检查正常' : 'Operating checks are healthy');
@@ -20,9 +21,9 @@ for (const language of ['zh', 'en']) {
     }
     expect((await new AxeBuilder({ page }).include('.operations-panel').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
     await page.route('**/api/ready', (route) => route.fulfill({ status: 503, json: { ok: false, status: 'degraded' } }));
-    await page.reload(); await page.locator('.operations-panel summary').click();
+    await page.reload(); await page.locator('.research-tools > summary').click(); await page.locator('.operations-panel summary').click();
     await expect(panel).toContainText(language === 'zh' ? '运行状态尚未确认' : 'Operational readiness is unconfirmed');
-    await page.route('**/api/ready', (route) => route.abort()); await page.reload(); await page.locator('.operations-panel summary').click();
+    await page.route('**/api/ready', (route) => route.abort()); await page.reload(); await page.locator('.research-tools > summary').click(); await page.locator('.operations-panel summary').click();
     await expect(panel).toContainText(language === 'zh' ? '运行状态尚未确认' : 'Operational readiness is unconfirmed');
   });
   test(`W5 ${language}: controlled funding binds reviewed terms, and a wallet change cancels confirmation`, async ({ page }, info) => {
