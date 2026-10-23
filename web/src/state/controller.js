@@ -16,6 +16,7 @@ import { copilotQuery, resetCopilotSession } from '../lib/copilot-api.js';
 import { defaultMarketSubscription, marketView, PAUSED_ACTIONS, visibleCases } from '../lib/market.js';
 import { scrollBehavior } from '../lib/accessibility.js';
 import { agentStore } from '../pages/agent/agent-store.js';
+import { actionLabel } from '../lib/agent-format.js';
 
 const get = () => appStore.get();
 const set = (patch) => appStore.set(patch);
@@ -660,12 +661,12 @@ export function subscribeToAgentActivity(caseId, { retry = false } = {}) {
       activityStream.retries = 0;
       agentLog(t('agent_stream_connected'), 'ok', 'agent_stream_connected');
     } else if (data.type === 'activity') {
-      agentLog(`Agent: ${data.action}${data.details?.price ? ` → $${data.details.price}` : ''}`, 'accent');
+      agentLog(`Agent: ${actionLabel(data.action)}${data.details?.price ? ` → $${data.details.price}` : ''}`, 'accent');
       set((state) => ({ agentActivities: [{ ...data, id: data.id ?? `ui-${Date.now()}`, timestamp: data.timestamp ?? new Date().toISOString() }, ...state.agentActivities].slice(0, 100) }));
       if (data.decision_id) refreshEvidence();
       // Decision records carry the agent's decision verb in details.decision_action.
       const decisionAction = data.details?.decision_action ?? data.action;
-      if (NOTIFY_DECISION_ACTIONS.has(decisionAction)) toast(t('agent_decision_toast', { action: decisionAction }));
+      if (NOTIFY_DECISION_ACTIONS.has(decisionAction)) toast(t('agent_decision_toast', { action: actionLabel(decisionAction) }));
     }
   };
   source.onerror = () => {

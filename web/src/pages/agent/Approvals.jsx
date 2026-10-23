@@ -5,12 +5,12 @@
 import { useStore } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import { agent } from '../../lib/agent-api.js';
-import { formatDateTime, usd } from '../../lib/agent-format.js';
+import { actionLabel, formatDateTime, usd } from '../../lib/agent-format.js';
 import { toast } from '../../lib/toast.js';
 import { Badge, Button, Card, CardHead } from '../../components/ui.jsx';
 import { agentStore, openDecision, refresh } from './agent-store.js';
 import { StatusBadge } from './badges.jsx';
-import { settlementPolicyReason, settlementReasoning } from './settlement.js';
+import { reasoningLang, settlementPolicyReason, settlementReasoning } from './settlement.js';
 
 const WAITING = ['PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE'];
 
@@ -92,13 +92,13 @@ function ApprovalCard({ decision, protectedPools }) {
     <article className="approval-card">
       <header className="approval-head">
         <div className="badge-row">
-          <Badge tone="info">{decision.action}</Badge>
+          <Badge tone="info" title={decision.action}>{actionLabel(decision.action)}</Badge>
           <strong>{decision.case_id}</strong>
           {protectedPools.has(decision.case_id) ? <Badge tone="warn" title={t('ac_protected_hint')}>{t('ac_protected')}</Badge> : null}
         </div>
         <span className="muted small">{formatDateTime(decision.created_at)}{approval.expires_at ? ` · ${t('ac_expires', { time: formatDateTime(approval.expires_at) })}` : ''}</span>
       </header>
-      <p>{settlementReasoning(decision)}</p>
+      <p lang={reasoningLang(decision)}>{settlementReasoning(decision)}</p>
       <OpeningSummary decision={decision} />
       <SettlementSummary decision={decision} />
       {proposal.new_issue_price_usd !== null && proposal.new_issue_price_usd !== undefined

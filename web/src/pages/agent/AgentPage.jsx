@@ -18,6 +18,9 @@ export function AgentPage() {
     startConsole();
     return () => stopConsole();
   }, []);
+  const statusMode = status?.mode;
+  // A proposal waiting for a person is the one thing on this page that needs action now, so it leads.
+  const waiting = useStore(agentStore, (s) => s.decisions.some((decision) => ['PENDING_APPROVAL', 'AWAITING_OWNER_SIGNATURE'].includes(decision.status) && decision.approval?.approval_id));
   const announce = announcement ? t('ac_timeline_update', { ...announcement, status: t(`ac_status_${announcement.status}`) }) : '';
   return (
     <div className="agent-console">
@@ -28,18 +31,20 @@ export function AgentPage() {
           <p className="page-sub">{t('ac_subtitle')}</p>
         </div>
       </header>
+      {/* In Demo the one-click story sits beside the status; operator controls move to the side column. */}
+      {waiting ? <ApprovalsPanel /> : null}
       <div className="agent-top">
         <StatusCard />
-        <ControlsCard />
+        {statusMode === 'demo' ? <DemoPlayback /> : <ControlsCard />}
       </div>
-      <ApprovalsPanel />
+      {waiting ? null : <ApprovalsPanel />}
       <div className="agent-layout">
         <div className="agent-main">
           <Timeline />
         </div>
         <aside className="agent-side">
-          {status?.mode === 'demo' ? <DemoPlayback /> : null}
-          {status ? (status.mode === 'live' ? <SettlementIntake /> : <Injector />) : null}
+          {status ? (statusMode === 'live' ? <SettlementIntake /> : <Injector />) : null}
+          {statusMode === 'demo' ? <ControlsCard /> : null}
           <ActivityLog />
         </aside>
       </div>

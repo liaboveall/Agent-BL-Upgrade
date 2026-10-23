@@ -1,7 +1,7 @@
 import { useStore } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import { safeExplorerUrl } from '../../lib/agent-api.js';
-import { formatTime, shortId } from '../../lib/agent-format.js';
+import { actionLabel, eventLabel, formatTime, shortId, sourceLabel } from '../../lib/agent-format.js';
 import { Badge, Card, CardHead, CopyButton, Empty } from '../../components/ui.jsx';
 import { agentStore, openDecision, setFilter } from './agent-store.js';
 import { ModeBadge, SimulatedBadge, StatusBadge, VerdictBadge } from './badges.jsx';
@@ -24,8 +24,8 @@ function Row({ decision, open, protectedCase }) {
     <div className={`ac-row${open ? ' is-open' : ''}`} role="listitem">
       <span className="ac-row-time mono">{formatTime(decision.created_at)}</span>
       <span className="ac-row-trigger">
-        <span>{decision.event_type}</span>
-        <span className="muted small">{t('ac_trigger_source', { source: decision.input_snapshot?.source ?? (decision.event_type === 'DOCUMENTS_INGESTED' ? 'ingest' : '—') })}</span>
+        <span title={decision.event_type}>{eventLabel(decision.event_type)}</span>
+        <span className="muted small">{t('ac_trigger_source', { source: sourceLabel(decision.input_snapshot?.source ?? (decision.event_type === 'DOCUMENTS_INGESTED' ? 'ingest' : '—')) })}</span>
         <span className="muted small">{decision.case_id}</span>
         <span className="badge-row">
           <ModeBadge mode={decision.input_snapshot?.source_mode ?? decision.mode} />
@@ -34,10 +34,11 @@ function Row({ decision, open, protectedCase }) {
       </span>
       <span className="ac-row-action">
         <button type="button" className="ac-row-open" data-focus-key={`decision:${decision.decision_id}`}
-          aria-label={t('ac_open_decision', { action: decision.action, case: decision.case_id })} onClick={() => openDecision(decision.decision_id)}>
-          <strong>{decision.action}</strong>
+          aria-label={t('ac_open_decision', { action: actionLabel(decision.action), case: decision.case_id })} onClick={() => openDecision(decision.decision_id)}>
+          <strong>{actionLabel(decision.action)}</strong>
         </button>
-        {decision.proposed_action && decision.proposed_action !== decision.action ? <span className="muted small">{`(${decision.proposed_action})`}</span> : null}
+        <code className="ac-row-code">{decision.action}</code>
+        {decision.proposed_action && decision.proposed_action !== decision.action ? <span className="muted small">{`(${actionLabel(decision.proposed_action)})`}</span> : null}
       </span>
       <span className="ac-row-state badge-row"><VerdictBadge verdict={decision.policy?.verdict} /><StatusBadge status={decision.status} /></span>
       <span className="ac-row-tx"><TxCell execution={decision.execution} /></span>
@@ -65,7 +66,7 @@ export function Timeline() {
         </select>
         <select className="select select-sm" aria-label={t('ac_filter_action')} data-focus-key="filter:action" value={filters.action} onChange={(event) => setFilter('action', event.target.value)}>
           <option value="">{t('ac_filter_action')}</option>
-          {actions.map((value) => <option key={value} value={value}>{value}</option>)}
+          {actions.map((value) => <option key={value} value={value}>{actionLabel(value)}</option>)}
         </select>
       </CardHead>
       {filtered.length ? (

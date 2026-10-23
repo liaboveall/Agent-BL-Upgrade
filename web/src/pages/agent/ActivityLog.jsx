@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useApp } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import { shortLabel } from '../../lib/market.js';
+import { actionLabel } from '../../lib/agent-format.js';
 import { Card, CardHead } from '../../components/ui.jsx';
 
 /**
@@ -37,7 +38,7 @@ export function ActivityLog() {
               return (
                 <li key={activity.id}>
                   <span className="muted mono">{new Date(activity.timestamp).toLocaleTimeString('en-US', { hour12: false })}</span>
-                  <span>{String(activity.action ?? '').replace(/_/g, ' ')}</span>
+                  <span title={activity.action}>{actionLabel(activity.action)}</span>
                   <span className="text-accent">{detail}</span>
                 </li>
               );

@@ -31,7 +31,7 @@
 
 .ac-rows { display: grid; }
 .ac-row {
-  display: grid; grid-template-columns: 74px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr) 150px;
+  display: grid; grid-template-columns: 74px minmax(0, 1.3fr) minmax(112px, 1fr) minmax(0, 1.2fr) minmax(0, 0.8fr) 140px;
   gap: var(--s-3); align-items: center; padding: 10px var(--s-2); border-bottom: 1px solid var(--line); font-size: var(--fs-13);
 }
 .ac-row:last-child { border-bottom: 0; }
@@ -41,7 +41,8 @@
 .ac-row-time { color: var(--muted); font-size: var(--fs-12); }
 .ac-row-trigger { display: grid; gap: 2px; min-width: 0; }
 .ac-row-trigger > span:first-child { font-weight: 600; overflow-wrap: anywhere; }
-.ac-row-action { display: grid; gap: 2px; }
+.ac-row-action { display: grid; gap: 2px; min-width: 0; }
+.ac-row-code { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
 .ac-row-open { justify-self: start; padding: 0; border: 0; background: none; color: var(--accent); font-size: var(--fs-13); }
 .ac-row-open:hover { text-decoration: underline; }
 .ac-row-id { display: flex; align-items: center; gap: 2px; color: var(--muted); font-size: var(--fs-12); }
@@ -57,7 +58,7 @@
 .activity-recent ul { display: grid; gap: 4px; margin-top: 6px; }
 .activity-recent li { display: flex; gap: var(--s-2); font-size: var(--fs-12); }
 
-.demo-steps { gap: var(--s-3); }
+.demo-steps { gap: var(--s-3); max-height: 220px; overflow-y: auto; padding-right: var(--s-1); }
 .demo-steps li { gap: var(--s-2); }
 .demo-steps li.is-current { font-weight: 650; }
 

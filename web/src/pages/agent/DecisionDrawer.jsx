@@ -6,13 +6,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useLang, useStore } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import { agent, safeExplorerUrl } from '../../lib/agent-api.js';
-import { formatDateTime, shortId, usd } from '../../lib/agent-format.js';
+import { actionLabel, eventLabel, formatDateTime, shortId, usd } from '../../lib/agent-format.js';
 import { Badge, Button, CopyButton, Dialog, DialogHeader, Disclosure, KV } from '../../components/ui.jsx';
 import { References } from '../../features/evidence/References.jsx';
 import { agentStore } from './agent-store.js';
 import { ApprovalControls } from './Approvals.jsx';
 import { ModeBadge, SimulatedBadge, StatusBadge, VerdictBadge } from './badges.jsx';
-import { settlementPolicyReason, settlementReasoning } from './settlement.js';
+import { reasoningLang, settlementPolicyReason, settlementReasoning } from './settlement.js';
 
 function Section({ title, children }) {
   return <section className="drawer-section"><h3>{title}</h3>{children}</section>;
@@ -207,11 +207,11 @@ function Detail({ detail, trace, anchor }) {
   return (
     <>
       <div className="drawer-meta">
-        <p className="muted small">{`${decision.case_id} · ${formatDateTime(decision.created_at)} · ${decision.event_type}`}</p>
+        <p className="muted small">{`${decision.case_id} · ${formatDateTime(decision.created_at)} · ${eventLabel(decision.event_type)}`}</p>
         <span className="badge-row"><StatusBadge status={decision.status} /><ModeBadge mode={decision.mode} /></span>
       </div>
       <Section title={t('ac_summary')}>
-        <p>{settlementReasoning(decision)}</p>
+        <p lang={reasoningLang(decision)}>{settlementReasoning(decision)}</p>
         {proposal.new_issue_price_usd !== null && proposal.new_issue_price_usd !== undefined ? <p className="muted">{t('ac_price_move', { price: usd(proposal.new_issue_price_usd), bps: proposal.price_move_bps ?? 0 })}</p> : null}
         {decision.note ? <p className="muted">{decision.note}</p> : null}
         {decision.error ? <p className="text-crit">{`${decision.error.code ?? ''} ${decision.error.message ?? ''}`}</p> : null}
@@ -283,7 +283,7 @@ export function DecisionDrawer({ id, onClose }) {
   const shown = data.id === id ? data : null;
   return (
     <Dialog id="ac-drawer" open={Boolean(id)} onClose={onClose} labelledBy="ac-drawer-title" variant="side" className="decision-drawer">
-      <DialogHeader id="ac-drawer-title" title={shown?.detail ? shown.detail.decision.action : t('a11y_decision_detail')} onClose={onClose} />
+      <DialogHeader id="ac-drawer-title" title={shown?.detail ? actionLabel(shown.detail.decision.action) : t('a11y_decision_detail')} onClose={onClose} />
       <div className="dialog-body">
         {!shown ? <p className="muted">{t('ac_loading')}</p> : shown.error ? <p className="text-crit">{shown.error}</p> : <Detail detail={shown.detail} trace={shown.trace} anchor={shown.anchor} />}
       </div>

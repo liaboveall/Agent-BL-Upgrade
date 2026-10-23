@@ -1,6 +1,7 @@
 // Live settlement wording: a verified USDC repayment or arrival proof reads differently from the
 // agent's generic reasoning.
-import { t } from '../../lib/i18n.js';
+import { getLang, t } from '../../lib/i18n.js';
+import { policyReasonText } from '../../lib/agent-format.js';
 
 const SETTLEMENT_ACTIONS = ['RECORD_PAYMENT', 'RECORD_ARRIVAL', 'SETTLE'];
 
@@ -10,10 +11,15 @@ export function settlementReasoning(decision) {
     ? t(`ac_set_reason_${decision.action}`, { amount }) : decision.reasoning_summary;
 }
 
+/** The engine writes its reasoning in English; mark it so screen readers use the right voice in the Chinese UI. */
+export function reasoningLang(decision) {
+  return getLang() === 'zh' && settlementReasoning(decision) === decision.reasoning_summary ? 'en' : undefined;
+}
+
 export function settlementPolicyReason(decision, reason) {
   if (reason.rule === 'STALE_EVIDENCE') return t('ac_evidence_expired');
   const keys = { LIVE_REQUIRES_APPROVAL: 'ac_set_policy_live', IRREVERSIBLE: 'ac_set_policy_sensitive', AUTONOMY_LEVEL: 'ac_set_policy_propose' };
-  return decision.mode === 'live' && SETTLEMENT_ACTIONS.includes(decision.action) && keys[reason.rule] ? t(keys[reason.rule]) : reason.message;
+  return decision.mode === 'live' && SETTLEMENT_ACTIONS.includes(decision.action) && keys[reason.rule] ? t(keys[reason.rule]) : policyReasonText(reason);
 }
 
 export const SETTLEMENT_ERROR_KEYS = {

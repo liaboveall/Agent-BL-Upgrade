@@ -53,9 +53,11 @@ export function StatusCard() {
         <KV label={t('ac_pending')}>{t('ac_pending_value', { pending: status.pending_approvals, owner: status.awaiting_owner_signature })}</KV>
         <KV label={t('ac_emergency')}>{status.emergency_stop ? <Badge tone="crit">{t('ac_emergency_on')}</Badge> : <Badge tone="muted">{t('ac_emergency_off')}</Badge>}</KV>
         <KV label={t('ac_signers')}>
-          <span className="badge-row">
-            {Object.entries(status.signers ?? {}).map(([role, info]) => <Badge key={role} tone={info.configured ? 'ok' : 'muted'}>{`${role} ${info.configured ? '✓' : '—'}`}</Badge>)}
-          </span>
+          {Object.keys(status.signers ?? {}).length ? (
+            <span className="badge-row">
+              {Object.entries(status.signers).map(([role, info]) => <Badge key={role} tone={info.configured ? 'ok' : 'muted'}>{`${role} ${info.configured ? '✓' : '—'}`}</Badge>)}
+            </span>
+          ) : <span className="muted">{t('ac_signers_none')}</span>}
         </KV>
       </div>
       {status.last_error ? <p className="text-crit small">{`${t('ac_last_error')}: ${status.last_error.message}`}</p> : null}

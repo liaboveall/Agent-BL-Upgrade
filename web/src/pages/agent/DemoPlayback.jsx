@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../state/hooks.js';
 import { getLang, t, tData } from '../../lib/i18n.js';
 import { agent } from '../../lib/agent-api.js';
+import { actionLabel } from '../../lib/agent-format.js';
 import { toast } from '../../lib/toast.js';
 import { Badge, Button, Card, CardHead, Field } from '../../components/ui.jsx';
 import { openDecision as openDecisionEvent } from '../../features/evidence/References.jsx';
@@ -63,7 +64,7 @@ export function DemoPlayback() {
             <li key={step.index} aria-current={index === stages.length - 1 ? 'step' : undefined} className={index === stages.length - 1 ? 'is-current' : ''} data-demo-step={String(step.index)}>
               <span>{localized(step.label) ?? step.kind}</span>
               {step.events.flatMap((event) => event.decisions ?? []).map((decision) => (
-                <Button key={decision.decision_id} variant="ghost" size="sm" data-focus-key={`demo:decision:${decision.decision_id}`} onClick={() => openDecisionEvent(decision.decision_id)}>{decision.action}</Button>
+                <Button key={decision.decision_id} variant="ghost" size="sm" data-focus-key={`demo:decision:${decision.decision_id}`} onClick={() => openDecisionEvent(decision.decision_id)}>{actionLabel(decision.action)}</Button>
               ))}
             </li>
           ))}
