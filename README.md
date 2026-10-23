@@ -89,6 +89,7 @@ For custom settings, copy [.env.example](.env.example) to `.env` without overwri
 | Command | Purpose |
 | --- | --- |
 | `npm run build` / `npm run dev:web` | Build the interface or run its development server |
+| `npm run clean` | Remove generated development output; preview with `-- --dry-run` |
 | `npm run lint` / `npm run check` | Check code, configuration, assets, and source consistency |
 | `npm test` / `npm run test:coverage` | Application regressions and coverage |
 | `npm run test:contracts` | Solidity contract regressions |

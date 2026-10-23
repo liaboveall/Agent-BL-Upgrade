@@ -1,4 +1,4 @@
-// AI-15 — reusable reliability primitives for autonomous execution.
+// Idempotency and retry primitives shared by the Agent runtime and event bus.
 
 import { hashSnapshot } from './decisionLogger.js';
 
@@ -12,21 +12,6 @@ export function eventIdempotencyKey(event = {}) {
     occurred_at: event.occurred_at ?? null,
     data: event.data ?? event.world_risk_events ?? null
   }).slice(2)}`;
-}
-
-export class KeyedSingleFlight {
-  constructor() {
-    this.inflight = new Map();
-  }
-
-  run(key, operation) {
-    if (this.inflight.has(key)) return this.inflight.get(key);
-    const promise = Promise.resolve()
-      .then(operation)
-      .finally(() => this.inflight.delete(key));
-    this.inflight.set(key, promise);
-    return promise;
-  }
 }
 
 export async function executeWithRetry(operation, options = {}) {
@@ -53,39 +38,3 @@ export async function executeWithRetry(operation, options = {}) {
   failure.attempts = maxAttempts;
   throw failure;
 }
-
-/**
- * Poll an event source until aborted. `fetchEvents` returns an array and
- * `onEvent` is called serially so ordering is deterministic.
- */
-export async function pollEventSource(options) {
-  const {
-    fetchEvents,
-    onEvent,
-    signal,
-    intervalMs = 5000,
-    sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-    onError = () => {}
-  } = options;
-  if (typeof fetchEvents !== 'function' || typeof onEvent !== 'function') {
-    throw new TypeError('fetchEvents and onEvent functions are required');
-  }
-
-  let cycles = 0;
-  while (!signal?.aborted) {
-    cycles += 1;
-    try {
-      const events = await fetchEvents();
-      if (!Array.isArray(events)) throw new TypeError('fetchEvents must return an array');
-      for (const event of events) {
-        if (signal?.aborted) break;
-        await onEvent(event);
-      }
-    } catch (error) {
-      onError(error);
-    }
-    if (!signal?.aborted) await sleep(intervalMs);
-  }
-  return { cycles, stopped: true };
-}
-

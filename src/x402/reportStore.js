@@ -111,7 +111,9 @@ export function getPaidReportCache(options = {}) {
   if (sharedCache && !options.filePath) return sharedCache;
   const filePath = options.filePath
     ?? process.env.X402_REPORT_CACHE_PATH
-    ?? runtimePath('x402-reports.json');
+    // Tests that need persistence supply an isolated path. Default test servers
+    // must not prune or overwrite the developer's existing paid-report cache.
+    ?? (process.env.NODE_TEST_CONTEXT ? null : runtimePath('x402-reports.json'));
   const cache = new PaidReportCache({ filePath, now: options.now });
   if (!options.filePath) sharedCache = cache;
   return cache;

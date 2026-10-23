@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Minimal Hardhat contracts for AgentBL eBL-backed RWA offering (WEB3-6 ~ WEB3-9).",
+  "description": "AgentBL controlled trade-finance contracts and local EVM regression tests",
   "engines": {
     "node": ">=22.13"
   },

@@ -10,7 +10,7 @@ test('current documentation points to controlled configuration and human accepta
 });
 test('documented current npm commands exist',()=>{
  const scripts=new Set([...Object.keys(readJson('package.json').scripts),...Object.keys(readJson('hardhat','package.json').scripts)]);
- for(const file of ['README.md',...fs.readdirSync(path.join(root,'docs')).filter(name=>name.endsWith('.md')).map(name=>`docs/${name}`)])for(const match of read(file).matchAll(/npm (?:--prefix \S+ )?run ([A-Za-z0-9:_-]+)/gu))assert.ok(scripts.has(match[1]),`${file}: ${match[1]}`);
+ for(const file of ['README.md','README.zh-CN.md',...fs.readdirSync(path.join(root,'docs')).filter(name=>name.endsWith('.md')).map(name=>`docs/${name}`)])for(const match of read(file).matchAll(/npm (?:--prefix \S+ )?run ([A-Za-z0-9:_-]+)/gu))assert.ok(scripts.has(match[1]),`${file}: ${match[1]}`);
 });
 test('.env.example documents every variable the server reads and never ships a real key', () => {
   const example = read('.env.example');

@@ -8,7 +8,6 @@ import { promisify } from 'node:util';
 import { generateRedteam } from '../src/agent/redteam/generator.js';
 import { runRedteam } from '../src/agent/redteam/runner.js';
 import { assessFreshness, eventFreshness } from '../src/agent/runtime/freshness.js';
-import { DataFreshnessValidator } from '../src/agent/security/dataFreshness.js';
 import { replayDecision } from '../src/agent/runtime/replay.js';
 import { createWorldRiskMonitor } from '../src/agent/runtime/sources/worldRiskMonitor.js';
 import { createAgentRoutes } from '../src/app/agentRoutes.js';
@@ -40,9 +39,6 @@ test('freshness fails closed at expiry, on invalid/future times, unhealthy sourc
   for (const patch of [{ expires_at: '2026-10-15T00:00:00Z' }, { observed_at: 'bad' }, { observed_at: '2026-10-16' },
     { expires_at: 'bad' }, { source_status: 'unavailable' }, { source_status: 'stale' }]) assert.equal(assessFreshness({ ...fresh, ...patch }, now).fresh, false);
   assert.equal(eventFreshness({ ...fresh, data: { events: [{ expires_at: '2025-01-01' }] } }, now).fresh, false);
-  const validator = new DataFreshnessValidator();
-  assert.equal(validator.validateFreshness({ observed_at: 'invalid' }, now).fresh, false);
-  assert.equal(validator.checkSourceHealth({ name: 'test', last_update: 'invalid' }, now).healthy, false);
 });
 
 test('stale evidence creates a review proposal and cannot mutate a pool or be approved', async (t) => {

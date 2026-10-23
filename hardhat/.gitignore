@@ -1,5 +1,0 @@
-node_modules
-artifacts
-cache
-deployments/*.json
-!deployments/injective_testnet-agentbl.json

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { PaidReportCache } from '../src/x402/reportStore.js';
+import { PaidReportCache, getPaidReportCache } from '../src/x402/reportStore.js';
 
 // X402-11 re-read store: a buyer who already settled must be able to re-read the
 // same report within its TTL (e.g. after a refresh) without paying again, and a
@@ -22,6 +22,23 @@ function envelope({ id = `rpt_${'a'.repeat(64)}`, expiresInMs = 60_000, now = Da
     expires_at: new Date(now + expiresInMs).toISOString()
   };
 }
+
+test('default test servers use a shared in-memory report cache', async () => {
+  const cache = getPaidReportCache();
+  assert.equal(cache.filePath, null);
+  const env = envelope();
+  await cache.save({ envelope: env, report: { isolated: true } });
+  assert.deepEqual((await getPaidReportCache().read(env.report_id)).report, { isolated: true });
+});
+
+test('an explicit report-cache path still persists across factory instances', async (t) => {
+  const filePath = await tmpStorePath();
+  t.after(() => fs.rm(path.dirname(filePath), { recursive: true, force: true }));
+  const env = envelope();
+  await getPaidReportCache({ filePath }).save({ envelope: env, report: { persisted: true } });
+  assert.deepEqual((await getPaidReportCache({ filePath }).read(env.report_id)).report, { persisted: true });
+  assert.equal(JSON.parse(await fs.readFile(filePath, 'utf8')).records.length, 1);
+});
 
 test('X402-11: a saved report is re-readable within its TTL without re-payment', async () => {
   const filePath = await tmpStorePath();

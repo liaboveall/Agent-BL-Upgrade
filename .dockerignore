@@ -26,4 +26,5 @@ artifacts
 .superpowers
 .playwright-cli
 test-results
+playwright-report
 scripts/vendor

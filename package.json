@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Controlled trade-finance blockchain research application with auditable testnet custody and settlement",
   "scripts": {
+    "clean": "node scripts/clean.mjs",
     "build": "vite build --config web/vite.config.js",
     "predev": "npm run build",
     "dev": "node src/app/server.js",

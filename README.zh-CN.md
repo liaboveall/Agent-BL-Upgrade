@@ -89,6 +89,7 @@ npm run dev
 | 命令 | 用途 |
 | --- | --- |
 | `npm run build` / `npm run dev:web` | 构建界面或单独启动前端开发服务 |
+| `npm run clean` | 清除开发产物；加 `-- --dry-run` 可预览 |
 | `npm run lint` / `npm run check` | 检查代码、配置、资源和源码一致性 |
 | `npm test` / `npm run test:coverage` | 应用回归与覆盖率 |
 | `npm run test:contracts` | Solidity 合约回归 |
