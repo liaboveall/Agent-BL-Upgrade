@@ -1,7 +1,7 @@
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import {
-  annualYieldText, cargoImage, marketFunding, marketView, marketVoyageProgress, routeText, shortCargoName, shortRoute
+  annualYieldText, cargoImage, marketClock, marketFunding, marketView, marketVoyageProgress, registryTag, routeText, shortCargoName, shortRoute
 } from '../../lib/market.js';
 import { selectCase } from '../../state/controller.js';
 import { Badge, Progress, cx } from '../../components/ui.jsx';
@@ -16,13 +16,13 @@ export function statusMeta(entry, view) {
   return { tone: meta.tone, label: meta.label };
 }
 
-export function ProjectCard({ entry, state, now }) {
+export function ProjectCard({ entry, state, now, tagged = false }) {
   const view = marketView(state, entry);
   const { quote, paused, pool } = view;
   const bl = entry.case?.bill_of_lading ?? {};
   const active = entry.case_id === state.caseId;
   const funding = marketFunding(pool);
-  const progress = marketVoyageProgress(entry.case, now);
+  const progress = marketVoyageProgress(entry.case, marketClock(entry, state.demoMode, now));
   const status = statusMeta(entry, view);
   const cargo = tData(bl.cargo || entry.cargo || entry.case_id);
   const highlighted = state.evidenceSelected?.case_id === entry.case_id;
@@ -38,7 +38,7 @@ export function ProjectCard({ entry, state, now }) {
         <img className="deal-thumb" src={cargoImage(bl.cargo || entry.cargo || entry.case_id, entry.case_id)} alt="" width="44" height="44" loading="lazy" />
         <span className="deal-title">
           <span className="deal-name" title={cargo}>{shortCargoName(cargo)}</span>
-          <span className="deal-route" title={routeText(bl)}>{shortRoute(bl)}</span>
+          <span className="deal-route" title={routeText(bl)}>{tagged ? `${shortRoute(bl)} · #${registryTag(entry)}` : shortRoute(bl)}</span>
         </span>
       </span>
       <span className="deal-badges">
@@ -47,7 +47,7 @@ export function ProjectCard({ entry, state, now }) {
       </span>
       <span className="deal-kpis">
         <span className="deal-kpi">
-          <span className="deal-kpi-label">{t('market_issue_price')}</span>
+          <span className="deal-kpi-label">{quote?.payout_speed ? t('market_issue_price_speed', { speed: f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed }) : t('market_issue_price')}</span>
           <span className="deal-kpi-value">{quote ? `$${f.price(quote.final_issue_price_usd)}` : '—'}</span>
         </span>
         <span className="deal-kpi">

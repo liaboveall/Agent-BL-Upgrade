@@ -154,6 +154,34 @@ export function marketVoyageProgress(caseData, now = Date.now()) {
   return f.voyageProgress(dep, eta, now);
 }
 
+/**
+ * The moment a voyage is measured at. Demo figures are a snapshot, so the voyage is read as of the day it was
+ * captured (the project dialog does the same); otherwise every Demo project would read "arrived" once the
+ * calendar passes the fixtures' ETAs. Live always uses the real clock.
+ */
+export function marketClock(entry, demoMode, now = Date.now()) {
+  if (!demoMode) return now;
+  const captured = Date.parse(entry?.case?.real_data?.snapshot_captured_at ?? '');
+  return Number.isFinite(captured) ? captured : now;
+}
+
+/** Case ids whose card would look the same as another one (same cargo and place); the card then adds its registry tail. */
+export function duplicateLabelIds(cases) {
+  const groups = new Map();
+  for (const entry of cases) {
+    const bl = entry.case?.bill_of_lading ?? {};
+    const key = `${shortCargoName(tData(bl.cargo || entry.cargo || entry.case_id))}|${shortRoute(bl)}`;
+    groups.set(key, [...(groups.get(key) ?? []), entry.case_id]);
+  }
+  return new Set([...groups.values()].filter((ids) => ids.length > 1).flat());
+}
+
+/** The short registry tail that tells two otherwise identical documents apart: "EWR-2026-FS-AL0-00013" -> "00013". */
+export function registryTag(entry) {
+  const id = String(entry.case?.bill_of_lading?.bl_id ?? entry.case_id ?? '');
+  return id.split('-').pop();
+}
+
 export function marketVoyageNote(bl, progress) {
   const disch = tData(bl.port_of_discharge) || 'destination';
   if (progress === null) return t('market_voyage_unknown');

@@ -31,15 +31,22 @@
 .readable-terms .research-constraints { max-width: 100%; }
 .readable-terms table { min-width: 0; }
 
-@media (max-width: 1199px) {
+/* Half-width desktop windows keep the project list and its detail card side by side; the header only wraps when it must. */
+@media (max-width: 1079px) {
   .topbar-inner { height: auto; min-height: 60px; flex-wrap: wrap; padding-block: 12px; gap: 10px; }
   .nav { order: 3; flex-basis: 100%; flex-wrap: wrap; }
-  .market-layout, .mint-layout, .mint-secondary, .agent-layout { grid-template-columns: minmax(0, 1fr); }
-  .market-aside, .mint-aside { position: static; }
-  .page-head { flex-wrap: wrap; gap: 20px; }
-  .page-head-stats { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
   .mode-strip-inner { flex-wrap: wrap; padding-block: 8px; }
   .mode-chain { margin-left: 0; }
+}
+@media (max-width: 959px) {
+  .market-layout { grid-template-columns: minmax(0, 1fr); }
+  .market-aside { position: static; max-height: none; overflow: visible; }
+}
+@media (max-width: 1199px) {
+  .mint-layout, .mint-secondary, .agent-layout { grid-template-columns: minmax(0, 1fr); }
+  .mint-aside { position: static; max-height: none; overflow: visible; }
+  .page-head { flex-wrap: wrap; gap: 20px; }
+  .page-head-stats { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
   .toolbar { flex-wrap: wrap; }
   .search { min-width: 220px; }
   .valuation-grid { grid-template-columns: minmax(0, 1fr); }

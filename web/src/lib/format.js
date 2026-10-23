@@ -10,6 +10,12 @@ export function usd(value) {
   return '$' + Math.round(Number(value)).toLocaleString('en-US');
 }
 
+/** USD with cents, for amounts a person typed or paid. 49999.595 -> "$50,000.00". */
+export function usd2(value) {
+  if (!Number.isFinite(Number(value))) return '—';
+  return '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 /** Compact USD for tight chips. 5600000 -> "$5.60M", 6427915 -> "$6.43M". */
 export function usdCompact(value) {
   const n = Number(value);

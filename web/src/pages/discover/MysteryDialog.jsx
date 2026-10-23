@@ -1,6 +1,6 @@
 import { useStore } from '../../state/hooks.js';
 import { t, tData } from '../../lib/i18n.js';
-import { cargoImage } from '../../lib/market.js';
+import { cargoImage, shortRoute, stripParens } from '../../lib/market.js';
 import { scrollBehavior } from '../../lib/accessibility.js';
 import { Badge, Button, Dialog, DialogHeader, cx } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
@@ -82,6 +82,8 @@ function Reveal() {
   const cargo = report?.cargo ?? {};
   const risk = report?.risk ?? {};
   const phase = mysteryState.reveal;
+  const from = stripParens(tData(cargo.port_of_loading || '—')), to = stripParens(tData(cargo.port_of_discharge || '—'));
+  const sameSite = from === to;
   return (
     <section id="mystery-reveal" className={cx('mystery-reveal', phase === 'opening' && 'is-opening', phase === 'open' && 'is-opening is-open')} hidden={phase === 'hidden'}>
       <div className="mystery-container-scene" aria-hidden="true">
@@ -98,10 +100,11 @@ function Reveal() {
           <div><span className="stat-label">{t('mystery_selected_route')}</span><h3 id="mystery-cargo-name">{tData(cargo.category || t('mystery_trade_cargo'))}</h3></div>
           <Badge tone={risk.level === 'LOW' ? 'ok' : ['HIGH', 'CRITICAL'].includes(risk.level) ? 'crit' : 'warn'} className="risk-pulse">{`${risk.level ?? '—'} · ${Number(risk.score_bps ?? 0).toLocaleString()} bps`}</Badge>
         </div>
-        <div className="mystery-map-route">
-          <div><span>{t('vp_dep')}</span><strong id="mystery-port-from">{tData(cargo.port_of_loading || '—')}</strong></div>
-          <div className="mystery-route-line"><span className="mystery-route-ship" aria-hidden="true">◆</span></div>
-          <div><span>{t('vp_arr')}</span><strong id="mystery-port-to">{tData(cargo.port_of_discharge || '—')}</strong></div>
+        {/* A warehouse receipt starts and ends at the same site: show it once instead of a departure and an arrival that are the same place. */}
+        <div className={cx('mystery-map-route', sameSite && 'is-single')}>
+          <div><span>{t(sameSite ? 'mystery_site' : 'vp_dep')}</span><strong id="mystery-port-from">{from}</strong></div>
+          <div className="mystery-route-line" hidden={sameSite}><span className="mystery-route-ship" aria-hidden="true">◆</span></div>
+          <div hidden={sameSite}><span>{t('vp_arr')}</span><strong id="mystery-port-to">{to}</strong></div>
         </div>
       </div>
     </section>
@@ -118,7 +121,7 @@ function RiskPassport() {
   return (
     <section id="mystery-risk-passport" className="mystery-section">
       <div className="mystery-section-head">
-        <div><span className="stat-label">AI Risk Passport</span><h3 id="mystery-report-route">{`${tData(cargo.port_of_loading || '—')} → ${tData(cargo.port_of_discharge || '—')}`}</h3></div>
+        <div><span className="stat-label">AI Risk Passport</span><h3 id="mystery-report-route">{shortRoute(cargo)}</h3></div>
         <Badge tone={suitability.matched ? 'ok' : 'crit'}>{suitability.matched ? t('mystery_passport_match') : t('mystery_passport_mismatch')}</Badge>
       </div>
       <div className="kv-grid kv-grid-3">

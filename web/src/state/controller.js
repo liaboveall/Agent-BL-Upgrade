@@ -319,10 +319,10 @@ export function getCaseComparison(entry, forceUpdate = false) {
 
 /** Make sure every listed case has a quote (or is loading one). */
 export function ensureComparisons(cases) {
-  for (const entry of cases) {
-    const cached = get().marketComparisons[entry.case_id];
-    if (!cached) getCaseComparison(entry).catch(() => {});
-  }
+  const missing = cases.filter((entry) => !get().marketComparisons[entry.case_id]);
+  if (!missing.length) return;
+  set({ marketLoading: true });
+  Promise.allSettled(missing.map((entry) => getCaseComparison(entry))).finally(() => set({ marketLoading: false }));
 }
 
 export function warmMarketQuotes() {
@@ -378,6 +378,15 @@ export function setCategory(category) {
   keepSelectionVisible();
 }
 
+/** Drop the category, the keyword and any Copilot match so the whole shelf is visible again. */
+export function resetMarketFilters() {
+  resetCopilotSession('search');
+  versions.search += 1;
+  searchAbort?.abort();
+  set({ categoryFilter: 'all', searchQuery: '', aiMatchedIds: null, aiRanks: null, aiResult: null, aiSearching: false });
+  keepSelectionVisible();
+}
+
 export function setMarketSort(sort) {
   set({ marketSort: sort || 'recommended' });
 }
@@ -411,6 +420,8 @@ function applySearchResult(result) {
     aiRanks: new Map(result.recommendations.map((item) => [item.case_id, item.rank])),
     aiResult: result
   });
+  // The detail panel must follow the matches, otherwise it keeps showing (and selling) a hidden project.
+  keepSelectionVisible();
 }
 
 export async function runAiSearch(query) {
@@ -456,7 +467,7 @@ export function clearAiSearch() {
 // ---------------------------------------------------------------------------------------------
 
 export function setSubscriptionAmount(value) {
-  set({ marketSubscriptionUsd: Number(value) || 0, marketSubscriptionResult: null });
+  set({ marketSubscriptionUsd: value, marketSubscriptionResult: null });
 }
 
 export async function subscribeSelected() {
@@ -504,7 +515,7 @@ export async function refreshPortfolio() {
 // ---------------------------------------------------------------------------------------------
 
 export function setFinancing(value) {
-  set({ financingUsd: Number(value) || 0 });
+  set({ financingUsd: value });
 }
 
 

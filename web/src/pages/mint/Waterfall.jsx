@@ -56,7 +56,9 @@ export function Waterfall({ quote: current }) {
               const delta = col.kind === 'down' || col.kind === 'up';
               const bottom = pos(Math.min(col.top, col.bottom));
               const height = Math.abs(pos(col.top) - pos(col.bottom));
-              const text = delta ? `${col.kind === 'down' ? '−' : '+'}${f.price(Math.abs(col.value))}` : `$${f.price(col.value)}`;
+              const magnitude = f.price(Math.abs(col.value));
+              // A step that rounds to nothing carries no sign ("−0.0000" reads as a bug).
+              const text = delta ? `${Number(magnitude) === 0 ? '' : col.kind === 'down' ? '−' : '+'}${magnitude}` : `$${f.price(col.value)}`;
               return (
                 <div key={index} className={`wf-col wf-${col.kind}`}>
                   <div className="wf-track">

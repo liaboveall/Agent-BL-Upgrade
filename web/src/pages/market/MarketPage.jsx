@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useApp } from '../../state/hooks.js';
+import { useApp, useAppPick } from '../../state/hooks.js';
 import { appStore } from '../../state/app-store.js';
 import { t } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
-import { CATEGORIES, MARKET_SORTS, marketStats, sortMarketCases, visibleCases } from '../../lib/market.js';
+import { CATEGORIES, MARKET_SORTS, duplicateLabelIds, marketStats, sortMarketCases, visibleCases } from '../../lib/market.js';
 import { scrollBehavior } from '../../lib/accessibility.js';
 import {
-  clearAiSearch, ensureComparisons, replaceSearchResult, runAiSearch, selectCase, setCategory, setMarketSort, setSearchQuery
+  clearAiSearch, ensureComparisons, replaceSearchResult, resetMarketFilters, runAiSearch, selectCase, setCategory, setMarketSort, setSearchQuery
 } from '../../state/controller.js';
 import { Button, Empty, Stat } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
@@ -16,13 +16,20 @@ import { ProjectCard } from './ProjectCard.jsx';
 import { DetailPanel } from './DetailPanel.jsx';
 import { PortfolioDialog } from './PortfolioDialog.jsx';
 
+// Everything MarketPage, ProjectCard and the market helpers (visibleCases, sortMarketCases, marketStats, marketView) read.
+const MARKET_STATE = [
+  'cases', 'casesError', 'caseId', 'categoryFilter', 'searchQuery', 'marketSort', 'aiMatchedIds', 'aiRanks', 'aiResult', 'marketLoading',
+  'marketComparisons', 'evidencePools', 'evidenceSelected', 'focusRequest', 'portfolio', 'demoMode'
+];
+
 export function MarketPage() {
-  const state = useApp((s) => s);
+  const state = useAppPick(MARKET_STATE);
   const now = useNow(60_000);
   const [portfolioOpen, setPortfolioOpen] = useState(false);
   const cases = useMemo(() => sortMarketCases(state, visibleCases(state)), [state]);
   const stats = useMemo(() => marketStats(state, cases), [state, cases]);
   const visibleIds = cases.map((entry) => entry.case_id).join('|');
+  const lookalikes = useMemo(() => duplicateLabelIds(state.cases), [state.cases]);
 
   useEffect(() => {
     ensureComparisons(visibleCases(appStore.get()));
@@ -79,12 +86,16 @@ export function MarketPage() {
           </div>
           {!state.cases.length && !state.casesError ? <Empty>{t('market_cases_loading')}</Empty> : cases.length ? (
             <div className="deal-grid">
-              {cases.map((entry) => <ProjectCard key={entry.case_id} entry={entry} state={state} now={now} />)}
+              {cases.map((entry) => <ProjectCard key={entry.case_id} entry={entry} state={state} now={now} tagged={lookalikes.has(entry.case_id)} />)}
             </div>
-          ) : <Empty title={t('market_empty')}>{t('market_empty_hint')}</Empty>}
+          ) : (
+            <Empty title={t('market_empty')} action={<Button variant="secondary" size="sm" onClick={resetMarketFilters}>{t('market_filters_reset')}</Button>}>
+              {t('market_empty_hint')}
+            </Empty>
+          )}
         </section>
         <aside className="market-aside" aria-label={t('a11y_selected_project')}>
-          <DetailPanel now={now} />
+          <DetailPanel now={now} noMatches={!cases.length && state.cases.length > 0} />
         </aside>
       </div>
       <PortfolioDialog open={portfolioOpen} onClose={() => setPortfolioOpen(false)} />

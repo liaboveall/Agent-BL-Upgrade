@@ -58,11 +58,12 @@ export function Progress({ value, tone = 'accent', label, paused }) {
   );
 }
 
-export function Empty({ title, children }) {
+export function Empty({ title, children, action }) {
   return (
     <div className="empty">
       {title ? <strong>{title}</strong> : null}
       {children ? <p>{children}</p> : null}
+      {action ? <div className="empty-action">{action}</div> : null}
     </div>
   );
 }

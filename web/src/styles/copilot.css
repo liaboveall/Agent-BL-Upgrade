@@ -1,8 +1,12 @@
 .cp-launcher {
-  position: fixed; right: 28px; bottom: 28px; z-index: 25; display: inline-flex; align-items: center; gap: 8px;
-  height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--text); color: #fff;
+  position: fixed; right: 24px; bottom: 24px; z-index: 25; display: inline-flex; align-items: center;
+  height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--text); color: #fff;
   font-size: var(--fs-14); font-weight: 600; box-shadow: var(--shadow-lg);
 }
+/* After the first screen the launcher shrinks to its icon so it covers less of the page; hover or focus brings the label back. */
+.cp-launcher-label { display: inline-block; max-width: 160px; padding-left: 8px; overflow: hidden; white-space: nowrap; transition: max-width 0.18s ease, opacity 0.18s ease, padding 0.18s ease; }
+.cp-launcher.is-compact .cp-launcher-label { max-width: 0; padding-left: 0; opacity: 0; }
+.cp-launcher.is-compact:hover .cp-launcher-label, .cp-launcher.is-compact:focus-visible .cp-launcher-label { max-width: 160px; padding-left: 8px; opacity: 1; }
 .cp-launcher:hover { background: #1e293b; }
 .cp-launcher:focus-visible { outline: none; box-shadow: var(--focus), var(--shadow-lg); }
 

@@ -10,7 +10,7 @@
 
 .mint-layout { display: grid; grid-template-columns: minmax(0, 1fr) 392px; gap: var(--s-6); align-items: start; }
 .mint-main { display: grid; gap: var(--s-5); min-width: 0; }
-.mint-aside { position: sticky; top: 116px; }
+.mint-aside { position: sticky; top: 112px; max-height: calc(100vh - 112px - 76px); margin: -2px; padding: 2px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .mint-secondary { display: grid; grid-template-columns: minmax(0, 1fr) 392px; gap: var(--s-6); align-items: start; margin-top: var(--s-6); }
 .mint-secondary-side { display: grid; gap: var(--s-5); }
 

@@ -42,7 +42,7 @@
 .deal-thumb { flex: none; width: 44px; height: 44px; border-radius: var(--r); object-fit: cover; background: var(--surface-2); }
 .deal-title { display: flex; flex-direction: column; min-width: 0; }
 .deal-name { overflow: hidden; color: var(--text); font-size: var(--fs-14); font-weight: 650; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
-.deal-route { overflow: hidden; color: var(--muted); font-size: var(--fs-12); text-overflow: ellipsis; white-space: nowrap; }
+.deal-route { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: var(--fs-12); line-height: 1.4; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .deal-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: calc(var(--s-2) * -1); }
 .deal-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
 .deal-kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -52,7 +52,11 @@
 .deal-foot { display: flex; justify-content: space-between; gap: var(--s-2); color: var(--muted); font-size: var(--fs-12); white-space: nowrap; }
 .deal-foot > span:first-child { overflow: hidden; text-overflow: ellipsis; }
 
-.market-aside { position: sticky; top: 116px; }
+/* The detail card scrolls inside its own sticky column, so its actions stay reachable on short screens and clear of the Copilot button. */
+.market-aside {
+  position: sticky; top: 112px; max-height: calc(100vh - 112px - 76px); margin: -2px; padding: 2px; overflow-y: auto;
+  overscroll-behavior: contain; scrollbar-width: thin;
+}
 .detail-panel { display: grid; gap: var(--s-4); padding: var(--s-5); }
 .detail-panel.is-loading { min-height: 240px; place-items: center; }
 .detail-title { font-size: var(--fs-18); line-height: 1.3; }
@@ -67,6 +71,8 @@
 .result-line { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-13); }
 .source-line { display: flex; align-items: center; gap: 6px; font-size: var(--fs-12); }
 .detail-actions { display: flex; gap: var(--s-2); }
+.detail-panel.is-empty { align-content: start; justify-items: start; gap: var(--s-2); min-height: 200px; }
+.detail-panel.is-empty .btn { margin-top: var(--s-2); }
 .detail-actions .btn { flex: 1; }
 
 /* ---------- portfolio drawer ---------- */

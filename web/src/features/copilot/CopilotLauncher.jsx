@@ -8,6 +8,7 @@ import { copilotQuery, resetCopilotSession } from '../../lib/copilot-api.js';
 import { portfolioPath, serverJson } from '../../lib/assistant-tools.js';
 import { Button, Dialog, DialogHeader } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
+import { usd2 } from '../../lib/format.js';
 import { Recommendations, poolStateLabel } from './Recommendations.jsx';
 
 export function CopilotLauncher() {
@@ -20,6 +21,13 @@ export function CopilotLauncher() {
   const transcript = useRef(null);
   const field = useRef(null);
   const launcher = useRef(null);
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 160);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const update = (id, patch) => setEntries((list) => list.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
 
@@ -76,8 +84,8 @@ export function CopilotLauncher() {
 
   return (
     <>
-      <button ref={launcher} type="button" className="cp-launcher" aria-controls="copilot-dialog" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(true)}>
-        <Icon name="message" size={16} />{t('cp_title')}
+      <button ref={launcher} type="button" className={`cp-launcher${compact ? ' is-compact' : ''}`} aria-controls="copilot-dialog" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        <Icon name="message" size={16} /><span className="cp-launcher-label">{t('cp_title')}</span>
       </button>
       <Dialog id="copilot-dialog" open={open} onClose={() => setOpen(false)} labelledBy="copilot-title" variant="side" className="cp-dialog">
         <div className="cp-shell">
@@ -98,7 +106,7 @@ export function CopilotLauncher() {
                 ) : null}
                 {entry.portfolio ? (
                   entry.portfolio.length
-                    ? entry.portfolio.map((item, index) => <p key={index}>{`${tData(item.label)} · $${item.amountUsd.toLocaleString()} · ${t(`cp_source_${item.source_label}`)} · ${poolStateLabel(item.current_status)}`}</p>)
+                    ? entry.portfolio.map((item, index) => <p key={index}>{`${tData(item.label)} · ${usd2(item.amountUsd)} · ${t(`cp_source_${item.source_label}`)} · ${poolStateLabel(item.current_status)}`}</p>)
                     : <p>{t('portfolio_empty')}</p>
                 ) : null}
               </div>

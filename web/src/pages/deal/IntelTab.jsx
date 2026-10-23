@@ -43,9 +43,9 @@ function WorldRisk() {
   const sim = useStore(simStore, (s) => s);
   const res = sim.worldRisk[caseId];
   useEffect(() => { fetchWorldRisk(false); }, [caseId]);
-  const captured = res?.snapshot_captured_at ? f.fmtDate(res.snapshot_captured_at.slice(0, 10)) : '—';
+  const captured = res?.snapshot_captured_at ? f.fmtDate(res.snapshot_captured_at.slice(0, 10)) : null;
   const modeText = !res ? '' : res.provider === 'public-live' ? t('wr_public_live')
-    : res.provider === 'public-snapshot' ? t('wr_public_snapshot', { date: captured })
+    : res.provider === 'public-snapshot' ? t(captured ? 'wr_public_snapshot' : 'wr_public_snapshot_undated', { date: captured })
       : res.live ? t('wr_live') : t('wr_offline');
   const hasEvents = Array.isArray(res?.events) && res.events.length > 0;
   const s = res?.signals ?? {};

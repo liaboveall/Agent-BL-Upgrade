@@ -1,36 +1,61 @@
-import { useApp } from '../../state/hooks.js';
+import { useAppPick } from '../../state/hooks.js';
 import { selectedQuote } from '../../state/app-store.js';
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import {
-  PAUSED_ACTIONS, annualYieldText, defaultMarketSubscription, marketDataSource, marketView, marketVoyageNote,
+  PAUSED_ACTIONS, annualYieldText, defaultMarketSubscription, marketClock, marketDataSource, marketView, marketVoyageNote,
   marketVoyageProgress, potentialYieldText, routeText, shortCargoName
 } from '../../lib/market.js';
-import { evidenceFor, openDeal, setSubscriptionAmount, setView, subscribeSelected } from '../../state/controller.js';
+import { evidenceFor, openDeal, resetMarketFilters, setSubscriptionAmount, setView, subscribeSelected } from '../../state/controller.js';
 import { Badge, Button, Field, KV, Progress } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
 import { References } from '../../features/evidence/References.jsx';
 import { statusMeta } from './ProjectCard.jsx';
+import { poolStateLabel } from '../../features/copilot/Recommendations.jsx';
 
-export function DetailPanel({ now }) {
-  const state = useApp((s) => s);
+// Everything DetailPanel and the helpers it passes the state to (marketView, selectedQuote, evidenceFor) read.
+const DETAIL_STATE = [
+  'cases', 'caseId', 'caseData', 'busy', 'comparison', 'speed', 'marketComparisons', 'evidencePools', 'evidenceLatest', 'evidenceSelected',
+  'marketSubscriptionUsd', 'marketSubscribing', 'marketSubscriptionResult', 'demoMode'
+];
+
+export function DetailPanel({ now, noMatches = false }) {
+  const state = useAppPick(DETAIL_STATE);
   const entry = state.cases.find((c) => c.case_id === state.caseId);
   const view = entry ? marketView(state, entry) : null;
   const quote = state.busy ? null : view?.quote ?? selectedQuote(state);
+  // Nothing on the shelf matches: never keep selling the project that was selected before the filter.
+  if (noMatches) {
+    return (
+      <div className="detail-panel card is-empty">
+        <p className="eyebrow">{t('market_detail_label')}</p>
+        <strong>{t('market_detail_none')}</strong>
+        <p className="muted small">{t('market_detail_none_hint')}</p>
+        <Button variant="secondary" size="sm" onClick={resetMarketFilters}>{t('market_filters_reset')}</Button>
+      </div>
+    );
+  }
   if (!entry || !quote) {
     return <div className="detail-panel card is-loading"><p className="muted">{t('market_detail_loading')}</p></div>;
   }
   const bl = state.caseData?.bill_of_lading ?? entry.case?.bill_of_lading ?? {};
   const paused = entry.historical === true || (view.pool ? view.paused : PAUSED_ACTIONS.has(quote.pricing_action));
   const status = statusMeta(entry, view);
-  const progress = marketVoyageProgress(entry.case, now);
+  const progress = marketVoyageProgress(entry.case, marketClock(entry, state.demoMode, now));
   const source = marketDataSource(entry);
   const amount = state.marketSubscriptionUsd ?? defaultMarketSubscription(quote);
   const tokens = quote.final_issue_price_usd > 0 ? Math.floor((Number(amount) || 0) / quote.final_issue_price_usd) : 0;
+  // The server re-checks every subscription; this only tells the person before they press the button.
+  const amountNumber = Number(amount) || 0;
+  const amountError = paused ? null : amountNumber <= 0 ? t('market_amount_positive')
+    : view.remainingUsd != null && amountNumber > Number(view.remainingUsd) + 0.005 ? t('market_amount_exceeds', { remaining: f.usd(view.remainingUsd) }) : null;
   const result = state.marketSubscriptionResult;
   const decision = evidenceFor(state, entry.case_id);
   const cargo = tData(bl.cargo || entry.cargo || 'Trade cargo');
-  const buttonLabel = entry.historical ? t('market_historical_btn') : paused ? t('market_paused_btn')
+  const speedLabel = f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed;
+  // "Paused" is for an offering the agent halted; a pool that simply moved on (funded, in transit, repaid) is closed.
+  const halted = PAUSED_ACTIONS.has(quote.pricing_action) || ['Paused', 'Frozen', 'Liquidation', 'Liquidated', 'Defaulted'].includes(view.pool?.status);
+  const buttonLabel = entry.historical ? t('market_historical_btn') : paused ? t(halted ? 'market_paused_btn' : 'market_closed_btn')
     : state.marketSubscribing ? t('market_subscribing') : t('market_subscribe_btn');
   return (
     <div className="detail-panel card" id="market-detail">
@@ -40,9 +65,14 @@ export function DetailPanel({ now }) {
         <p className="muted">{routeText(bl)}</p>
       </header>
 
+      <div className="detail-actions">
+        <Button variant="secondary" size="sm" onClick={() => openDeal(state.caseId)}><Icon name="ship" size={14} />{t('market_open_voyage')}</Button>
+        <Button variant="ghost" size="sm" onClick={() => setView('mint')}>{t('market_open_pricing')}<Icon name="arrowRight" size={14} /></Button>
+      </div>
+
       <div className="detail-price">
         <div>
-          <span className="stat-label">{t('market_issue_price')}</span>
+          <span className="stat-label">{t('market_issue_price_speed', { speed: speedLabel })}</span>
           <strong className="price-xl">${f.price(quote.final_issue_price_usd)}</strong>
         </div>
         <div className="detail-badges">
@@ -77,14 +107,19 @@ export function DetailPanel({ now }) {
               inputMode="numeric"
               value={String(amount)}
               disabled={paused}
+              aria-invalid={amountError ? 'true' : undefined}
+              aria-describedby={amountError ? 'market-amount-error' : undefined}
               onChange={(event) => setSubscriptionAmount(event.target.value)}
             />
-            <Button id="market-subscribe-btn" variant="primary" disabled={state.busy || !view.canSubscribe || !state.demoMode || state.marketSubscribing} onClick={subscribeSelected}>
+            <Button id="market-subscribe-btn" variant="primary" disabled={state.busy || !view.canSubscribe || !state.demoMode || state.marketSubscribing || Boolean(amountError)} onClick={subscribeSelected}>
               {buttonLabel}
             </Button>
           </div>
         </Field>
-        {!state.demoMode && !paused ? <p className="field-hint">{t('market_live_subscribe_hint')}</p> : null}
+        {amountError ? <p id="market-amount-error" className="field-error" role="alert">{amountError}</p> : null}
+        {!state.demoMode && !paused ? (
+          <p className="field-hint">{t('market_live_subscribe_hint')} <button type="button" className="link-btn" onClick={() => setView('finance')}>{t('go_finance')}</button></p>
+        ) : null}
         <div className="readout" aria-live="polite">
           <div className="kv-stack">
             <KV label={t('market_readout_receive')}>{`${f.int(tokens)} RWA`}</KV>
@@ -93,7 +128,7 @@ export function DetailPanel({ now }) {
           </div>
           {result ? (
             <p className="result-line">
-              <Badge tone={f.stateTone(result.final_state)}>{result.final_state}</Badge>
+              <Badge tone={f.stateTone(result.final_state)}>{poolStateLabel(result.final_state)}</Badge>
               {t('cp_subscription_recorded', { price: result.price, shares: f.int(result.tokenCount) })}
             </p>
           ) : <p className="muted small">{t('market_readout_foot')}</p>}
@@ -103,11 +138,6 @@ export function DetailPanel({ now }) {
       <p className={`source-line tone-text-${source.tone}`}><Icon name="info" size={14} />{source.text}</p>
       <p className="muted small">{t('market_terms_scope', { speed: f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed, version: view.pool?.quote_version ?? 1 })}</p>
       <p className="callout tone-warn">{t('investment_risk_note')}</p>
-
-      <div className="detail-actions">
-        <Button variant="secondary" onClick={() => openDeal(state.caseId)}><Icon name="ship" size={15} />{t('market_open_voyage')}</Button>
-        <Button variant="ghost" onClick={() => setView('mint')}>{t('market_open_pricing')}<Icon name="arrowRight" size={14} /></Button>
-      </div>
       {decision ? <References references={decision.references} /> : null}
     </div>
   );

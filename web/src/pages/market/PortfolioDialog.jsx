@@ -18,7 +18,7 @@ export function PortfolioDialog({ open, onClose }) {
       <DialogHeader id="portfolio-title" title={t('portfolio_h')} subtitle={t('position_portfolio_sub')} onClose={onClose} />
       <div className="dialog-body">
         <div className="stat-row">
-          <Stat label={t('position_demo_total')} value={`$${(summary?.totalInvestedUsd ?? 0).toLocaleString()}`} />
+          <Stat label={t('position_demo_total')} value={f.usd2(summary?.totalInvestedUsd ?? 0)} />
           <Stat label={t('position_demo_yield')} value={`${((summary?.avgYieldBps ?? 0) / 100).toFixed(2)}%`} />
         </div>
         <PositionList positions={state.portfolio.positions?.filter((position) => position.mode === 'live')} onRefresh={refreshPortfolio} />
@@ -32,7 +32,7 @@ export function PortfolioDialog({ open, onClose }) {
                 <li key={`${item.reference}-${item.timestamp}`} className="holding">
                   <div className="holding-head">
                     <strong>{tData(item.label)}</strong>
-                    <span className="mono">${item.amountUsd.toLocaleString()}</span>
+                    <span className="mono">{f.usd2(item.amountUsd)}</span>
                   </div>
                   <p className="muted small">{t(`cp_source_${item.source_label}`)}</p>
                   <p>{t('cp_position_current', { status: poolStateLabel(item.current_status), price: item.current_price_usd ?? '—', risk: f.riskLabel(item.current_risk_level) })}</p>

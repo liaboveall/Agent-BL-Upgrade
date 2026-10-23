@@ -3,7 +3,7 @@ import { t } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import * as web3 from '../../lib/web3.js';
 import { PAUSED_ACTIONS, potentialYieldText } from '../../lib/market.js';
-import { mint, selectSpeed, setFinancing } from '../../state/controller.js';
+import { mint, selectSpeed, setFinancing, setView } from '../../state/controller.js';
 import { Badge, Button, Card, Field, KV, cx, useRovingKeys } from '../../components/ui.jsx';
 import { RichT } from '../../components/RichText.jsx';
 
@@ -12,6 +12,7 @@ const SPEEDS = ['FAST', 'BALANCED', 'LOW_COST'];
 /** Pick a payout speed, enter the financing amount, mint. The one action this page is for. */
 export function MintPanel({ quote }) {
   const comparison = useApp((s) => s.comparison);
+  const pool = useApp((s) => s.evidencePools.get(s.caseId) ?? null);
   const speed = useApp((s) => s.speed);
   const financingUsd = useApp((s) => s.financingUsd);
   const minting = useApp((s) => s.minting);
@@ -39,6 +40,8 @@ export function MintPanel({ quote }) {
             <span className="small"><strong className="text-gain">{potentialYieldText(quote)}</strong> {t('hp_upside')}</span>
           </div>
           <p className="muted small"><RichT k="hp_redeem" vars={{ speed: f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed }} /></p>
+          {pool?.quote && (pool.quote.payout_speed !== quote.payout_speed || Math.abs(pool.quote.final_issue_price_usd - quote.final_issue_price_usd) > 1e-6)
+            ? <p className="muted small">{t('live_pool_terms', { speed: f.SPEED_META[pool.quote.payout_speed]?.label ?? pool.quote.payout_speed, price: f.price(pool.quote.final_issue_price_usd) })}</p> : null}
         </div>
       </header>
 
@@ -99,6 +102,7 @@ export function MintPanel({ quote }) {
       )}
       <p className="compliance small" id="compliance-note"><RichT k="compliance" /></p>
       <p className="callout tone-warn">{t(demoMode ? 'mint_demo_scope' : 'mint_lab_scope')}</p>
+      {demoMode ? null : <button type="button" className="link-btn" onClick={() => setView('finance')}>{t('go_finance')}</button>}
       <MintResult result={result} quote={quote} />
     </Card>
   );

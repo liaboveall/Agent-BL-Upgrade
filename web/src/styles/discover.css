@@ -128,6 +128,8 @@
 .mystery-route-heading h3 { margin-top: 4px; font-size: var(--fs-22); }
 .mystery-map-route { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(100px, 1fr); align-items: center; gap: var(--s-3); min-height: 140px; }
 .mystery-map-route > div:last-child { text-align: right; }
+.mystery-map-route.is-single { grid-template-columns: minmax(0, 1fr); }
+.mystery-map-route.is-single > div:first-child { text-align: left; }
 .mystery-map-route span { color: var(--muted); font-size: var(--fs-12); }
 .mystery-map-route strong { display: block; margin-top: 4px; font-size: var(--fs-14); overflow-wrap: anywhere; }
 .mystery-route-line { position: relative; height: 2px; border-top: 2px dashed var(--accent); }

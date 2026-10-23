@@ -9,6 +9,7 @@ import * as f from '../../lib/format.js';
 import { Badge, Button, Card, CardHead, Disclosure } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
 import { RichT } from '../../components/RichText.jsx';
+import { marketFunding } from '../../lib/market.js';
 import { EVENTS, getOffering, relocalizeEvents, resetVoyage, simStore, syncSimulationCase, toggleEvent } from './simulation.js';
 
 const PLAY_MS = 60000; // wall-clock ms to play the full voyage (0 → 100%)
@@ -37,6 +38,8 @@ export function VoyageTab({ active }) {
   const caseData = state.caseData;
   const bl = caseData.bill_of_lading ?? {};
   const quote = liveQuote(state);
+  const pool = state.evidencePools.get(state.caseId) ?? null;
+  const recorded = marketFunding(pool);
   const sim = useStore(simStore, (s) => s);
   useEffect(() => { syncSimulationCase(state.caseId, state.speed); }, [state.caseId, state.speed]);
   useEffect(() => { relocalizeEvents(); }, [lang]);
@@ -155,7 +158,7 @@ export function VoyageTab({ active }) {
       </Card>
 
       <div className="voyage-grid">
-        <LivePrice quote={quote} />
+        <LivePrice quote={quote} pool={pool} />
         <Card className="fin-card" aria-labelledby="fin-h">
           <CardHead id="fin-h" title={t('fin_head')} level={3} />
           <div className="kv-grid">
@@ -166,6 +169,7 @@ export function VoyageTab({ active }) {
             <div className="progress"><span className="progress-fill fill-accent" ref={refs.finBar} /></div>
             <p className="muted small" ref={refs.finLabel} />
             <p className="muted small">{t('fin_virtual_note')}</p>
+            {recorded ? <p className="small fin-recorded">{t('fin_recorded', { raised: f.usdCompact(recorded.raised), target: f.usdCompact(recorded.target), pct: Math.round(recorded.fill * 100) })}</p> : null}
           </div>
         </Card>
       </div>
@@ -194,7 +198,7 @@ export function VoyageTab({ active }) {
   );
 }
 
-function LivePrice({ quote }) {
+function LivePrice({ quote, pool }) {
   const [flash, setFlash] = useState(null);
   const last = useRef(null);
   const price = quote?.final_issue_price_usd;
@@ -209,14 +213,19 @@ function LivePrice({ quote }) {
   }, [price]);
   if (!quote) return <Card><p className="muted">—</p></Card>;
   const act = f.actionMeta(quote.pricing_action);
+  const speedLabel = f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed;
+  // The market sells the pool's recorded terms; say so when this quote (another payout speed or a repricing) differs.
+  const published = pool?.quote;
+  const differs = published && (published.payout_speed !== quote.payout_speed || Math.abs(published.final_issue_price_usd - price) > 1e-6);
   return (
     <Card className="live-price-card" aria-labelledby="live-h">
-      <CardHead id="live-h" title={t('live_price_label')} level={3} />
+      <CardHead id="live-h" title={t('live_price_speed', { speed: speedLabel })} level={3} />
       <div className={`price-xl live-price${flash ? ` ${flash}` : ''}`} id="live-price" aria-live="polite">${f.price(price)}</div>
       <div className="live-meta">
         <Badge tone={act.tone}>{`${act.icon} ${act.label}`}</Badge>
         <span className="small"><strong className="text-gain">{f.bpsToPct(quote.implied_gross_yield_bps)}</strong> {t('live_upside')}</span>
       </div>
+      {differs ? <p className="muted small">{t('live_pool_terms', { speed: f.SPEED_META[published.payout_speed]?.label ?? published.payout_speed, price: f.price(published.final_issue_price_usd) })}</p> : null}
     </Card>
   );
 }
