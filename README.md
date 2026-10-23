@@ -131,13 +131,13 @@ docs/         Current references, showcase assets, and human acceptance
 | Follow the fund rules | [Contracts and funding lifecycle](docs/contracts.md) |
 | Run and maintain it | [Configuration, backup, and operations](docs/operations.md) |
 | Inspect the inputs | [Research data and optional models](docs/data-sources.md) |
-| Complete the remaining acceptance | [Human wallet acceptance](docs/acceptance.md) |
+| Human wallet acceptance result | [Human wallet acceptance](docs/acceptance.md) |
 
 Supporting documents under `docs/` are currently written in Chinese.
 
 ## Research scope and delivery
 
-> **Current delivery:** v2 testnet deployment, all three funding paths, late recovery, ledger reconciliation, and local container recovery have been verified. **Human wallet acceptance remains pending** and is the only remaining delivery task.
+> **Current delivery:** v2 testnet deployment, all three funding paths, late recovery, ledger reconciliation, and local container recovery have been verified. **Human wallet acceptance was completed on 2026-10-23** (normal repayment and failed-raise refund on new testnet pools #26 and #27).
 
 Contracts constrain registered assets, authorizations, and test tokens deposited into them. Material hashes do not prove real goods or legal claims; duplicate financing outside the registry domain is not automatically prevented. Research addresses do not represent independent organizations. Test tokens are not real dollars, and shares are non-transferable.
 
