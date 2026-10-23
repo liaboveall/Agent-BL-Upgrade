@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp, useLang } from '../../state/hooks.js';
+import { t } from '../../lib/i18n.js';
+import { setView } from '../../state/controller.js';
 import { appStore } from '../../state/app-store.js';
 import { connectWallet, connectedAddress, currentWalletSession } from '../../lib/web3.js';
 import { controlledRequest, controlledIntentOptions, acknowledgeControlledTerms, subscribeControlled, claimControlled, refundControlled } from '../../lib/controlled.js';
@@ -7,6 +9,8 @@ import { verifyReadableTerms } from '../../lib/financing-disclosure.js';
 import { ReadableTerms } from './ReadableTerms.jsx';
 import { RoleWorkspace } from './RoleWorkspace.jsx';
 
+// A pool the chain returned without a date shows a dash; it must not throw and take the whole panel down.
+const isoTime = (v) => { const ms = v == null ? NaN : Number(v) * 1000; return Number.isFinite(ms) ? new Date(ms).toISOString() : '—'; };
 const amount = (v) => v == null ? '—' : `${BigInt(v) / 1000000n}.${(BigInt(v) % 1000000n).toString().padStart(6, '0')}`;
 export function ControlledFinancePanel({ primary = false }) {
   const zh = useLang() === 'zh', demo = useApp((s) => s.demoMode), generation = useApp((s) => s.modeGeneration);
@@ -190,13 +194,22 @@ export function ControlledFinancePanel({ primary = false }) {
         </div>
       </div>
       {loading && <p className="finance-loading" role="status">{zh ? '正在读取链上快照与持仓…' : 'Reading chain snapshot and positions…'}</p>}
-      {!status?.active ? (!loading && <p role="status">{zh ? '当前未连接可核验的受控融资实例。' : 'No verified controlled financing instance is connected.'}</p>) : <>
+      {!status?.active ? (!loading && <div className="finance-empty" role="status">
+        <p><strong>{t('finance_empty_title')}</strong><br />{t('finance_empty_body')}</p>
+        <div className="finance-paths">
+          {[['market', 'finance_path_market'], ['mint', 'finance_path_mint'], ['agent', 'finance_path_agent']].map(([view, key]) => (
+            <button key={view} type="button" className="finance-path" onClick={() => setView(view)}>
+              <strong>{t(key)}</strong><span>{t(`${key}_hint`)}</span>
+            </button>
+          ))}
+        </div>
+      </div>) : <>
         <div className="finance-overview" aria-label={zh ? '当前融资概览' : 'Current financing overview'}>
           <div><span>{zh ? '资金池总数' : 'Funding pools'}</span><strong>{listing?.total_pools ?? '—'}</strong><small>{zh ? '当前协议实例' : 'In this protocol instance'}</small></div>
           <div><span>{zh ? '当前浏览' : 'Showing'}</span><strong>{!listing ? '—' : !listing.total_pools ? '0' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`}</strong><small>{zh ? '固定区块快照' : 'One consistent snapshot'}</small></div>
           <div><span>{zh ? '操作模式' : 'Execution mode'}</span><strong className="finance-mode">{demo ? 'Demo' : 'Live'}</strong><small>{demo ? (zh ? '只读浏览 · 无资金操作' : 'Read only · no fund actions') : (zh ? '测试网 · 钱包逐次确认' : 'Testnet · wallet approvals')}</small></div>
         </div>
-        <div className="role-entry"><div className="finance-role-callout"><div><strong>{zh ? '融资方与审查人' : 'Borrowers and reviewers'}</strong><p>{zh ? '管理单证、材料审核与融资流程。' : 'Manage documents, reviews, and financing responsibilities.'}</p></div><button type="button" aria-label={zh ? '融资方与审查人：角色待办与操作' : 'Borrowers and reviewers: responsibilities and actions'} aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')} <span aria-hidden="true">{rolesOpen ? '−' : '↗'}</span></button></div><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>
+        <div className="role-entry"><div className="finance-role-callout"><div><strong>{zh ? '融资方与审查人' : 'Borrowers and reviewers'}</strong><p>{zh ? '管理单证、材料审核与融资流程。' : 'Manage documents, reviews, and financing responsibilities.'}</p></div><button type="button" aria-label={zh ? '融资方与审查人：角色待办与操作' : 'Borrowers and reviewers: responsibilities and actions'} aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')} <span aria-hidden="true">{rolesOpen ? '−' : '↓'}</span></button></div><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>
         <div className="finance-directory-toolbar">
           <div><h2>{zh ? '浏览资金池' : 'Explore funding pools'}</h2><p>{zh ? '查看状态、资金流转与每个池的完整条款。' : 'Review each pool’s status, cash movements, and terms.'}</p></div>
           <form className="finance-pool-lookup" onSubmit={(event) => { event.preventDefault(); if (!busy && /^[1-9]\d{0,8}$/u.test(lookup)) { setReview(null); setPage({ from: Number(lookup), pool_id: Number(lookup) }); } }}>
@@ -213,7 +226,7 @@ export function ControlledFinancePanel({ primary = false }) {
           <div className="finance-detail-head"><h2>{zh ? '资金池' : 'Funding pool'} #{offer.pool_id} · {offerLabel(offer)}</h2><button type="button" onClick={() => { setSelectedPool(null); detailOpener.current?.focus(); }}>{zh ? '关闭详情' : 'Close details'}</button></div>
           <p>{blockedReason(offer)}</p>
           <dl><div><dt>{zh ? '资产与责任' : 'Asset and responsibility'}</dt><dd>{zh ? '以完整公开条款中的货物、路线和责任主体为准；哈希不证明真实货权。' : 'Read the cargo, route and responsible parties in the full public terms. A hash does not prove real title.'}</dd></div>
-            <div><dt>{zh ? '募集 / 放款截止 / 到期' : 'Subscription / disbursement deadline / maturity'}</dt><dd>{[offer.subscription_deadline, offer.disbursement_deadline, offer.maturity].map((v) => v ? new Date(Number(v) * 1000).toISOString() : '—').join(' / ')}</dd></div>
+            <div><dt>{zh ? '募集 / 放款截止 / 到期' : 'Subscription / disbursement deadline / maturity'}</dt><dd>{[offer.subscription_deadline, offer.disbursement_deadline, offer.maturity].map(isoTime).join(' / ')}</dd></div>
             <div><dt>{zh ? '进度' : 'Progress'}</dt><dd>{offer.subscribed} / {offer.shares} {zh ? '份；实收与回款见上表。' : 'shares; actual cash amounts appear above.'}</dd></div>
             <div><dt>{zh ? '退出责任' : 'Cash exit'}</dt><dd>{zh ? '出资人自行退款或领取；融资方实际回款。处置与异议按已签条款执行。' : 'Investors refund or claim for themselves; the borrower sends actual repayments. Resolution and disputes follow the signed terms.'}</dd></div></dl>
           <p>{zh ? '目标兑付不是预测收益；可能损失本金。公开条款在每次钱包授权前独立核验。' : 'Target redemption is not a return forecast; principal may be lost. Full terms are independently checked before wallet authorization.'}</p>
@@ -225,9 +238,9 @@ export function ControlledFinancePanel({ primary = false }) {
           {publicTerms?.pool_id === offer.pool_id && <ReadableTerms pack={publicTerms.pack} zh={zh} />}
         </section>)}
         <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份价格 / 兑付' : 'Price / redemption per share'}</th><th>{zh ? '募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
-          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{new Date(Number(offer.maturity) * 1000).toISOString().slice(0, 10)}</time></td>
+          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{isoTime(offer.maturity).slice(0, 10)}</time></td>
             <td>{amount(offer.issue_price_atomic)} / {amount(offer.redemption_per_share_atomic)} TEST_USDC</td><td>{amount(offer.raised_atomic)} / {amount(offer.disbursed_atomic)} / {amount(offer.recovered_atomic)}</td>
-            <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '融资详情' : 'Financing details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">↗</span></button></td></tr>)}</tbody></table></div>
+            <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '融资详情' : 'Financing details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">{selectedPool === offer.pool_id ? '−' : '↑'}</span></button></td></tr>)}</tbody></table></div>
         {!offers.length && listing && listing.complete !== false && <p>{zh ? '此实例尚无发行。' : 'This instance has no offerings.'}</p>}
         <nav className="finance-pagination" aria-label={zh ? '资金池分页与查找' : 'Funding pool pages and lookup'}>
           <span>{zh ? '当前范围' : 'Current range'}: {!listing?.total_pools ? '—' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`} / {listing?.total_pools ?? '—'}</span>

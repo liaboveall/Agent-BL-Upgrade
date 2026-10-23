@@ -46,7 +46,7 @@ export function EvidencePanel() {
     <dl>
       <div><dt>{zh ? '证据包' : 'Evidence package'}</dt><dd>{status ? (zh ? '版本化、加密保存、按权限下载，可离线复算。' : 'Versioned, encrypted, authorized download and offline verification.') : (zh ? '状态待核对' : 'Status pending')}</dd></div>
       <div><dt>{zh ? '模型与估值' : 'Model and valuation'}</dt><dd>{zh ? '研究参数，尚未完成独立业务验收。' : 'Research parameters. Independent business acceptance is pending.'}</dd></div>
-      <div><dt>{zh ? '付款不明' : 'Unknown payment'}</dt><dd>{zh ? '先对账已签授权，勿重复付费。' : 'Reconcile the signed authorization before another payment.'}</dd></div>
+      <div><dt>{zh ? '付款结果不明' : 'Payment outcome unknown'}</dt><dd>{zh ? '先对账已签授权，勿重复付费。' : 'Reconcile the signed authorization before another payment.'}</dd></div>
       <div><dt>{zh ? '链上包含' : 'Chain inclusion'}</dt><dd>{zh ? '包含证明不代表材料真实或仍可获取。' : 'Inclusion does not prove source truth or availability.'}</dd></div>
     </dl>
     <form onSubmit={download}>

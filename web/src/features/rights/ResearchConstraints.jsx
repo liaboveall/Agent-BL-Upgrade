@@ -1,4 +1,5 @@
 import { useLang } from '../../state/hooks.js';
+import { sourceStatusLabel } from '../../lib/source-status.js';
 const money = (v) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
 export function ResearchConstraints({ quote }) {
   const zh = useLang() === 'zh', r = quote.research_feasibility;
@@ -18,6 +19,6 @@ export function ResearchConstraints({ quote }) {
     {quote.data_review_required && <p role="status">{zh ? '待人工接管：数据尚未达到来源要求，融资已暂停。' : 'Human takeover pending: data does not meet source requirements; financing is paused.'}</p>}
     <table><caption>{zh ? '敏感性分析（不是概率预测）' : 'Sensitivity analysis (not probability forecasts)'}</caption><thead><tr><th>{zh ? '情景' : 'Scenario'}</th><th>{zh ? '资方下限 USD' : 'Investor floor USD'}</th><th>{zh ? '共同上限 USD' : 'Common cap USD'}</th><th>{zh ? '结论' : 'Outcome'}</th></tr></thead>
       <tbody>{r.sensitivity.map((row) => <tr key={row.scenario}><td>{labels[row.scenario][zh ? 0 : 1]}</td><td>{money(row.investor_floor_usd)}</td><td>{money(row.total_ceiling_usd)}</td><td>{row.feasible ? (zh ? '研究区间可行' : 'Research interval feasible') : (zh ? '拒绝：无共同区间' : 'Reject: no common interval')}</td></tr>)}</tbody></table>
-    <ul>{Object.entries(quote.field_sources ?? {}).map(([field, source]) => <li key={field}>{fields[field]?.[zh ? 0 : 1] ?? field}: {source.status} · {sourceLabels[source.source]?.[zh ? 0 : 1] ?? source.source}</li>)}</ul>
+    <ul>{Object.entries(quote.field_sources ?? {}).map(([field, source]) => <li key={field}>{fields[field]?.[zh ? 0 : 1] ?? field}: {sourceStatusLabel(source.status, zh)} · {sourceLabels[source.source]?.[zh ? 0 : 1] ?? source.source}</li>)}</ul>
   </div>;
 }

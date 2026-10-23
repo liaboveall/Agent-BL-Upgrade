@@ -1,0 +1,136 @@
+/* Research tools and the controlled-financing layer.
+   Rights, evidence, operations, the financing panel and the role workspace use the same tokens, radii and
+   form controls as the rest of the dashboard: one blue accent, quiet borders, 13px working text. */
+
+/* ---------- the "research tools" disclosure under every page ---------- */
+.research-tools { margin-top: var(--s-6); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
+.research-tools > summary,
+.controlled-panel > details > summary { cursor: pointer; list-style: none; }
+.research-tools > summary::-webkit-details-marker,
+.controlled-panel > details > summary::-webkit-details-marker { display: none; }
+.research-tools > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 16px 20px;
+  border-radius: var(--r-lg); color: var(--text-2); font-size: var(--fs-14); font-weight: 600;
+}
+.research-tools > summary:hover { color: var(--text); }
+.research-tools[open] > summary { border-bottom: 1px solid var(--line); border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.research-tools > summary::after,
+.controlled-panel > details > summary::after {
+  content: ''; flex: none; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translateY(-2px); transition: transform 0.15s ease;
+}
+.research-tools[open] > summary::after,
+.controlled-panel > details[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+.research-tools > aside { width: 100%; max-width: none; margin: 0; padding: 0 20px; color: var(--text-2); }
+.research-tools > aside + aside { border-top: 1px solid var(--line); }
+.research-tools > summary:focus-visible, .controlled-panel > details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* the three operator panels inside it */
+.rights-panel details, .evidence-panel details, .operations-panel details { border: 0; border-radius: 0; background: none; padding: 0; }
+.rights-panel summary, .evidence-panel summary, .operations-panel summary {
+  display: flex; align-items: center; gap: 8px; padding: 14px 0; list-style: none; color: var(--text); font-size: var(--fs-14); font-weight: 600; cursor: pointer;
+}
+.rights-panel summary::-webkit-details-marker, .evidence-panel summary::-webkit-details-marker, .operations-panel summary::-webkit-details-marker { display: none; }
+.rights-panel summary::before, .evidence-panel summary::before, .operations-panel summary::before {
+  content: ''; flex: none; width: 6px; height: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); transition: transform 0.15s ease;
+}
+.rights-panel details[open] > summary::before, .evidence-panel details[open] > summary::before, .operations-panel details[open] > summary::before { transform: rotate(45deg); }
+.rights-panel summary:focus-visible, .evidence-panel summary:focus-visible, .operations-panel summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.rights-panel details[open], .evidence-panel details[open], .operations-panel details[open] { padding-bottom: 16px; }
+.rights-panel details > p, .evidence-panel details > p, .operations-panel details > p { margin: 0 0 var(--s-3); color: var(--muted); font-size: var(--fs-13); }
+
+/* label / value lists */
+.rights-panel dl, .evidence-panel dl, .operations-panel dl { display: grid; gap: 0; margin: 0 0 var(--s-3); }
+.rights-panel dl > div, .evidence-panel dl > div, .operations-panel dl > div {
+  display: grid; grid-template-columns: minmax(120px, 180px) minmax(0, 1fr); gap: var(--s-4); padding: 9px 0; border-top: 1px solid var(--line); font-size: var(--fs-13);
+}
+.rights-panel dt, .evidence-panel dt, .operations-panel dt { color: var(--muted); font-weight: 500; }
+.rights-panel dd, .evidence-panel dd, .operations-panel dd { margin: 0; min-width: 0; color: var(--text); overflow-wrap: anywhere; }
+
+/* shared form look (evidence downloads, review, role workspace, financing inputs) */
+.evidence-panel form { display: grid; gap: var(--s-3); max-width: 560px; margin-top: var(--s-3); }
+.evidence-panel label, .role-workspace label { display: grid; gap: 6px; color: var(--text-2); font-size: var(--fs-13); font-weight: 550; }
+.evidence-panel input, .evidence-panel textarea, .role-workspace input:not([type="checkbox"]):not([type="file"]), .role-workspace select, .role-workspace textarea,
+.controlled-pending input {
+  width: 100%; min-width: 0; min-height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r);
+  background: var(--surface); color: var(--text); font: 400 var(--fs-14)/1.4 var(--font);
+}
+.evidence-panel textarea, .role-workspace textarea { min-height: 84px; padding: 8px 12px; resize: vertical; }
+.role-workspace select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.evidence-panel input:hover, .evidence-panel textarea:hover, .role-workspace input:hover, .role-workspace select:hover, .role-workspace textarea:hover { border-color: var(--faint); }
+.evidence-panel input:focus, .evidence-panel textarea:focus, .role-workspace input:focus, .role-workspace select:focus, .role-workspace textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus); }
+.evidence-panel button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: var(--r);
+  background: var(--surface); color: var(--text); font-size: var(--fs-14); font-weight: 550; box-shadow: var(--shadow-sm); cursor: pointer;
+}
+.evidence-panel button:hover:not(:disabled) { background: var(--surface-2); }
+.evidence-panel button[type="submit"] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.evidence-panel button[type="submit"]:hover:not(:disabled) { background: var(--accent-hover); }
+.evidence-panel button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.evidence-panel button:focus-visible { outline: none; box-shadow: var(--focus); }
+.evidence-review-form { margin-top: var(--s-3); padding: 0 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); }
+.evidence-review-form[open] { padding-bottom: 16px; }
+.evidence-review-form summary { font-size: var(--fs-13); }
+.evidence-review-form label { margin: var(--s-3) 0; }
+.evidence-review-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* ---------- controlled financing ---------- */
+.operations-panel summary:focus-visible { outline-offset: 2px; }
+.controlled-panel { margin: 0 auto 1rem; padding: 0 1.5rem; max-width: 1440px; color: var(--text); }
+.controlled-panel details { padding: 1rem; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.controlled-panel summary { font-weight: 650; }
+.controlled-panel code, .controlled-notice { overflow-wrap: anywhere; }
+.controlled-panel button { padding: .5rem .8rem; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface); color: var(--text-2); cursor: pointer; }
+.controlled-panel button:disabled { opacity: .6; cursor: default; }
+.controlled-panel button:focus-visible, .controlled-panel input:focus-visible, .controlled-panel summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.controlled-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.controlled-shares { display: flex; align-items: center; gap: .8rem; margin: 1rem 0; }
+.controlled-shares input { max-width: 8rem; padding: .5rem; border: 1px solid var(--line-strong); border-radius: var(--r); color: var(--text); background: var(--surface); }
+.controlled-table-wrap { overflow-x: auto; }
+.controlled-panel table { width: 100%; border-collapse: collapse; }
+.controlled-panel th, .controlled-panel td { text-align: left; padding: .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.controlled-position, .controlled-confirm { padding: 1rem; margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--r-lg); }
+.controlled-position button + button, .controlled-confirm button + button { margin-left: .6rem; }
+.controlled-pending { padding: 1rem 0; overflow-wrap: anywhere; }
+.controlled-pending input { display: block; max-width: 100%; width: 34rem; margin-top: 6px; }
+
+/* ---------- readable terms ---------- */
+.readable-terms { display: grid; gap: var(--s-3); min-width: 0; overflow-wrap: anywhere; color: var(--text-2); font-size: var(--fs-13); line-height: 1.7; }
+.readable-terms h3 { color: var(--text); font-size: var(--fs-16); }
+.readable-terms p, .readable-terms ul { margin: 0; }
+.readable-terms dl { display: grid; margin: 0; }
+.readable-terms dl > div, .controlled-confirm dl > div, .role-workspace dl > div {
+  display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 3fr); gap: var(--s-3); padding: 7px 0; border-top: 1px solid var(--line);
+}
+.readable-terms dd, .controlled-confirm dd, .role-workspace dd { margin: 0; min-width: 0; color: var(--text); }
+.readable-terms dt, .controlled-confirm dt, .role-workspace dt { color: var(--muted); font-weight: 550; }
+.readable-terms code, .controlled-confirm code { font-size: var(--fs-12); }
+.readable-terms ul { display: grid; gap: 2px; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-12); line-height: 1.6; }
+.controlled-confirm dl { display: grid; margin: var(--s-3) 0; }
+.controlled-confirm h4 { margin-bottom: var(--s-2); font-size: var(--fs-16); }
+
+/* ---------- research pricing feasibility (pricing page) ---------- */
+.research-constraints { display: grid; gap: var(--s-3); margin-top: var(--s-5); padding-top: var(--s-5); border-top: 1px solid var(--line); overflow-x: auto; }
+.research-constraints h3 { font-size: var(--fs-16); }
+.research-constraints p { margin: 0; color: var(--text-2); font-size: var(--fs-13); line-height: 1.65; }
+.research-constraints table { width: 100%; border-collapse: collapse; font-size: var(--fs-13); font-variant-numeric: tabular-nums; }
+.research-constraints caption { padding-bottom: 8px; color: var(--text-2); font-size: var(--fs-13); font-weight: 600; text-align: left; caption-side: top; }
+.research-constraints th { padding: 8px 12px; background: var(--surface-2); color: var(--muted); font-size: var(--fs-12); font-weight: 600; text-align: left; }
+.research-constraints td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+.research-constraints ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-12); }
+
+/* ---------- financing role workspace ---------- */
+.role-workspace { display: grid; gap: var(--s-3); margin-block: var(--s-4); padding: var(--s-5); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); color: var(--text-2); font-size: var(--fs-13); }
+.role-workspace h3 { color: var(--text); font-size: var(--fs-16); }
+.role-workspace p { margin: 0; }
+.role-workspace code, .role-workspace dd { overflow-wrap: anywhere; }
+.role-workspace ol { padding-inline-start: 1.5rem; }
+.role-workspace li { margin-block: .5rem; }
+.role-workspace > button, .role-workspace .controlled-confirm button { justify-self: start; }
+.role-workspace label:has(> input[type="checkbox"]), .controlled-confirm label:has(> input[type="checkbox"]) { display: flex; align-items: center; gap: 8px; }
+.role-next { padding: var(--s-3) var(--s-4); border-radius: var(--r); background: var(--accent-soft); color: var(--text); }
+
+@media (max-width: 600px) {
+  .rights-panel dl > div, .evidence-panel dl > div, .operations-panel dl > div { grid-template-columns: 1fr; gap: 4px; }
+}

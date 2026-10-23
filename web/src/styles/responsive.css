@@ -17,9 +17,6 @@
 .funding-detail h2, .positions-heading { font-size: var(--fs-18); }
 .funding-detail dl > div { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr); gap: 12px; padding: 8px 0; }
 .funding-detail dt { font-weight: 600; }
-.research-tools { margin-top: 24px; }
-.research-tools > summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
-.research-tools > aside { width: 100%; padding-inline: 0; }
 .topbar-inner { height: auto; min-height: 60px; flex-wrap: wrap; gap: 12px 16px; padding-block: 12px; }
 .topbar-right { min-width: 0; max-width: 100%; flex-wrap: wrap; }
 .nav { min-width: 0; flex-wrap: wrap; }

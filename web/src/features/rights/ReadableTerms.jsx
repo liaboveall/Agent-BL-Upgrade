@@ -1,3 +1,4 @@
+import { sourceFieldLabel, sourceStatusLabel } from '../../lib/source-status.js';
 const amount = (v) => `${BigInt(v) / 1000000n}.${(BigInt(v) % 1000000n).toString().padStart(6, '0')}`;
 const time = (v) => new Date(Number(v) * 1000).toISOString();
 export function ReadableTerms({ pack, zh }) {
@@ -24,7 +25,7 @@ export function ReadableTerms({ pack, zh }) {
     <p>{zh ? '部分放款：P=实收本金，L=已放款，G=已售份额×目标；目标 T=P+ceil((G−P)×L/P)，待偿=max(T−(P−L+实际回款),0)。闲置本金不计溢价。' : 'Partial draw: P=paid principal, L=drawn cash, G=sold shares × target. Target T=P+ceil((G−P)×L/P); debt=max(T−(P−L+recovery),0). Idle principal earns no premium.'}</p>
     <p>{zh ? '处置通知 1 天，公告后 3 天硬截止。通知窗口内最多一次冻结；换 hash 或参与者不能重开。审核和治理缺席时任何人可在硬截止按现金规则终局；到期未公告也可发起退出。终局后追加材料通过补偿性回款或链外救济处理。' : 'Resolution has one day notice and a three day hard limit. One freeze in the notice window; changing hash or participant cannot restart it. Anyone can finalize cash at the hard limit if review or governance is absent; maturity also permits a public exit. Later evidence uses compensating recovery or external remedies.'}</p>
     <p>{zh ? '累计现金按永久认购槽位逐原子循环分配，领取顺序不改变权益。最多 32 段、1,000,000 份；首次领取烧毁份额后仍保留迟到回款权利。误转不计为池回款，须另行对账。' : 'Cumulative cash is allocated in atomic units to permanent subscription slots, independently of claim order. Up to 32 segments and 1,000,000 shares. Burning shares preserves later recovery rights. Direct transfers require separate reconciliation.'}</p>
-    <ul>{doc.sources.map((source) => <li key={source.field}>{source.field}: {source.status} · {source.reference}</li>)}</ul>
+    <ul>{doc.sources.map((source) => <li key={source.field}>{sourceFieldLabel(source.field, zh)}: {sourceStatusLabel(source.status, zh)} · {source.reference}</li>)}</ul>
     {pack.pool_id != null && <p><a href={`/api/controlled/offerings/${pack.pool_id}/terms?download=1`} download>{zh ? '下载完整条款与复算字段' : 'Download complete terms and verification fields'}</a></p>}
   </div>;
 }
