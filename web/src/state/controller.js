@@ -12,6 +12,7 @@ import * as f from '../lib/format.js';
 import { agent } from '../lib/agent-api.js';
 import { t } from '../lib/i18n.js';
 import { toast } from '../lib/toast.js';
+import { askText } from '../lib/dialogs.js';
 import { copilotQuery, resetCopilotSession } from '../lib/copilot-api.js';
 import { defaultMarketSubscription, marketView, PAUSED_ACTIONS, visibleCases } from '../lib/market.js';
 import { scrollBehavior } from '../lib/accessibility.js';
@@ -47,6 +48,14 @@ export async function refreshEvidence() {
     });
     refreshPortfolio();
   } catch { /* the decision timeline reports runtime errors */ }
+}
+
+// The activity stream replays recent decisions when it connects, and a busy agent emits several in a burst; each one
+// needs the same fresh reference list, so ask once after the burst instead of once per event.
+let evidenceTimer = null;
+function scheduleEvidenceRefresh() {
+  clearTimeout(evidenceTimer);
+  evidenceTimer = setTimeout(() => { evidenceTimer = null; refreshEvidence(); }, 250);
 }
 
 export function clearEvidenceSelection() {
@@ -85,24 +94,33 @@ export async function boot() {
   booted = true;
   const initialView = viewFromHash(window.location.hash);
   if (initialView) set({ view: initialView });
+  // Give the landing entry an address too, so Back from the next page has somewhere to return to.
+  else window.history.replaceState(null, '', `#/${get().view}`);
   wireWindowEvents();
-  await loadDemoRuntimeMode();
-  await refreshNetworks();
-  await reflectChainStatus();
-  await restoreWalletIfSaved();
-  try {
-    set({ cases: await api.getCases(), casesError: null });
-  } catch (error) {
-    set({ casesError: error.message });
-    toast(t('t_load_cases_fail', { msg: error.message }), true);
+  // The runtime mode, the chain configuration and the catalog do not depend on each other: ask for them together.
+  const chain = (async () => {
+    await refreshNetworks();
+    await reflectChainStatus();
+    await restoreWalletIfSaved();
+  })();
+  const catalog = api.getCases().then((cases) => ({ cases }), (error) => ({ error }));
+  const modeLoaded = await loadDemoRuntimeMode();
+  await chain;
+  const loaded = await catalog;
+  if (loaded.error) {
+    set({ casesError: loaded.error.message });
+    toast(t('t_load_cases_fail', { msg: loaded.error.message }), true);
     return;
   }
+  set({ cases: loaded.cases, casesError: null });
   await selectCase(get().cases[0]?.case_id);
-  warmMarketQuotes();
-  refreshEvidence();
-  refreshPortfolio();
+  // Quotes for the other projects are requested by the market page when it is shown. The evidence and the portfolio
+  // were requested with the mode; ask again only when that failed or a saved wallet came back after the first read.
+  if (!modeLoaded) refreshEvidence();
+  if (!modeLoaded || get().wallet) refreshPortfolio();
 }
 
+/** @returns {Promise<boolean>} whether the server answered; the page still starts in Demo when it did not. */
 async function loadDemoRuntimeMode() {
   try {
     const response = await fetch('/api/demo/mode');
@@ -110,8 +128,10 @@ async function loadDemoRuntimeMode() {
     if (!response.ok) throw new Error(data.error || 'Could not load runtime mode');
     set({ demoMode: data.demoMode, liveAvailable: data.liveAvailable, modeGeneration: data.generation });
     resetEvidence();
+    return true;
   } catch {
     set({ demoMode: true, liveAvailable: false });
+    return false;
   }
 }
 
@@ -141,7 +161,7 @@ async function postAdmin(url, body, token) {
 async function postWithAdminToken(url, body) {
   let { response, data } = await postAdmin(url, body, storedAdminToken());
   if (response.status === 401) {
-    const entered = (window.prompt(t('admin_token_prompt')) || '').trim();
+    const entered = (await askText({ title: t('admin_token_title'), label: t('admin_token_prompt'), hint: t('admin_token_hint'), secret: true }) || '').trim();
     if (!entered) throw new Error(t('admin_token_cancelled'));
     ({ response, data } = await postAdmin(url, body, entered));
     rememberAdminToken(response.ok ? entered : '');
@@ -179,7 +199,6 @@ export async function resetDemo() {
     resetEvidence();
     resetCopilotUi();
     await selectCase(get().cases[0]?.case_id);
-    setView('market');
     warmMarketQuotes();
     toast(t('demo_reset_done'));
   } catch (error) {
@@ -193,14 +212,19 @@ export async function resetDemo() {
 
 export const VIEWS = ['finance', 'market', 'mint', 'agent', 'discover'];
 
-export function setView(name) {
+/**
+ * Show a page. `history` says how the address bar follows: 'push' (default) adds an entry so the browser's Back
+ * button returns to the previous page, 'replace' rewrites the current entry (arrow-key tab moves, the first load),
+ * 'none' when the address already changed (Back/Forward, a typed hash).
+ */
+export function setView(name, { history = 'push' } = {}) {
   if (!VIEWS.includes(name)) return;
   set({ view: name });
   // A decision drawer belongs to the Agent console it was opened in.
   if (name !== 'agent') agentStore.set({ openDecisionId: null });
   if (name === 'market') refreshPortfolio();
   if (typeof window !== 'undefined') {
-    if (window.location.hash !== `#/${name}`) window.history.replaceState(null, '', `#/${name}`);
+    if (history !== 'none' && window.location.hash !== `#/${name}`) window.history[history === 'replace' ? 'replaceState' : 'pushState'](null, '', `#/${name}`);
     window.scrollTo({ top: 0, behavior: scrollBehavior() });
   }
 }
@@ -663,7 +687,7 @@ export function subscribeToAgentActivity(caseId, { retry = false } = {}) {
     } else if (data.type === 'activity') {
       agentLog(`Agent: ${actionLabel(data.action)}${data.details?.price ? ` → $${data.details.price}` : ''}`, 'accent');
       set((state) => ({ agentActivities: [{ ...data, id: data.id ?? `ui-${Date.now()}`, timestamp: data.timestamp ?? new Date().toISOString() }, ...state.agentActivities].slice(0, 100) }));
-      if (data.decision_id) refreshEvidence();
+      if (data.decision_id) scheduleEvidenceRefresh();
       // Decision records carry the agent's decision verb in details.decision_action.
       const decisionAction = data.details?.decision_action ?? data.action;
       if (NOTIFY_DECISION_ACTIONS.has(decisionAction)) toast(t('agent_decision_toast', { action: actionLabel(decisionAction) }));
@@ -714,6 +738,8 @@ function wireWindowEvents() {
   });
   window.addEventListener('hashchange', () => {
     const view = viewFromHash(window.location.hash);
-    if (view && view !== get().view) setView(view);
+    // Back to the entry before the first page load has no hash: that is the home page.
+    if (!view) setView('finance', { history: 'replace' });
+    else if (view !== get().view) setView(view, { history: 'none' });
   });
 }

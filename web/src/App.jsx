@@ -4,6 +4,8 @@ import { t } from './lib/i18n.js';
 import { TopBar } from './shell/TopBar.jsx';
 import { ModeStrip } from './shell/ModeStrip.jsx';
 import { Toast } from './components/Toast.jsx';
+import { AppDialogs } from './components/AppDialogs.jsx';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import { MarketPage } from './pages/market/MarketPage.jsx';
 import { MintPage } from './pages/mint/MintPage.jsx';
 import { AgentPage } from './pages/agent/AgentPage.jsx';
@@ -54,16 +56,18 @@ export function App() {
           const Page = PAGES[name];
           return (
             <section key={name} id={`view-${name}`} role="tabpanel" aria-labelledby={`tab-${name}`} hidden={view !== name} className="view">
-              {view === name ? <Page /> : null}
+              {view === name ? <ErrorBoundary key={name}><Page /></ErrorBoundary> : null}
             </section>
           );
         })}
-        <ControlledFinancePanel primary={view === 'finance'} />
-        <details className="research-tools" open={view !== 'finance' || undefined}>
+        <ErrorBoundary><ControlledFinancePanel primary={view === 'finance'} /></ErrorBoundary>
+        <details className="research-tools">
           <summary>{lang === 'zh' ? '研究工具、证据与运行状态' : 'Research tools, evidence and operations'}</summary>
-          <RightsPanel />
-          <EvidencePanel />
-          <OperationsPanel />
+          <ErrorBoundary>
+            <RightsPanel />
+            <EvidencePanel />
+            <OperationsPanel />
+          </ErrorBoundary>
         </details>
       </main>
       <footer className="page-foot">
@@ -72,6 +76,7 @@ export function App() {
       </footer>
       <DealDialog />
       <CopilotLauncher />
+      <AppDialogs />
       <Toast />
     </div>
   );

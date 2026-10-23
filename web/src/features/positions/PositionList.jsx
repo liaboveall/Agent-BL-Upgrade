@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { t } from '../../lib/i18n.js';
 import { claimPosition } from '../../lib/web3.js';
+import { askConfirm } from '../../lib/dialogs.js';
 import { useApp } from '../../state/hooks.js';
 import { getAppState } from '../../state/app-store.js';
 import { Button } from '../../components/ui.jsx';
@@ -15,7 +16,7 @@ export function PositionList({ positions = [], onRefresh = () => {} }) {
   const demoMode = useApp((state) => state.demoMode);
   const [busy, setBusy] = useState(null), [message, setMessage] = useState(''), [receipt, setReceipt] = useState(null);
   const claim = async (position) => {
-    if (busy || !window.confirm(t('position_claim_confirm'))) return;
+    if (busy || !await askConfirm({ title: t('position_claim'), body: t('position_claim_confirm'), confirmLabel: t('position_claim') })) return;
     const wallet = getAppState().wallet?.address, generation = getAppState().modeGeneration;
     setBusy(position.position_id); setMessage(''); setReceipt(null);
     try {

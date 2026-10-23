@@ -8,7 +8,8 @@ const NAV_KEYS = { finance: 'nav_finance', market: 'nav_market', mint: 'nav_mint
 
 export function TopBar() {
   const view = useApp((state) => state.view);
-  const { onKeyDown, choiceProps } = useRovingKeys(VIEWS, view, setView);
+  // Arrow keys move the selection without piling up history entries; a click is a real navigation.
+  const { onKeyDown, choiceProps } = useRovingKeys(VIEWS, view, (name) => setView(name, { history: 'replace' }));
   return (
     <header className="topbar">
       <div className="topbar-inner">

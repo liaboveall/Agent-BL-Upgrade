@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useLang } from '../../state/hooks.js';
 
 export function OperationsPanel() {
-  const zh = useLang() === 'zh', [state, setState] = useState(null);
+  const zh = useLang() === 'zh', [state, setState] = useState(null), [open, setOpen] = useState(false);
+  // Readiness is only asked for while the panel is open: a closed panel should not poll the server (or log a 503) on every page.
   useEffect(() => {
+    if (!open) return undefined;
     const abort = new AbortController();
     const poll = async () => {
       try {
@@ -14,9 +16,9 @@ export function OperationsPanel() {
     };
     poll(); const timer = setInterval(poll, 15000);
     return () => { abort.abort(); clearInterval(timer); };
-  }, []);
+  }, [open]);
   return <aside className="operations-panel" aria-label={zh ? '服务与资金操作' : 'Service and funding operations'}>
-    <details>
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>{zh ? '服务状态与操作恢复' : 'Service status and recovery'}</summary>
       <p role="status">{state?.ok ? (zh ? '运行检查正常。每笔资金操作仍以钱包及链上确认结果为准。' : 'Operating checks are healthy. Funding actions still require wallet and chain confirmation.')
         : state ? (zh ? '运行状态尚未确认；新增操作须等待检查恢复，已有记录可继续核对。' : 'Operational readiness is unconfirmed. New intake awaits recovery; existing records remain available for reconciliation.')

@@ -7,6 +7,7 @@ import { t } from '../../lib/i18n.js';
 import { agent } from '../../lib/agent-api.js';
 import { actionLabel, formatDateTime, usd } from '../../lib/agent-format.js';
 import { toast } from '../../lib/toast.js';
+import { askText } from '../../lib/dialogs.js';
 import { Badge, Button, Card, CardHead } from '../../components/ui.jsx';
 import { agentStore, openDecision, refresh } from './agent-store.js';
 import { StatusBadge } from './badges.jsx';
@@ -69,8 +70,8 @@ export function ApprovalControls({ approval, decision }) {
             onClick={() => guarded(() => agent.approve(approval.approval_id), 'ac_approved_toast')}>
             {t('ac_approve')}
           </Button>
-          <Button variant="ghost" data-focus-key={`reject:${approval.approval_id}`} onClick={() => {
-            const note = window.prompt(t('ac_reject_reason'));
+          <Button variant="ghost" data-focus-key={`reject:${approval.approval_id}`} onClick={async () => {
+            const note = await askText({ title: t('ac_reject'), label: t('ac_reject_reason'), multiline: true, optional: true, confirmLabel: t('ac_reject') });
             if (note === null) return;
             guarded(() => agent.reject(approval.approval_id, note.trim() || undefined), 'ac_rejected_toast');
           }}>{t('ac_reject')}</Button>

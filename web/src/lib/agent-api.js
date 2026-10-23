@@ -3,6 +3,7 @@
 // runtime-mode switch uses) and is asked for once when the server answers 401.
 
 import { t } from './i18n.js';
+import { askText } from './dialogs.js';
 
 const ADMIN_TOKEN_KEY = 'agentbl.adminToken';
 
@@ -51,7 +52,7 @@ async function send(path, { method = 'GET', body, token } = {}) {
 export async function agentRequest(path, options = {}) {
   let { response, data } = await send(path, { ...options, token: storedToken() });
   if (response.status === 401 && data?.code === 'admin_token_required') {
-    const entered = (window.prompt(t('ac_token_prompt')) || '').trim();
+    const entered = (await askText({ title: t('admin_token_title'), label: t('ac_token_prompt'), hint: t('admin_token_hint'), secret: true }) || '').trim();
     if (!entered) throw new AgentApiError(t('ac_token_cancelled'), { status: 401, code: 'admin_token_required' });
     ({ response, data } = await send(path, { ...options, token: entered }));
     rememberToken(response.ok ? entered : '');
