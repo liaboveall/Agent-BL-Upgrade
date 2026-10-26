@@ -28,6 +28,8 @@
 
 Solidity 0.8.24、Paris、viaIR、optimizer 200 runs，依赖由锁文件固定；标准 EVM runtime 24,576 bytes 和 initcode 49,152 bytes 上限保持有效。
 
+Hardhat 依赖安装使用 `npm --prefix hardhat ci`。当前保留 Zod 4.6.7 安全修复，并由 `postinstall` 对 `hardhat-zod-utils` 3.0.8 应用受版本校验的兼容补丁，将错误字段读取改为 Zod 3/4 共用的 `issues`；上游兼容后可移除此补丁。跳过安装脚本时需手动运行 `npm --prefix hardhat run postinstall`。合约测试同时验证无效配置能显示具体字段错误。
+
 当前控制版本为 2，Rights 签名域为 v2。旧 v1 的 ABI/runtime 位于 `scripts/config/rights-v1-artifacts.json`，保留读取及退出，源码整理不会升级旧合约。新 Registry 共用原 Hub 和治理，继续保留历史占用；不同 Pool 使用独立账本，不能复用旧交易检查点。
 
 `npm run rights:plan` 与 `npm run rights:candidate` 生成无签名计划；`npm run testnet -- status n5-v2-20261019` 查询当前部署记录。部署、激活和资金执行需要显式 `--execute`、干净提交及同提交 CI 收据。已存在实例只能沿原 journal 恢复，不能用新实例 ID 绕过原交易。

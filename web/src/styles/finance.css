@@ -21,6 +21,8 @@
 .finance-empty p { margin: 0; line-height: 1.7; }
 .finance-empty p strong { color: var(--text); font-size: 15px; }
 .finance-paths { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+/* Three guide cards side by side leave ~95px per column on a phone; stack them. */
+@media (max-width: 767px) { .finance-paths { grid-template-columns: 1fr; } }
 .controlled-panel button.finance-path { display: grid; gap: 4px; align-content: start; min-height: 0; padding: 16px 18px; border-color: var(--line); border-radius: 10px; background: var(--surface); text-align: left; }
 .controlled-panel button.finance-path strong { color: var(--accent); font-size: 14px; }
 .controlled-panel button.finance-path span { color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.6; }

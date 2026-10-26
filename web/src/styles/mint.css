@@ -90,6 +90,8 @@
   background: var(--surface-2); color: var(--muted); text-align: center;
 }
 .dropzone p:first-of-type { color: var(--text-2); font-weight: 550; }
+/* The inline "click to browse files" control needs a finger-sized hit area, not a 19px text line. */
+.dropzone .link-btn { display: inline-block; min-height: 32px; padding: 4px 6px; margin: -4px -2px; font-weight: 600; }
 .dropzone.is-dragging { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .jobs { display: grid; gap: var(--s-3); }
 .job { display: grid; gap: var(--s-2); padding: var(--s-4); border: 1px solid var(--line); border-radius: var(--r); }

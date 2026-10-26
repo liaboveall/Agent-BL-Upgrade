@@ -8,6 +8,7 @@
     "node": ">=22.13"
   },
   "scripts": {
+    "postinstall": "node scripts/patch-zod-compat.mjs",
     "compile": "hardhat build",
     "test": "hardhat test"
   },
@@ -24,5 +25,8 @@
   },
   "allowScripts": {
     "esbuild": false
+  },
+  "overrides": {
+    "zod": "^4.6.7"
   }
 }

@@ -789,7 +789,7 @@ async function routeRequest(request, response, url) {
     return;
   }
 
-  // ---- 脱敏数据 API ----
+  // ---- Desensitized data API ----
 
   if (method === 'GET' && pathname === '/api/desensitization/spot-purchase') {
     const data = await loadSpotPurchase();

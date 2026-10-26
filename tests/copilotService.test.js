@@ -31,6 +31,56 @@ test('Copilot service: multiple turns preserve constraints and return current ev
   assert.equal(reset.recommendations.length, 0);
 });
 
+test('Copilot service: introductions after a search return no assets or actions and preserve saved preferences', async () => {
+  for (const locale of ['zh', 'en']) {
+    let calls = 0;
+    const runtime = service({ llmConfigured: () => true, chatFn: async () => { calls += 1; throw new Error('Offline model'); } });
+    const context = await runtime.create({ locale });
+    const sessionId = context.session_id;
+    const first = await runtime.query({ message: 'low risk copper, budget USD 1000' }, { sessionId });
+    const before = calls;
+    for (const message of ['who are you', '你好', 'hello, what can you do?']) {
+      const result = await runtime.query({ message }, { sessionId });
+      assert.equal(result.intent, 'OUT_OF_SCOPE', message);
+      assert.deepEqual(result.recommendations, []);
+      assert.equal(result.action_required, undefined);
+      assert.deepEqual(result.context.constraints, first.context.constraints);
+      assert.match(result.narrative, /AgentBL.*Copilot/u);
+      assert.equal(calls, before, 'Neither intent nor narrative generation calls a model for an introduction');
+    }
+    assert.equal((await runtime.get(sessionId)).history.length, 4);
+  }
+});
+
+test('Copilot service: greeted free-text preferences work in initial and follow-up turns', async () => {
+  const extractionInputs = [];
+  const runtime = service({
+    getPools: async () => [pool('S', { commodity: 'Soybean', risk: 'LOW' })],
+    llmConfigured: () => true,
+    chatFn: async (request) => {
+      const input = JSON.parse(request.messages[1].content);
+      if (!Object.hasOwn(input, 'user_text')) return { content: 'These assets fit the saved preferences.' };
+      extractionInputs.push(input);
+      return { content: JSON.stringify({ intent: extractionInputs.length === 1 ? 'TARGETED_SEARCH' : 'REFINE',
+        constraints_delta: extractionInputs.length === 1 ? { commodities_include: ['soybean'] } : { risk_max: 'LOW' }, confidence: 0.9 }) };
+    }
+  });
+  const context = await runtime.create({ locale: 'en' });
+  const sessionId = context.session_id;
+  const first = await runtime.query({ message: 'hello, grain assets please' }, { sessionId });
+  assert.equal(first.intent, 'TARGETED_SEARCH');
+  assert.equal(first.intent_mode, 'llm');
+  assert.deepEqual(first.recommendations.map((item) => item.pool_id), ['S']);
+  const next = await runtime.query({ message: '您好，给我适合新手的项目' }, { sessionId });
+  assert.equal(next.intent, 'REFINE');
+  assert.equal(next.intent_mode, 'llm');
+  assert.deepEqual(next.recommendations.map((item) => item.pool_id), ['S']);
+  assert.deepEqual(next.context.constraints.commodities_include, ['soybean']);
+  assert.equal(next.context.constraints.risk_max, 'LOW');
+  assert.equal(extractionInputs.length, 2);
+  assert.deepEqual(extractionInputs[1].previous_constraints.commodities_include, ['soybean']);
+});
+
 test('Copilot service: a decision hold and a changed quote affect the next query, without stale catalogue hints', async () => {
   const pools = [pool('C'), pool('A', { commodity: 'Aluminium' })]; let decisions = [];
   const runtime = service({ getPools: async () => pools, getDecisions: async () => decisions });
@@ -57,7 +107,7 @@ test('Copilot service: compare/explain/action turns do not silently modify persi
   assert.deepEqual(compared.context.constraints.commodities_include, ['copper']);
   const explain = await runtime.query({ message: 'explain', pool_ids: ['C'] }, { sessionId });
   assert.deepEqual(explain.recommendations.map((item) => item.pool_id), ['C']);
-  for (const message of ['subscribe USD 1000', 'buy report']) {
+  for (const message of ['subscribe USD 1000', 'buy report', 'hello, subscribe USD 1000', '你好，购买风险报告']) {
     const result = await runtime.query({ message }, { sessionId });
     assert.equal(result.action_required.executed, false);
     assert.equal(result.action_required.confirmation_required, true);

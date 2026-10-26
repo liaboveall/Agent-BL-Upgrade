@@ -77,10 +77,11 @@
     "ethers": "6.17.0",
     "express": "5.2.1",
     "unpdf": "1.7.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "overrides": {
-    "ws": "8.21.0"
+    "ws": "8.21.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

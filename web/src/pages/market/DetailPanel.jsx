@@ -19,7 +19,7 @@ const DETAIL_STATE = [
   'marketSubscriptionUsd', 'marketSubscribing', 'marketSubscriptionResult', 'demoMode'
 ];
 
-export function DetailPanel({ now, noMatches = false }) {
+export function DetailPanel({ now, noMatches = false, selectionVisible = true }) {
   const state = useAppPick(DETAIL_STATE);
   const entry = state.cases.find((c) => c.case_id === state.caseId);
   const view = entry ? marketView(state, entry) : null;
@@ -35,7 +35,8 @@ export function DetailPanel({ now, noMatches = false }) {
       </div>
     );
   }
-  if (!entry || !quote) {
+  // A language change can replace the results before the selection effect picks a matching project.
+  if (!selectionVisible || !entry || !quote) {
     return <div className="detail-panel card is-loading"><p className="muted">{t('market_detail_loading')}</p></div>;
   }
   const bl = state.caseData?.bill_of_lading ?? entry.case?.bill_of_lading ?? {};

@@ -8,12 +8,12 @@ const rootDir = path.resolve(__dirname, '../..');
 
 const DATA_DIR = path.join(rootDir, 'data/desensitizationData');
 
-// 内存缓存，首次加载后复用
+// In-memory cache, reused after the first load
 const cache = new Map();
 
 /**
- * 从 desensitizationData 子目录加载 data.json
- * @param {string} category - 子目录名 (spotPurchase | spotSale | transport | warehouse)
+ * Load data.json from a desensitizationData subdirectory
+ * @param {string} category - subdirectory name (spotPurchase | spotSale | transport | warehouse)
  * @returns {Promise<Array>}
  */
 async function loadCategory(category) {
@@ -38,35 +38,35 @@ async function loadCategory(category) {
 }
 
 /**
- * 加载现货采购数据
+ * Load spot purchase data
  */
 export function loadSpotPurchase() {
   return loadCategory('spotPurchase');
 }
 
 /**
- * 加载现货销售数据
+ * Load spot sale data
  */
 export function loadSpotSale() {
   return loadCategory('spotSale');
 }
 
 /**
- * 加载运输数据
+ * Load transport data
  */
 export function loadTransport() {
   return loadCategory('transport');
 }
 
 /**
- * 加载仓储数据
+ * Load warehouse data
  */
 export function loadWarehouse() {
   return loadCategory('warehouse');
 }
 
 /**
- * 加载全部四类脱敏数据
+ * Load all four desensitized datasets
  * @returns {Promise<{spotPurchase: Array, spotSale: Array, transport: Array, warehouse: Array}>}
  */
 export async function loadAllDesensitizationData() {
@@ -81,7 +81,7 @@ export async function loadAllDesensitizationData() {
 }
 
 /**
- * 返回脱敏数据统计摘要
+ * Return a summary of the desensitized datasets
  * @returns {Promise<{total: number, categories: Array<{name: string, label: string, count: number}>}>}
  */
 export async function getDesensitizationSummary() {
@@ -100,7 +100,7 @@ export async function getDesensitizationSummary() {
 }
 
 /**
- * 清空缓存（用于测试或热重载场景）
+ * Clear the cache (for tests or hot reload)
  */
 export function clearDesensitizationCache() {
   cache.clear();

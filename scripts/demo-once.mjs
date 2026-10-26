@@ -1,11 +1,11 @@
 /**
- * AgentBL 一键演示脚本
+ * AgentBL one-click demo script
  *
- * 1 分钟内走完整条 AI 定价主线：
- *  案例加载 → AI 估值 → 定价折价 → 投资者认购 → 航运风险 → x402 付费情报
+ * Walks the whole AI pricing storyline in about one minute:
+ *  load case → AI valuation → discounted pricing → investor subscription → voyage risk → x402 paid intel
  *
- * 对标 wohainengren 的 1 分钟闭环节奏。
- * 全程离线可跑，不需要钱包/合约/API Key。
+ * Paced like a one-minute end-to-end pitch.
+ * Runs fully offline: no wallet, contract or API key required.
  *
  * Usage: npm run demo:once
  */
@@ -25,7 +25,7 @@ const API = `http://127.0.0.1:${port}`;
 
 try {
   // ═══════════════════════════════════════════════════════
-  // 第 1 幕：案例选择 (10 秒)
+  // Act 1: case selection (10 s)
   // ═══════════════════════════════════════════════════════
   console.log('┌─ 第 1 幕 ─────────────────────────────────────────────┐');
   console.log('│ 🚢 新加坡港，500 吨铜阴极板即将装船                   │');
@@ -40,7 +40,7 @@ try {
   console.log(`  ✓ 已加载案例: ${copperCase.label} (${copperCase.risk_hint})\n`);
 
   // ═══════════════════════════════════════════════════════
-  // 第 2 幕：AI 定价 (15 秒)
+  // Act 2: AI pricing (15 s)
   // ═══════════════════════════════════════════════════════
   console.log('┌─ 第 2 幕 ─────────────────────────────────────────────┐');
   console.log('│ 🤖 AI 定价与风控 Agent 启动                            │');
@@ -59,7 +59,7 @@ try {
   console.log(`\n  ✓ 推荐到账速度: ${comparison.recommended_payout_speed}\n`);
 
   // ═══════════════════════════════════════════════════════
-  // 第 3 幕：投资 (10 秒)
+  // Act 3: investment (10 s)
   // ═══════════════════════════════════════════════════════
   console.log('┌─ 第 3 幕 ─────────────────────────────────────────────┐');
   console.log('│ 💰 投资者认购                                          │');
@@ -79,7 +79,7 @@ try {
   console.log(`  ✓ 初始定价: $${offering.initial_quote?.final_issue_price_usd?.toFixed(3)}\n`);
 
   // ═══════════════════════════════════════════════════════
-  // 第 4 幕：航运风险 (15 秒)
+  // Act 4: voyage risk (15 s)
   // ═══════════════════════════════════════════════════════
   console.log('┌─ 第 4 幕 ─────────────────────────────────────────────┐');
   console.log('│ 🌪 航运途中的突发事件                                  │');
@@ -88,7 +88,7 @@ try {
   console.log('│    ③ 必须经过海峡的货 → AI 暂停发行                  │');
   console.log('└──────────────────────────────────────────────────────┘\n');
 
-  // 战争危机案例
+  // War-crisis case
   const warRes = await fetch(`${API}/api/pricing/quote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -102,7 +102,7 @@ try {
   }
 
   // ═══════════════════════════════════════════════════════
-  // 第 5 幕：x402 付费情报 (10 秒)
+  // Act 5: x402 paid intel (10 s)
   // ═══════════════════════════════════════════════════════
   console.log('┌─ 第 5 幕 ─────────────────────────────────────────────┐');
   console.log('│ 💎 x402 付费情报市场                                   │');
@@ -124,7 +124,7 @@ try {
   }
 
   // ═══════════════════════════════════════════════════════
-  // 收束
+  // Wrap-up
   // ═══════════════════════════════════════════════════════
   console.log('╔══════════════════════════════════════════════════════════╗');
   console.log('║  🎯 一句话总结:                                         ║');

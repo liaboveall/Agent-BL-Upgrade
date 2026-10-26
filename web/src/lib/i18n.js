@@ -493,9 +493,11 @@ const DICT = {
 
 	    // category filter
 	    cat_all: '全部',
-	    cat_energy_chemical: '能源化工类',
 	    cat_metal: '金属',
-	    cat_ore: '矿石',
+	    cat_energy: '能源',
+	    cat_ore: '矿石与精矿',
+	    cat_agriculture: '农产品',
+	    cat_other: '其他',
 	    search_ph: '搜索提单或 AI 自然语言筛选…',
 	    ai_parse: 'AI 筛选',
 	    ai_search_title: 'AI 解析自然语言偏好，智能筛选提单',
@@ -1326,9 +1328,11 @@ const DICT = {
 
 	    // category filter
 	    cat_all: 'All',
-	    cat_energy_chemical: 'Energy & Chemical',
-	    cat_metal: 'Metal',
-	    cat_ore: 'Ore',
+	    cat_metal: 'Metals',
+	    cat_energy: 'Energy',
+	    cat_ore: 'Ores & Concentrates',
+	    cat_agriculture: 'Agriculture',
+	    cat_other: 'Other',
 	    search_ph: 'Search eBL or AI natural language filter…',
 	    ai_parse: 'AI Filter',
 	    ai_search_title: 'AI parses natural-language preferences to filter eBLs',
