@@ -3,7 +3,7 @@ import { useApp, useAppPick } from '../../state/hooks.js';
 import { appStore } from '../../state/app-store.js';
 import { t } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
-import { CATEGORIES, MARKET_SORTS, duplicateLabelIds, marketStats, sortMarketCases, visibleCases } from '../../lib/market.js';
+import { MARKET_SORTS, categoryOptions, duplicateLabelIds, marketStats, sortMarketCases, visibleCases } from '../../lib/market.js';
 import { scrollBehavior } from '../../lib/accessibility.js';
 import {
   clearAiSearch, ensureComparisons, replaceSearchResult, resetMarketFilters, runAiSearch, selectCase, setCategory, setMarketSort, setSearchQuery
@@ -108,7 +108,12 @@ const SORT_LABELS = {
   funding_desc: 'market_sort_funding', eta_asc: 'market_sort_eta'
 };
 
+// What the category chips need: every case (which categories exist) and the search (match counts).
+const TOOLBAR_STATE = ['cases', 'searchQuery', 'aiMatchedIds', 'aiRanks'];
+
 function MarketToolbar() {
+  const toolbarState = useAppPick(TOOLBAR_STATE);
+  const options = useMemo(() => categoryOptions(toolbarState), [toolbarState]);
   const category = useApp((s) => s.categoryFilter);
   const sort = useApp((s) => s.marketSort);
   const searchQuery = useApp((s) => s.searchQuery);
@@ -127,9 +132,9 @@ function MarketToolbar() {
   return (
     <div className="toolbar" role="search">
       <div className="chip-group" role="group" aria-label={t('market_category_label')}>
-        {CATEGORIES.map((name) => (
+        {options.map(({ name, count }) => (
           <button key={name} type="button" className={`chip-btn${category === name ? ' is-active' : ''}`} aria-pressed={category === name} onClick={() => setCategory(name)}>
-            {t(`cat_${name}`)}
+            {t(`cat_${name}`)}<span className="chip-count">{count}</span>
           </button>
         ))}
       </div>

@@ -7,6 +7,8 @@
 }
 .chip-btn:hover { border-color: var(--faint); color: var(--text); }
 .chip-btn.is-active { background: var(--text); border-color: var(--text); color: #fff; }
+.chip-count { margin-left: 4px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; font-variant-numeric: tabular-nums; color: var(--muted); background: color-mix(in srgb, var(--text) 8%, transparent); }
+.chip-btn.is-active .chip-count { color: #fff; background: rgba(255, 255, 255, 0.22); }
 .search {
   display: flex; align-items: center; gap: var(--s-2); flex: 1; max-width: 520px; margin-left: auto; height: 38px; padding: 0 4px 0 12px;
   border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface);

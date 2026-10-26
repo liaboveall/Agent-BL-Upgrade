@@ -19,38 +19,82 @@ export function potentialYieldText(quote, unavailable = '--') {
   return f.bpsToPct(quote.implied_gross_yield_bps);
 }
 
-const CATEGORY_MAP = {
-  energy_chemical: ['crude', 'oil', 'refined', 'rubber', 'petroleum', 'chemical'],
-  metal: ['copper', 'iron', 'aluminum', 'aluminium', 'steel'],
-  ore: ['ore', 'concentrate']
-};
-export const CATEGORIES = ['all', 'energy_chemical', 'metal', 'ore'];
+// Display order of the category chips; the toolbar adds 'all' and hides categories with no cases.
+export const CATEGORIES = ['metal', 'energy', 'ore', 'agriculture', 'other'];
 
-export function caseCategories(entry) {
-  const cargo = (entry.case?.bill_of_lading?.cargo || entry.cargo || '').toLowerCase();
-  const cats = [];
-  for (const cat of ['ore', 'metal', 'energy_chemical']) if (CATEGORY_MAP[cat].some((k) => cargo.includes(k))) cats.push(cat);
-  return cats.length ? cats : ['all'];
+// One category per case; the first matching rule wins, so ores and concentrates are not counted as
+// metals and vegetable oils stay agricultural. Cargo lines may be Chinese (e.g. "铝锭 AL99.70").
+const CATEGORY_RULES = [
+  ['ore', /\bores?\b|concentrate|矿/u],
+  ['agriculture', /soy|grain|wheat|corn|maize|rice|sugar|coffee|cocoa|cotton|palm|rubber|大豆|谷物|小麦|玉米|橡胶|棉花|糖/u],
+  ['energy', /crude|petroleum|gasoil|gasoline|diesel|kerosene|jet fuel|\bfuel\b|\boil\b|\blng\b|\blpg\b|\bcoal\b|原油|成品油|柴油|汽油|燃料油|煤/u],
+  ['metal', /copper|alumin|steel|zinc|nickel|\biron\b|\btin\b|\blead\b|metal|cathode|ingot|p1020|adc12|铜|铝|钢|锌|镍|锭/u]
+];
+
+function categoryText(entry) {
+  const data = entry?.case ?? {};
+  return [data.cargo?.commodity, data.bill_of_lading?.cargo, entry?.cargo, entry?.case_id].filter(Boolean).join(' ').toLowerCase();
 }
 
-/** Cases after the category filter, the keyword search and (when active) the Copilot match. */
-export function visibleCases(state) {
+/** The single category a market case belongs to. */
+export function caseCategory(entry) {
+  const text = categoryText(entry);
+  return CATEGORY_RULES.find(([, pattern]) => pattern.test(text))?.[0] ?? 'other';
+}
+
+/** Lower-case search terms, split on whitespace and punctuation. */
+export function searchTerms(query) {
+  return String(query ?? '').toLowerCase().split(/[\s,;/|·→()（）[\]]+/u).map((term) => term.trim()).filter(Boolean);
+}
+
+/** What a case can be found by: its data, the displayed translation and its category name. */
+export function caseSearchFields(entry) {
+  const data = entry?.case ?? {};
+  const bl = data.bill_of_lading ?? {};
+  const fields = [
+    entry?.case_id, entry?.label, entry?.cargo, entry?.route, entry?.risk_hint,
+    data.cargo?.commodity, data.cargo?.grade,
+    bl.cargo, bl.bl_id, bl.bl_no, bl.vessel, bl.vessel_name, bl.voyage_no,
+    bl.port_of_loading, bl.port_of_discharge, bl.shipper, bl.consignee, bl.carrier
+  ].filter((value) => typeof value === 'string' && value.trim());
+  const category = caseCategory(entry);
+  return [...fields, ...fields.map((value) => tData(value)), category, t(`cat_${category}`)];
+}
+
+/** True when every search term appears somewhere in the fields; an empty query matches all. */
+export function matchesSearch(fields, query) {
+  const terms = searchTerms(query);
+  if (!terms.length) return true;
+  const haystack = fields.join(' ').toLowerCase();
+  return terms.every((term) => haystack.includes(term));
+}
+
+/** Cases after the keyword search or (when active) the Copilot match, before the category filter. */
+export function searchedCases(state) {
   let cases = state.cases;
   if (state.aiMatchedIds) {
     cases = cases.filter((c) => state.aiMatchedIds.has(c.case_id));
     cases = [...cases].sort((a, b) => (state.aiRanks?.get(a.case_id) ?? 0) - (state.aiRanks?.get(b.case_id) ?? 0));
-  }
-  if (state.categoryFilter !== 'all') cases = cases.filter((c) => caseCategories(c).includes(state.categoryFilter));
-  // The Copilot already understood the intent, so its match is not narrowed by the raw keywords.
-  if (!state.aiMatchedIds && state.searchQuery.trim()) {
-    const q = state.searchQuery.trim().toLowerCase();
-    cases = cases.filter((c) => {
-      const bl = c.case?.bill_of_lading ?? {};
-      return [c.label, c.cargo, c.route, c.risk_hint, c.case_id, bl.cargo, bl.port_of_loading, bl.port_of_discharge, bl.bl_id, bl.vessel_name]
-        .filter(Boolean).join(' ').toLowerCase().includes(q);
-    });
+  } else if (state.searchQuery.trim()) {
+    // The Copilot already understood the intent, so its match is not narrowed by the raw keywords.
+    cases = cases.filter((c) => matchesSearch(caseSearchFields(c), state.searchQuery));
   }
   return cases;
+}
+
+/** Cases after the category filter, the keyword search and (when active) the Copilot match. */
+export function visibleCases(state) {
+  const cases = searchedCases(state);
+  if (state.categoryFilter === 'all') return cases;
+  return cases.filter((c) => caseCategory(c) === state.categoryFilter);
+}
+
+/** Category chips to show: 'all' plus every category some case belongs to, each with its match count. */
+export function categoryOptions(state) {
+  const present = new Set(state.cases.map(caseCategory));
+  const searched = searchedCases(state);
+  const count = (name) => (name === 'all' ? searched.length : searched.filter((c) => caseCategory(c) === name).length);
+  return ['all', ...CATEGORIES.filter((name) => present.has(name))].map((name) => ({ name, count: count(name) }));
 }
 
 export function cachedComparison(state, caseId) {
