@@ -52,7 +52,9 @@ const routes = [
   ['write code', 'OUT_OF_SCOPE'], ['收益至少100001bps', 'CLARIFY'],
   // Greetings and questions about the assistant describe what it does; a greeting with a preference still searches.
   ['who are you', 'OUT_OF_SCOPE'], ['Hello!', 'OUT_OF_SCOPE'], ['你好', 'OUT_OF_SCOPE'], ['你是谁？', 'OUT_OF_SCOPE'],
-  ['what can you do', 'OUT_OF_SCOPE'], ['hi, low risk copper', 'TARGETED_SEARCH']
+  ['what can you do', 'OUT_OF_SCOPE'], ['hi, low risk copper', 'TARGETED_SEARCH'],
+  // A greeting in front of another intent must not swallow it.
+  ['你好，查看持仓', 'PORTFOLIO'], ['hello, start over', 'RESET'], ['你好，为什么', 'EXPLAIN'], ['hi, compare copper and soybeans', 'COMPARE']
 ];
 for (const [message, intent] of routes) test(`Copilot intent: ${message}`, () => assert.equal(parseIntent(message).intent, intent));
 
