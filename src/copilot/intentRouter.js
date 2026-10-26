@@ -91,6 +91,12 @@ export function parseIntent(text, context = { history: [] }) {
   if (/(?:买|购买)(?:风险|估值|反欺诈|单证)?(?:情报)?报告|buy (?:a )?(?:(?:risk|valuation|fraud|document) )?report|paid report/iu.test(text)) intent = 'ACTION_BUY_REPORT';
   if (/重新开始|清空条件|重置|start over|reset|clear (?:my )?(?:filters|preferences)/iu.test(text)) intent = 'RESET';
   if (/写代码|天气预报|write (?:some )?code|weather forecast/iu.test(text)) intent = 'OUT_OF_SCOPE';
+  // Greetings and questions about the assistant itself get a short description of what it does instead of
+  // a browse result. Only when the message carries no preference ("hi, low-risk copper" still searches).
+  if (!Object.keys(delta).length && !Object.keys(soft).length
+    && /^\s*(?:hi|hello|hey|yo)\b|^\s*(?:你好|您好|嗨|哈喽)|\bwho are you\b|\bwhat are you\b|\bwhat can you do\b|\bhow do you work\b|\bwhat is this\b|^\s*help\s*[?!.]*$|你是谁|你是什么|你能做什么|你会什么|你是做什么的|怎么用你|^\s*帮助\s*$/iu.test(text)) {
+    intent = 'OUT_OF_SCOPE';
+  }
   if (ambiguities.includes('range_requires_clarification')) intent = 'CLARIFY';
   const overrides = intent === 'OVERRIDE' ? Object.keys(delta).filter((key) => !key.endsWith('_exclude')) : [];
   const parsed = turnSchema.safeParse({ intent, constraints_delta: delta, override_dims: overrides, soft_delta: soft, confidence: 1 });

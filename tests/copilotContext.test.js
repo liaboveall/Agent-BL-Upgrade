@@ -49,7 +49,10 @@ const routes = [
   ['browse investments', 'EXPLORATORY_BROWSE'], ['低风险铜', 'TARGETED_SEARCH'], ['actually aluminium', 'OVERRIDE'],
   ['compare copper and soybeans', 'COMPARE'], ['为什么', 'EXPLAIN'], ['show my portfolio', 'PORTFOLIO'],
   ['subscribe USD 1000', 'ACTION_SUBSCRIBE'], ['buy a report', 'ACTION_BUY_REPORT'], ['start over', 'RESET'],
-  ['write code', 'OUT_OF_SCOPE'], ['收益至少100001bps', 'CLARIFY']
+  ['write code', 'OUT_OF_SCOPE'], ['收益至少100001bps', 'CLARIFY'],
+  // Greetings and questions about the assistant describe what it does; a greeting with a preference still searches.
+  ['who are you', 'OUT_OF_SCOPE'], ['Hello!', 'OUT_OF_SCOPE'], ['你好', 'OUT_OF_SCOPE'], ['你是谁？', 'OUT_OF_SCOPE'],
+  ['what can you do', 'OUT_OF_SCOPE'], ['hi, low risk copper', 'TARGETED_SEARCH']
 ];
 for (const [message, intent] of routes) test(`Copilot intent: ${message}`, () => assert.equal(parseIntent(message).intent, intent));
 

@@ -1,7 +1,7 @@
 export function templateNarrative(result, locale) {
   const zh = locale === 'zh';
   if (result.clarifying_question) return result.clarifying_question;
-  if (result.intent === 'OUT_OF_SCOPE') return zh ? '我可以帮助筛选和比较贸易资产、解释风险，以及查看持仓。' : 'I can filter and compare trade assets, explain risks, and show your portfolio.';
+  if (result.intent === 'OUT_OF_SCOPE') return zh ? '我是 AgentBL 的投资者 Copilot：可以按货物、航线、风险和预算筛选和比较贸易资产、解释风险，以及查看持仓。试试“低风险的铜”。' : 'I am the AgentBL investor Copilot: I filter and compare trade assets by commodity, route, risk and budget, explain risks, and show your portfolio. Try "low-risk copper".';
   if (result.intent === 'RESET') return zh ? '偏好已清空。可以从货物、风险或预算重新开始。' : 'Preferences cleared. Start again with a commodity, risk limit or budget.';
   if (result.intent === 'PORTFOLIO') return zh ? '请查看下方持仓，数据来自服务器上的 Demo 记录。' : 'See your portfolio below, from the server’s Demo records.';
   if (result.intent.startsWith('ACTION_')) return zh ? '请核对下方动作卡片。只有点击确认才会执行；认购仅生成份额凭证，没有资金托管或保本承诺。' : 'Review the action card below. Execution requires your confirmation; subscription creates share certificates without custody or a capital guarantee.';
