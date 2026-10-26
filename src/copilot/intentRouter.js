@@ -29,6 +29,14 @@ export const REGION_TERMS = [
 const NUMERIC_KEYS = ['yield_min_bps', 'tenor_days_max', 'ticket_usd', 'financing_max_usd', 'insurance_coverage_min'];
 const negative = (text, at) => /不要|不看|不投|排除|避开|避免|不含|\b(?:not|no|avoid|exclude|without)\b/iu.test(text.slice(Math.max(0, at - 35), at).split(/[，,。.;；]/u).at(-1));
 const add = (delta, key, value) => { delta[key] = [...new Set([...(delta[key] ?? []), value])]; };
+const GREETING = /^(?:(?:hi|hello|hey|yo)\b|你好|您好|嗨|哈喽)[\s,.!?，。！？:：]*/iu;
+const INTRODUCTION = /^(?:(?:please|请问|请告诉我|我想知道|想问一下)[\s,，:：]*)?(?:who are you|what are you|what can you do|how do you work|what is this|help|你是谁|你是什么|你能做什么|你会什么|你是做什么的|怎么用你|帮助)[呢呀吗啊]?\s*[?!.。？！]*$/iu;
+
+function isIntroduction(text) {
+  const content = text.trim();
+  const message = content.replace(GREETING, '');
+  return Boolean(content) && (!message || INTRODUCTION.test(message));
+}
 
 export function commodityOf(text) {
   return COMMODITY_TERMS.find(([, pattern]) => new RegExp(pattern.source, 'iu').test(text))?.[0] ?? 'unknown';
@@ -91,11 +99,10 @@ export function parseIntent(text, context = { history: [] }) {
   if (/(?:买|购买)(?:风险|估值|反欺诈|单证)?(?:情报)?报告|buy (?:a )?(?:(?:risk|valuation|fraud|document) )?report|paid report/iu.test(text)) intent = 'ACTION_BUY_REPORT';
   if (/重新开始|清空条件|重置|start over|reset|clear (?:my )?(?:filters|preferences)/iu.test(text)) intent = 'RESET';
   if (/写代码|天气预报|write (?:some )?code|weather forecast/iu.test(text)) intent = 'OUT_OF_SCOPE';
-  // Greetings and questions about the assistant itself get a short description of what it does instead of
-  // a browse result. Only when nothing else was recognised: a preference ("hi, low-risk copper") or another
-  // intent ("hello, start over", "你好，查看持仓") keeps its own meaning.
-  if (intent === 'EXPLORATORY_BROWSE' && !Object.keys(delta).length && !Object.keys(soft).length
-    && /^\s*(?:hi|hello|hey|yo)\b|^\s*(?:你好|您好|嗨|哈喽)|\bwho are you\b|\bwhat are you\b|\bwhat can you do\b|\bhow do you work\b|\bwhat is this\b|^\s*help\s*[?!.]*$|你是谁|你是什么|你能做什么|你会什么|你是做什么的|怎么用你|^\s*帮助\s*$/iu.test(text)) {
+  // Only a standalone introduction gets this reply. A greeting must preserve business requests
+  // and leave unrecognized prose available for model-based preference extraction.
+  if (['EXPLORATORY_BROWSE', 'REFINE'].includes(intent) && !Object.keys(delta).length && !Object.keys(soft).length
+    && isIntroduction(text)) {
     intent = 'OUT_OF_SCOPE';
   }
   if (ambiguities.includes('range_requires_clarification')) intent = 'CLARIFY';

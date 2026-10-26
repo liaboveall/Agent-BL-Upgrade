@@ -34,6 +34,29 @@ test('Copilot API: create/read/message/delete session lifecycle and privacy', as
   assert.equal((await requestJson(base, 'GET', path)).status, 404);
 });
 
+test('Copilot API: a follow-up introduction streams no asset recommendations and a greeted reset clears filters', async (t) => {
+  const { base } = await setup(t);
+  const created = await requestJson(base, 'POST', '/api/copilot/sessions', { locale: 'en' });
+  const path = `/api/copilot/sessions/${created.data.context.session_id}`;
+  const first = await requestJson(base, 'POST', `${path}/messages`, { message: 'copper, budget USD 1000' });
+  assert.equal(first.data.recommendations[0].pool_id, 'C');
+  const response = await fetch(`${base}${path}/messages`, { method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'text/event-stream' }, body: JSON.stringify({ message: 'hello, who are you?' }) });
+  const events = [];
+  const result = await readCopilotStream(response, (event) => events.push(event));
+  assert.deepEqual(events, ['result', 'narrative', 'done']);
+  assert.equal(result.intent, 'OUT_OF_SCOPE');
+  assert.deepEqual(result.recommendations, []);
+  assert.deepEqual(result.context.constraints, first.data.context.constraints);
+  assert.match(result.narrative, /I am the AgentBL investor Copilot/u);
+  const portfolio = await requestJson(base, 'POST', `${path}/messages`, { message: '你好，查看持仓' });
+  assert.equal(portfolio.data.intent, 'PORTFOLIO');
+  const reset = await requestJson(base, 'POST', `${path}/messages`, { message: '你好，清空条件' });
+  assert.equal(reset.data.intent, 'RESET');
+  assert.deepEqual(reset.data.context.constraints.commodities_include, []);
+  assert.equal(reset.data.context.constraints.ticket_usd, undefined);
+});
+
 test('Copilot API: SSE sends structured results then validated narrative and completion', async (t) => {
   const { base } = await setup(t);
   const response = await fetch(`${base}/api/copilot/query`, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'text/event-stream' }, body: JSON.stringify({ message: '铜' }) });

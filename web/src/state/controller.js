@@ -392,8 +392,8 @@ export function selectSpeed(speed) {
   set({ speed, voyageInjected: false, voyageOffering: null, voyageEvents: [] });
 }
 
-/** After a filter change the selection must stay among the visible cases. */
-function keepSelectionVisible() {
+/** After a filter or search-language change the selection must stay among the visible cases. */
+export function keepSelectionVisible() {
   const visible = visibleCases(get());
   if (visible.length && !visible.some((c) => c.case_id === get().caseId)) selectCase(visible[0].case_id);
 }
@@ -719,7 +719,14 @@ function wireWindowEvents() {
     setView('agent');
     agentStore.set({ openDecisionId: event.detail.decision_id });
   });
-  window.addEventListener('agentbl:selectcase', (event) => { selectCase(event.detail.case_id); setView('market'); });
+  window.addEventListener('agentbl:selectcase', (event) => {
+    const caseId = event.detail?.case_id;
+    if (!get().cases.some((entry) => entry.case_id === caseId)) return;
+    // An explicit Copilot navigation replaces the market search that could hide the requested project.
+    resetMarketFilters();
+    selectCase(caseId);
+    setView('market');
+  });
   window.addEventListener('agentbl:decisionselected', (event) => {
     selectLinkedDecision(event.detail.decision).catch((error) => toast(error.message, true));
   });

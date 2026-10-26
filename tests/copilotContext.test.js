@@ -53,10 +53,43 @@ const routes = [
   // Greetings and questions about the assistant describe what it does; a greeting with a preference still searches.
   ['who are you', 'OUT_OF_SCOPE'], ['Hello!', 'OUT_OF_SCOPE'], ['你好', 'OUT_OF_SCOPE'], ['你是谁？', 'OUT_OF_SCOPE'],
   ['what can you do', 'OUT_OF_SCOPE'], ['hi, low risk copper', 'TARGETED_SEARCH'],
-  // A greeting in front of another intent must not swallow it.
-  ['你好，查看持仓', 'PORTFOLIO'], ['hello, start over', 'RESET'], ['你好，为什么', 'EXPLAIN'], ['hi, compare copper and soybeans', 'COMPARE']
+  ['hello, who are you?', 'OUT_OF_SCOPE'], ['您好，你能做什么？', 'OUT_OF_SCOPE'],
+  ['请问你是谁？', 'OUT_OF_SCOPE'], ['Hi, please, who are you?', 'OUT_OF_SCOPE'], ['您好，请问你能做什么呢？', 'OUT_OF_SCOPE'],
+  ['hi, show my portfolio', 'PORTFOLIO'], ['你好，查看持仓', 'PORTFOLIO'],
+  ['hello, start over', 'RESET'], ['你好，清空条件', 'RESET'],
+  ['hey, buy a report', 'ACTION_BUY_REPORT'], ['您好，购买风险报告', 'ACTION_BUY_REPORT'],
+  ['hello, subscribe', 'ACTION_SUBSCRIBE'], ['你好，解释一下', 'EXPLAIN'],
+  ['你好，为什么', 'EXPLAIN'], ['hi, compare copper and soybeans', 'COMPARE']
 ];
 for (const [message, intent] of routes) test(`Copilot intent: ${message}`, () => assert.equal(parseIntent(message).intent, intent));
+
+test('Copilot: standalone introductions work after a search without calling the model or changing constraints', async () => {
+  const context = turn(fresh(), '低风险铜，预算1000美元');
+  for (const message of ['who are you', '你好', 'what can you do', 'hello, who are you?', '您好，你能做什么？', '您好，请问你能做什么呢？', 'help']) {
+    const parsed = await routeIntent(message, context, { llmConfigured: true, chatFn: async () => assert.fail('An introduction must not call the model') });
+    assert.equal(parsed.intent, 'OUT_OF_SCOPE', message);
+    assert.deepEqual(mergeContext(context, parsed).constraints, context.constraints, message);
+  }
+});
+
+test('Copilot: a greeted reset clears saved preferences and greeted prose still reaches the model', async () => {
+  const context = turn(fresh(), '铜，低风险，预算1000美元');
+  const reset = await routeIntent('你好，清空条件', context);
+  assert.equal(reset.intent, 'RESET');
+  const cleared = mergeContext(context, reset);
+  assert.deepEqual(cleared.constraints.commodities_include, []);
+  assert.equal(cleared.constraints.ticket_usd, undefined);
+  assert.equal(cleared.constraints.risk_max, undefined);
+
+  let calls = 0;
+  const result = await routeIntent('hello, grain assets please', fresh(), { llmConfigured: true, chatFn: async () => {
+    calls += 1;
+    return { content: JSON.stringify({ intent: 'TARGETED_SEARCH', constraints_delta: { commodities_include: ['soybean'] }, confidence: 0.9 }) };
+  } });
+  assert.equal(calls, 1);
+  assert.equal(result.mode, 'llm');
+  assert.deepEqual(result.constraints_delta.commodities_include, ['soybean']);
+});
 
 test('Copilot: Chinese and English commodities, ports, negative terms, units and payout speeds', () => {
   const parsed = parseIntent('medium risk, copper concentrate, exclude crude, avoid Hormuz, Singapore, return >= 8%, within 12 days, invest USD 20k, insurance 110%, fast payout');
