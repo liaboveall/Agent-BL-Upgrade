@@ -1,5 +1,5 @@
 // TRUST-3: Prompt Injection Defense
-// 文档内容视为不可信数据，防止改变工具权限、支付地址、价格和系统规则
+// Document content is untrusted data: it must not change tool permissions, payment addresses, prices or system rules
 
 export const MALICIOUS_TEST_CASES = [
   {
