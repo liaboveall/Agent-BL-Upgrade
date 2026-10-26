@@ -21,12 +21,16 @@ export function CopilotLauncher() {
   const transcript = useRef(null);
   const field = useRef(null);
   const launcher = useRef(null);
+  // The expanded pill covers the bottom of the right-hand column (detail panel, payout speeds) on
+  // desktop, so it introduces itself for a moment and then shrinks to an icon that sits in the page
+  // margin; hover or focus expands it again, and scrolling shrinks it at once.
   const [compact, setCompact] = useState(false);
   useEffect(() => {
-    const onScroll = () => setCompact(window.scrollY > 160);
+    const onScroll = () => { if (window.scrollY > 160) setCompact(true); };
+    const intro = setTimeout(() => setCompact(true), 3500);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => { clearTimeout(intro); window.removeEventListener('scroll', onScroll); };
   }, []);
 
   const update = (id, patch) => setEntries((list) => list.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
