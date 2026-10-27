@@ -24,6 +24,11 @@
 .research-tools > aside { width: 100%; max-width: none; margin: 0; padding: 0 20px; color: var(--text-2); }
 .research-tools > aside + aside { border-top: 1px solid var(--line); }
 .research-tools > summary:focus-visible, .controlled-panel > details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Off the financing page the panel is a footnote: the same quiet accordion as the research tools below it. */
+.controlled-panel.is-secondary > details { border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+.controlled-panel.is-secondary > details > summary,
+.controlled-panel.is-secondary > details:not([open]) > summary { padding: 16px 20px; color: var(--text-2); font-size: var(--fs-14); font-weight: 600; letter-spacing: 0; }
+.controlled-panel.is-secondary > details > summary:hover { color: var(--text); }
 
 /* the three operator panels inside it */
 .rights-panel details, .evidence-panel details, .operations-panel details { border: 0; border-radius: 0; background: none; padding: 0; }
@@ -113,6 +118,11 @@
 /* ---------- research pricing feasibility (pricing page) ---------- */
 .research-constraints { display: grid; gap: var(--s-3); margin-top: var(--s-5); padding-top: var(--s-5); border-top: 1px solid var(--line); overflow-x: auto; }
 .research-constraints h3 { font-size: var(--fs-16); }
+.research-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); margin: 0; }
+.research-figures > div { display: grid; gap: 2px; padding: var(--s-3); border-radius: var(--r); background: var(--surface-2); }
+.research-figures dt { color: var(--muted); font-size: var(--fs-12); }
+.research-figures dd { margin: 0; font-size: var(--fs-14); font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) { .research-figures { grid-template-columns: minmax(0, 1fr); } }
 .research-constraints p { margin: 0; color: var(--text-2); font-size: var(--fs-13); line-height: 1.65; }
 .research-constraints table { width: 100%; border-collapse: collapse; font-size: var(--fs-13); font-variant-numeric: tabular-nums; }
 .research-constraints caption { padding-bottom: 8px; color: var(--text-2); font-size: var(--fs-13); font-weight: 600; text-align: left; caption-side: top; }

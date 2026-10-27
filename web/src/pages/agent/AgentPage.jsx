@@ -39,13 +39,14 @@ export function AgentPage() {
       </div>
       {waiting ? null : <ApprovalsPanel />}
       <div className="agent-layout">
+        {/* The live log reads with the decisions it explains; the side column holds the inputs. */}
         <div className="agent-main">
           <Timeline />
+          <ActivityLog />
         </div>
         <aside className="agent-side">
           {status ? (statusMode === 'live' ? <SettlementIntake /> : <Injector />) : null}
           {statusMode === 'demo' ? <ControlsCard /> : null}
-          <ActivityLog />
         </aside>
       </div>
       <p id="ac-announcement" className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announce}</p>

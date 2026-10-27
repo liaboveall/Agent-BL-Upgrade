@@ -19,7 +19,7 @@
 .tier-option input { position: absolute; opacity: 0; pointer-events: none; }
 .tier-option > span { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface); }
 .tier-option strong { font-size: var(--fs-13); }
-.tier-option small { color: var(--muted); font-size: 11px; }
+.tier-option small { color: var(--muted); font-size: var(--fs-11); }
 .tier-option:hover > span { border-color: var(--faint); }
 .tier-option input:checked + span { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
 .tier-option input:focus-visible + span { box-shadow: var(--focus); }
@@ -106,7 +106,7 @@
 .mystery-container-cargo img { transform: scale(1.12); filter: brightness(0.64) saturate(0.78); transition: transform 0.9s cubic-bezier(0.2, 0.75, 0.2, 1), filter 0.9s ease; }
 .mystery-reveal.is-opening .mystery-container-cargo img { transform: scale(1); filter: brightness(1) saturate(1.05); }
 .mystery-container-door { position: absolute; z-index: 2; top: 0; bottom: 0; width: 50.5%; display: grid; place-items: center; color: #eef2f7; border: 3px solid #94a3b8; background: repeating-linear-gradient(90deg, #334155 0 12px, #475569 12px 17px); transition: transform 0.9s cubic-bezier(0.2, 0.75, 0.2, 1); backface-visibility: hidden; }
-.mystery-container-door span { writing-mode: vertical-rl; font-size: 13px; font-weight: 900; letter-spacing: 0.25em; }
+.mystery-container-door span { writing-mode: vertical-rl; font-size: var(--fs-13); font-weight: 900; letter-spacing: 0.25em; }
 .mystery-container-door.door-left { left: 0; transform-origin: left center; }
 .mystery-container-door.door-right { right: 0; transform-origin: right center; }
 .mystery-reveal.is-opening .door-left { transform: perspective(700px) rotateY(-102deg); }

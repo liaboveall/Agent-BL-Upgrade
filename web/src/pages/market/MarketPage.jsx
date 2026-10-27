@@ -5,6 +5,7 @@ import { t } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import { MARKET_SORTS, categoryOptions, duplicateLabelIds, marketStats, sortMarketCases, visibleCases } from '../../lib/market.js';
 import { scrollBehavior } from '../../lib/accessibility.js';
+import { useStickyFit } from '../../hooks/useStickyFit.js';
 import {
   clearAiSearch, ensureComparisons, keepSelectionVisible, replaceSearchResult, resetMarketFilters, runAiSearch, selectCase, setCategory, setMarketSort, setSearchQuery
 } from '../../state/controller.js';
@@ -27,6 +28,8 @@ export function MarketPage() {
   useLang();
   const now = useNow(60_000);
   const [portfolioOpen, setPortfolioOpen] = useState(false);
+  const aside = useRef(null);
+  useStickyFit(aside);
   // Search includes translated fields, so derive the small catalog on both language and store renders.
   const cases = sortMarketCases(state, visibleCases(state));
   const selectionVisible = cases.some((entry) => entry.case_id === state.caseId);
@@ -98,7 +101,7 @@ export function MarketPage() {
             </Empty>
           )}
         </section>
-        <aside className="market-aside" aria-label={t('a11y_selected_project')}>
+        <aside ref={aside} className="market-aside" aria-label={t('a11y_selected_project')}>
           <DetailPanel now={now} noMatches={!cases.length && state.cases.length > 0} selectionVisible={selectionVisible} />
         </aside>
       </div>

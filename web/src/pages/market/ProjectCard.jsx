@@ -1,11 +1,19 @@
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import {
-  annualYieldText, cargoImage, marketClock, marketFunding, marketView, marketVoyageProgress, registryTag, routeText, shortCargoName, shortRoute
+  annualYieldText, cargoImage, marketClock, marketFunding, marketView, marketVoyageProgress, potentialYieldText, registryTag, routeText, shortCargoName, shortRoute
 } from '../../lib/market.js';
 import { selectCase } from '../../state/controller.js';
 import { Badge, Progress, cx } from '../../components/ui.jsx';
 import { poolStateLabel } from '../../features/copilot/Recommendations.jsx';
+import { scrollBehavior } from '../../lib/accessibility.js';
+
+// Below 960px the detail card follows the whole shelf, so a tap would otherwise change nothing in view.
+const SINGLE_COLUMN = '(max-width: 959px)';
+function revealSelectedDetail() {
+  if (!window.matchMedia?.(SINGLE_COLUMN).matches) return;
+  requestAnimationFrame(() => document.querySelector('.market-aside')?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }));
+}
 
 /** The status chip next to the risk level: historical, an inactive pool, or the quote's pricing action. */
 export function statusMeta(entry, view) {
@@ -32,7 +40,7 @@ export function ProjectCard({ entry, state, now, tagged = false }) {
       className={cx('deal-card', active && 'is-active', paused && 'is-paused', highlighted && 'is-highlighted')}
       data-case={entry.case_id}
       aria-pressed={active}
-      onClick={() => selectCase(entry.case_id)}
+      onClick={() => { selectCase(entry.case_id); revealSelectedDetail(); }}
     >
       <span className="deal-card-head">
         <img className="deal-thumb" src={cargoImage(bl.cargo || entry.cargo || entry.case_id, entry.case_id)} alt="" width="44" height="44" loading="lazy" />
@@ -45,14 +53,18 @@ export function ProjectCard({ entry, state, now, tagged = false }) {
         <Badge tone={f.riskTone(quote?.risk_level)}>{quote ? t('market_risk_badge', { level: f.riskLabel(quote.risk_level) }) : '—'}</Badge>
         {status.tone !== 'ok' ? <Badge tone={status.tone}>{status.label}</Badge> : null}
       </span>
+      {/* Label, value and note are one line each in both columns, so prices line up across a row of cards.
+          The period return leads; the annualized figure of a short tenor is context, not the headline. */}
       <span className="deal-kpis">
         <span className="deal-kpi">
-          <span className="deal-kpi-label">{quote?.payout_speed ? t('market_issue_price_speed', { speed: f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed }) : t('market_issue_price')}</span>
+          <span className="deal-kpi-label">{t('market_issue_price')}</span>
           <span className="deal-kpi-value">{quote ? `$${f.price(quote.final_issue_price_usd)}` : '—'}</span>
+          <span className="deal-kpi-note">{quote?.payout_speed ? t('market_card_speed', { speed: f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed }) : '\u00a0'}</span>
         </span>
         <span className="deal-kpi">
-          <span className="deal-kpi-label">{quote?.tenor_days ? t('market_annual_tenor', { days: quote.tenor_days }) : t('market_upside')}</span>
-          <span className={cx('deal-kpi-value', !paused && quote && 'text-gain')}>{paused ? '--' : annualYieldText(quote)}</span>
+          <span className="deal-kpi-label">{quote?.tenor_days ? t('market_card_upside', { days: quote.tenor_days }) : t('market_card_upside_plain')}</span>
+          <span className={cx('deal-kpi-value', !paused && quote && 'text-gain')}>{paused ? '—' : potentialYieldText(quote, '—')}</span>
+          <span className="deal-kpi-note">{paused || !quote ? '\u00a0' : t('market_card_annual', { pct: annualYieldText(quote, '—') })}</span>
         </span>
       </span>
       <span className="deal-funding">

@@ -17,9 +17,12 @@
 .command code { flex: 1; font-size: var(--fs-12); }
 .command .copy-btn { color: #cbd5e1; }
 
-.agent-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--s-5); align-items: start; }
-.agent-main { min-width: 0; }
-.agent-side { display: grid; gap: var(--s-5); }
+/* Both columns end together: an empty timeline grows to meet the side column instead of leaving a blank. */
+.agent-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--s-5); align-items: stretch; }
+.agent-main { display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
+.agent-main > .ac-timeline { display: flex; flex: 1; flex-direction: column; }
+.ac-timeline > .empty { flex: 1; align-content: center; min-height: 160px; }
+.agent-side { display: grid; align-self: start; gap: var(--s-5); }
 
 .ac-demo, #ac-injector { display: grid; gap: var(--s-4); align-content: start; }
 .ac-demo > .card-head, #ac-injector > .card-head { margin-bottom: 0; }
@@ -42,7 +45,7 @@
 .ac-row-trigger { display: grid; gap: 2px; min-width: 0; }
 .ac-row-trigger > span:first-child { font-weight: 600; overflow-wrap: anywhere; }
 .ac-row-action { display: grid; gap: 2px; min-width: 0; }
-.ac-row-code { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.ac-row-code { color: var(--muted); font-size: var(--fs-11); overflow-wrap: anywhere; }
 .ac-row-open { justify-self: start; padding: 0; border: 0; background: none; color: var(--accent); font-size: var(--fs-13); }
 .ac-row-open:hover { text-decoration: underline; }
 .ac-row-id { display: flex; align-items: center; gap: 2px; color: var(--muted); font-size: var(--fs-12); }
@@ -75,5 +78,5 @@
 .span-row.is-error .span-bar { background: var(--crit); }
 .span-ms { text-align: right; color: var(--muted); }
 .anchor { display: grid; gap: var(--s-2); }
-.json-block { max-height: 260px; overflow: auto; padding: var(--s-3); border-radius: var(--r); background: var(--surface-2); font-size: 11px; }
+.json-block { max-height: 260px; overflow: auto; padding: var(--s-3); border-radius: var(--r); background: var(--surface-2); font-size: var(--fs-11); }
 .replay-result { margin-top: 6px; font-size: var(--fs-13); }

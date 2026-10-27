@@ -33,14 +33,16 @@
   --warn-soft: #fdf1d9;
   --crit: #b42323;
   --crit-soft: #fbe8e8;
+  --crit-line: #f0c3ba;
   --info: #1d5bbf;
   --info-soft: #e8f0fd;
   --gain: #096441;
   --cost: #b42323;
 
   /* type */
-  --font: "Inter", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font: "Inter Variable", "Inter", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --mono: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --fs-11: 11px;
   --fs-12: 12px;
   --fs-13: 13px;
   --fs-14: 14px;
@@ -49,6 +51,7 @@
   --fs-22: 22px;
   --fs-28: 28px;
   --fs-36: 36px;
+  --fs-40: 40px;
 
   /* shape + space */
   --r-sm: 6px;

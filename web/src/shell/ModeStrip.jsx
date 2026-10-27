@@ -12,7 +12,7 @@ export function ModeStrip() {
   const [confirming, setConfirming] = useState(false);
   const confirmButton = useRef(null);
   const resetButton = useRef(null);
-  // Live is a server setting, not something a visitor can turn on: say so instead of offering a control that only fails.
+  // Live is a server setting, not something a visitor can turn on: the control then states that instead of offering a switch.
   const liveUnavailable = demoMode && !liveAvailable;
 
   const refocusReset = useRef(false);
@@ -27,8 +27,8 @@ export function ModeStrip() {
     <section id="demo-banner" className={`mode-strip ${demoMode ? 'is-demo' : 'is-live'}`} aria-live="polite">
       <div className="mode-strip-inner">
         <span className="mode-pill"><span className="mode-dot" aria-hidden="true" />{demoMode ? 'DEMO' : 'LIVE'}</span>
-        <span className="mode-copy">{demoMode ? t('demo_mode_copy') : t('live_mode_copy')}</span>
-        <span className="mode-chain muted">{chainReal ? t('chain_deployed', { network: networkName }) : t('chain_not_deployed')}</span>
+        <span className="mode-copy" title={demoMode ? t('demo_mode_copy') : t('live_mode_copy')}>{demoMode ? t('demo_mode_copy') : t('live_mode_copy')}</span>
+        <span className="mode-chain muted" title={chainReal ? t('chain_deployed', { network: networkName }) : t('chain_not_deployed')}>{chainReal ? t('chain_deployed', { network: networkName }) : t('chain_not_deployed')}</span>
         <span className="mode-actions">
           <button
             id="mode-toggle-btn"
@@ -36,11 +36,10 @@ export function ModeStrip() {
             className="link-btn"
             onClick={toggleRuntimeMode}
             disabled={liveUnavailable}
-            aria-describedby={liveUnavailable ? 'mode-unavailable' : undefined}
+            title={liveUnavailable ? t('live_unavailable_hint') : undefined}
           >
-            {demoMode ? t('switch_to_live') : t('switch_to_demo')}
+            {liveUnavailable ? t('live_unavailable_short') : demoMode ? t('switch_to_live') : t('switch_to_demo')}
           </button>
-          {liveUnavailable ? <span id="mode-unavailable" className="mode-note muted">{t('live_unavailable_short')}</span> : null}
           {confirming ? (
             <span className="mode-confirm" role="group" aria-label={t('demo_reset')} onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); cancel(); } }}>
               <span>{t('demo_reset_confirm')}</span>

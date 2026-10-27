@@ -120,7 +120,7 @@ function QuoteSide({ label, quote, strong }) {
       <span className="muted small">{label}</span>
       <strong className={strong ? 'price-lg' : 'price-md'}>${f.price(quote.final_issue_price_usd)}</strong>
       <span className="badge-row">
-        <Badge tone={f.riskTone(quote.risk_level)}>{`${f.int(quote.risk_score_bps)} bps`}</Badge>
+        <Badge tone={f.riskTone(quote.risk_level)}>{t('risk_premium_badge', { level: f.riskLabel(quote.risk_level), bps: f.int(quote.risk_score_bps) })}</Badge>
         <Badge tone={meta.tone}>{meta.label}</Badge>
       </span>
     </div>

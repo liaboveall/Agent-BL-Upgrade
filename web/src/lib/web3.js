@@ -706,8 +706,12 @@ export async function readX402PaymentAttestation(reportOrReceiptId) {
     explorerUrl: event?.transactionHash ? explorerTx(cfg, event.transactionHash) : null
   };
 }
+// rights-session.js imports this module, so it registers its token reader here instead of being imported back.
+let rightsSessionToken = () => null;
+export function provideRightsSessionToken(reader) {
+  rightsSessionToken = reader;
+}
 async function capitalPost(url, body) {
-  const { rightsSessionToken } = await import('./rights-session.js');
   const token = rightsSessionToken();
   const response = await fetch(url, {
     method: 'POST',

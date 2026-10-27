@@ -9,12 +9,12 @@ export const PAUSED_ACTIONS = new Set(['PAUSE_OFFERING', 'FREEZE_POOL', 'TRIGGER
 export const INACTIVE_POOL_STATES = new Set(['Funded', 'InTransit', 'Paused', 'Frozen', 'Liquidation', 'Liquidated', 'Repaid', 'Redeemed', 'Cancelled', 'Defaulted', 'LossSettled']);
 
 /** Yield per year: what investors compare offerings of different lengths by. Older quotes fall back to gross. */
-export function annualYieldText(quote, unavailable = '--') {
+export function annualYieldText(quote, unavailable = '—') {
   if (!quote || PAUSED_ACTIONS.has(quote.pricing_action)) return unavailable;
   return f.bpsToPct(quote.annualized_yield_bps ?? quote.implied_gross_yield_bps);
 }
 
-export function potentialYieldText(quote, unavailable = '--') {
+export function potentialYieldText(quote, unavailable = '—') {
   if (!quote || PAUSED_ACTIONS.has(quote.pricing_action)) return unavailable;
   return f.bpsToPct(quote.implied_gross_yield_bps);
 }

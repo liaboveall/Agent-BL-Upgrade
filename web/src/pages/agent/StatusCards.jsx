@@ -41,7 +41,7 @@ export function StatusCard() {
       </CardHead>
       <div className="kv-grid kv-grid-3">
         <KV label={t('ac_mode')}>
-          <span className="badge-row"><ModeBadge mode={status.mode} /><Badge tone={status.executor === 'chain' ? 'ok' : 'muted'} title={status.executor === 'chain' ? t('ac_exec_chain') : t('ac_exec_demo')}>{status.executor === 'chain' ? 'CHAIN' : 'SIM'}</Badge></span>
+          <span className="badge-row"><ModeBadge mode={status.mode} /><Badge tone={status.executor === 'chain' ? 'ok' : 'muted'} title={status.executor === 'chain' ? t('ac_exec_chain') : t('ac_exec_demo')}>{status.executor === 'chain' ? t('ac_exec_badge_chain') : t('ac_exec_badge_sim')}</Badge></span>
         </KV>
         <KV label={t('ac_autonomy')}>
           <span className="badge-row">{t(`ac_autonomy_${autonomy.effective}`)}{autonomy.downgraded ? <Badge tone="warn" title={t('ac_downgraded_hint')}>{t('ac_downgraded')}</Badge> : null}</span>

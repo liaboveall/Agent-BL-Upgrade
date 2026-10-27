@@ -16,6 +16,9 @@ body {
 
 h1, h2, h3, h4, h5, p, ul, ol, dl, dd, figure, fieldset { margin: 0; }
 h1, h2, h3, h4, h5 { color: var(--text); font-weight: 650; letter-spacing: -0.01em; line-height: 1.25; }
+/* Balanced headings and no one-character last lines ("目。") in CJK paragraphs. */
+h1, h2, h3 { text-wrap: balance; }
+p, li, dd { text-wrap: pretty; }
 ul, ol { padding: 0; list-style: none; }
 fieldset { border: 0; padding: 0; min-width: 0; }
 legend { padding: 0; }

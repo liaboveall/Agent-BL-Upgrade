@@ -57,7 +57,7 @@ export function DemoPlayback() {
         <Button variant="ghost" data-focus-key="demo:stop" disabled={!run.active || pending} onClick={() => call(true)}>{t('ac_demo_stop')}</Button>
       </div>
       {status?.autonomy?.effective !== 'auto' ? <p className="muted small">{t('ac_demo_needs_auto')}</p> : null}
-      <p role="status" aria-live="polite" aria-atomic="true" className="small demo-progress">{t('ac_demo_progress', { done: scenario?.next_step ?? 0, total: scenario?.total_steps ?? 0 })}</p>
+      <p role="status" aria-live="polite" aria-atomic="true" className="small demo-progress">{scenario?.total_steps ? t('ac_demo_progress', { done: scenario.next_step ?? 0, total: scenario.total_steps }) : t('ac_demo_not_loaded')}</p>
       {stages.length ? (
         <ol className="steps demo-steps">
           {stages.map((step, index) => (

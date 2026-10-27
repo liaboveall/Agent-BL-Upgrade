@@ -14,7 +14,7 @@ export function Valuation({ quote }) {
   return (
     <Card id="valuation-panel" aria-labelledby="valuation-h">
       <CardHead id="valuation-h" title={t('p1_h')}>
-        <Badge tone={f.riskTone(quote.risk_level)}>{`${f.int(quote.risk_score_bps)} bps · ${f.riskLabel(quote.risk_level)}`}</Badge>
+        <Badge tone={f.riskTone(quote.risk_level)}>{t('risk_premium_badge', { level: f.riskLabel(quote.risk_level), bps: f.int(quote.risk_score_bps) })}</Badge>
       </CardHead>
       <div className="valuation-grid">
         <div className="collateral">

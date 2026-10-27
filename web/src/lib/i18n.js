@@ -121,7 +121,7 @@ const DICT = {
     cp_activity_empty: '暂无决策记录。', cp_tool_demo: 'Demo 模拟',
     a11y_skip: '跳到主要内容', a11y_views: '页面导航', a11y_network: '协议网络',
     a11y_market_controls: '市场排序和持仓', a11y_selected_project: '当前项目',
-    a11y_decision_detail: '决策详情', a11y_voyage_progress: '航程进度', a11y_mystery_progress: '盲盒付款与揭晓进度',
+    a11y_decision_detail: '决策详情', a11y_voyage_progress: '航程进度', a11y_mystery_progress: '抽检付款与揭晓进度',
     ac_timeline_update: '{count} 条决策有更新：{action}，{status}（{id}）。',
     ac_open_decision: '查看决策：{action} · {case}',
     ac_autonomy_off: '关闭', ac_autonomy_observe: '仅观察', ac_autonomy_propose: '提出方案', ac_autonomy_auto: '按策略自动执行',
@@ -293,13 +293,13 @@ const DICT = {
     ac_chain_reconcile: '链记录发生冲突。请核对历史证据后恢复监听；当前提案已暂停。',
     ac_chain_stop_hint: '链上合约已紧急停止。控制台开关只控制本地停止，不能解除合约停止。',
     ac_chain_unknown_hint: '链状态尚未核实或仍在同步，执行提案暂时暂停。',
-    ac_last_tick: '上次 tick',
-    ac_next_tick: '下次 tick',
+    ac_last_tick: '上次巡检',
+    ac_next_tick: '下次巡检',
     ac_queue: '事件队列',
-    ac_queue_value: '排队 {queued} · 处理中 {processing} · 死信 {dead}',
+    ac_queue_value: '排队 {queued} · 处理中 {processing} · 失败 {dead}',
     ac_signers: '签名密钥',
     ac_pending: '待处理审批',
-    ac_pending_value: '待批准 {pending} · 待 owner 签名 {owner}',
+    ac_pending_value: '待批准 {pending} · 待所有者签名 {owner}',
     ac_emergency: '紧急停止',
     ac_emergency_on: '已触发',
     ac_emergency_off: '未触发',
@@ -307,12 +307,12 @@ const DICT = {
     ac_controls_h: '管理员控制',
     ac_start: '启动',
     ac_stop: '停止',
-    ac_tick: '立即 tick',
+    ac_tick: '立即巡检',
     ac_emergency_stop: '紧急停止',
     ac_emergency_lift: '解除紧急停止',
     ac_started_toast: 'Agent 已启动',
     ac_stopped_toast: 'Agent 已停止',
-    ac_tick_toast: '已执行一次 tick',
+    ac_tick_toast: '已执行一次巡检',
     ac_autonomy_set: '自主级别已更新',
     ac_emergency_set: '已触发紧急停止',
     ac_emergency_lifted: '已解除紧急停止',
@@ -331,8 +331,8 @@ const DICT = {
     ac_expires: '{time} 前有效',
     ac_route_sim: '批准后在 Demo 里模拟执行。',
     ac_route_server: '批准后由服务器用已授权的定价密钥上链，随后显示交易。',
-    ac_route_owner: '批准后需要 owner 在本机签名发送。',
-    ac_owner_waiting: '等待 owner 签名。在你自己的电脑上运行（默认 dry-run，加 --confirm 才发送）：',
+    ac_route_owner: '批准后需要所有者在本机签名发送。',
+    ac_owner_waiting: '等待所有者签名。在你自己的电脑上运行（默认 dry-run，加 --confirm 才发送）：',
     ac_owner_hint: '发送后服务器会自己读取链上交易和回执，核对合约、方法、参数一致才标记完成。',
     ac_show_plan: '查看要签的交易',
     ac_open_new: '创建新的链上融资池', ac_open_existing: '关联已登记的货物',
@@ -374,7 +374,7 @@ const DICT = {
     ac_inj_done: '事件已处理',
     ac_inj_ignored: '事件被忽略：{reason}',
     ac_timeline_h: '决策时间线',
-    ac_timeline_empty: '还没有任何决策。注入一个事件，或等监控源产生事件。',
+    ac_timeline_empty: '还没有任何决策。点右侧事件注入器里的任一事件，或在上方启动全流程演示。',
     ac_timeline_filtered_empty: '没有符合筛选条件的决策。',
     ac_filter_status: '全部状态',
     ac_filter_action: '全部动作',
@@ -387,7 +387,7 @@ const DICT = {
     ac_status_SKIPPED: '仅记录',
     ac_status_REJECTED: '已拒绝',
     ac_status_PENDING_APPROVAL: '待批准',
-    ac_status_AWAITING_OWNER_SIGNATURE: '待 owner 签名',
+    ac_status_AWAITING_OWNER_SIGNATURE: '待所有者签名',
     ac_verdict_AUTO: '自动',
     ac_verdict_NEEDS_APPROVAL: '需批准',
     ac_verdict_OBSERVE_ONLY: '仅观察',
@@ -408,7 +408,7 @@ const DICT = {
     ac_exec_price: '价格变化',
     ac_exec_events: '链上事件',
     ac_exec_pending: '确认中',
-    ac_exec_pending_hint: '交易已广播，等待确认；下一次 tick 会对账',
+    ac_exec_pending_hint: '交易已广播，等待确认；下一次巡检会对账',
     ac_exec_note: '备注',
     ac_pipeline: '流水线与追踪',
     ac_trace_none: '没有追踪记录。',
@@ -461,7 +461,7 @@ const DICT = {
     nav_voyage: '航运追踪 · 实时定价',
     nav_intel: 'x402 风控报告',
     wallet_connect: '🦊 连接钱包',
-    live_tip: '所有数字均由本地 AI 定价引擎实时产生',
+    live_tip: '所有数字均由本地确定性定价引擎实时产生',
     case_label: '当前提单',
     case_select_aria: '选择交易案例或电子提单',
     lang_switch_to: 'EN',
@@ -513,13 +513,13 @@ const DICT = {
     keyword_ai_unavailable_toast: '关键词匹配 {n} 张 eBL（AI 暂不可用）',
 
     // chain status
-    chain_deployed: '● 合约已部署 · 连接钱包铸造真实 {network} 交易',
+    chain_deployed: '● 已配置 {network} 合约 · 真实操作需在 Live 中逐笔确认',
     chain_not_deployed: '○ 合约未部署 · 当前为模拟上链（运行 deploy 脚本后切真实链）',
 
     // marketplace
     market_eyebrow: '投资市场',
     market_h1: '选择一笔 eBL 支撑的贸易项目。',
-    market_subtitle: '浏览由 AI 实时定价的贸易金融项目。每张卡片都绑定电子提单、航线风险评分、航运进度和认购进度。',
+    market_subtitle: '浏览由规则引擎实时定价的贸易金融项目。每张卡片都绑定电子提单、航线风险评分、航运进度和认购进度。',
     market_sort_label: '项目排序',
     market_sort_recommended: '推荐排序',
     market_sort_yield: '年化收益最高',
@@ -533,12 +533,12 @@ const DICT = {
     market_loading: '定价中…',
     market_stat_deals: '可见项目',
     market_stat_target: '融资目标',
-    market_stat_yield: '平均年化收益',
+    market_stat_yield: '平均年化（参考）',
     market_stat_open: '开放项目',
     market_summary_visible: '可见',
     market_summary_selected: '已选',
     market_summary_price: '发行价',
-    market_issue_price: 'AI 发行价',
+    market_issue_price: '发行价',
     market_upside: '潜在收益',
     market_upside_annual: '年化 · 约 {days} 天',
     market_annual_short: '年化 {apr}',
@@ -565,7 +565,7 @@ const DICT = {
     market_readout_foot: '目标兑付不保本，取决于进口商付款、货物结算与保险覆盖。',
     market_need_amount: '请输入大于 0 的投资金额',
     market_subscribing: '模拟中…',
-    market_subscribed_toast: '已按当前 AI 报价完成模拟认购。',
+    market_subscribed_toast: '已按当前报价完成模拟认购。',
     market_subscribe_fail: '模拟认购失败: {msg}',
     market_subscribe_result: '已模拟发行生命周期 · {n} 个步骤',
     market_voyage_note: '到 {disch} 已完成 {pct}% · ETA {eta}',
@@ -614,13 +614,13 @@ const DICT = {
     hero_subtitle: '出口商质押电子提单，AI Pricing &amp; Risk Agent 读取货值、单据与实时宏观风险，给出可解释的 RWA 发行折价 —— <em>风险越高 → 发行价越低 → 投资者潜在收益越高</em>。输入融资金额即可铸造 RWA 并锚定上链（测试网）。',
 
     // view 1 panels
-    p1_h: 'AI 货值估算 & 航线风险',
-    p1_sub: 'AI 核验的抵押货值，以及这条航线各类风险的分数与<strong>数据来源</strong>。',
-    collateral_label: 'AI 核验抵押货值',
+    p1_h: '货值估算与航线风险',
+    p1_sub: '按规则估算的抵押货值，以及这条航线各类风险的分数与<strong>数据来源</strong>。',
+    collateral_label: '规则估算抵押货值',
     riskdims_h: '航线风险维度',
     sources_head: '📑 数据来源',
-    p2_h: 'AI 定价台',
-    p2_sub: '发行价如何从 $1.00 目标兑付价一步步折下来：base 锚点 → 减急用折价 → 减风险折价。',
+    p2_h: '定价台',
+    p2_sub: '发行价如何从 $1.00 目标兑付价一步步折下来：基准锚点 → 减急用折价 → 减风险折价。',
     p3_h: '融资 & 铸造 RWA',
     p3_sub: '选择到账速度（AI 按可验证毛利分成定价），输入融资金额，铸造 RWA 并上链。',
     payout_speed_label: '出口商到账速度',
@@ -641,7 +641,7 @@ const DICT = {
     exporter_preferences: '出口商偏好（自主 Agent 约束）',
     pref_min_price: '最低发行价 (USD)',
     pref_speed: '到账速度偏好',
-    pref_ai_recommended: 'AI 推荐',
+    pref_ai_recommended: '推荐',
     pref_price_updated: '出口商将最低发行价约束更新为 {value}',
     pref_speed_updated: '出口商将到账速度偏好更新为 {value}',
     pref_saved: '出口商偏好已保存到 Agent：之后的自动改价会遵守最低发行价',
@@ -666,24 +666,24 @@ const DICT = {
     agent_terminal_ready: '> 暂无 Agent 活动。服务器记录到真实活动（定价、认购、上传等）后会显示在这里。',
 
     // deal strip
-    ds_route: '航线', ds_cargo: '货物', ds_ebl: '电子提单', ds_declared: '申报货值', ds_collateral: 'AI 核验货值',
+    ds_route: '航线', ds_cargo: '货物', ds_ebl: '电子提单', ds_declared: '申报货值', ds_collateral: '估算货值',
 
     // hero price
-    hp_label: 'AI 发行价 / RWA token',
+    hp_label: '发行价 / RWA token',
     hp_upside: '潜在毛收益',
     hp_redeem: '兑付目标 <strong>$1.00</strong> · {speed} 到账',
 
     // valuation
     val_declared: '申报货值', val_insured: '投保金额', val_safe_exposure: '安全兑付敞口', val_supply: '建议 token 供给',
     risk_cite_head: '风险折价援引 RAG 情报:',
-    src_rag: 'RAG 情报', src_market: '市场基准', src_valuation: 'AI 货值核验', src_docs: '单据核验',
+    src_rag: 'RAG 情报', src_market: '市场基准', src_valuation: '货值估算', src_docs: '单据核验',
     src_valuation_detail: '落地价 × 数量，经波动率 haircut，并按 {cov}% 兑付覆盖率封顶安全敞口',
 
     // payout speeds (sub label)
     speed_FAST_sub: '很快到账', speed_BALANCED_sub: '正常到账', speed_LOW_COST_sub: '耐心资本',
 
     // waterfall
-    wf_target: '目标兑付', wf_base: 'Base 锚点', wf_urgency: '急用折价', wf_risk: '风险折价',
+    wf_target: '目标兑付', wf_base: '基准锚点', wf_urgency: '急用折价', wf_risk: '风险折价',
     wf_indicative: '指示价', wf_floor: '抵押下限', wf_final: '最终发行价',
     wf_note_redemption: 'redemption value', wf_note_anchor: 'patient-money anchor',
     wf_note_profit: 'profit-share price', wf_note_floor: 'lifted to safe coverage',
@@ -693,13 +693,13 @@ const DICT = {
 
     // exporter cards
     ec_cash: '到账现金', ec_cost: '融资成本', ec_share: '占贸易毛利', ec_net: '保留净利',
-    ec_aipick: '★ AI 推荐', unit_per_token: '/ token',
+    ec_aipick: '推荐', unit_per_token: '/ token',
 
     // mint readout
     mr_receive_pre: '铸造后获得', mr_receive_post: 'RWA @ ${price} / token',
     mr_price: '发行价', mr_invest: '投入', mr_redeem: '目标兑付', mr_upside: '潜在毛收益',
     mr_foot: '目标兑付非保本——取决于进口商付款与货物结算。',
-    mr_paused: 'AI 已暂停发行（{action}）——当前风险下不开放铸造。',
+    mr_paused: '定价引擎已暂停发行（{action}）——当前风险下不开放铸造。',
 
     // mint result
     res_chain: '⛓ {network} 链上', res_sim: '🧪 模拟交易',
@@ -759,7 +759,7 @@ const DICT = {
     vp2_sub: '在途风险一旦升级，AI 立即重定价；下方价格随之变化。',
     live_price_label: '当前 RWA 发行价',
     live_upside: '潜在毛收益',
-    live_risk_label: '风险等级', live_riskbps_label: '风险分数',
+    live_risk_label: '风险等级', live_riskbps_label: '风险加点',
     fin_head: '认购进度', fin_paused: ' (已暂停)',
 
     vp3_h: '突发事件模拟（Demo）',
@@ -788,8 +788,8 @@ const DICT = {
     ev_insurance_desc: '承保人援引海湾「战争除外」条款，部分拒赔，抵押覆盖塌陷。',
 
     // callout
-    co_paused: '⏸ 在途风险升级至 {level} —— AI 暂停了发行。新证据 {hash}。',
-    co_repriced: '↓ 风险升至 {level} —— AI 将发行价 {a} 重定价至 {b}（投资者潜在收益扩大至 {y}）。',
+    co_paused: '⏸ 在途风险升级至 {level} —— 定价引擎暂停了发行。新证据 {hash}。',
+    co_repriced: '↓ 风险升至 {level} —— 定价引擎将发行价 {a} 重定价至 {b}（投资者潜在收益扩大至 {y}）。',
     co_held: '风险重估为 {level}；价格维持在 {p}。',
 
     // world risk (xAPI)
@@ -823,7 +823,7 @@ const DICT = {
     mystery_preview_btn: '创建公平轮次', mystery_committing: '冻结候选中…', mystery_frozen: '候选已冻结',
     mystery_demo_mode: '演示模式 · 可用本地签名，不转移真实资金',
     mystery_live_mode: 'Live 模式 · 仅接受真实 EVM 结算',
-    mystery_modal_title: 'Mystery Voyage 盲盒航线', mystery_modal_subtitle: 'Commit-reveal AI 尽调',
+    mystery_modal_title: 'Mystery Voyage 随机航线尽调', mystery_modal_subtitle: 'Commit-reveal AI 尽调',
     mystery_step_commit: 'Commit', mystery_step_commit_desc: '冻结合规候选航线',
     mystery_step_402: '402', mystery_step_402_desc: '获取支付挑战',
     mystery_step_settlement: '结算', mystery_step_settlement_desc: '绑定支付证据',
@@ -852,7 +852,7 @@ const DICT = {
     mystery_proof_hash: 'Proof 哈希', mystery_payment_binding: '支付绑定',
     mystery_second_confirmation: '独立认购确认', mystery_max_stress_loss: '压力情景损失',
     mystery_amount_label: '独立认购金额（USD）',
-    mystery_risk_ack: '我独立授权这次认购，并接受当前展示的损失与风险；盲盒付款没有替我投资。',
+    mystery_risk_ack: '我独立授权这次认购，并接受当前展示的损失与风险；抽检付款没有替我投资。',
     mystery_confirm_subscribe: '签名并认购', mystery_subscribe_selected: '认购被选 RWA', mystery_view_report: '查看 Risk Passport',
     mystery_signing_subscription: '等待第二次独立签名…',
     mystery_subscription_success: '认购已完成 · {tx}', mystery_subscription_complete: '认购交易已记录',
@@ -1209,7 +1209,7 @@ const DICT = {
     ac_inj_done: 'Event processed',
     ac_inj_ignored: 'Event ignored: {reason}',
     ac_timeline_h: 'Decision timeline',
-    ac_timeline_empty: 'No decisions yet. Inject an event, or wait for a monitor to produce one.',
+    ac_timeline_empty: 'No decisions yet. Inject an event from the panel on the right, or start the full workflow demo above.',
     ac_timeline_filtered_empty: 'No decisions match the filters.',
     ac_filter_status: 'All statuses',
     ac_filter_action: 'All actions',
@@ -1296,7 +1296,7 @@ const DICT = {
     nav_voyage: 'Voyage Risk',
     nav_intel: '③ x402 Risk Report',
     wallet_connect: 'Connect Wallet',
-    live_tip: 'Every number is produced live by the local AI pricing engine',
+    live_tip: 'Every number is produced live by the local deterministic pricing engine',
     case_label: 'Selected case / eBL',
     case_select_aria: 'Select trade case or eBL',
     lang_switch_to: '中文',
@@ -1316,7 +1316,7 @@ const DICT = {
     wallet_verification_failed: 'Verification failed: {msg}',
 
     // runtime mode
-    demo_mode_copy: 'DEMO MODE · No wallet required · simulated receipts are not chain transactions',
+    demo_mode_copy: 'Demo · no wallet needed · simulated receipts are not chain transactions',
     live_mode_copy: 'LIVE MODE · Real wallet, USDC and on-chain transactions',
     switch_to_live: 'Switch to Live',
     switch_to_demo: 'Switch to Demo',
@@ -1348,13 +1348,13 @@ const DICT = {
     keyword_ai_unavailable_toast: 'Keyword matched {n} eBL deals (AI unavailable)',
 
     // chain status
-    chain_deployed: '● Contract deployed · connect a wallet to mint a real {network} tx',
+    chain_deployed: '● {network} contracts configured · real actions are confirmed one by one in Live',
     chain_not_deployed: '○ Not deployed · simulated minting (run the deploy script to go live)',
 
     // marketplace
     market_eyebrow: 'Investment marketplace',
     market_h1: 'Choose an eBL-backed trade project.',
-    market_subtitle: 'Browse live AI-priced trade-finance offerings. Each sticker is backed by an electronic bill of lading, route risk scoring, voyage progress, and a funding progress bar.',
+    market_subtitle: 'Browse trade-finance offerings priced live by the rule engine. Each card is backed by an electronic bill of lading, route risk scoring, voyage progress, and a funding progress bar.',
     market_sort_label: 'Sort deals',
     market_sort_recommended: 'Recommended',
     market_sort_yield: 'Highest annual yield',
@@ -1368,12 +1368,12 @@ const DICT = {
     market_loading: 'Pricing…',
     market_stat_deals: 'Visible deals',
     market_stat_target: 'Funding target',
-    market_stat_yield: 'Avg annual yield',
+    market_stat_yield: 'Avg annualized (indicative)',
     market_stat_open: 'Open deals',
     market_summary_visible: 'Visible',
     market_summary_selected: 'Selected',
     market_summary_price: 'Issue price',
-    market_issue_price: 'AI issue price',
+    market_issue_price: 'Issue price',
     market_upside: 'upside',
     market_upside_annual: 'a year · ~{days} days',
     market_annual_short: '{apr} a year',
@@ -1400,7 +1400,7 @@ const DICT = {
     market_readout_foot: 'Target redemption is not guaranteed and depends on importer payment, cargo settlement, and insurance coverage.',
     market_need_amount: 'Enter an investment amount greater than 0',
     market_subscribing: 'Simulating…',
-    market_subscribed_toast: 'Subscription simulated with the current AI quote.',
+    market_subscribed_toast: 'Subscription simulated with the current quote.',
     market_subscribe_fail: 'Subscription simulation failed: {msg}',
     market_subscribe_result: 'Offering lifecycle simulated · {n} steps',
     market_voyage_note: '{pct}% to {disch} · ETA {eta}',
@@ -1436,9 +1436,9 @@ const DICT = {
     riskdim_price: 'Price volatility',
     riskdim_docs: 'Documents',
     risk_clear: 'clear',
-    speed_FAST_label: 'FAST',
-    speed_BALANCED_label: 'BALANCED',
-    speed_LOW_COST_label: 'LOW COST',
+    speed_FAST_label: 'Fast',
+    speed_BALANCED_label: 'Balanced',
+    speed_LOW_COST_label: 'Low cost',
     speed_FAST_blurb: 'Cash in hours — give up more margin for speed.',
     speed_BALANCED_blurb: 'Standard settlement — a balanced financing cost.',
     speed_LOW_COST_blurb: 'Patient capital — cheapest financing, slower cash.',
@@ -1449,12 +1449,12 @@ const DICT = {
     hero_subtitle: 'An exporter pledges an electronic Bill of Lading; the AI Pricing &amp; Risk Agent reads cargo value, documents and live macro risk to issue a defensible RWA discount — <em>higher risk → lower price → higher investor upside</em>. Enter a financing amount to mint RWA and anchor it on-chain (testnet).',
 
     // view 1 panels
-    p1_h: 'AI Cargo Valuation & Route Risk',
-    p1_sub: 'The AI-verified collateral value, plus this route\'s risk scores and <strong>data sources</strong>.',
-    collateral_label: 'AI-verified collateral value',
+    p1_h: 'Cargo valuation and route risk',
+    p1_sub: 'The rule-based collateral estimate, plus this route\'s risk scores and <strong>data sources</strong>.',
+    collateral_label: 'Estimated collateral value',
     riskdims_h: 'Route risk dimensions',
     sources_head: '📑 Data sources',
-    p2_h: 'AI Pricing Console',
+    p2_h: 'Pricing console',
     p2_sub: 'How the issue price discounts from the $1.00 target redemption: base anchor → − urgency → − risk.',
     p3_h: 'Financing & Mint RWA',
     p3_sub: 'Pick a payout speed (the AI prices it as a share of verified profit), enter a financing amount, mint RWA on-chain.',
@@ -1476,7 +1476,7 @@ const DICT = {
     exporter_preferences: 'Exporter Preferences (Autonomous Agent Constraints)',
     pref_min_price: 'Min issue price (USD)',
     pref_speed: 'Speed preference',
-    pref_ai_recommended: 'AI Recommended',
+    pref_ai_recommended: 'Recommended',
     pref_price_updated: 'Exporter updated the minimum issue price constraint to {value}',
     pref_speed_updated: 'Exporter updated the payout speed preference to {value}',
     pref_saved: 'Exporter preferences saved to the agent: automatic repricing now respects the minimum issue price',
@@ -1501,17 +1501,17 @@ const DICT = {
     agent_terminal_ready: '> No agent activity yet. Real activity recorded by the server (pricing, subscriptions, uploads) will appear here.',
 
     // deal strip
-    ds_route: 'Route', ds_cargo: 'Cargo', ds_ebl: 'eBL', ds_declared: 'Declared value', ds_collateral: 'AI-verified value',
+    ds_route: 'Route', ds_cargo: 'Cargo', ds_ebl: 'eBL', ds_declared: 'Declared value', ds_collateral: 'Estimated value',
 
     // hero price
-    hp_label: 'AI issue price / RWA token',
+    hp_label: 'Issue price / RWA token',
     hp_upside: 'implied gross upside',
     hp_redeem: 'redeems toward <strong>$1.00</strong> · {speed} payout',
 
     // valuation
     val_declared: 'Declared value', val_insured: 'Insured value', val_safe_exposure: 'Safe redemption exposure', val_supply: 'Suggested token supply',
     risk_cite_head: 'Risk discount cites RAG intel:',
-    src_rag: 'RAG intel', src_market: 'Market benchmark', src_valuation: 'AI valuation', src_docs: 'Document check',
+    src_rag: 'RAG intel', src_market: 'Market benchmark', src_valuation: 'Valuation', src_docs: 'Document check',
     src_valuation_detail: 'Landed price × quantity, after a volatility haircut, capped at {cov}% redemption coverage',
 
     // payout speeds (sub label)
@@ -1528,13 +1528,13 @@ const DICT = {
 
     // exporter cards
     ec_cash: 'Cash to exporter', ec_cost: 'Financing cost', ec_share: '% of trade profit', ec_net: 'Net profit kept',
-    ec_aipick: '★ AI pick', unit_per_token: '/ token',
+    ec_aipick: 'Recommended', unit_per_token: '/ token',
 
     // mint readout
     mr_receive_pre: 'You receive', mr_receive_post: 'RWA @ ${price} / token',
     mr_price: 'Issue price', mr_invest: 'Invested', mr_redeem: 'Target redemption', mr_upside: 'Implied upside',
     mr_foot: 'Target redemption is not guaranteed — subject to importer payment & settlement.',
-    mr_paused: 'AI has paused the offering ({action}) — minting is closed at the current risk.',
+    mr_paused: 'The pricing engine paused the offering ({action}) — minting is closed at the current risk.',
 
     // mint result
     res_chain: '⛓ {network} on-chain', res_sim: '🧪 Simulated tx',
@@ -1594,7 +1594,7 @@ const DICT = {
     vp2_sub: 'The moment in-transit risk escalates, the AI reprices and the figure below moves.',
     live_price_label: 'Current RWA issue price',
     live_upside: 'implied gross upside',
-    live_risk_label: 'Risk level', live_riskbps_label: 'Risk score',
+    live_risk_label: 'Risk level', live_riskbps_label: 'Risk premium',
     fin_head: 'Subscription', fin_paused: ' (paused)',
 
     vp3_h: 'In-transit Event Simulation (Demo)',
@@ -1623,8 +1623,8 @@ const DICT = {
     ev_insurance_desc: 'Underwriter invokes a Gulf “war exclusion”, partially declines cover; collateral coverage collapses.',
 
     // callout
-    co_paused: '⏸ In-transit risk escalated to {level} — the AI PAUSED the offering. New evidence {hash}.',
-    co_repriced: '↓ Risk rose to {level} — AI repriced {a} → {b} (investor upside widened to {y}).',
+    co_paused: '⏸ In-transit risk escalated to {level} — the pricing engine PAUSED the offering. New evidence {hash}.',
+    co_repriced: '↓ Risk rose to {level} — the pricing engine repriced {a} → {b} (investor upside widened to {y}).',
     co_held: 'Risk reassessed to {level}; price held at {p}.',
 
     // world risk (xAPI)

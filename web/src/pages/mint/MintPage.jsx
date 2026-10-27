@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useApp } from '../../state/hooks.js';
 import { selectedQuote } from '../../state/app-store.js';
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import { caseOptionLabel, cargoQuantity } from '../../lib/market.js';
 import { scrollBehavior } from '../../lib/accessibility.js';
+import { useStickyFit } from '../../hooks/useStickyFit.js';
 import { selectCase } from '../../state/controller.js';
 import { Empty } from '../../components/ui.jsx';
 import { Valuation } from './Valuation.jsx';
@@ -19,6 +20,8 @@ export function MintPage() {
   const quote = selectedQuote(state);
   const bl = state.caseData?.bill_of_lading ?? {};
   const focusRequest = state.focusRequest;
+  const aside = useRef(null);
+  useStickyFit(aside);
   useEffect(() => {
     if (focusRequest?.target !== 'mint') return;
     const node = document.getElementById('waterfall');
@@ -63,7 +66,7 @@ export function MintPage() {
               <Valuation quote={quote} />
               <Waterfall quote={quote} />
             </div>
-            <aside className="mint-aside" aria-label={t('p3_h')}>
+            <aside ref={aside} className="mint-aside" aria-label={t('p3_h')}>
               <MintPanel quote={quote} />
             </aside>
           </div>

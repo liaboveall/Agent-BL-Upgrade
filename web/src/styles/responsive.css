@@ -33,15 +33,16 @@
   .topbar-inner { height: auto; min-height: 60px; flex-wrap: wrap; padding-block: 12px; gap: 10px; }
   .nav { order: 3; flex-basis: 100%; flex-wrap: wrap; }
   .mode-strip-inner { flex-wrap: wrap; padding-block: 8px; }
+  .mode-copy, .mode-chain { min-width: 0; white-space: normal; }
   .mode-chain { margin-left: 0; }
 }
 @media (max-width: 959px) {
   .market-layout { grid-template-columns: minmax(0, 1fr); }
-  .market-aside { position: static; max-height: none; overflow: visible; }
+  .market-aside { position: static; }
 }
 @media (max-width: 1199px) {
   .mint-layout, .mint-secondary, .agent-layout { grid-template-columns: minmax(0, 1fr); }
-  .mint-aside { position: static; max-height: none; overflow: visible; }
+  .mint-aside { position: static; }
   .page-head { flex-wrap: wrap; gap: 20px; }
   .page-head-stats { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
   .toolbar { flex-wrap: wrap; }
@@ -55,11 +56,12 @@
   html { scroll-padding-top: 24px; }
   .app-header { position: static; }
   .topbar-inner { gap: 12px; }
-  .topbar-right { flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 100%; }
-  .network-select { max-width: 145px; }
+  .topbar-right { flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; max-width: 100%; }
+  .network-select { flex: 1 1 auto; width: auto; max-width: none; min-width: 0; }
   .wallet-btn { min-width: 0; }
-  .nav { gap: 4px; }
-  .nav-tab { height: auto; min-height: 40px; font-size: 13px; padding: 8px; white-space: normal; }
+  /* Tabs in an even grid instead of a ragged second line; only data regions scroll sideways. */
+  .nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .nav-tab { height: auto; min-height: 40px; padding: 6px 8px; font-size: var(--fs-13); line-height: 1.25; text-align: center; white-space: normal; }
   .mode-actions { flex-wrap: wrap; gap: 12px; }
   .mode-strip-inner > * { min-width: 0; max-width: 100%; }
   .mode-copy { flex: 1 1 220px; }
@@ -73,6 +75,7 @@
   .mint-secondary, .risk-dims ul, .job-steps, .approval-grid { grid-template-columns: minmax(0, 1fr); }
   .case-picker { width: 100%; }
   .deal-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .deal-strip-item:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .deal-grid { grid-template-columns: minmax(0, 1fr); }
   .chip-group { flex-wrap: wrap; }
   .search { flex-basis: 100%; max-width: none; margin-left: 0; }
@@ -84,7 +87,7 @@
   .controlled-actions input { width: 100%; }
   .controlled-confirm button { margin-block: 6px; }
   .readable-terms dl > div, .funding-detail dl > div, .operations-panel dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .controlled-snapshot { font-size: 12px; }
+  .controlled-snapshot { font-size: var(--fs-12); }
   .research-tools > aside { max-width: 100%; }
   .dialog-wide, .dialog-center { width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
   .dialog-head, .dialog-body { padding: 16px; }
@@ -99,6 +102,8 @@
   .ac-row { min-width: 740px; }
   .span-row { grid-template-columns: 90px minmax(0, 1fr) 40px; }
   .wf-val { font-size: 10px; overflow-wrap: anywhere; }
+  /* The first column already reads $1.0000; on a phone the line label would sit on the final value. */
+  .wf-target-line span, .wf-col-note { display: none; }
   .wf-cols, .wf-labels { gap: 4px; }
   .cp-launcher { position: static; align-self: flex-end; margin: 0 16px 24px; }
   .passport-grid, .mystery-reveal, .mystery-map-route { grid-template-columns: minmax(0, 1fr); }

@@ -28,11 +28,11 @@
 .cp-rank { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: var(--fs-12); font-weight: 700; }
 .cp-metrics { font-size: var(--fs-13); }
 .cp-card-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
-.cp-hash { font-size: 11px; color: var(--muted); }
+.cp-hash { font-size: var(--fs-11); color: var(--muted); }
 .cp-action-card { display: grid; gap: var(--s-2); padding: var(--s-4); border: 1px solid var(--accent-line); border-radius: var(--r); background: var(--accent-soft); font-size: var(--fs-13); }
 .cp-action-card h4 { font-size: var(--fs-14); }
 .cp-action-form { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .cp-action-form .select, .cp-action-form .input { flex: 1; min-width: 160px; }
 .cp-action-buttons { display: flex; gap: var(--s-2); }
 .cp-action-status { min-height: 18px; color: var(--text-2); }
-.cp-report-body { max-height: 240px; overflow: auto; padding: var(--s-3); border-radius: var(--r); background: var(--surface); font-size: 11px; }
+.cp-report-body { max-height: 240px; overflow: auto; padding: var(--s-3); border-radius: var(--r); background: var(--surface); font-size: var(--fs-11); }

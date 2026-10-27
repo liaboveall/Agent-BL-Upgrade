@@ -24,13 +24,18 @@ export function Waterfall({ quote: current }) {
   const indicative = quote.indicative_issue_price_usd;
   const final = quote.final_issue_price_usd;
   const lifted = quote.binding_constraint === 'COLLATERAL' && final > indicative + 1e-6;
-  const lo = Math.max(0.4, Math.floor((Math.min(indicative, final, base) - 0.06) * 20) / 20);
+  // Zoom the axis to the prices actually shown (in 0.005 steps) so a 16 bps step is a visible bar, not a hairline.
+  const lowest = Math.min(indicative, final, base);
+  const lo = Math.max(0.4, Math.floor((lowest - Math.max(0.005, (1 - lowest) * 0.25)) * 200) / 200);
   const pos = (v) => Math.max(0, Math.min(100, ((v - lo) / (1 - lo)) * 100));
+  // A step that rounds to nothing is drawn neutral and says so, instead of a red "0.0000" and "−0 bps".
+  const step = (value) => (Number(f.price(Math.abs(value))) === 0 ? 'flat' : 'down');
+  const discountNote = (prefix, bps) => `${prefix} · ${Number(bps) > 0 ? `−${bps} bps` : t('wf_no_discount')}`;
   const cols = [
     { kind: 'target', label: t('wf_target'), value: 1.0, top: 1.0, bottom: lo, note: t('wf_note_redemption') },
     { kind: 'base', label: t('wf_base'), value: base, top: base, bottom: lo, note: t('wf_note_anchor') },
-    { kind: 'down', label: t('wf_urgency'), value: -urg, top: base, bottom: speedPrice, note: `${f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed} · −${quote.urgency_discount_bps} bps` },
-    { kind: 'down', label: t('wf_risk'), value: -risk, top: speedPrice, bottom: indicative, note: `${f.riskLabel(quote.risk_level)} · −${quote.risk_discount_bps} bps` },
+    { kind: step(urg), label: t('wf_urgency'), value: -urg, top: base, bottom: speedPrice, note: discountNote(f.SPEED_META[quote.payout_speed]?.label ?? quote.payout_speed, quote.urgency_discount_bps) },
+    { kind: step(risk), label: t('wf_risk'), value: -risk, top: speedPrice, bottom: indicative, note: discountNote(f.riskLabel(quote.risk_level), quote.risk_discount_bps) },
     { kind: 'mid', label: t('wf_indicative'), value: indicative, top: indicative, bottom: lo, note: t('wf_note_profit') }
   ];
   if (lifted) cols.push({ kind: 'up', label: t('wf_floor'), value: final - indicative, top: final, bottom: indicative, note: t('wf_note_floor') });
@@ -53,7 +58,7 @@ export function Waterfall({ quote: current }) {
           <div className="wf-cols">
             <div className="wf-target-line" style={{ bottom: `calc((100% - 32px) * ${pos(1) / 100})` }}><span>{t('wf_axis_target')}</span></div>
             {cols.map((col, index) => {
-              const delta = col.kind === 'down' || col.kind === 'up';
+              const delta = col.kind === 'down' || col.kind === 'up' || col.kind === 'flat';
               const bottom = pos(Math.min(col.top, col.bottom));
               const height = Math.abs(pos(col.top) - pos(col.bottom));
               const magnitude = f.price(Math.abs(col.value));

@@ -83,8 +83,8 @@ export function DetailPanel({ now, noMatches = false, selectionVisible = true })
       </div>
 
       <div className="kv-grid">
-        <KV label={t('market_detail_annual')} tone={paused ? undefined : 'gain'}>{paused ? '--' : annualYieldText(quote)}</KV>
-        <KV label={t('market_detail_upside')}>{paused ? '--' : `${potentialYieldText(quote)}${quote.tenor_days ? ` · ${t('market_tenor_days', { days: quote.tenor_days })}` : ''}`}</KV>
+        <KV label={quote.tenor_days ? t('market_card_upside', { days: quote.tenor_days }) : t('market_card_upside_plain')} tone={paused ? undefined : 'gain'}>{paused ? '—' : potentialYieldText(quote)}</KV>
+        <KV label={t('market_detail_annual')}>{paused ? '—' : annualYieldText(quote)}</KV>
         <KV label={t('live_riskbps_label')}>{`${f.int(quote.risk_score_bps)} bps`}</KV>
         <KV label={t('market_detail_collateral')}>{f.usdCompact(quote.ai_verified_collateral_value_usd)}</KV>
         <KV label={t('market_fact_target')}>{f.usdCompact(quote.expected_cash_to_exporter_usd ?? quote.requested_cash_usd)}</KV>

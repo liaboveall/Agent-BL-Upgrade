@@ -71,7 +71,7 @@ h4.card-title { font-size: var(--fs-14); }
 .stat-value { font-size: var(--fs-22); font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; }
 .stat-hint { color: var(--muted); font-size: var(--fs-12); }
 .stat-row { display: flex; gap: var(--s-8); margin-bottom: var(--s-5); }
-.price-xxl { display: block; font-size: 40px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; }
+.price-xxl { display: block; font-size: var(--fs-40); font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; }
 .price-xl { display: block; font-size: var(--fs-28); font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
 .price-lg { font-size: var(--fs-22); font-weight: 650; }
 .price-md { font-size: var(--fs-18); font-weight: 650; }
@@ -123,7 +123,7 @@ h4.card-title { font-size: var(--fs-14); }
 /* segmented control */
 .segmented { display: inline-flex; padding: 3px; border-radius: var(--r); background: var(--surface-2); }
 .segment { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-2); font-size: var(--fs-13); font-weight: 550; }
-.segment small { color: var(--muted); font-size: 11px; font-weight: 400; }
+.segment small { color: var(--muted); font-size: var(--fs-11); font-weight: 400; }
 .segment.is-active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
 
 /* ---------- disclosure ---------- */

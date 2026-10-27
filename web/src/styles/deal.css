@@ -17,7 +17,7 @@
 }
 .ship-tooltip {
   position: absolute; left: 50%; bottom: calc(100% + 2px); transform: translateX(-50%); padding: 3px 8px; border-radius: var(--r-sm);
-  background: var(--text); color: #fff; font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
+  background: var(--text); color: #fff; font-size: var(--fs-11); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
 }
 .voyage-rail:hover .ship-tooltip, .ship:focus-visible + .ship-tooltip { opacity: 1; }
 .voyage-controls { display: flex; align-items: center; gap: var(--s-3); }
@@ -116,6 +116,6 @@
 .report-card { display: grid; gap: 4px; padding: var(--s-3); border: 1px solid var(--line); border-radius: var(--r); font-size: var(--fs-13); }
 .report-card header { display: flex; justify-content: space-between; gap: var(--s-2); }
 .trace-grid { display: grid; gap: 4px; }
-.trace-value { display: block; padding: 4px 6px; border-radius: 4px; background: var(--surface-2); font-size: 11px; white-space: pre-wrap; }
+.trace-value { display: block; padding: 4px 6px; border-radius: 4px; background: var(--surface-2); font-size: var(--fs-11); white-space: pre-wrap; }
 .purchased-list { display: grid; }
 .purchased-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--line); }

@@ -1,4 +1,4 @@
-import { connectedAddress, currentWalletSession } from './web3.js';
+import { connectedAddress, currentWalletSession, provideRightsSessionToken } from './web3.js';
 import { appStore } from '../state/app-store.js';
 
 let authorization = null;
@@ -10,6 +10,7 @@ export function rightsSessionToken() {
     || authorization.generation !== current.modeGeneration || authorization.expires_at <= Date.now()) { clearRightsSession(); return null; }
   return authorization.token;
 }
+provideRightsSessionToken(rightsSessionToken);
 export async function rightsRequest(route, body) {
   const token = rightsSessionToken();
   const response = await fetch(`/api/rights/${route}`, { ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),

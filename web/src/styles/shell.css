@@ -37,17 +37,19 @@
 }
 .mode-pill {
   display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  font-size: var(--fs-11); font-weight: 700; letter-spacing: 0.04em;
 }
 .is-demo .mode-pill { background: #fbe6bd; color: #7a4800; }
 .is-live .mode-pill { background: #cdeedc; color: #0b5e3f; }
 .mode-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .is-demo .mode-copy { color: #6b4300; }
 .is-live .mode-copy { color: #0b5e3f; }
-.mode-chain { margin-left: auto; font-size: var(--fs-12); }
-.mode-actions { display: flex; align-items: center; gap: var(--s-4); }
-.mode-actions .link-btn { min-height: 24px; }
-.mode-note { font-size: var(--fs-12); }
+/* One line on desktop: the chain note gives way first, then the mode copy; both keep their full text in a tooltip. */
+.mode-copy { flex: 0 1 auto; min-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mode-chain { flex: 0 100 auto; min-width: 0; margin-left: auto; overflow: hidden; font-size: var(--fs-12); text-overflow: ellipsis; white-space: nowrap; }
+.mode-actions { display: flex; flex: none; align-items: center; gap: var(--s-4); }
+.mode-actions .link-btn { min-height: 24px; white-space: nowrap; }
+.mode-actions .link-btn:disabled { color: var(--muted); cursor: default; text-decoration: none; }
 .mode-confirm { display: inline-flex; align-items: center; gap: var(--s-3); }
 .link-btn.is-danger { color: var(--crit); }
 
@@ -79,5 +81,5 @@
 
 .position-address { overflow-wrap: anywhere; }
 .position-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.position-values dt { color: var(--muted); font-size: 12px; }
+.position-values dt { color: var(--muted); font-size: var(--fs-12); }
 .position-values dd { margin: 4px 0 0; overflow-wrap: anywhere; }

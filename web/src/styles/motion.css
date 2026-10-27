@@ -29,5 +29,5 @@
   .passport-share-modal { position: static; display: block; width: 100%; max-height: none; box-shadow: none; }
   .passport-share-modal .dialog-head, .passport-share-modal .button-row, .passport-share-modal .passport-advanced,
   .passport-share-modal #passport-json-preview, .passport-share-modal .field-label, .passport-share-modal #passport-share-nickname { display: none !important; }
-  .share-preview { border: 0; font-size: 16px; }
+  .share-preview { border: 0; font-size: var(--fs-16); }
 }
