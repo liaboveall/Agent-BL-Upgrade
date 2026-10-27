@@ -106,3 +106,45 @@ test('retired Oracle tool cannot be invoked with any supplied commitment', async
     assert.ok(!body.error.includes('confirmed'));
   });
 });
+
+test('BE-7: an invalid min_acceptable_issue_price is rejected instead of silently ignored', async () => {
+  await withServer(async (baseUrl) => {
+    for (const value of ['abc', '-5']) {
+      const res = await fetch(`${baseUrl}/api/pricing/quote?min_acceptable_issue_price=${value}`, { method: 'POST' });
+      const body = await res.json();
+      assert.equal(res.status, 400, value);
+      assert.ok(body.details.some((d) => d.includes('min_acceptable_issue_price')));
+    }
+    assert.equal((await fetch(`${baseUrl}/api/pricing/quote?min_acceptable_issue_price=0.95`, { method: 'POST' })).status, 200);
+  });
+});
+
+test('a caller-supplied case analysed by world-risk never writes its id or price into the public feed', async () => {
+  await withServer(async (baseUrl) => {
+    const spoofed = { ...copperCase, case_id: 'CALLER-SUPPLIED-CASE' };
+    assert.equal((await postJson(baseUrl, '/api/intel/world-risk', spoofed)).status, 200);
+    assert.equal((await postJson(baseUrl, '/api/intel/world-risk', { case: spoofed })).status, 200);
+    const feed = await (await fetch(`${baseUrl}/api/agent/activity?case_id=CALLER-SUPPLIED-CASE`)).json();
+    assert.equal(feed.count, 0);
+  });
+});
+
+test('legacy capital-layer intent routes point to the controlled workflow when no pool is configured', async () => {
+  await withServer(async (baseUrl) => {
+    for (const route of ['/api/positions/subscription-intents', '/api/positions/claim-intents', `/api/positions/subscription-intents/${'0'.repeat(8)}-0000-0000-0000-${'0'.repeat(12)}/transaction`]) {
+      const res = await postJson(baseUrl, route, {});
+      assert.equal(res.status, 404, route);
+      assert.equal((await res.json()).code, 'legacy_capital_unconfigured');
+    }
+  });
+});
+
+test('the market references list its pools on the very first request after a start', async () => {
+  const { resetStore } = await import('../src/app/store.js');
+  resetStore();
+  await withServer(async (baseUrl) => {
+    const references = await (await fetch(`${baseUrl}/api/agent/references`)).json();
+    assert.ok(references.pools.length >= 10);
+    assert.ok(references.pools.every((pool) => pool.quote && typeof pool.quote.final_issue_price_usd === 'number'));
+  });
+});

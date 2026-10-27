@@ -285,9 +285,8 @@ async function resolvePricingRequest(body, url) {
         || wrapper.paid_report_envelopes.some((entry) => !isRecord(entry)))) {
     errors.push('paid_report_envelopes must be an array of objects');
   }
-  if (errors.length > 0) throw new ValidationError('Invalid pricing request', errors);
-
   const minAcceptablePrice = parseAmount(q.get('min_acceptable_issue_price') ?? wrapper.min_acceptable_issue_price, 'min_acceptable_issue_price', errors, { allowZero: true });
+  if (errors.length > 0) throw new ValidationError('Invalid pricing request', errors);
 
   const compareRaw = q.get('compare') ?? wrapper.compare;
   const options = {
@@ -701,7 +700,8 @@ const recoverySummary = ({ status, record, body, request_required: requestRequir
 });
 
 async function handlePaidService(request, response, service) {
-  if (process.env.DEMO_MODE === 'false') {
+  // The runtime mode decides the transport; the simulated route also refuses on its own when DEMO_MODE=false.
+  if (demoModeController.snapshot().mode === 'live') {
     const gateway = await getLiveGateway(request.socket.server);
     await gateway.handle(request, response);
     return;
@@ -1156,21 +1156,28 @@ async function routeRequest(request, response, url) {
     return;
   }
 
+  // Capital-layer intents without the rights controller. Only a harness that gives the agent a configured pool (the
+  // W2 suite) serves them; a normal runtime has none, so the routes say where wallet financing lives instead of failing later.
+  const legacyCapital = () => {
+    const capital = getAgentService().capital;
+    if (!capital?.chainConfig) throw new HttpError(404, 'legacy_capital_unconfigured', 'Wallet financing uses /api/controlled/*; this capital-layer route has no configured pool');
+    return capital;
+  };
   if (method === 'POST' && pathname === '/api/positions/subscription-intents') {
-    const body = await readJsonBody(request);
-    const intent = await getAgentService().capital.prepareSubscription(body);
-    sendJson(response, 201, { intent });
+    const capital = legacyCapital();
+    sendJson(response, 201, { intent: await capital.prepareSubscription(await readJsonBody(request)) });
     return;
   }
   if (method === 'POST' && pathname === '/api/positions/claim-intents') {
-    const body = await readJsonBody(request);
-    sendJson(response, 201, { intent: await getAgentService().capital.prepareClaim(body) });
+    const capital = legacyCapital();
+    sendJson(response, 201, { intent: await capital.prepareClaim(await readJsonBody(request)) });
     return;
   }
   const intentTx = pathname.match(/^\/api\/positions\/subscription-intents\/([a-f0-9-]{36})\/transaction$/u);
   if (method === 'POST' && intentTx) {
+    const capital = legacyCapital();
     const body = await readJsonBody(request);
-    sendJson(response, 200, { intent: await getAgentService().capital.attach(intentTx[1], body.tx_hash) });
+    sendJson(response, 200, { intent: await capital.attach(intentTx[1], body?.tx_hash) });
     return;
   }
 
@@ -1303,12 +1310,14 @@ async function routeRequest(request, response, url) {
   // No XAPI_KEY -> deterministic offline fixtures, so the endpoint never breaks.
   if (method === 'POST' && pathname === '/api/intel/world-risk') {
     const body = await readJsonBody(request);
-    const caseData = looksLikeCase(body) ? body : (isRecord(body) && body.case ? body.case : await loadDemoCase());
+    const callerCase = looksLikeCase(body) ? body : (isRecord(body) && body.case ? body.case : null);
+    const caseData = callerCase ?? await loadDemoCase();
     const { assessWorldRisk } = await import('../agent/worldRiskAgent.js');
     const { repriceWithWorldRisk } = await import('../core/worldRiskPricing.js');
     const assessment = await assessWorldRisk(caseData, {});
     const repriced = repriceWithWorldRisk(caseData, assessment.events);
-    if (assessment.events?.length) {
+    // Like /api/pricing/quote: only the server's own case enters the public feed, never a caller's case id or price.
+    if (assessment.events?.length && !callerCase) {
       logAgentActivity({
         type: 'RISK',
         action: 'RISK_ESCALATION',

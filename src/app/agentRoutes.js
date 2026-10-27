@@ -123,6 +123,8 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     }
 
     if (method === 'GET' && pathname === '/api/agent/references') {
+      // The market prices its cards from these pools; a first visit right after a restart must not get an empty list.
+      await service.ensurePools?.();
       const { decisions } = await service.listDecisions({ limit: service.config.maxDecisions, caseFilter });
       const seen = new Set();
       const current = decisions.filter((decision) => {

@@ -318,3 +318,22 @@ test('MCP pricing uses current final terms for every scenario without mock fallb
   assert.deepEqual(quote,quoteFromCase(data,{payout_speed:data.financing?.payout_speed??'BALANCED'}));
  }
 });
+
+test('a simulated MCP purchase is refused while the serving runtime is Live and never rewrites process settings', async () => {
+  const before = { DEMO_MODE: process.env.DEMO_MODE, X402_MODE: process.env.X402_MODE };
+  const live = { getService: () => ({ getMode: () => 'live' }) };
+  await assert.rejects(callTool('purchase_premium_analysis', { case_id: 'CASE-EBL-2026-0001', kind: 'premium-risk' }, live),
+    (error) => error.code === 'demo_purchase_disabled_in_live_mode' && error.status === 409);
+  assert.deepEqual({ DEMO_MODE: process.env.DEMO_MODE, X402_MODE: process.env.X402_MODE }, before);
+});
+
+test('MCP tools reach the market cases the app lists, priced and simulated on the same model', async () => {
+  const { result: data } = await callTool('get_trade_case', { case_id: 'CASE-EBL-CU-SIN-SHA' });
+  assert.equal(data.case_id, 'CASE-EBL-CU-SIN-SHA');
+  const { result: quote } = await callTool('generate_pricing_quote', { case_id: 'CASE-EBL-CU-SIN-SHA' });
+  assert.deepEqual(quote, quoteFromCase(data, { payout_speed: data.financing.payout_speed }));
+  const { result: offering } = await callTool('simulate_offering', { case_id: 'CASE-EBL-2026-ALU-FS-WH-00013' });
+  assert.ok(offering.steps.length > 0 && offering.pricing_summary.final_issue_price_usd > 0);
+  assert.equal((await callTool('verify_trade_documents', { case_id: 'CASE-EBL-ALU-JEA-RTM' })).result.ok, true);
+  await assert.rejects(callTool('get_trade_case', { case_id: 'NOPE' }), /Known cases: .*CASE-EBL-CU-SIN-SHA/u);
+});

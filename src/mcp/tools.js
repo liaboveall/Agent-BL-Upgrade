@@ -9,8 +9,10 @@ import { listenOnUsablePort } from '../../scripts/lib/listen.mjs';
 import { quoteFromCase } from '../core/pricingEngine.js';
 import { normalizePricingQuoteHashes, PAYOUT_SPEEDS, assertPricingQuote } from '../core/pricingSchema.js';
 import { simulateWorkflow } from '../core/workflow.js';
+import { simulateOffering } from '../core/offeringSimulator.js';
 import { assertTradeCase } from '../core/schema.js';
 import { listHarnessCaseFiles } from '../core/scenarioRunner.js';
+import { prepareCuratedCase } from '../core/curatedCases.js';
 import { searchKnowledgeBase } from '../rag/search.js';
 import { checkDocumentConsistency } from '../agent/documentConsistency.js';
 import { authorizeMcpWrite, MCP_PINNED_NETWORK } from './security.js';
@@ -23,14 +25,40 @@ import { verifyRevealProof } from '../mystery/fairness.js';
 // Import Bowen's pricing engine — for real PricingQuote generation
 
 const MYSTERY_OPEN_PRICE_USDC = 0.001;
+const CURATED_CASES = path.resolve(import.meta.dirname, '../../data/cases');
+
+/**
+ * Every case the tools can name: the demo and harness scenarios as stored, then the market's public curated cases
+ * as the app shows them (dates moved to today, market and route evidence attached). Private uploads are never listed.
+ */
+async function caseCatalog() {
+  const cases = [];
+  for (const file of await listHarnessCaseFiles({ includeDemo: true })) cases.push(JSON.parse(await fs.readFile(file, 'utf8')));
+  const seen = new Set(cases.map((data) => data.case_id));
+  const curated = (await fs.readdir(CURATED_CASES).catch(() => [])).filter((name) => name.endsWith('.case.json')).sort();
+  for (const name of curated) {
+    const raw = JSON.parse(await fs.readFile(path.join(CURATED_CASES, name), 'utf8'));
+    if (seen.has(raw.case_id) || raw.visibility === 'private') continue;
+    seen.add(raw.case_id);
+    cases.push({ raw, load: () => prepareCuratedCase(raw) });
+  }
+  return cases;
+}
+const caseIdOf = (entry) => entry.raw?.case_id ?? entry.case_id;
+
+/** The original TradeCase schema applies to harness-style cases; current cases (no legacy financing block) are
+ * validated by the pricing engine and its quote schema instead, as the app's own pricing routes do. */
+function checkCase(caseData) {
+  if (caseData?.financing?.requested_amount_usd !== undefined || caseData?.financing?.requested_cash_usd === undefined) assertTradeCase(caseData);
+}
+const caseDataOf = async (entry) => entry.load ? entry.load() : entry;
+
 async function loadMysteryPools(caseId) {
   const pools = new Map();
-  const files = await listHarnessCaseFiles({
-    includeDemo: true
-  });
-  for (const file of files) {
-    const caseData = JSON.parse(await fs.readFile(file, 'utf8'));
-    if (caseId && caseData.case_id !== caseId) continue;
+  for (const entry of await caseCatalog()) {
+    if (caseId && caseIdOf(entry) !== caseId) continue;
+    if (entry.raw?.historical) continue;
+    const caseData = await caseDataOf(entry);
     if (!caseData.financing) continue;
     try {
       const configuredSpeed = caseData.financing.payout_speed;
@@ -61,26 +89,19 @@ async function loadMysteryPools(caseId) {
 }
 
 /**
- * Load a trade case by its case_id.
- * Searches data/demo-case.json and data/scenarios/*.json.
+ * Load a trade case by its case_id: the demo, the harness scenarios and the market's curated cases.
  *
  * @param {string} caseId
  * @returns {Promise<Object>} TradeCase object
  * @throws {Error} if not found
  */
 async function loadCaseById(caseId) {
-  const files = await listHarnessCaseFiles({
-    includeDemo: true
-  });
-  for (const file of files) {
-    const raw = await fs.readFile(file, 'utf8');
-    const data = JSON.parse(raw);
-    if (data.case_id === caseId) {
-      assertTradeCase(data);
-      return data;
-    }
-  }
-  throw new Error(`Trade case not found: ${caseId}. Available cases can be listed via listHarnessCaseFiles().`);
+  const catalog = await caseCatalog();
+  const entry = catalog.find((item) => caseIdOf(item) === caseId);
+  if (!entry) throw new Error(`Trade case not found: ${caseId}. Known cases: ${catalog.map(caseIdOf).join(', ')}`);
+  const data = await caseDataOf(entry);
+  checkCase(data);
+  return data;
 }
 
 // ============================================================
@@ -110,7 +131,7 @@ export async function handleGeneratePricingQuote({
 } = {}) {
   const caseData = trade_case || (case_id ? await loadCaseById(case_id) : null);
   if (!caseData) throw new Error('Either case_id or trade_case must be provided');
-  assertTradeCase(caseData);
+  checkCase(caseData);
   const quote = quoteFromCase(caseData, {
     payout_speed: caseData.financing?.payout_speed ?? 'BALANCED'
   });
@@ -132,6 +153,23 @@ export async function handleSimulateOffering({
   const caseData = trade_case || (case_id ? await loadCaseById(case_id) : null);
   if (!caseData) {
     throw new Error('Either case_id or trade_case must be provided');
+  }
+  // A current case has no legacy risk-workflow fields: simulate its offering on the pricing model the app uses.
+  if (caseData?.financing?.requested_amount_usd === undefined && caseData?.financing?.requested_cash_usd !== undefined) {
+    const offering = simulateOffering(caseData, { payout_speed: PAYOUT_SPEEDS.includes(caseData.financing.payout_speed) ? caseData.financing.payout_speed : 'BALANCED' });
+    const quote = offering.final_quote;
+    return {
+      tool: 'simulate_offering',
+      result: {
+        case_id: offering.case_id,
+        final_state: offering.final_state,
+        offering_state: offering.final_state,
+        steps: offering.steps,
+        initial_quote: offering.initial_quote,
+        settlement: offering.settlement,
+        pricing_summary: { final_issue_price_usd: quote.final_issue_price_usd, pricing_action: quote.pricing_action, risk_level: quote.risk_level, risk_score_bps: quote.risk_score_bps }
+      }
+    };
   }
   const workflow = simulateWorkflow(caseData);
   const report = workflow.risk_report;
@@ -194,7 +232,7 @@ export async function handleVerifyTradeDocuments({
 } = {}) {
   const caseData = trade_case || (case_id ? await loadCaseById(case_id) : null);
   if (!caseData) throw new Error('Either case_id or trade_case must be provided');
-  assertTradeCase(caseData);
+  checkCase(caseData);
   return {
     tool: 'verify_trade_documents',
     result: checkDocumentConsistency(caseData)
@@ -217,6 +255,13 @@ async function withEphemeralApp(run) {
 // Tool 7: purchase_premium_analysis
 // ============================================================
 
+/** The mode of the runtime serving this call: the app's agent service when present, else this process's own setting. */
+function runtimeMode(context) {
+  const mode = context?.getService?.()?.getMode?.();
+  if (mode === 'demo' || mode === 'live') return mode;
+  return process.env.DEMO_MODE === 'false' ? 'live' : 'demo';
+}
+
 export async function handlePurchasePremiumAnalysis({
   case_id,
   kind = 'premium-risk',
@@ -224,11 +269,19 @@ export async function handlePurchasePremiumAnalysis({
   budget_usdc = 0.005,
   approved = false,
   approval_token
-} = {}) {
+} = {}, context) {
   if (!case_id) throw new Error('Missing required parameter: case_id');
   const service = X402_SERVICES.find(item => item.serviceId === kind);
   if (!service) throw new Error(`Unknown premium analysis kind: ${kind}`);
   if (!['demo', 'live'].includes(mode)) throw new Error('mode must be demo or live');
+  // A simulated purchase must never hand out a report that a Live runtime sells for a real payment.
+  if (mode === 'demo' && runtimeMode(context) === 'live') {
+    throw Object.assign(new Error('Simulated purchases are disabled while the runtime is Live; pay through the Live x402 flow'), {
+      code: 'demo_purchase_disabled_in_live_mode',
+      status: 409,
+      expose: true
+    });
+  }
   const caseData = await loadCaseById(case_id);
   if (mode === 'live') {
     const chainConfig = loadApplicationConfig();
@@ -246,22 +299,14 @@ export async function handlePurchasePremiumAnalysis({
   const {
     fetchPaidIntel
   } = await import('../x402/client.js');
-  const previousDemoMode = process.env.DEMO_MODE;
-  const previousX402Mode = process.env.X402_MODE;
-  process.env.DEMO_MODE = 'true';
-  process.env.X402_MODE = 'demo';
-  let result;
-  try {
-    result = await withEphemeralApp(baseUrl => fetchPaidIntel(baseUrl, service.endpoint, {
-      demoMode: true,
-      budgetUSDC: Number(budget_usdc),
-      caseData,
-      timeoutMs: 15_000
-    }));
-  } finally {
-    if (previousDemoMode === undefined) delete process.env.DEMO_MODE;else process.env.DEMO_MODE = previousDemoMode;
-    if (previousX402Mode === undefined) delete process.env.X402_MODE;else process.env.X402_MODE = previousX402Mode;
-  }
+  // The runtime is in Demo (checked above), so its paid routes already use the simulated transport. Process-wide
+  // settings are never rewritten here: other requests served meanwhile would see a different payment mode.
+  const result = await withEphemeralApp(baseUrl => fetchPaidIntel(baseUrl, service.endpoint, {
+    demoMode: true,
+    budgetUSDC: Number(budget_usdc),
+    caseData,
+    timeoutMs: 15_000
+  }));
   if (!result.paid?.report_envelope) throw new Error(result.error?.error ?? 'Paid report was not unlocked');
   const envelope = result.paid.report_envelope;
   return {
