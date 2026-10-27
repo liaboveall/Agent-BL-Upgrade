@@ -117,6 +117,53 @@ test('sources: PortWatch transits become a 7-day average against the same week a
   await assert.rejects(fetchChokepointTransits(['X'], { fetchImpl: async () => response({ error: { message: 'bad query' } }) }), /bad query/u);
 });
 
+test('sources: an intermittent PortWatch error body is retried before the snapshot is used', async () => {
+  let calls = 0;
+  const fetchImpl = async (url) => {
+    calls += 1;
+    if (calls === 1) return response({ error: { code: 400, message: 'Invalid URL' } });
+    const baseline = decodeURIComponent(String(url)).includes('2025-');
+    return response({ features: Array.from({ length: 7 }, (_, i) => ({ attributes: { portname: 'Malacca Strait', date: `${baseline ? '2025' : '2026'}-10-${String(i + 10).padStart(2, '0')}`, n_total: 200 } })) });
+  };
+  const out = await fetchChokepointTransits(['Malacca Strait'], { now: Date.parse('2026-10-27T00:00:00Z'), fetchImpl, retryDelayMs: 0 });
+  assert.equal(out['Malacca Strait'].latest_date, '2026-10-16');
+  assert.equal(calls, 3, 'one failed attempt, then the recent and baseline windows');
+});
+
+test('sources: a timed-out PortWatch request is retried with its own longer timeout', async () => {
+  const timeouts = [];
+  let calls = 0;
+  const fetchImpl = async (url, init) => {
+    calls += 1;
+    if (calls === 1) throw Object.assign(new Error('This operation was aborted'), { name: 'AbortError' });
+    timeouts.push(init.signal instanceof AbortSignal);
+    const baseline = decodeURIComponent(String(url)).includes('2025-');
+    return response({ features: [{ attributes: { portname: 'Dover Strait', date: baseline ? '2025-10-12' : '2026-10-18', n_total: 50 } }] });
+  };
+  const out = await fetchChokepointTransits(['Dover Strait'], { now: Date.parse('2026-10-27T00:00:00Z'), fetchImpl, retryDelayMs: 0, env: { REAL_DATA_TIMEOUT_MS: '600' } });
+  assert.equal(out['Dover Strait'].latest_date, '2026-10-18');
+  assert.equal(calls, 3);
+  await assert.rejects(fetchChokepointTransits(['X'], { retryDelayMs: 0, fetchImpl: async () => { throw new Error('down'); } }), /down/u);
+});
+
+test('live: PortWatch counts stay current through its weekly release lag and go stale after two weeks', async (t) => {
+  const caseData = { case_id: 'PW', route_profile: { chokepoints: ['Malacca Strait'] } };
+  const fetchImpl = async (url) => {
+    const text = decodeURIComponent(String(url));
+    if (!text.includes('arcgis')) throw new Error('offline in this test');
+    const year = text.includes('2025-') ? '2025' : '2026';
+    return response({ features: Array.from({ length: 7 }, (_, i) => ({ attributes: { portname: 'Malacca Strait', date: `${year}-10-${String(i + 12).padStart(2, '0')}`, n_total: 200 } })) });
+  };
+  for (const [label, now, status] of [['nine days after the newest day', '2026-10-27T00:00:00Z', 'live'], ['fifteen days after', '2026-11-02T00:00:00Z', 'stale']]) {
+    await t.test(label, async () => {
+      const at = Date.parse(now);
+      const risk = await routeRiskEvents(caseData, { env: { REAL_DATA: 'on' }, now: at, cache: new TtlCache({ now: () => at }), fetchImpl, retryDelayMs: 0 });
+      assert.equal(risk.evidence.chokepoints[0].latest_date, '2026-10-18');
+      assert.equal(risk.evidence.chokepoints[0].status, status);
+    });
+  }
+});
+
 test('sources: Google News RSS items keep title, outlet, time and link', async () => {
   const xml = `<rss><channel><item><title>Ships hit near Hormuz - Reuters</title><link>https://news.example/a</link><pubDate>Wed, 14 Oct 2026 12:49:00 GMT</pubDate><source url="x">Reuters</source></item>
     <item><title><![CDATA[Copper &amp; aluminium rally]]></title><link>https://news.example/b</link><pubDate>Thu, 15 Oct 2026 01:00:00 GMT</pubDate></item><item><title></title></item></channel></rss>`;

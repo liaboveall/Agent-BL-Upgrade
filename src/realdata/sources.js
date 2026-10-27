@@ -7,7 +7,7 @@
 //   Open-Meteo Marine wave-height forecast at a point
 //   Yahoo Finance     futures quotes (unofficial chart endpoint; may change without notice)
 
-import { fetchJson, fetchText } from './http.js';
+import { fetchJson, fetchText, timeoutMs } from './http.js';
 
 const DAY_MS = 86_400_000;
 // Empty cells are missing observations, never measurements of zero.
@@ -22,11 +22,27 @@ function sqlList(names) {
   return names.map((name) => `'${String(name).replace(/'/gu, "''")}'`).join(',');
 }
 
-async function portwatchRows(where, options) {
+// A query the hosted service has not answered recently takes about six seconds, then the same URL is served from its
+// cache in milliseconds; a cold query sometimes comes back as an ArcGIS error body ("Invalid URL", HTTP 200) or times
+// out. So PortWatch gets a longer timeout than the other sources, and errors and timeouts are retried a few times.
+const PORTWATCH_ATTEMPTS = 3;
+const PORTWATCH_TIMEOUT_MS = 15_000;
+
+async function portwatchRows(where, { retryDelayMs = 250, ...options } = {}) {
   const params = new URLSearchParams({ where, outFields: 'date,portname,n_total', orderByFields: 'date', resultRecordCount: '2000', f: 'json' });
-  const json = await fetchJson(`${PORTWATCH_URL}?${params}`, options);
-  if (!Array.isArray(json.features)) throw new Error(json.error?.message ?? 'PortWatch returned no features');
-  return json.features.map((feature) => feature.attributes ?? {}).filter((row) => row.portname && row.date);
+  const timeout = Math.max(PORTWATCH_TIMEOUT_MS, timeoutMs(options.env));
+  let failure;
+  for (let attempt = 1; attempt <= PORTWATCH_ATTEMPTS; attempt += 1) {
+    try {
+      const json = await fetchJson(`${PORTWATCH_URL}?${params}`, { ...options, timeout });
+      if (Array.isArray(json.features)) return json.features.map((feature) => feature.attributes ?? {}).filter((row) => row.portname && row.date);
+      failure = new Error(json.error?.message ?? 'PortWatch returned no features');
+    } catch (error) {
+      failure = error;
+    }
+    if (attempt < PORTWATCH_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, retryDelayMs * attempt));
+  }
+  throw failure;
 }
 
 function mean(values) {

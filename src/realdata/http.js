@@ -23,10 +23,10 @@ export function timeoutMs(env = process.env) {
   return Number.isFinite(value) && value >= 500 ? value : DEFAULT_TIMEOUT_MS;
 }
 
-/** GET a URL as text with a timeout. `fetchImpl` is the test seam. */
-export async function fetchText(url, { env = process.env, fetchImpl = globalThis.fetch, headers = {} } = {}) {
+/** GET a URL as text with a timeout (`timeout` overrides the configured one for a slow source). `fetchImpl` is the test seam. */
+export async function fetchText(url, { env = process.env, fetchImpl = globalThis.fetch, headers = {}, timeout } = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs(env));
+  const timer = setTimeout(() => controller.abort(), timeout ?? timeoutMs(env));
   try {
     const response = await fetchImpl(url, { headers: { 'user-agent': USER_AGENT, accept: '*/*', ...headers }, signal: controller.signal });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);

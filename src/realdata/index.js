@@ -32,8 +32,10 @@ const GAL_PER_BBL = 42;
 const DAY = 86_400_000;
 const clock = (options) => typeof options.now === 'function' ? options.now() : options.now ?? Date.now();
 
-// Observation freshness is separate from cache/retrieval freshness. Quotes tolerate weekends;
-// daily PortWatch releases tolerate 72h, forecasts one hour, odds/news their retrieval window.
+// Observation freshness is separate from cache/retrieval freshness. Quotes tolerate weekends; forecasts one
+// hour, odds/news their retrieval window. PortWatch publishes its daily transit counts once a week with about a
+// week's lag, so a healthy feed's newest day is 7-13 days old: two weeks is stale, 72 hours would always be.
+const PORTWATCH_MAX_AGE_MS = 14 * 86_400_000;
 function observation(got, observedAt, maxAgeMs, options) {
   const at = Date.parse(observedAt ?? '');
   const valid = Number.isFinite(at) && at <= clock(options) + 5 * MINUTE;
@@ -124,7 +126,7 @@ async function getChokepoints(names, options) {
     () => fetchChokepointTransits(names, options), Object.keys(snapshotPart).length ? snapshotPart : null, options);
   for (const name of names) {
     const item = got?.value?.[name];
-    if (item) out[name] = { ...item, ...observation(got, item.latest_date, 3 * DAY, options) };
+    if (item) out[name] = { ...item, ...observation(got, item.latest_date, PORTWATCH_MAX_AGE_MS, options) };
   }
   return out;
 }

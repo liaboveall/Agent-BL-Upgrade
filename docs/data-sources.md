@@ -10,6 +10,9 @@
 | `data/scenarios/`、`data/pricing-scenarios/`、`data/agent-scenarios/` | 风险、定价和 Agent 回归 |
 | `data/real-data/`、`data/world-intel/`、`data/risk-intel/` | 带时间及来源的观测或研究快照 |
 | `data/evaluation/w4/` | 现有来源评估语料、公开样本与许可 |
+| `data/disclosures/` | 已批准融资条款的公开副本（按披露哈希命名，可选），见目录内 README |
+
+IMF PortWatch 每周发布一次逐日通行量，最新一天通常比当天晚 7–13 天，因此航道数据按 14 天判断是否过期；未被近期查询过的请求约需 6 秒，偶尔返回 “Invalid URL” 或超时，因此它单独使用 15 秒超时并最多重试三次，仍失败才回退到离线快照。
 
 这些文件仍被应用或回归使用。虚构案例不证明真实成交，日期平移不使旧行情成为新观测。来源状态以 live / stale / fixture / unavailable 区分；缺失、过期、回退和失败须可见。
 
