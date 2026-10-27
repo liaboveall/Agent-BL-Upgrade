@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { Wallet, id } from 'ethers';
-import { RightsService } from '../src/rights/service.js';
+import { RightsService, VAULT_QUEUE_LIMIT, VAULT_WAIT_MS } from '../src/rights/service.js';
 
 const gate = () => { let open; const promise = new Promise((resolve) => { open = resolve; }); return { promise, open }; };
 const within = (promise, ms, label) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} still waiting after ${ms}ms`)), ms))]);
@@ -71,7 +71,9 @@ test('F04 the commit after an unlocked chain read re-checks the session and neve
 });
 
 test('F04 the vault queue is bounded and a request that waited too long is refused, not run later', async (t) => {
-  const h = await fixture(t, { queueLimit: 2, waitMs: 50 }), held = gate(), original = h.service.writer;
+  // The tiny limits apply only while the lock is held; real vault I/O (slower on Windows) runs under the defaults.
+  const h = await fixture(t), held = gate(), original = h.service.writer;
+  Object.assign(h.service, { queueLimit: 2, waitMs: 50 });
   let ran = 0;
   h.service.writer = { exclusive: async (task) => { await held.promise; return task(); } };
   const waiting = [h.service.principal(h.owner.session.token), h.service.principal(h.other.session.token)];
@@ -80,6 +82,7 @@ test('F04 the vault queue is bounded and a request that waited too long is refus
   assert.equal(h.service.queueMetrics().queued, 0);
   assert.equal(h.service.queueMetrics().rejected, 3);
   h.service.writer = { exclusive: (task) => original.exclusive(async () => { ran++; return task(); }) };
+  Object.assign(h.service, { queueLimit: VAULT_QUEUE_LIMIT, waitMs: VAULT_WAIT_MS });
   held.open(); await new Promise((resolve) => setTimeout(resolve, 20));
   assert.equal(ran, 0, 'abandoned requests did not take the lock once it was free');
   assert.equal((await h.service.principal(h.owner.session.token)).organization, 'tenant-a');
