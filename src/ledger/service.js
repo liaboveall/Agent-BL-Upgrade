@@ -6,6 +6,7 @@ import { PROTOCOL_V5_ABI } from '../chain/protocolV5Abi.js';
 import { chainStateName } from '../agent/runtime/poolRules.js';
 import { RpcReadPool, mapReads, assertSnapshot, snapshotInfo, boundedProvider } from '../rights/reads.js';
 import { CONTROL_VERSION } from '../rights/typedData.js';
+import { findNonceTransaction } from '../chain/nonceLookup.js';
 
 const fail = (code, message, status = 409) => { throw Object.assign(new Error(message), { code, status, expose: true }); };
 const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
@@ -175,16 +176,16 @@ export class CapitalLedgerService {
     }
     if (intent.broadcast_nonce === undefined) return intent;
     const latest = await read(() => ctx.provider.getBlockNumber());
-    if (latest - intent.prepared_block > 500) fail('manual_reconciliation_required', 'Saved transaction is outside the bounded scan; attach its original wallet hash');
-    for (let n = intent.prepared_block; n <= latest; n++) {
-      const block = await read(() => ctx.provider.getBlock(n, true)); if (!block) fail('chain_unavailable', 'A recovery block is unavailable', 503);
-      for (const hash of block.transactions) {
-        const tx = await read(() => ctx.provider.getTransaction(hash)); if (!tx) fail('chain_unavailable', 'A recovery transaction is unavailable', 503);
-        if (!same(tx.from, intent.investor) || tx.nonce !== intent.broadcast_nonce) continue;
-        if (!same(tx.to, intent.protocol_instance.pool_address) || !same(tx.data, intent.calldata) || tx.value !== 0n) fail('nonce_consumed_by_other_transaction', 'Another transaction used the saved nonce; reconcile in the wallet');
-        return this.attach(intentId, hash);
-      }
+    let found;
+    try { found = await findNonceTransaction(ctx.provider, read, { from: intent.investor, nonce: intent.broadcast_nonce, fromBlock: intent.prepared_block, latest }); }
+    catch (error) {
+      if (error?.code === 'nonce_history_unavailable') fail('manual_reconciliation_required', 'This node cannot locate the saved transaction by its nonce; attach its original wallet hash');
+      if (error?.code === 'recovery_block_missing' || error?.code === 'recovery_transaction_missing') fail('chain_unavailable', 'A recovery block or transaction is unavailable', 503);
+      throw error;
     }
-    return { ...intent, reconciliation_required: true };
+    if (!found) return { ...intent, reconciliation_required: true };
+    const { hash, tx } = found;
+    if (!same(tx.to, intent.protocol_instance.pool_address) || !same(tx.data, intent.calldata) || tx.value !== 0n) fail('nonce_consumed_by_other_transaction', 'Another transaction used the saved nonce; reconcile in the wallet');
+    return this.attach(intentId, hash);
   }
 }

@@ -4,6 +4,7 @@ import { readJson } from '../lib/jsonStore.js';
 import { HttpError } from '../app/http.js';
 import { RpcReadPool } from './reads.js';
 import { CONTROL_VERSION } from './typedData.js';
+import { findNonceTransaction } from '../chain/nonceLookup.js';
 
 export const RIGHTS_CONTROLLER_ABI = [
   'function governance() view returns (address)', 'function registry() view returns (address)', 'function token() view returns (address)',
@@ -34,12 +35,48 @@ export function maskImmutableBytecode(bytecode, artifact) {
   return code;
 }
 
+// How long a complete verification serves the hot read paths before it is repeated in full.
+export const VERIFY_REUSE_MS = 5 * 60 * 1000;
+
+/** verifyCurrent() where the chain adapter has it (fixture adapters only implement verify()). */
+export function verifyChain(chain, options) {
+  return typeof chain.verifyCurrent === 'function' ? chain.verifyCurrent(options) : chain.verify(options);
+}
+
 /** Read-only planner. Caller signs in their wallet; the server has no private key. */
 export class RightsChainService {
-  constructor({ provider, controller, registry, pool, token, chainId, governance, artifacts, readPool = new RpcReadPool() }) {
-    Object.assign(this, { provider, controller, registry, pool, token, chainId, governance, artifacts, readPool });
+  #verified = null;
+  #pending = null;
+  constructor({ provider, controller, registry, pool, token, chainId, governance, artifacts, readPool = new RpcReadPool(), verifyReuseMs = VERIFY_REUSE_MS }) {
+    Object.assign(this, { provider, controller, registry, pool, token, chainId, governance, artifacts, readPool, verifyReuseMs });
   }
-  async verify({ read = this.readPool.budget(100).read, readAt } = {}) {
+  /**
+   * The checks a page read needs, without re-reading every runtime each time. An activated instance has no
+   * upgrade, ownership-transfer, rebinding or selfdestruct path, so its code, bindings and signature domains are
+   * re-verified in full only every `verifyReuseMs`. What can change, the RPC's network and the registry's hub
+   * enrollment, is read on every call. Signing and receipt paths keep calling verify() in full.
+   */
+  async verifyCurrent({ read = this.readPool.budget(100).read, readAt } = {}) {
+    const cached = this.#verified;
+    if (!cached || Date.now() - cached.at > this.verifyReuseMs) {
+      this.#pending ??= this.verify({ read, readAt }).finally(() => { this.#pending = null; });
+      return this.#pending;
+    }
+    const hub = new Contract(cached.hub, ['function registry(address) view returns (bool)'], this.provider);
+    const [network, enrolled] = await Promise.all([read(() => this.provider.getNetwork()),
+      read(() => hub.registry(cached.registry, ...(readAt ? [readAt] : [])))]);
+    requireThat(BigInt(network.chainId) === BigInt(this.chainId), 'rights_network_mismatch');
+    requireThat(enrolled, 'rights_registry_not_enrolled');
+    return { ...cached.binding };
+  }
+  async verify(options = {}) {
+    this.#verified = null;
+    const { hub, registry, ...binding } = await this.verifyBindings(options);
+    this.#verified = { at: Date.now(), binding, hub, registry };
+    return { ...binding };
+  }
+  /** Every check, read from the chain now; also returns the hub and registry for the per-call checks. */
+  async verifyBindings({ read = this.readPool.budget(100).read, readAt } = {}) {
     const view = (contract, method, ...args) => read(() => contract[method](...args, ...(readAt ? [readAt] : [])));
     const [network, owner, actualPool, actualRegistry, actualToken, gov, version, gate, mode, minter, boundController, count, delay, scope, capitalVersion, registryGovernance, hubAddress,
       oracle, capitalRegistry, capitalToken, controllerDomain, registryDomain] = await Promise.all([
@@ -79,7 +116,8 @@ export class RightsChainService {
       requireThat(a?.deployedBytecode && maskImmutableBytecode(await read(() => this.provider.getCode(rightsAddress, readAt?.blockTag)), a)
         === maskImmutableBytecode(a.deployedBytecode, a), 'rights_bytecode_mismatch');
     }
-    return { chain_id: String(network.chainId), controller: owner, pool: actualPool, governance: gov, control_version: Number(version), exit_only: Number(version) < CONTROL_VERSION };
+    return { chain_id: String(network.chainId), controller: owner, pool: actualPool, governance: gov, control_version: Number(version), exit_only: Number(version) < CONTROL_VERSION,
+      hub: hubAddress, registry: actualRegistry };
   }
   async prepare(principal, input) {
     const binding = await this.verify();
@@ -150,23 +188,17 @@ export class RightsChainService {
   async recoverTransaction(plan) {
     const { read } = this.readPool.budget(2000);
     const latest = await read(() => this.provider.getBlockNumber());
-    if (latest - plan.prepared_block > 500) throw new HttpError(409, 'rights_manual_reconciliation_required', 'Saved broadcast is outside the bounded scan; reconcile its wallet hash explicitly');
-    for (let number = plan.prepared_block; number <= latest; number++) {
-      const block = await read(() => this.provider.getBlock(number, true));
-      requireThat(block, 'rights_recovery_block_missing');
-      // Some providers ignore prefetch; fetch each transaction without guessing a hash.
-      for (const hash of block.transactions) {
-        const tx = await read(() => this.provider.getTransaction(hash));
-        requireThat(tx, 'rights_recovery_transaction_missing');
-        if (equal(tx.from, plan.from) && Number(tx.nonce) === plan.nonce) {
-          if (!equal(tx.to, plan.to) || !equal(tx.data, plan.calldata) || tx.value !== 0n) {
-            return { status: 'nonce_consumed_by_other_transaction', observed_tx_hash: hash };
-          }
-          return this.verifyTransaction(plan, hash);
-        }
-      }
+    let found;
+    try { found = await findNonceTransaction(this.provider, read, { from: plan.from, nonce: plan.nonce, fromBlock: plan.prepared_block, latest }); }
+    catch (error) {
+      if (error?.code === 'nonce_history_unavailable') throw new HttpError(409, 'rights_manual_reconciliation_required', 'This node cannot locate the saved broadcast by its nonce; reconcile its wallet hash explicitly');
+      if (error?.code === 'recovery_block_missing' || error?.code === 'recovery_transaction_missing') requireThat(false, `rights_${error.code}`);
+      throw error;
     }
-    return null;
+    if (!found) return null;
+    const { hash, tx } = found;
+    if (!equal(tx.to, plan.to) || !equal(tx.data, plan.calldata) || tx.value !== 0n) return { status: 'nonce_consumed_by_other_transaction', observed_tx_hash: hash };
+    return this.verifyTransaction(plan, hash);
   }
 }
 

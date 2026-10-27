@@ -3,7 +3,7 @@ import path from 'node:path';
 import { OperationsMonitor } from './monitor.js';
 import { readJson, writeJsonAtomic } from '../lib/jsonStore.js';
 import { rightsKey, unseal } from '../rights/vault.js';
-import { loadRightsChain } from '../rights/chain.js';
+import { loadRightsChain, verifyChain } from '../rights/chain.js';
 
 /** Read-only verification. No key generation, charging, transaction signing or automatic repair. */
 export async function verifyRuntimeMaterials(directory, env = {}) {
@@ -53,7 +53,7 @@ export function createRuntimeMonitor({ directory, env, getAgentStatus, getCapita
     probeControls: async () => {
       if (!env.AGENTBL_RIGHTS_CONFIG) return { enabled: false };
       chain ??= await loadRightsChain(env.AGENTBL_RIGHTS_CONFIG);
-      try { return { enabled: true, ...await chain.verify(), intake_stopped: await chain.controller.intakeStopped(),
+      try { return { enabled: true, ...await verifyChain(chain), intake_stopped: await chain.controller.intakeStopped(),
         ...(getCapitalHealth ? await getCapitalHealth() : {}) }; }
       catch (error) { await chain.provider.destroy(); chain = null; throw error; }
     },

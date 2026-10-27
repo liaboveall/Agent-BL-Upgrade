@@ -221,4 +221,20 @@ describe('N3 actual EVM, authenticated HTTP, enrolled roles and wallet adapters'
       assert.ok(positions.snapshot); assert.ok(positions.read_metrics.calls > 0);
     } finally { c.chain.pool = actualPool; }
   });
+
+  it('reads a page through the canonical Multicall3 with the same rows and far fewer reads, and ignores a lookalike', async () => {
+    const page = async () => { await c.provider.send('evm_mine', []); return request('controlled/offerings?from=1&limit=10'); };
+    const rows = (result) => result.offerings.map(({ block_number: _block, ...row }) => row);
+    const before = await page();
+    const { code } = JSON.parse(await fs.readFile(new URL('./helpers/multicall3-runtime.json', import.meta.url), 'utf8'));
+    const { MULTICALL3_ADDRESS } = await import('../src/chain/multicall.js');
+    await c.provider.send('hardhat_setCode', [MULTICALL3_ADDRESS, `${code.slice(0, -2)}${code.endsWith('00') ? '01' : '00'}`]);
+    const lookalike = await page();
+    assert.ok(lookalike.read_metrics.calls > 80, 'altered code is not trusted');
+    await c.provider.send('hardhat_setCode', [MULTICALL3_ADDRESS, code]);
+    const batched = await page();
+    assert.deepEqual(rows(batched), rows(before));
+    assert.equal(batched.complete, true);
+    assert.ok(batched.read_metrics.calls < 12 && before.read_metrics.calls > 80, `${batched.read_metrics.calls} vs ${before.read_metrics.calls} reads`);
+  });
 });

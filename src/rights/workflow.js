@@ -1,6 +1,7 @@
 import { id } from 'ethers';
 import { chainStateName } from '../agent/runtime/poolRules.js';
 import { RpcReadPool, assertSnapshot, snapshotInfo } from './reads.js';
+import { verifyChain } from './chain.js';
 
 export const WORKFLOW_STEPS = [
   { id: 'document', roles: ['issuer'], next: 'create_material' },
@@ -27,7 +28,7 @@ export async function materialWorkflow(chain, principal, record, pack, published
   const { read, stats } = readPool.budget(120);
   try {
     const block = await read(() => chain.provider.getBlock('latest')), at = { blockTag: block.number };
-    await chain.verify({ read, readAt: at });
+    await verifyChain(chain, { read, readAt: at });
     const eblId = await read(() => chain.registry.eblForAsset(pack.terms.assetKey, at));
     const [title, pledge, pledgeTerms, poolId] = eblId > 0n ? await Promise.all([
       read(() => chain.registry.titles(eblId, at)), read(() => chain.registry.pledgedTo(eblId, at)), read(() => chain.registry.pledgeTerms(eblId, at)), read(() => chain.controller.latestPoolForEbl(eblId, at)) ]) : [null, null, null, 0n];

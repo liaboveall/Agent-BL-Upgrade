@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { isAddress } from 'ethers';
-import { loadRightsChain } from '../rights/chain.js';
+import { loadRightsChain, verifyChain } from '../rights/chain.js';
 import { readJson } from '../lib/jsonStore.js';
 import { Ledger } from '../ledger/ledger.js';
 import { CapitalLedgerService } from '../ledger/service.js';
@@ -33,7 +33,7 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
       const config = controlledCapitalConfig({ ...configuration, control_version: binding.control_version });
       const ledger = new Ledger({ baseDir: path.join(runtimeDir(env), `controlled-capital-${config.contracts.RWAOfferingPool.toLowerCase()}`) });
       const capital = new CapitalLedgerService({ ledger, chainConfig: config, getMode, getGeneration, readPool, confirmations: Number(configuration.chain_id) === 31337 ? 1 : 3,
-        getContext: async () => { await chain.verify({ read: readPool.budget(100).read }); return { provider: chain.provider }; } });
+        getContext: async () => { await verifyChain(chain, { read: readPool.budget(100).read }); return { provider: chain.provider }; } });
       context = { chain, config, capital, configuration }; return context;
     })().catch((error) => { loading = null; throw error; });
     return loading;
@@ -48,7 +48,7 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
     }
     const { chain, capital, config } = await load();
     const pagedRead = route === 'offerings' || /^offerings\/[1-9]\d*$/u.test(route);
-    if (!pagedRead) await chain.verify({ read: readPool.budget(100).read });
+    if (!pagedRead) await verifyChain(chain, { read: readPool.budget(100).read });
     const authorizeWallet = async (wallet, saved, broadcast = false, allowExitOnly = false) => {
       // Supplied read-only fixture adapters do not implement business sessions.
       if (typeof disclosures.principal !== 'function') return null;
