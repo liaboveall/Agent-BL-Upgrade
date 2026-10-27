@@ -32,11 +32,11 @@
       "contracts": {
         "RightsGovernance": "0x1Df02ED170bA2367d56F190Cc1b8225f58f6E2e5",
         "AssetIdentityHub": "0x471c70CAb4166AF7D0261cb0dE9Be26B53C01e88",
-        "CommittedEBLRegistry": "0x7cD3485d87b00e4F9154C19750DfCC3C8394C671",
-        "RightsController": "0xdfF4E824764c6Ff858CAF28d74F026D9E97624aF",
+        "CommittedEBLRegistry": "0x4558234020d2692940f50B3dF501A58c7E9db891",
+        "RightsController": "0x1E3D356cf439e2b0e7d781A02D364e142f50DB51",
         "MockAuthorizationUSDC": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C",
-        "RWAOfferingPoolV5": "0x53d65a42Df5431157922fE85ab72C2C7abB7AC99",
-        "ControlledRWAToken": "0xDbEf424638154AA595308A45f62898CE9aF2aE17",
+        "RWAOfferingPoolV5": "0x84d82e9BC685bD4377F701d233657DBb63daD15F",
+        "ControlledRWAToken": "0x3150F3309B39a1ACcE69355F09EfA7075ae4459d",
         "PaymentOracle": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
         "AgentDecisionLog": "0xA95200a69A62eD9e2A8D024fDeAAc7BB231E05f4"
       },
@@ -541,9 +541,9 @@
       },
       "deployments": {
         "RWAOfferingPoolV5": {
-          "address": "0x53d65a42Df5431157922fE85ab72C2C7abB7AC99",
-          "blockNumber": 144364667,
-          "deployTx": "0xb361ffd6708b7dd15757a77776df79f9f48e920bc525efccffd22eee4760b3ae"
+          "address": "0x84d82e9BC685bD4377F701d233657DBb63daD15F",
+          "blockNumber": 145730878,
+          "deployTx": "0x1d779085a1c856a68bcaa4847fc1da696fce2f7613b6ebb34e7295f68242cc25"
         },
         "PaymentOracle": {
           "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
@@ -556,7 +556,7 @@
           "blockNumber": 144218776
         }
       },
-      "controlVersion": 2
+      "controlVersion": 3
     }
   }
 }

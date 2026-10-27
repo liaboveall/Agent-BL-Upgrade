@@ -54,7 +54,7 @@ Live 模式下，服务生成受限的无签名计划，当前钱包确认后才
 
 ## 当前实例与信任边界
 
-当前公开配置是 control version 2、Rights v2 签名域。旧 v1 使用冻结 ABI/runtime，只保留应用内查询与既有退出；不能用新 ABI 解释旧条款。共享治理与 Hub 保留旧资产占用，新 Registry、Pool、Controller 和资金账本独立。
+当前公开配置是 control version 3、Rights v3 签名域。旧 v1、v2 使用各自冻结的 ABI/runtime，只保留应用内查询与既有退出；不能用新 ABI 解释旧条款。共享治理与 Hub 保留旧资产占用，新 Registry、Pool、Controller 和资金账本独立。
 
 完整条款可下载并离线复算，前端也独立核对签名域和承诺。合约可以约束登记域内对象和测试代币，无法独立证明货物、单证、估值或法律权利真实。研究角色由同一操作员保管，不代表独立组织。
 

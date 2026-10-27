@@ -44,6 +44,8 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
     await expect(terms).toContainText(language === 'zh' ? '完整融资条款' : 'Complete financing terms');
     await expect(terms).toContainText(pack.terms.exporter); await expect(terms).toContainText('0 TEST_USDC');
     await expect(terms).toContainText(language === 'zh' ? '烧毁份额后仍保留' : 'Burning shares preserves');
+    await expect(terms).toContainText(language === 'zh' ? '每个钱包在同一池最多 32 段' : 'at most 32 separate subscription segments in one pool');
+    await expect(terms).toContainText(language === 'zh' ? '首笔认购后价格固定' : 'The price is fixed from the first subscription');
     await expect(terms.getByRole('link')).toHaveAttribute('href', '/api/controlled/offerings/1/terms?download=1');
     const confirm = card.getByRole('button', { name: language === 'zh' ? '确认并前往钱包' : 'Confirm and continue to wallet', exact: true });
     await expect(confirm).toBeDisabled(); await card.getByRole('checkbox').focus(); await page.keyboard.press('Space'); await expect(confirm).toBeEnabled();

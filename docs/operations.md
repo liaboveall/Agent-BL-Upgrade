@@ -31,10 +31,10 @@ npm run dev
 
 | 服务 | 地址 | 持久状态 |
 | --- | --- | --- |
-| 当前 v2 | <http://127.0.0.1:3000/#/finance> | `data/runtime/n5-deployment/n5-v2-20261019/application/` |
+| 旧 v2 退出 | <http://127.0.0.1:3000/#/finance> | `data/runtime/n5-deployment/n5-v2-20261019/application/` |
 | 旧 v1 退出 | <http://127.0.0.1:3001/#/finance> | `data/runtime/w5-app/` |
 
-以上地址指已经初始化的本机容器；新 checkout 不会自动具有其私有材料和运行状态。两实例分别保留配置、vault 和账本，不能互相覆盖。旧 v1 不在应用内开放新增风险。
+以上地址指已经初始化的本机容器；新 checkout 不会自动具有其私有材料和运行状态。各实例分别保留配置、vault 和账本，不能互相覆盖。当前 v3 实例的运行目录是 `data/runtime/n5-deployment/n5-v3-20261027/application/`，`AGENTBL_RIGHTS_CONFIG` 指向同目录上一级的 `rights-instance.json`；启动它时使用新端口，不能复用 v2 的运行目录。旧 v1、v2 不在应用内开放新增风险；用当前代码服务 v2 时，它按冻结产物核验并自动进入只退出状态。
 
 `GET /api/health` 检查进程存活，`GET /api/ready` 检查就绪，`GET /api/ops/status` 提供运行状态。就绪并不表示真实业务启用。
 
@@ -47,7 +47,7 @@ docker compose stop
 
 Compose 默认使用自己的命名卷；已有部署应继续使用其原挂载、配置和密钥，不能用默认 Compose 覆盖。新测试实例使用不同端口和运行目录。
 
-当前 v2 应用为在途公共读取预留最多 180 秒排空，Compose 的 `stop_grace_period` 为 210 秒；直接启动容器时使用 `--stop-timeout 210`，显式停止使用：
+应用为在途公共读取预留最多 180 秒排空，Compose 的 `stop_grace_period` 为 210 秒；直接启动容器时使用 `--stop-timeout 210`，显式停止使用：
 
 ```sh
 docker stop -t 210 <容器>
@@ -80,9 +80,9 @@ npm run runtime:backup -- restore --directory <新目标目录> --key-file <独�
 
 `npm run build:clean` 比较两次干净构建；`npm run test:load -- --soak-seconds 600 --output test-results/load.json` 测量现有离线服务，不代表公共 RPC 或并发商业容量。
 
-测试网工具 `npm run testnet -- status n5-v2-20261019` 只查询原部署记录。`prepare` / `activate` / `funding` 需要 `--execute` 和相同提交 CI 收据，未知交易先找原 nonce/hash，不能自动重发；历史已结清样例不应重新广播。`npm run testnet:legacy -- status` 仅查询旧部署。
+测试网工具 `npm run testnet -- status n5-v3-20261027`（旧实例为 `n5-v2-20261019`）只查询原部署记录。`prepare` / `activate` / `funding` 需要 `--execute` 和相同提交 CI 收据，未知交易先找原 nonce/hash，不能自动重发；历史已结清样例不应重新广播。`npm run testnet:legacy -- status` 仅查询旧部署。
 
-人工验收的新池由 `npm run testnet -- acceptance n5-v2-20261019 <阶段>` 准备，输入为实例目录中的 `acceptance-input.json`：批次名、两个验收钱包、两个池的认购截止，以及可选的审查截止。各阶段如下：
+人工验收的新池由 `npm run testnet -- acceptance n5-v3-20261027 <阶段>` 准备，输入为实例目录中的 `acceptance-input.json`：批次名、两个验收钱包、两个池的认购截止，以及可选的审查截止。各阶段如下：
 
 - `plan` 不读密钥，列出每个阶段将发送的交易及其原交易状态。
 - `prepare` 建立正常兑付池和失败募集池，登记出资身份，并发放资格、测试代币和 gas。执行前先停止该实例应用；执行期间持有运行租约，独占写材料 vault。

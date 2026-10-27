@@ -52,7 +52,7 @@ A bilingual interface for borrowers, reviewers, and investors, with financing po
 
 [![AgentBL English financing workspace](docs/assets/financing-en.png)](docs/assets/financing-en.png)
 
-<sub>Actual local v2 interface. The screenshot shows public testnet pool data in Demo viewing mode, with no wallet connected.</sub>
+<sub>Actual interface of the local v2 instance. The screenshot shows public testnet pool data in Demo viewing mode, with no wallet connected.</sub>
 
 ## One workflow, three cash outcomes
 
@@ -138,7 +138,7 @@ Supporting documents under `docs/` are currently written in Chinese.
 
 ## Research scope and delivery
 
-> **Current delivery:** v2 testnet deployment, all three funding paths, late recovery, ledger reconciliation, and local container recovery have been verified. **Human wallet acceptance was completed on 2026-10-23** (normal repayment and failed-raise refund on new testnet pools #26 and #27).
+> **Current delivery:** since 2026-10-27 the public configuration points to the new control version 3 instance `n5-v3-20261027`, which fixes pre-maturity liquidation rights, repricing after subscription, issuer key rotation and collateral release retry (see the [contract notes](docs/contracts.md)); the v2 instance is frozen as exit-only. The v2 testnet deployment, all three funding paths, late recovery, ledger reconciliation, and local container recovery have been verified; **human wallet acceptance was completed on v2 on 2026-10-23** (pools #26 and #27) and has not been repeated on v3.
 
 Contracts constrain registered assets, authorizations, and test tokens deposited into them. Material hashes do not prove real goods or legal claims; duplicate financing outside the registry domain is not automatically prevented. Research addresses do not represent independent organizations. Test tokens are not real dollars, and shares are non-transferable.
 
@@ -151,7 +151,7 @@ These URLs apply when the initialized local containers are already running; a fr
 
 | Service | URL |
 | --- | --- |
-| Current v2 financing and positions | <http://127.0.0.1:3000/#/finance> |
+| Legacy v2 queries and exits | <http://127.0.0.1:3000/#/finance> |
 | Legacy v1 queries and exits | <http://127.0.0.1:3001/#/finance> |
 
 </details>
