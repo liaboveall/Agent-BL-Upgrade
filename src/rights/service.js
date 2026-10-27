@@ -37,14 +37,25 @@ export function pruneExpiredAccess(state, now) {
   for (const [key, session] of Object.entries(state.sessions)) if (session?.expires_at <= cutoff) delete state.sessions[key];
 }
 
+// The vault is one encrypted file behind one writer, so its queue must stay short. Chain reads happen outside
+// it; these bounds keep a burst (or a stuck disk) from growing an unbounded line of waiting requests.
+export const VAULT_QUEUE_LIMIT = 64;
+export const VAULT_WAIT_MS = 15_000;
+const STALE = Symbol('stale plan');
+
 /** Durable, encrypted research identity and disclosure service. Every operation re-resolves
  * the current subject/session; no caller-supplied organization or role is trusted. */
 export class RightsService {
-  constructor({ env = process.env, directory = runtimePath('rights', env), clock = () => Date.now(), chain = null, getVersion = null, getMode = null, getGeneration = () => 0, readPool = chain?.readPool ?? new RpcReadPool() } = {}) {
+  #queue = { queued: 0, completed: 0, last_wait_ms: 0, max_wait_ms: 0, rejected: 0 };
+  constructor({ env = process.env, directory = runtimePath('rights', env), clock = () => Date.now(), chain = null, getVersion = null, getMode = null, getGeneration = () => 0, readPool = chain?.readPool ?? new RpcReadPool(),
+    queueLimit = VAULT_QUEUE_LIMIT, waitMs = VAULT_WAIT_MS } = {}) {
     this.directory = directory; this.env = env; this.clock = clock; this.chain = chain;
     this.getVersion = getVersion; this.getMode = getMode; this.getGeneration = getGeneration; this.readPool = readPool;
+    this.queueLimit = queueLimit; this.waitMs = waitMs;
     this.writer = new LedgerWriter(directory);
   }
+  /** Observable vault queue: requests waiting now and how long recent ones waited for the lock. */
+  queueMetrics() { return { ...this.#queue, limit: this.queueLimit, wait_limit_ms: this.waitMs }; }
   async status() {
     let configured = false;
     try { configured = Boolean(rightsKey(this.env)); } catch {}
@@ -52,27 +63,75 @@ export class RightsService {
     if (this.chain) { try { await this.chain.verify(); active = true; } catch { unavailable = true; } }
     return { scope: 'research_test_assets_only', business_enabled: false, candidate: active ? 'deployed_research_instance' : 'local_source',
       active_control_plane: active, unavailable, identity_configured: configured,
-      external_rights_verified: false, trusted_provider_verified: false };
+      external_rights_verified: false, trusted_provider_verified: false, vault_queue: this.queueMetrics() };
   }
   async #transaction(callback) {
     const key = rightsKey(this.env);
     if (!key) throw new HttpError(503, 'rights_not_configured', 'Research identity vault is not configured');
-    return this.writer.exclusive(async () => {
-      const file = path.join(this.directory, 'vault.json'), stored = await readJson(file);
-      const marker = path.join(this.directory, 'vault-initialized.json'), initialized = await readJson(marker);
-      if (!stored && initialized) throw new HttpError(503, 'rights_vault_missing', 'The initialized rights vault is missing; restore its history before continuing');
-      const state = stored ? unseal(key, stored, VAULT_AAD) : emptyState();
-      if (state.schema !== VAULT_AAD) throw new HttpError(503, 'rights_schema_mismatch', 'Rights vault schema is unsupported');
-      const context = { key, now: this.clock(), dirty: false };
-      const result = await callback(state, context);
-      if (context.dirty) {
-        pruneExpiredAccess(state, context.now);
-        state.revision++;
-        await writeJsonAtomic(file, seal(key, state, VAULT_AAD), { durable: true });
-        if (!initialized) await writeJsonAtomic(marker, { schema: VAULT_AAD, initialized: true }, { durable: true });
-      }
-      return result;
+    const queue = this.#queue, busy = () => new HttpError(503, 'rights_vault_busy', 'The identity vault is busy; retry shortly');
+    if (queue.queued >= this.queueLimit) { queue.rejected++; throw busy(); }
+    const enqueued = performance.now();
+    let state = 'waiting', timer;
+    queue.queued++;
+    const leave = (next) => { if (state === 'waiting') { state = next; queue.queued--; } };
+    const expired = new Promise((_, reject) => {
+      timer = setTimeout(() => { if (state === 'waiting') { leave('abandoned'); queue.rejected++; reject(busy()); } }, this.waitMs);
+      timer.unref?.();
     });
+    const work = this.writer.exclusive(async () => {
+      if (state === 'abandoned') return undefined; // its caller already received rights_vault_busy; never run it late
+      leave('running'); clearTimeout(timer);
+      const waited = Math.round(performance.now() - enqueued);
+      queue.last_wait_ms = waited; queue.max_wait_ms = Math.max(queue.max_wait_ms, waited); queue.completed++;
+      return this.#locked(key, callback);
+    });
+    try { return await Promise.race([work, expired]); }
+    finally { clearTimeout(timer); leave('failed'); }
+  }
+  async #locked(key, callback) {
+    const file = path.join(this.directory, 'vault.json'), stored = await readJson(file);
+    const marker = path.join(this.directory, 'vault-initialized.json'), initialized = await readJson(marker);
+    if (!stored && initialized) throw new HttpError(503, 'rights_vault_missing', 'The initialized rights vault is missing; restore its history before continuing');
+    const state = stored ? unseal(key, stored, VAULT_AAD) : emptyState();
+    if (state.schema !== VAULT_AAD) throw new HttpError(503, 'rights_schema_mismatch', 'Rights vault schema is unsupported');
+    const context = { key, now: this.clock(), dirty: false };
+    const result = await callback(state, context);
+    if (context.dirty) {
+      pruneExpiredAccess(state, context.now);
+      state.revision++;
+      await writeJsonAtomic(file, seal(key, state, VAULT_AAD), { durable: true });
+      if (!initialized) await writeJsonAtomic(marker, { schema: VAULT_AAD, initialized: true }, { durable: true });
+    }
+    return result;
+  }
+  /** The caller's own saved plan, re-resolved from the current session. */
+  #ownedPlan(state, token, planId, now) {
+    const principal = this.#principal(state, token, now), plan = state.plans[planId];
+    if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
+    return { principal, plan };
+  }
+  /**
+   * Read a plan, run its chain reads with the vault unlocked, then commit only if the plan is still exactly
+   * the one that was read. A slow or retrying RPC therefore delays only this request, never another
+   * organization's identity or material reads, and the commit still re-checks session and plan state.
+   */
+  async #planWithChain(token, planId, { check = () => {}, read, apply }) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const draft = await this.#transaction((state, ctx) => {
+        const owned = this.#ownedPlan(state, token, planId, ctx.now);
+        check(state, owned.plan, owned.principal, ctx);
+        return { principal: owned.principal, plan: structuredClone(owned.plan) };
+      });
+      const observed = await read(draft.plan, draft.principal);
+      const result = await this.#transaction((state, ctx) => {
+        const owned = this.#ownedPlan(state, token, planId, ctx.now);
+        if (canonicalJson(owned.plan) !== canonicalJson(draft.plan)) return STALE;
+        check(state, owned.plan, owned.principal, ctx);
+        return apply(state, owned.plan, observed, ctx, owned.principal);
+      });
+      if (result !== STALE) return result;
+    }
+    throw new HttpError(409, 'rights_plan_busy', 'The saved operation changed while it was being checked; retry');
   }
   #principal(state, token, now, { allowExitOnly = false } = {}) {
     const session = /^[a-f0-9]{64}$/u.test(token ?? '') ? state.sessions[digest(token)] : null;
@@ -374,36 +433,35 @@ export class RightsService {
     return materialWorkflow(this.chain, principal, input.record, input.pack, input.published, input.approvals, this.readPool);
   }
   async checkpointPlan(token, planId) {
-    const draft = await this.#transaction((state, ctx) => {
-      const principal = this.#principal(state, token, ctx.now), plan = state.plans[planId];
-      if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
-      return structuredClone(plan);
-    });
+    const draft = await this.#transaction((state, ctx) => structuredClone(this.#ownedPlan(state, token, planId, ctx.now).plan));
     if (draft.operation === 'acknowledge_terms') {
       const reviewed = await financingReview(this.chain, this, draft.plan_input.pool_id);
       if (draft.plan_input.reviewed_disclosure_hash !== reviewed.disclosure_hash || String(draft.plan_input.quote_version) !== reviewed.quote_version) throw new HttpError(409, 'financing_review_required', 'Review current complete terms before wallet submission');
     }
-    return this.#transaction(async (state, ctx) => {
-      const principal = this.#principal(state, token, ctx.now), plan = state.plans[planId];
-      if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
+    const context = (state, plan, principal) => {
       if (plan.status !== 'draft') throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the original operation before another wallet send');
       if (this.getMode && this.getMode() !== 'live' || plan.execution_generation !== this.getGeneration() || plan.session_id !== principal.session_id
         || plan.material_id && plan.material_revision !== state.materials[plan.material_id]?.revision) throw new HttpError(409, 'execution_context_changed', 'Session, mode or material changed; prepare a new review');
       if (!this.chain) throw new HttpError(503, 'rights_chain_not_configured', 'Verified chain unavailable');
-      const fresh = await this.chain.prepare(principal, plan.plan_input);
-      if (plan.execution_generation !== this.getGeneration() || this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'execution_context_changed', 'Execution context changed before broadcast');
-      if (fresh.chain_id !== plan.chain_id || fresh.pool !== plan.pool || fresh.controller !== plan.controller || fresh.calldata !== plan.calldata
-        || fresh.nonce !== plan.nonce) throw new HttpError(409, 'rights_plan_changed', 'Chain, nonce or transaction changed; prepare a new review');
-      if (plan.material_id) {
-        const material = this.#material(state, principal, plan.material_id, ctx.now);
-        if (plan.operation === 'create_offering') {
-          const valid = material.reviews.filter((review) => !state.subjects[review.subject_id]?.revoked && review.revision === material.revision);
-          if (valid.length < 2 || state.publications[plan.material_id]?.revision !== material.revision) throw new HttpError(409, 'rights_approved_disclosure_required', 'Current independent reviews are required');
+    };
+    return this.#planWithChain(token, planId, {
+      check: context,
+      // The preflight call and nonce read run unlocked; the commit re-checks session, mode, material and plan.
+      read: (plan, principal) => this.chain.prepare(principal, plan.plan_input),
+      apply: (state, plan, fresh, ctx, principal) => {
+        if (fresh.chain_id !== plan.chain_id || fresh.pool !== plan.pool || fresh.controller !== plan.controller || fresh.calldata !== plan.calldata
+          || fresh.nonce !== plan.nonce) throw new HttpError(409, 'rights_plan_changed', 'Chain, nonce or transaction changed; prepare a new review');
+        if (plan.material_id) {
+          const material = this.#material(state, principal, plan.material_id, ctx.now);
+          if (plan.operation === 'create_offering') {
+            const valid = material.reviews.filter((review) => !state.subjects[review.subject_id]?.revoked && review.revision === material.revision);
+            if (valid.length < 2 || state.publications[plan.material_id]?.revision !== material.revision) throw new HttpError(409, 'rights_approved_disclosure_required', 'Current independent reviews are required');
+          }
         }
+        if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
+          && !['draft', 'confirmed', 'reverted'].includes(other.status))) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send');
+        plan.status = 'broadcast_prepared'; plan.checkpoint_at = ctx.now; ctx.dirty = true; return plan;
       }
-      if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
-        && !['draft', 'confirmed', 'reverted'].includes(other.status))) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send');
-      plan.status = 'broadcast_prepared'; plan.checkpoint_at = ctx.now; ctx.dirty = true; return plan;
     });
   }
   async prepareTransaction(token, input) {
@@ -446,12 +504,11 @@ export class RightsService {
       state.plans[plan_id] = saved; ctx.dirty = true; return saved;
     });
   }
-  getPlan(token, planId) {
-    return this.#transaction(async (state, ctx) => {
-      const principal = this.#principal(state, token, ctx.now), plan = state.plans[planId];
-      if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
-      if (this.chain) {
-        const observed = plan.tx_hash ? await this.chain.verifyTransaction(plan, plan.tx_hash) : await this.chain.recoverTransaction(plan);
+  async getPlan(token, planId) {
+    if (!this.chain) return this.#transaction((state, ctx) => this.#ownedPlan(state, token, planId, ctx.now).plan);
+    return this.#planWithChain(token, planId, {
+      read: (plan) => plan.tx_hash ? this.chain.verifyTransaction(plan, plan.tx_hash) : this.chain.recoverTransaction(plan),
+      apply: (state, plan, observed, ctx) => {
         if (observed?.tx_hash && Object.values(state.plans).some((other) => other.plan_id !== planId && other.tx_hash?.toLowerCase() === observed.tx_hash.toLowerCase())) {
           throw new HttpError(409, 'rights_transaction_reused', 'Transaction is already bound to another plan');
         }
@@ -460,19 +517,20 @@ export class RightsService {
           plan.receipt_history.push({ tx_hash: plan.tx_hash, block_number: plan.block_number, block_hash: plan.block_hash, status: plan.status, invalidated_at: ctx.now });
         }
         if (observed) { Object.assign(plan, observed); ctx.dirty = true; }
+        return plan;
       }
-      return plan;
     });
   }
   async attachTransaction(token, planId, txHash) {
     if (!/^0x[a-fA-F0-9]{64}$/u.test(txHash ?? '')) throw new HttpError(400, 'rights_tx_hash_invalid', 'A transaction hash is required');
     if (!this.chain) throw new HttpError(409, 'rights_chain_not_configured', 'No verified W3 protocol instance is configured');
-    return this.#transaction(async (state, ctx) => {
-      const principal = this.#principal(state, token, ctx.now), plan = state.plans[planId];
-      if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
-      if (plan.tx_hash && plan.tx_hash.toLowerCase() !== txHash.toLowerCase()) throw new HttpError(409, 'rights_plan_already_bound', 'Plan already has a different transaction; reconcile it first');
-      if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.tx_hash?.toLowerCase() === txHash.toLowerCase())) throw new HttpError(409, 'rights_transaction_reused', 'Transaction is already bound to another plan');
-      Object.assign(plan, await this.chain.verifyTransaction(plan, txHash)); ctx.dirty = true; return plan;
+    return this.#planWithChain(token, planId, {
+      check: (state, plan) => {
+        if (plan.tx_hash && plan.tx_hash.toLowerCase() !== txHash.toLowerCase()) throw new HttpError(409, 'rights_plan_already_bound', 'Plan already has a different transaction; reconcile it first');
+        if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.tx_hash?.toLowerCase() === txHash.toLowerCase())) throw new HttpError(409, 'rights_transaction_reused', 'Transaction is already bound to another plan');
+      },
+      read: (plan) => this.chain.verifyTransaction(plan, txHash),
+      apply: (state, plan, observed, ctx) => { Object.assign(plan, observed); ctx.dirty = true; return plan; }
     });
   }
 }
