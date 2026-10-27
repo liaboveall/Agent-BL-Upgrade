@@ -56,11 +56,15 @@ export function RoleWorkspace({ zh, status, wallet }) {
   viewContext.current = { wallet, generation, materialId, operation, file, amount, evidence, distribution, investorWallet, validUntil, documentText };
   const capture = () => { const saved = { ...viewContext.current }; return () => { if (!Object.entries(saved).every(([name, value]) => viewContext.current[name] === value)) throw new Error('Wallet, mode, material or action changed. Review again.'); }; };
   const key = status?.active && wallet ? `agentbl.role-plan:${status.config.chainIdDecimal}:${status.config.contracts.RWAOfferingPool.toLowerCase()}:${wallet.toLowerCase()}` : null;
+  // A new wallet, mode generation or protocol instance ends the business session and every preview built on it.
+  // The display language is not part of that identity: switching it keeps the session, materials and inputs.
   useEffect(() => {
     selectedMaterial.current = ''; clearRightsSession(); setPrincipal(null); setMaterials([]); setWorkflow(null); setPlan(null); setApproved(false); setOperation(''); setFile(null);
-    try { setPending(key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null); } catch { setPending({ invalid: true }); setError(zh ? '原操作记录损坏，请保留钱包记录并人工核对。' : 'Saved operation is corrupt. Keep the wallet record for manual reconciliation.'); }
-  }, [wallet, generation, key, zh]);
-  const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(describeFinanceError(failure, zh).message); } finally { setBusy(false); } };
+    try { setPending(key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null); } catch { setPending({ invalid: true }); }
+  }, [wallet, generation, key]);
+  // The reviewer confirmed the preview as it read in the previous language; ask for that one confirmation again.
+  useEffect(() => { setApproved(false); }, [zh]);
+  const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(failure); } finally { setBusy(false); } };
   const reload = async () => { setMaterials((await rightsRequest('materials')).materials); if (materialId) setWorkflow(await rightsRequest(`materials/${materialId}/workflow`)); };
   const login = (exitOnly = false) => run(async () => { const value = await openRightsSession(subjectId, { exitOnly }); setPrincipal(value); setMaterials(value.exit_only ? [] : (await rightsRequest('materials')).materials); });
   const chooseMaterial = (id) => { selectedMaterial.current = id; setMaterialId(id); setWorkflow(null); setPlan(null); setApproved(false); if (id) run(async () => { const result = await rightsRequest(`materials/${id}/workflow`); if (selectedMaterial.current === id && rightsSessionToken()) setWorkflow(result); }); };
@@ -173,6 +177,7 @@ export function RoleWorkspace({ zh, status, wallet }) {
         <label><input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />{zh ? '我已核对本次预览' : 'I reviewed this action'}</label>
         <button type="button" disabled={busy || !approved || demo} onClick={confirm}>{zh ? '确认本次操作' : 'Confirm this action'}</button><button type="button" disabled={busy} onClick={() => setPlan(null)}>{zh ? '关闭预览' : 'Close preview'}</button></section>}
     </>}
-    {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}{busy && <p role="status">{zh ? '正在核验…' : 'Verifying…'}</p>}
+    {pending?.invalid && <p role="alert">{zh ? '原操作记录损坏，请保留钱包记录并人工核对。' : 'Saved operation is corrupt. Keep the wallet record for manual reconciliation.'}</p>}
+    {error && <p role="alert">{describeFinanceError(error, zh).message}</p>}{notice && <p role="status">{notice}</p>}{busy && <p role="status">{zh ? '正在核验…' : 'Verifying…'}</p>}
   </section>;
 }

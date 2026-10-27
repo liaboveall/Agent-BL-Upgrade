@@ -33,10 +33,14 @@ export function ControlledFinancePanel({ primary = false }) {
   const [page, setPage] = useState({ from: 1 }), [listing, setListing] = useState(null), [lookup, setLookup] = useState('');
   const [loading, setLoading] = useState(true), [positionError, setPositionError] = useState(''), [selectedPool, setSelectedPool] = useState(null);
   const [publicTerms, setPublicTerms] = useState(null);
-  const error = problem?.message ?? '';
-  const setError = useCallback((message) => setProblem(message ? { message, session: false } : null), []);
+  // Messages are kept language-neutral ([zh, en] pairs or the original failure) and localized at render, so a
+  // language switch re-labels the panel without re-reading the chain or closing an open review.
+  const pick = (message) => Array.isArray(message) ? message[zh ? 0 : 1] : message;
   // Codes and contract reverts become a localized next step; unknown failures keep their own message.
-  const fail = useCallback((failure) => setProblem(describeFinanceError(failure, zh)), [zh]);
+  const shownProblem = problem?.failure ? describeFinanceError(problem.failure, zh) : problem ? { message: pick(problem.message), session: false } : null;
+  const error = shownProblem?.message ?? '';
+  const setError = useCallback((message) => setProblem(message ? { message } : null), []);
+  const fail = useCallback((failure) => setProblem({ failure }), []);
   const [showRoles, setShowRoles] = useState(null);
   const rolesOpen = showRoles ?? !primary;
   const focusAfterRead = useRef(null);
@@ -88,14 +92,14 @@ export function ControlledFinancePanel({ primary = false }) {
         if (!value.active) return;
         if (wallet) {
           try { setPending(JSON.parse(localStorage.getItem(`agentbl.controlled-intent:${value.config.contracts.RWAOfferingPool.toLowerCase()}:${wallet.toLowerCase()}`) ?? 'null')); }
-          catch { setPending({ invalid: true }); setPositionError(zh ? '原交易记录损坏，请保留钱包记录并人工核对。' : 'Saved transaction record is corrupt. Keep wallet records for manual reconciliation.'); }
+          catch { setPending({ invalid: true }); setPositionError(['原交易记录损坏，请保留钱包记录并人工核对。', 'Saved transaction record is corrupt. Keep wallet records for manual reconciliation.']); }
         }
         const query = new URLSearchParams(Object.entries(page).map(([key, value]) => [key, String(value)]));
         const endpoint = page.pool_id ? `offerings/${page.pool_id}` : `offerings${page.from === 1 && !page.block_number ? '' : `?${query}`}`;
         const offerResponse = await fetch(`/api/controlled/${endpoint}`, { signal: abort.signal }), listing = await offerResponse.json();
         if (!offerResponse.ok) throw Object.assign(new Error(listing.error ?? 'Controlled offering read failed'), { code: listing.code });
         if (abort.signal.aborted) return; setOffers(listing.offerings); setListing(listing);
-        if (listing.complete === false) setError(zh ? '部分池查询失败，请重试；未返回的数据不是零余额。' : 'Some pools could not be read. Retry; missing data is not a zero balance.');
+        if (listing.complete === false) setError(['部分池查询失败，请重试；未返回的数据不是零余额。', 'Some pools could not be read. Retry; missing data is not a zero balance.']);
         if (wallet) try {
           const response = await fetch(`/api/controlled/positions?wallet=${encodeURIComponent(wallet)}`, { signal: abort.signal }), data = await response.json();
           if (!response.ok) throw new Error(data.error ?? 'Position reconciliation failed');
@@ -108,14 +112,14 @@ export function ControlledFinancePanel({ primary = false }) {
             if (value.next_cursor && value.next_cursor <= next) throw new Error('Position cursor did not advance'); next = value.next_cursor;
           }
           if (abort.signal.aborted) return; setPositions(allPositions);
-          if (incomplete) setPositionError(zh ? '持仓查询未完整对账，未知金额显示为 —。' : 'Position reads are incomplete; unknown amounts are shown as —.');
-          if (data.warning) setPositionError(zh ? '链上持仓尚待对账。' : 'Chain positions need reconciliation.');
-        } catch { if (!abort.signal.aborted) { setPositions([]); setPositionError(zh ? '持仓读取失败；余额未知，请重试对账。' : 'Position read failed. Balances are unknown; retry reconciliation.'); } }
+          if (incomplete) setPositionError(['持仓查询未完整对账，未知金额显示为 —。', 'Position reads are incomplete; unknown amounts are shown as —.']);
+          if (data.warning) setPositionError(['链上持仓尚待对账。', 'Chain positions need reconciliation.']);
+        } catch { if (!abort.signal.aborted) { setPositions([]); setPositionError(['持仓读取失败；余额未知，请重试对账。', 'Position read failed. Balances are unknown; retry reconciliation.']); } }
       } catch (failure) { if (!abort.signal.aborted) { setOffers([]); setPositions([]); setListing(null); fail(failure); } }
       finally { if (!abort.signal.aborted) setLoading(false); }
     };
     load(); return () => abort.abort();
-  }, [wallet, refresh, zh, page, generation, setError, fail]);
+  }, [wallet, refresh, page, generation, setError, fail]);
   const navigate = (from) => { setReview(null); setPage({ from, block_number: listing.snapshot.block_number, block_hash: listing.snapshot.block_hash }); };
   const blockedReason = (offer) => demo ? (zh ? 'Demo 只读；Live 测试网操作需钱包逐次授权。' : 'Demo is read only; Live testnet actions require wallet approval.')
     : !wallet ? (zh ? '先连接钱包，再核对资格与条款。' : 'Connect a wallet, then verify eligibility and terms.')
@@ -208,7 +212,7 @@ export function ControlledFinancePanel({ primary = false }) {
         <p>{zh ? '核对资金池状态与完整条款，再由钱包确认每一步。仅限模拟单证与测试代币。' : 'Explore pools and verify the full terms before approving a wallet action. Research titles and test assets only.'}</p>
         <div className="finance-primary-actions">
           {status?.active && <button type="button" className="finance-button-primary" onClick={connect} disabled={busy}>{wallet ? `${wallet.slice(0, 8)}…${wallet.slice(-4)}` : (zh ? '连接 EVM 钱包' : 'Connect EVM wallet')}</button>}
-          <button type="button" aria-label={zh ? '重试当前查询' : 'Retry current query'} disabled={busy || loading} onClick={() => setRefresh((n) => n + 1)}>{zh ? '刷新数据' : 'Refresh data'}</button>
+          <button type="button" disabled={busy || loading} onClick={() => setRefresh((n) => n + 1)}>{zh ? '刷新数据' : 'Refresh data'}</button>
         </div>
       </div>
       {loading && <p className="finance-loading" role="status">{zh ? '正在读取链上快照与持仓…' : 'Reading chain snapshot and positions…'}</p>}
@@ -227,11 +231,11 @@ export function ControlledFinancePanel({ primary = false }) {
           <div><span>{zh ? '当前浏览' : 'Showing'}</span><strong>{!listing ? '—' : !listing.total_pools ? '0' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`}</strong><small>{zh ? '固定区块快照' : 'One consistent snapshot'}</small></div>
           <div><span>{zh ? '操作模式' : 'Execution mode'}</span><strong className="finance-mode">{demo ? 'Demo' : 'Live'}</strong><small>{demo ? (zh ? '只读浏览 · 无资金操作' : 'Read only · no fund actions') : (zh ? '测试网 · 钱包逐次确认' : 'Testnet · wallet approvals')}</small></div>
         </div>
-        <div className="role-entry"><div className="finance-role-callout"><div><strong>{zh ? '融资方与审查人' : 'Borrowers and reviewers'}</strong><p>{zh ? '管理单证、材料审核与融资流程。' : 'Manage documents, reviews, and financing responsibilities.'}</p></div><button type="button" aria-label={zh ? '融资方与审查人：角色待办与操作' : 'Borrowers and reviewers: responsibilities and actions'} aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')} <span aria-hidden="true">{rolesOpen ? '−' : '↓'}</span></button></div><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>
+        <div className="role-entry"><div className="finance-role-callout"><div><strong>{zh ? '融资方与审查人' : 'Borrowers and reviewers'}</strong><p>{zh ? '管理单证、材料审核与融资流程。' : 'Manage documents, reviews, and financing responsibilities.'}</p></div><button type="button" aria-label={`${rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')}${zh ? '：融资方与审查人的角色待办' : ': borrower and reviewer responsibilities'}`} aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')} <span aria-hidden="true">{rolesOpen ? '−' : '↓'}</span></button></div><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>
         <div className="finance-directory-toolbar">
           <div><h2>{zh ? '浏览资金池' : 'Explore funding pools'}</h2><p>{zh ? '查看状态、资金流转与每个池的完整条款。' : 'Review each pool’s status, cash movements, and terms.'}</p></div>
           <form className="finance-pool-lookup" onSubmit={(event) => { event.preventDefault(); if (!busy && /^[1-9]\d{0,8}$/u.test(lookup)) { setReview(null); setPage({ from: Number(lookup), pool_id: Number(lookup) }); } }}>
-            <label htmlFor="funding-pool-lookup">{zh ? '指定池编号' : 'Pool ID'}</label><div><input id="funding-pool-lookup" inputMode="numeric" placeholder={zh ? '例如 25' : 'e.g. 25'} value={lookup} onChange={(event) => setLookup(event.target.value)} /><button type="submit" aria-label={zh ? '查找资金池' : 'Find funding pool'} disabled={busy || !/^[1-9]\d{0,8}$/u.test(lookup)}>{zh ? '查找' : 'Find pool'}</button></div>
+            <label htmlFor="funding-pool-lookup">{zh ? '指定池编号' : 'Pool ID'}</label><div><input id="funding-pool-lookup" inputMode="numeric" placeholder={zh ? '例如 25' : 'e.g. 25'} value={lookup} onChange={(event) => setLookup(event.target.value)} /><button type="submit" disabled={busy || !/^[1-9]\d{0,8}$/u.test(lookup)}>{zh ? '查找' : 'Find pool'}</button></div>
           </form>
         </div>
         {listing?.failures?.length > 0 && <p role="alert">{zh ? '尚未读到的池' : 'Unread pools'}: {listing.failures.map((row) => `#${row.pool_id}`).join(', ')}</p>}
@@ -259,7 +263,7 @@ export function ControlledFinancePanel({ primary = false }) {
         <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份价格 / 兑付' : 'Price / redemption per share'}</th><th>{zh ? '募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
           <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{isoTime(offer.maturity).slice(0, 10)}</time></td>
             <td>{amount(offer.issue_price_atomic)} / {amount(offer.redemption_per_share_atomic)} TEST_USDC</td><td>{amount(offer.raised_atomic)} / {amount(offer.disbursed_atomic)} / {amount(offer.recovered_atomic)}</td>
-            <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '融资详情' : 'Financing details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">{selectedPool === offer.pool_id ? '−' : '↑'}</span></button></td></tr>)}</tbody></table></div>
+            <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '查看详情' : 'View details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">{selectedPool === offer.pool_id ? '−' : '↑'}</span></button></td></tr>)}</tbody></table></div>
         {!offers.length && listing && listing.complete !== false && <p>{zh ? '此实例尚无发行。' : 'This instance has no offerings.'}</p>}
         <nav className="finance-pagination" aria-label={zh ? '资金池分页与查找' : 'Funding pool pages and lookup'}>
           <span>{zh ? '当前范围' : 'Current range'}: {!listing?.total_pools ? '—' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`} / {listing?.total_pools ?? '—'}</span>
@@ -274,7 +278,7 @@ export function ControlledFinancePanel({ primary = false }) {
         <h2 className="positions-heading">{zh ? '我的持仓与退出' : 'My positions and exits'}</h2>
         {!wallet && <p>{zh ? '连接钱包后读取自己的持仓和退出权利。' : 'Connect your wallet to read your positions and exits.'}</p>}
         {wallet && !loading && !positionError && !positions.length && <p>{zh ? '此钱包在当前实例没有已发现的持仓。' : 'No positions were found for this wallet in this instance.'}</p>}
-        {positionError && <p role="alert">{positionError}</p>}
+        {positionError && <p role="alert">{pick(positionError)}</p>}
         {positions.map((position) => <div key={position.position_id} className="controlled-position"><p>#{position.chain_pool_id} · {stateLabel(position.chain_state ?? position.status)} · {zh ? '持有' : 'Shares'} {position.shares} · {zh ? '可领取' : 'Claimable'} {amount(position.claimable_atomic)} TEST_USDC · {position.reconciled ? (zh ? '已对账' : 'Reconciled') : (zh ? '对账中' : 'Reconciling')}</p>
           <p>{zh ? '实付 / 已领取 / 已退款' : 'Paid / claimed / refunded'}: {amount(position.cost_atomic)} / {amount(position.claimed_atomic)} / {amount(position.refunded_atomic)} TEST_USDC</p>
           {position.recovery_rights_retained && <p>{zh ? '份额销毁后仍保留后续回款受益权；有新增回款时可再次领取。' : 'Recovery rights survive share redemption. You can claim again when later payments arrive.'}</p>}
@@ -290,7 +294,7 @@ export function ControlledFinancePanel({ primary = false }) {
           <button type="button" disabled={busy || demo || (Boolean(review.offer) && !termsRead)} onClick={confirm}>{zh ? '确认并前往钱包' : 'Confirm and continue to wallet'}</button><button type="button" disabled={busy} onClick={() => setReview(null)}>{zh ? '取消' : 'Cancel'}</button></section>}
       </>}
       {busy && <p role="status">{zh ? '正在处理，请保留当前交易记录…' : 'Processing. Keep the current transaction record…'}</p>}
-      {error && <p role="alert" className="finance-alert">{error}{problem.session && status?.active && <> <button type="button" className="finance-inline-action" onClick={verifyIdentity}>{zh ? '重新验证身份' : 'Verify identity again'}</button></>}</p>}{notice && <p role="status" className="controlled-notice">{notice}</p>}
+      {error && <p role="alert" className="finance-alert">{error}{shownProblem.session && status?.active && <> <button type="button" className="finance-inline-action" onClick={verifyIdentity}>{zh ? '重新验证身份' : 'Verify identity again'}</button></>}</p>}{notice && <p role="status" className="controlled-notice">{notice}</p>}
     </details>
   </aside>;
 }

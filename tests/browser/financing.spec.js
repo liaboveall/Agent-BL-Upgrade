@@ -48,12 +48,12 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
   const walletPositions = page.waitForResponse((response) => response.url().includes('/api/controlled/positions?wallet='));
   await page.goto('/#/finance'); const panel = page.locator('.controlled-panel');
   await walletPositions; await expect(panel.getByRole('button', { name: /0x121212.*1212/u })).toBeVisible();
-  await panel.getByRole('button', { name: zh ? '融资方与审查人：角色待办与操作' : 'Borrowers and reviewers: responsibilities and actions', exact: true }).click();
+  await panel.getByRole('button', { name: zh ? '打开工作台：融资方与审查人的角色待办' : 'Open workspace: borrower and reviewer responsibilities', exact: true }).click();
   const next = panel.getByRole('button', { name: zh ? '下一页' : 'Next page', exact: true });
   await expect(panel.locator('tbody tr').first()).toContainText('#1'); await next.click(); await expect(panel.locator('tbody tr').first()).toContainText('#11');
   partial = true; await next.click(); await expect(panel).toContainText(zh ? '尚未读到的池' : 'Unread pools'); await expect(panel.locator('tbody tr').last()).toContainText('#25');
   await expect(next).toBeDisabled(); partial = false;
-  await panel.getByLabel(zh ? '指定池编号' : 'Pool ID', { exact: true }).fill('25'); await panel.getByRole('button', { name: zh ? '查找资金池' : 'Find funding pool' }).click();
+  await panel.getByLabel(zh ? '指定池编号' : 'Pool ID', { exact: true }).fill('25'); await panel.getByRole('button', { name: zh ? '查找' : 'Find pool', exact: true }).click();
   await expect(panel.locator('tbody tr')).toHaveCount(1); await expect(panel.locator('tbody tr')).toContainText('#25');
   const workspace = panel.getByRole('region', { name: zh ? '融资角色工作台' : 'Financing role workspace' });
   await workspace.getByLabel(zh ? '管理员发放的业务身份编号' : 'Enrolled business identity ID').fill(materialId);
@@ -76,6 +76,20 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
     .map((node) => [node.tagName, node.className, Math.round(node.getBoundingClientRect().right)]));
   expect(overflow).toEqual([]);
   expect((await new AxeBuilder({ page }).include('.role-workspace').withTags(['wcag2a', 'wcag2aa']).analyze()).violations).toEqual([]);
+  // The display language is not part of the identity: switching keeps the session, material, action and preview
+  // without another wallet challenge or chain re-read; only the confirmation given in the other language is reset.
+  const challenges = routes.filter((row) => row.name === 'wallet-challenges').length, reads = routes.length;
+  await page.locator('.lang-btn').click();
+  const relabelled = panel.getByRole('region', { name: zh ? 'Financing role workspace' : '融资角色工作台' });
+  await expect(relabelled).toContainText('research-carrier');
+  await expect(relabelled.getByLabel(zh ? 'Organization materials' : '本组织材料')).toHaveValue(materialId);
+  await expect(relabelled.getByLabel(zh ? 'Next action' : '本次操作')).toHaveValue('disburse');
+  const relabelledPreview = relabelled.getByRole('region', { name: zh ? 'Role action preview' : '角色操作预览' });
+  await expect(relabelledPreview).toContainText('8.000000 TEST_USDC'); await expect(relabelledPreview.getByRole('checkbox')).not.toBeChecked();
+  await expect(relabelled.getByRole('button', { name: zh ? 'Verify role with this wallet' : '用当前钱包验证角色' })).toHaveCount(0);
+  await expect(panel.locator('tbody tr')).toHaveCount(1);
+  expect(routes.filter((row) => row.name === 'wallet-challenges').length).toBe(challenges); expect(routes.length).toBe(reads);
+  await page.locator('.lang-btn').click(); await expect(preview.getByRole('checkbox')).not.toBeChecked(); await expect(workspace).toContainText('research-carrier');
   await page.evaluate(() => window.n3Handlers.accountsChanged([])); await expect(preview).toHaveCount(0); await expect(workspace.getByText('research-carrier')).toHaveCount(0);
   await expect(panel.locator('tbody tr').first()).toContainText('#1 ·');
   const privateReadsBefore = routes.filter((row) => row.name === 'materials').length;

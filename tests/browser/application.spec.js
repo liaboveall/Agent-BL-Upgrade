@@ -31,20 +31,30 @@ const ready = async (page) => {
   await page.locator('#case-dropdown').selectOption(copper); await expect(page.locator('#mint-btn')).toBeEnabled();
 };
 
-// The glass and its dark appearance follow the system setting, so both schemes carry the same contrast bar.
+// The glass and its dark appearance follow the system setting, so both schemes carry the same bar. The scan
+// covers the default finance page too and every WCAG 2.0–2.2 A/AA rule, plus label-content-name-mismatch
+// (axe ships it as experimental): voice-control users say the visible text, so it must be in the name.
+// Reduced motion keeps axe from sampling a control halfway through a fade.
+const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+const fullScan = (page) => new AxeBuilder({ page }).withTags(WCAG_TAGS).options({ rules: { 'label-content-name-mismatch': { enabled: true } } }).analyze();
+const violations = (result) => JSON.stringify(result.violations.map((v) => [v.id, v.nodes.map((n) => n.target)]));
 for (const language of ['zh', 'en']) for (const scheme of ['light', 'dark']) {
-  test(`${language}${scheme === 'dark' ? ' dark' : ''}: four desktop pages have no overflow, page errors or contrast violations`, async ({ page }, testInfo) => {
+  test(`${language}${scheme === 'dark' ? ' dark' : ''}: five pages have no overflow, page errors or WCAG A/AA violations`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
-    await page.emulateMedia({ colorScheme: scheme });
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     await page.addInitScript((lang) => localStorage.setItem('ts_lang', lang), language);
     await ready(page);
-    for (const view of ['market', 'mint', 'agent', 'discover']) {
-      await page.goto(`/#/${view}`); await expect(page.locator(`#view-${view}`)).toBeVisible();
-      if (view === 'market') await expect(page.locator('.deal-card').first()).toBeVisible();
-      const result = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
-      expect(result.violations, JSON.stringify(result.violations.map((v) => v.nodes.map((n) => n.target)))).toEqual([]);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await page.screenshot({ path: testInfo.outputPath(`${view}-${language}-${scheme}.png`), fullPage: true });
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const view of ['finance', 'market', 'mint', 'agent', 'discover']) {
+        await page.goto(`/#/${view}`); await expect(page.locator(`#view-${view}`)).toBeVisible();
+        if (view === 'market') await expect(page.locator('.deal-card').first()).toBeVisible();
+        if (view === 'finance') await expect(page.locator('#controlled-finance .finance-loading')).toHaveCount(0);
+        const result = await fullScan(page);
+        expect(result.violations, violations(result)).toEqual([]);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        if (width === 1440) await page.screenshot({ path: testInfo.outputPath(`${view}-${language}-${scheme}.png`), fullPage: true });
+      }
     }
     await page.setViewportSize({ width: 1280, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

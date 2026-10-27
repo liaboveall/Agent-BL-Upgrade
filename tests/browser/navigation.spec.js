@@ -51,11 +51,11 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   await panel.getByRole('button', { name: zh ? '刷新与对账' : 'Refresh and reconcile' }).click(); await expect(rows.first()).toContainText('#1 ·');
   await panel.getByRole('button', { name: zh ? '末页' : 'Last page', exact: true }).click(); await expect(rows.last()).toContainText('#26 ·');
   await panel.getByLabel(zh ? '指定池编号' : 'Pool ID', { exact: true }).fill('25');
-  await panel.getByRole('button', { name: zh ? '查找资金池' : 'Find funding pool' }).click(); await expect(rows).toHaveCount(1);
-  await panel.getByRole('button', { name: `${zh ? '融资详情' : 'Financing details'} #25`, exact: true }).click();
+  await panel.getByRole('button', { name: zh ? '查找' : 'Find pool', exact: true }).click(); await expect(rows).toHaveCount(1);
+  await panel.getByRole('button', { name: `${zh ? '查看详情' : 'View details'} #25`, exact: true }).click();
   await expect(panel.getByRole('region', { name: zh ? '融资详情' : 'Financing details', exact: true })).toContainText(zh ? '当前不接受新认购' : 'New subscriptions are closed');
   positionsOutage = true;
-  const retry = panel.getByRole('button', { name: zh ? '重试当前查询' : 'Retry current query' });
+  const retry = panel.getByRole('button', { name: zh ? '刷新数据' : 'Refresh data', exact: true });
   await retry.click(); await expect(panel).toContainText(zh ? '余额未知' : 'Balances are unknown'); await expect(rows).toHaveCount(1);
   await expect(panel.getByText(zh ? '此钱包在当前实例没有已发现的持仓。' : 'No positions were found for this wallet in this instance.', { exact: true })).toHaveCount(0);
   positionsOutage = false; outage = true; await retry.click(); await expect(panel.getByRole('alert')).toContainText('RPC unavailable');

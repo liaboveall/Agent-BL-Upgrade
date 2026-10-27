@@ -35,7 +35,7 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
     });
     const walletReady = page.waitForResponse((response) => response.url().includes('/api/controlled/positions?wallet='));
     await page.goto('/#/market'); await walletReady; const panel = page.locator('.controlled-panel'); await panel.locator('summary').click();
-    await panel.getByRole('button', { name: `${language === 'zh' ? '融资详情' : 'Financing details'} #1`, exact: true }).click();
+    await panel.getByRole('button', { name: `${language === 'zh' ? '查看详情' : 'View details'} #1`, exact: true }).click();
     await panel.getByRole('button', { name: language === 'zh' ? '只读查看完整条款' : 'Read full terms without signing' }).click();
     await expect(panel.locator('.funding-detail .readable-terms')).toContainText(pack.terms.exporter);
     const review = panel.getByRole('button', { name: language === 'zh' ? '审阅认购' : 'Review subscription', exact: true });
