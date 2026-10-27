@@ -18,6 +18,9 @@ services:
       HOST: 0.0.0.0
       AGENTBL_RUNTIME_DIR: /app/data/runtime
       AGENTBL_RELEASE_REVISION: ${AGENTBL_RELEASE_REVISION:-UNRECORDED}
+      # Inside the container requests never arrive over loopback, so name the hosts explicitly
+      # (DNS rebinding). Add the public name here when a reverse proxy serves one.
+      AGENTBL_ALLOWED_HOSTS: ${AGENTBL_ALLOWED_HOSTS:-localhost,127.0.0.1}
     volumes:
       # Receipts, cached reports, decision logs and Mystery reveals survive restarts.
       - agentbl-runtime:/app/data/runtime

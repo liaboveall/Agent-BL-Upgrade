@@ -28,6 +28,14 @@ const checked = (schema, value) => {
   return result.data;
 };
 function emptyState() { return { schema: VAULT_AAD, revision: 0, subjects: {}, challenges: {}, sessions: {}, materials: {}, publications: {}, plans: {} }; }
+// Expired challenges and sessions grant nothing, but every write re-encrypts the whole vault. A day of
+// grace keeps recent ones revocable and inspectable; older ones are dropped on the next write.
+export const EXPIRED_ACCESS_RETENTION_MS = 24 * 60 * 60 * 1000;
+export function pruneExpiredAccess(state, now) {
+  const cutoff = now - EXPIRED_ACCESS_RETENTION_MS;
+  for (const [key, challenge] of Object.entries(state.challenges)) if (challenge?.message?.validUntil * 1000 <= cutoff) delete state.challenges[key];
+  for (const [key, session] of Object.entries(state.sessions)) if (session?.expires_at <= cutoff) delete state.sessions[key];
+}
 
 /** Durable, encrypted research identity and disclosure service. Every operation re-resolves
  * the current subject/session; no caller-supplied organization or role is trusted. */
@@ -58,6 +66,7 @@ export class RightsService {
       const context = { key, now: this.clock(), dirty: false };
       const result = await callback(state, context);
       if (context.dirty) {
+        pruneExpiredAccess(state, context.now);
         state.revision++;
         await writeJsonAtomic(file, seal(key, state, VAULT_AAD), { durable: true });
         if (!initialized) await writeJsonAtomic(marker, { schema: VAULT_AAD, initialized: true }, { durable: true });

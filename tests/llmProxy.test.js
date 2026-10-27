@@ -84,6 +84,7 @@ test('LLM relay', async (t) => {
     process.env.LLM_BASE_URL = `${upstream.base}/v1`;
     process.env.LLM_API_KEY = RELAY_KEY;
     process.env.LLM_MODEL = 'x-test-2';
+    process.env.LLM_HTTP_RELAY = 'true';
   };
   t.beforeEach(() => { configure(); upstream.state.mode = 'json'; upstream.state.received.length = 0; upstream.state.closedEarly = 0; });
   t.after(async () => { clearLlmEnv(); await app.close(); await upstream.close(); });
@@ -91,8 +92,8 @@ test('LLM relay', async (t) => {
   await t.test('status reveals the provider and model but never the key', async () => {
     const res = await requestJson(app.base, 'GET', '/api/llm/status');
     assert.equal(res.status, 200);
-    assert.deepEqual({ enabled: res.data.enabled, configured: res.data.configured, provider: res.data.provider, model: res.data.model },
-      { enabled: true, configured: true, provider: 'custom', model: 'x-test-2' });
+    assert.deepEqual({ enabled: res.data.enabled, configured: res.data.configured, relay: res.data.relay, provider: res.data.provider, model: res.data.model },
+      { enabled: true, configured: true, relay: true, provider: 'custom', model: 'x-test-2' });
     assert.ok(!res.text.includes(RELAY_KEY));
   });
 
@@ -257,6 +258,7 @@ test('LLM relay', async (t) => {
 
   await t.test('answers 503 when no provider is configured, and 404 when the relay is disabled', async () => {
     clearLlmEnv();
+    process.env.LLM_HTTP_RELAY = 'true';
     const missing = await chat(app.base, { messages: [userMessage()] });
     assert.equal(missing.status, 503);
     assert.equal(missing.data.code, 'llm_not_configured');
@@ -268,6 +270,17 @@ test('LLM relay', async (t) => {
     assert.equal(disabled.status, 404);
     assert.equal(disabled.data.code, 'llm_proxy_disabled');
     assert.equal((await requestJson(app.base, 'GET', '/api/llm/status')).data.enabled, false);
+    assert.equal(upstream.state.received.length, 0);
+  });
+
+  await t.test('the browser relay stays off until LLM_HTTP_RELAY=true, even with a configured provider', async () => {
+    delete process.env.LLM_HTTP_RELAY;
+    const closed = await chat(app.base, { messages: [userMessage()] });
+    assert.equal(closed.status, 404);
+    assert.equal(closed.data.code, 'llm_relay_not_enabled');
+    const status = (await requestJson(app.base, 'GET', '/api/llm/status')).data;
+    assert.equal(status.configured, true, 'server-side model features still see the provider');
+    assert.equal(status.relay, false);
     assert.equal(upstream.state.received.length, 0);
   });
 

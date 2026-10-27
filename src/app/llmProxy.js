@@ -117,15 +117,22 @@ export function normalizeChatRequest(body, { maxTokensCap: cap = DEFAULT_MAX_TOK
   return request;
 }
 
+/**
+ * The browser-facing relay is opt-in (LLM_HTTP_RELAY=true). No page of this app calls it any more, and
+ * left open it lets anyone who can reach the server spend the provider key on arbitrary prompts.
+ * Server-side model features (Copilot, narration) do not use it and follow LLM_PROXY_ENABLED alone.
+ */
+export const relayEnabled = (env = process.env) => String(env.LLM_HTTP_RELAY ?? 'false').toLowerCase() === 'true';
+
 /** What the UI is allowed to know about the relay (never the key). */
 export function llmStatus(env = process.env) {
   if (String(env.LLM_PROXY_ENABLED ?? 'true').toLowerCase() === 'false') {
-    return { enabled: false, configured: false };
+    return { enabled: false, configured: false, relay: false };
   }
   const provider = resolveProvider(env);
   return provider
-    ? { enabled: true, configured: true, provider: provider.provider, model: provider.model }
-    : { enabled: true, configured: false };
+    ? { enabled: true, configured: true, relay: relayEnabled(env), provider: provider.provider, model: provider.model }
+    : { enabled: true, configured: false, relay: relayEnabled(env) };
 }
 
 function upstreamBody(request, model, env) {
@@ -188,6 +195,7 @@ export function stripReasoningFromSseLine(line) {
 export async function relayChat(request, response, { env = process.env, fetchImpl = fetch, logger = console } = {}) {
   const status = llmStatus(env);
   if (!status.enabled) throw new HttpError(404, 'llm_proxy_disabled', 'The LLM relay is disabled on this server');
+  if (!status.relay) throw new HttpError(404, 'llm_relay_not_enabled', 'The browser LLM relay is off; set LLM_HTTP_RELAY=true to expose it');
   const provider = resolveProvider(env);
   if (!provider) {
     throw new HttpError(503, 'llm_not_configured', 'No LLM provider is configured on the server (set DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, OPENAI_API_KEY or LLM_BASE_URL + LLM_API_KEY)');

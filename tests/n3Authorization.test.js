@@ -47,6 +47,22 @@ test('N3 wallet sessions retain tenant boundaries, bounded challenges and immedi
   await assert.rejects(h.service.prepareTransaction(exit.token, h.input), { code: 'rights_session_required' });
 });
 
+test('N3 vault drops challenges and sessions a day after they expire, keeping live ones', async (t) => {
+  const h = await fixture(t);
+  const { unseal } = await import('../src/rights/vault.js');
+  const vault = async () => unseal(Buffer.from(h.service.env.AGENTBL_RIGHTS_KEY, 'hex'), JSON.parse(await fs.readFile(path.join(h.service.directory, 'vault.json'), 'utf8')), 'agentbl-rights-vault-v1');
+  for (let i = 0; i < 3; i++) await h.service.createChallenge(h.owner.subject.subject_id, { selfService: true });
+  const before = await vault();
+  assert.ok(Object.keys(before.challenges).length >= 3);
+  // Sessions last an hour and challenges five minutes; after a day of grace both are gone on the next write.
+  h.advance(25 * 60 * 60 * 1000);
+  const fresh = await h.owner.login();
+  const after = await vault();
+  assert.deepEqual(Object.values(after.challenges).map((challenge) => challenge.used), [true], 'only the challenge behind the new session remains');
+  assert.deepEqual(Object.values(after.sessions).map((session) => session.session_id), [fresh.session_id]);
+  assert.equal((await h.service.listMaterials(fresh.token)).materials.length, 1);
+});
+
 test('N3 draft authorization is invalidated by material, session, mode generation or instance changes', async (t) => {
   const h = await fixture(t), token = h.owner.session.token;
   await assert.rejects(h.service.prepareTransaction(h.outsider.session.token, h.input), { code: 'rights_material_not_found' });

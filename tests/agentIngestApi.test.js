@@ -91,6 +91,28 @@ test('ingest API (Demo)', async (t) => {
     await service.stop();
   });
 
+  await t.test('a reconnecting SSE client replays only the activity its workspace may read', async () => {
+    const service = await freshService();
+    const res = await api('POST', '/api/agent/ingest?wait=1', { case_id: 'CASE-UP-API-SSE', documents: await documents() });
+    assert.equal(res.data.job.status, 'DONE');
+    // Replay is written before the live stream goes quiet; read until the heartbeat-free stream stalls.
+    const replay = (headers) => new Promise((resolve, reject) => {
+      const request = http.get(`${app.base}/api/agent/activity/stream`, { headers: { 'Last-Event-ID': '0', ...headers } }, (response) => {
+        let text = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => { text += chunk; });
+        setTimeout(() => { request.destroy(); resolve(text); }, 300);
+      });
+      request.on('error', reject);
+    });
+    const anonymous = await replay({});
+    assert.match(anonymous, /"type":"connected"/u);
+    assert.doesNotMatch(anonymous, /CASE-UP-API-SSE/u, 'another workspace must not replay a private case');
+    const owner = await replay({ Cookie: cookie });
+    assert.match(owner, /CASE-UP-API-SSE/u, 'the owning workspace still replays its own case');
+    await service.stop();
+  });
+
   await t.test('uploading the same documents again is a 200 with the same job, not a second decision', async () => {
     const service = await freshService();
     const body = { case_id: 'CASE-UP-API-2', documents: await documents() };

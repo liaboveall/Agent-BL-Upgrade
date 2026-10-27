@@ -163,7 +163,7 @@ export function sendError(response, error, { requestId, logger = console } = {})
 
 const BODY_DRAIN_MS = 2000;
 
-function trustedHops(value) {
+export function trustedHops(value) {
   if (value === undefined || value === null || value === '' || value === 'false' || value === '0') return 0;
   if (value === 'true') return 1;
   const hops = Number(value);

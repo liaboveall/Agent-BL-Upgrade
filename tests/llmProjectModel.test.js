@@ -44,7 +44,7 @@ test('browser relay transmits x-test-2 across providers and ignores client model
   for (const [name, env] of providers) await t.test(name, async () => {
     let sent;
     const app = await listen(http.createServer(async (request, response) => {
-      try { await relayChat(request, response, { env, fetchImpl: async (url, options) => { sent = JSON.parse(options.body); return completion(); } }); }
+      try { await relayChat(request, response, { env: { ...env, LLM_HTTP_RELAY: 'true' }, fetchImpl: async (url, options) => { sent = JSON.parse(options.body); return completion(); } }); }
       catch (error) { sendError(response, error); }
     }));
     try {

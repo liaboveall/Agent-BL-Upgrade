@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from '../src/app/server.js';
+import { assertAllowedHost } from '../src/app/security.js';
 import { decodeBody, getRaw, listen, rawRequest, requestJson } from './helpers/http.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -191,5 +192,34 @@ test('HTTP hardening', async (t) => {
       const res = await getRaw(app.base, pathname);
       assert.equal(res.status, 404, pathname);
     }
+  });
+
+  await t.test('a loopback request naming a foreign host (DNS rebinding) is refused before any route runs', async () => {
+    const rebound = await rawRequest(app.port, 'GET /api/health HTTP/1.1\r\nHost: rebind.attacker.example:3000\r\nConnection: close\r\n\r\n');
+    assert.match(rebound.statusLine, /^HTTP\/1\.1 421 /u);
+    assert.match(rebound.text, /host_not_allowed/u);
+    for (const host of [`127.0.0.1:${app.port}`, `localhost:${app.port}`, `[::1]:${app.port}`]) {
+      const local = await rawRequest(app.port, `GET /api/health HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\n\r\n`);
+      assert.match(local.statusLine, /^HTTP\/1\.1 200 /u, host);
+    }
+  });
+
+  await t.test('allowed host names, proxies and non-loopback listeners decide who checks the Host header', () => {
+    const request = (host, localAddress = '127.0.0.1') => ({ headers: { host }, socket: { localAddress } });
+    assert.throws(() => assertAllowedHost(request('evil.example'), {}), { code: 'host_not_allowed' });
+    assert.doesNotThrow(() => assertAllowedHost(request('evil.example'), { TRUST_PROXY: '1' }), 'a declared proxy owns the check');
+    assert.doesNotThrow(() => assertAllowedHost(request('agentbl.example', '10.0.0.5'), {}), 'not reachable through loopback rebinding');
+    assert.doesNotThrow(() => assertAllowedHost(request('AgentBL.example:443'), { AGENTBL_ALLOWED_HOSTS: 'agentbl.example' }));
+    assert.throws(() => assertAllowedHost(request('evil.example', '10.0.0.5'), { AGENTBL_ALLOWED_HOSTS: 'agentbl.example', TRUST_PROXY: '1' }), { code: 'host_not_allowed' });
+    assert.doesNotThrow(() => assertAllowedHost(request('127.0.0.1:3000', '10.0.0.5'), { AGENTBL_ALLOWED_HOSTS: 'agentbl.example' }));
+  });
+
+  await t.test('a write that another site started is refused; same-origin and non-browser writes pass', async () => {
+    const crossSite = await requestJson(app.base, 'POST', '/api/risk/analyze', undefined, { 'Sec-Fetch-Site': 'cross-site' });
+    assert.equal(crossSite.status, 403);
+    assert.equal(crossSite.data.code, 'cross_site_request');
+    assert.equal((await requestJson(app.base, 'POST', '/api/risk/analyze', undefined, { 'Sec-Fetch-Site': 'same-origin' })).status, 200);
+    assert.equal((await requestJson(app.base, 'POST', '/api/risk/analyze')).status, 200, 'scripts and agents send no Sec-Fetch-Site');
+    assert.equal((await requestJson(app.base, 'GET', '/api/health', undefined, { 'Sec-Fetch-Site': 'cross-site' })).status, 200, 'reads stay open');
   });
 });

@@ -43,6 +43,8 @@ import {
 } from './http.js';
 import {
   applySecurityHeaders,
+  assertAllowedHost,
+  assertNotCrossSiteWrite,
   buildContentSecurityPolicy,
   checkAdminToken,
   connectOriginsFromChainConfig,
@@ -179,11 +181,7 @@ async function loadCaseCatalog() {
     for (const data of loaded) if (data) add({ ...data, ...extra });
   };
   await readDir(casesDir);
-  // Archived cases stay listed only because a deployed testnet pool still points at them (pool #2).
-
-
   // Only curated, explicitly public examples belong here. Uploads remain private working papers.
-
   const cases = [...files.values()].map((data) => {
     const bl = data.bill_of_lading ?? {};
     const meta = CASE_META[data.case_id] ?? {};
@@ -255,7 +253,8 @@ function parseAmount(raw, field, errors, { allowZero = false } = {}) {
  */
 async function resolvePricingRequest(body, url) {
   const wrapper = isRecord(body) && !looksLikeCase(body) ? body : {};
-  const caseData = looksLikeCase(body) ? body : (wrapper.case ?? await loadDemoCase());
+  const callerCase = looksLikeCase(body) ? body : wrapper.case;
+  const caseData = callerCase ?? await loadDemoCase();
   const q = url.searchParams;
 
   const errors = [];
@@ -300,7 +299,7 @@ async function resolvePricingRequest(body, url) {
     pool_id: q.get('pool_id') ?? wrapper.pool_id ?? undefined,
     min_acceptable_issue_price: minAcceptablePrice
   };
-  return { caseData, options };
+  return { caseData, options, callerSuppliedCase: callerCase !== undefined };
 }
 
 /** Narrow the resolved options to what quoteFromCase / compareSpeeds accept. */
@@ -468,8 +467,9 @@ function openActivityStream(request, response, url) {
       .then((missed) => {
         let highest = resumeFrom;
         for (const activity of missed) {
-          response.write(sseMessage(activity));
           highest = Math.max(highest, activity.seq);
+          // Replay obeys the same workspace rule as live delivery and the REST feed.
+          if (clientWants(client, activity)) response.write(sseMessage(activity));
         }
         client.replaying = false;
         for (const activity of client.held) {
@@ -846,7 +846,7 @@ async function routeRequest(request, response, url) {
   // returns all three payout speeds + a recommendation (Exporter page).
   if (method === 'POST' && pathname === '/api/pricing/quote') {
     const body = await readJsonBody(request);
-    const { caseData, options } = await resolvePricingRequest(body, url);
+    const { caseData, options, callerSuppliedCase } = await resolvePricingRequest(body, url);
     if (options.compare) {
       const comparison = compareSpeeds(caseData, quoteOptions(options));
       const quotes = comparison.quotes.map(normalizePricingQuoteHashes);
@@ -861,7 +861,9 @@ async function routeRequest(request, response, url) {
     } else {
       const quote = normalizePricingQuoteHashes(quoteFromCase(caseData, quoteOptions(options)));
       assertPricingQuote(quote, caseData);
-      logAgentActivity({
+      // The feed is a public record of the server's own cases. A quote over a case the caller posted is a
+      // private calculation: recording it would let anyone write arbitrary case ids and prices into the feed.
+      if (!callerSuppliedCase) logAgentActivity({
         type: 'PRICING',
         action: 'PRICING_QUOTE',
         caseId: quote.case_id ?? caseData.case_id,
@@ -1600,6 +1602,8 @@ export async function handleRequest(request, response) {
   try {
     const url = parseRequestUrl(request);
     applySecurityHeaders(response, { isApi: url.pathname.startsWith('/api/') });
+    assertAllowedHost(request);
+    assertNotCrossSiteWrite(request);
     const operations = request.socket.server?.operations;
     if (handleOperationsRoute(request, response, url, operations)) return;
     guardNewIntake(request, url, operations);

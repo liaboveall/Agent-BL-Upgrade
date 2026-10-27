@@ -76,7 +76,7 @@ export async function requestJson(base, method, pathname, body, headers = {}) {
 export function clearLlmEnv(env = process.env) {
   for (const name of [
     'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_DEPLOYMENT',
-    'LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL', 'LLM_PROVIDER', 'LLM_PROXY_ENABLED', 'LLM_PROXY_MAX_CONCURRENCY',
+    'LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL', 'LLM_PROVIDER', 'LLM_PROXY_ENABLED', 'LLM_HTTP_RELAY', 'LLM_PROXY_MAX_CONCURRENCY',
     'LLM_MAX_TOKENS_CAP', 'LLM_REASONING_EFFORT',
     'Tencent_API_KEY', 'Tencent_BASE_URL', 'DEEPSEEK_API_KEY', 'DASHSCOPE_API_KEY', 'DASHSCOPE_BASE_URL',
     'Ali_API_KEY', 'Ali_BASE_URL', 'OPENAI_API_KEY'

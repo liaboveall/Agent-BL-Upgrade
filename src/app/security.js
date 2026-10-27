@@ -1,6 +1,7 @@
 // Cross-cutting security controls for the HTTP server: response headers + CSP,
 // a small in-memory rate limiter, and admin-token verification.
 import crypto from 'node:crypto';
+import { HttpError, trustedHops } from './http.js';
 
 // RPC hosts the browser wallet flow talks to that are not (yet) in application-config.json.
 const BUILTIN_CONNECT_ORIGINS = Object.freeze([
@@ -144,4 +145,44 @@ export function checkAdminToken(request, env = process.env) {
   const supplied = suppliedAdminToken(request);
   const authorized = supplied !== '' && crypto.timingSafeEqual(digest(supplied), digest(expected));
   return { configured: true, authorized };
+}
+
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '[::1]']);
+const isLoopbackHostname = (name) => LOOPBACK_HOSTNAMES.has(name) || /^127(?:\.\d{1,3}){3}$/u.test(name);
+const isLoopbackAddress = (address) => {
+  const value = String(address ?? '').replace(/^::ffff:/iu, '');
+  return value === '::1' || value.startsWith('127.');
+};
+function hostnameOf(header) {
+  const value = String(header ?? '').trim().toLowerCase();
+  return value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':')[0];
+}
+
+/**
+ * DNS rebinding: another site can point its own hostname at 127.0.0.1 and then call this API from the
+ * visitor's browser as if it were same-origin. A request that arrives over loopback must therefore name
+ * a loopback host. Operators who serve other names list them in AGENTBL_ALLOWED_HOSTS (enforced on every
+ * interface once set); behind a declared reverse proxy (TRUST_PROXY) the proxy owns the Host check.
+ */
+export function assertAllowedHost(request, env = process.env) {
+  const name = hostnameOf(request.headers?.host);
+  if (name === '' || isLoopbackHostname(name)) return;
+  const allowed = String(env.AGENTBL_ALLOWED_HOSTS ?? '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+  if (allowed.length > 0) {
+    if (allowed.includes(name)) return;
+  } else if (trustedHops(env.TRUST_PROXY) > 0 || !isLoopbackAddress(request.socket?.localAddress)) {
+    return;
+  }
+  throw new HttpError(421, 'host_not_allowed', 'This server does not answer for that host name; add it to AGENTBL_ALLOWED_HOSTS');
+}
+
+/**
+ * Browsers label a request another site started (Sec-Fetch-Site: cross-site). No route here is meant
+ * to be written to from another site's page, so those writes are refused before any handler runs.
+ */
+export function assertNotCrossSiteWrite(request) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return;
+  if (String(request.headers?.['sec-fetch-site'] ?? '').toLowerCase() === 'cross-site') {
+    throw new HttpError(403, 'cross_site_request', 'Requests started by another site cannot change state here');
+  }
 }

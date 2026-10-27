@@ -56,6 +56,14 @@ test('agent activity feed', async (t) => {
     assert.ok(entry.id && entry.timestamp);
   });
 
+  await t.test('a quote over a case the caller posted is answered but never written to the public feed', async () => {
+    const demoCase = (await requestJson(app.base, 'GET', '/api/demo-data')).data;
+    const quote = await requestJson(app.base, 'POST', '/api/pricing/quote', { case: { ...demoCase, case_id: 'CASE-FORGED-BY-CALLER' } });
+    assert.equal(quote.status, 200);
+    assert.equal(quote.data.case_id, 'CASE-FORGED-BY-CALLER');
+    assert.deepEqual(await activities(app.base, '?case_id=CASE-FORGED-BY-CALLER'), []);
+  });
+
   await t.test('a subscription is recorded without publishing the full wallet address', async () => {
     const listings = await requestJson(app.base, 'GET', '/api/market/listings');
     const pool = listings.data.pools[0];
