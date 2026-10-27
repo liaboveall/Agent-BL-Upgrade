@@ -130,7 +130,7 @@ export const UI_DICT = {
     portfolio_sub: '服务器为当前钱包记录的 Demo 认购（未连接钱包时为演示钱包）。',
     portfolio_total_label: '已投资',
     portfolio_yield_label: '平均收益',
-    portfolio_empty_hint: '在投资市场认购一个项目后，会显示在这里。',
+    portfolio_empty_hint: '在研究案例中模拟认购一个项目后，会显示在这里。',
 
     deal_tab_voyage: '航程与定价',
     deal_tab_intel: '风险情报',
@@ -243,7 +243,7 @@ export const UI_DICT = {
     agent_terminal_case: '当前案例：{label}',
 
     discover_h1: '随机航线尽调与航程护照',
-    discover_subtitle: '为一份 AI 尽调报告付 0.001 USDC，随机揭晓一条符合风险偏好的航线，并在本地验证抽签。认购是另一次独立签名。',
+    discover_subtitle: '为一份 AI 尽调报告付 0.001 USDC，随机揭晓一条符合风险偏好的航线，并在本地验证抽签。这是可验证随机抽签的研究演示：随机结果不是挑选投资的方法，也不构成推荐；认购是另一次独立签名。',
     cp_subtitle: '用一句话描述偏好，Copilot 从服务器的最新报价里推荐项目。'
   },
   en: {
@@ -362,7 +362,7 @@ export const UI_DICT = {
     portfolio_sub: 'Demo subscriptions the server holds for this wallet (the demo wallet when none is connected).',
     portfolio_total_label: 'Invested',
     portfolio_yield_label: 'Average yield',
-    portfolio_empty_hint: 'Subscribe to a project in the marketplace and it shows up here.',
+    portfolio_empty_hint: 'Simulate a subscription to a research case and it shows up here.',
 
     deal_tab_voyage: 'Voyage and pricing',
     deal_tab_intel: 'Risk intelligence',
@@ -475,7 +475,7 @@ export const UI_DICT = {
     agent_terminal_case: 'Case: {label}',
 
     discover_h1: 'Mystery Voyage and Voyage Passport',
-    discover_subtitle: 'Pay 0.001 USDC for an AI due-diligence report on one randomly revealed route that fits your risk tier, and verify the draw yourself. Subscribing is a separate signature.',
+    discover_subtitle: 'Pay 0.001 USDC for an AI due-diligence report on one randomly revealed route that fits your risk tier, and verify the draw yourself. Subscribing is a separate signature. This demonstrates verifiable random draws for research: a random draw is not a way to choose an investment and is not a recommendation.',
     cp_subtitle: 'Describe what you want in one sentence; the Copilot recommends from the server\'s latest quotes.'
   }
 };

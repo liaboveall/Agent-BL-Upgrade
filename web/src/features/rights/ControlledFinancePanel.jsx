@@ -10,8 +10,18 @@ import { describeFinanceError } from '../../lib/finance-errors.js';
 import { ReadableTerms } from './ReadableTerms.jsx';
 import { RoleWorkspace } from './RoleWorkspace.jsx';
 
-// A pool the chain returned without a date shows a dash; it must not throw and take the whole panel down.
-const isoTime = (v) => { const ms = v == null ? NaN : Number(v) * 1000; return Number.isFinite(ms) ? new Date(ms).toISOString() : '—'; };
+// Chain timestamps read in the reader's language and time zone (the zone is named), with the exact instant in
+// dateTime. A pool the chain returned without a date shows a dash; it must not throw and take the whole panel down.
+function ChainTime({ value, zh, dateOnly = false }) {
+  const ms = value == null ? NaN : Number(value) * 1000;
+  if (!Number.isFinite(ms)) return '—';
+  const date = new Date(ms), locale = zh ? 'zh-CN' : 'en-GB';
+  const day = { year: 'numeric', month: 'short', day: 'numeric' };
+  if (dateOnly) return <time dateTime={date.toISOString()}>{new Intl.DateTimeFormat(locale, day).format(date)}</time>;
+  const text = new Intl.DateTimeFormat(locale, { ...day, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
+  const zone = new Intl.DateTimeFormat(locale, { timeZoneName: 'short' }).formatToParts(date).find((part) => part.type === 'timeZoneName')?.value;
+  return <time dateTime={date.toISOString()}>{zone ? `${text} (${zone})` : text}</time>;
+}
 const amount = (v) => v == null ? '—' : `${BigInt(v) / 1000000n}.${(BigInt(v) % 1000000n).toString().padStart(6, '0')}`;
 // Each wallet action says what it moves; a refund or claim must never read like a subscription.
 function confirmationCopy(review, zh) {
@@ -40,7 +50,8 @@ export function ControlledFinancePanel({ primary = false }) {
   const shownProblem = problem?.failure ? describeFinanceError(problem.failure, zh) : problem ? { message: pick(problem.message), session: false } : null;
   const error = shownProblem?.message ?? '';
   const setError = useCallback((message) => setProblem(message ? { message } : null), []);
-  const fail = useCallback((failure) => setProblem({ failure }), []);
+  // `scope` is the pool whose detail started the action: its failure is shown there, next to the button.
+  const fail = useCallback((failure, scope = null) => setProblem({ failure, scope }), []);
   const [showRoles, setShowRoles] = useState(null);
   const rolesOpen = showRoles ?? !primary;
   const focusAfterRead = useRef(null);
@@ -144,7 +155,7 @@ export function ControlledFinancePanel({ primary = false }) {
       const current = appStore.get();
       if (snapshot.wallet !== connectedAddress() || snapshot.session !== currentWalletSession() || snapshot.generation !== current.modeGeneration || current.demoMode) throw Object.assign(new Error('Wallet or mode changed. Review again.'), { code: 'CONTEXT_CHANGED' });
       setReview({ kind, offer, shares, pack, generation: snapshot.generation });
-    } catch (failure) { fail(failure); } finally { setBusy(false); }
+    } catch (failure) { fail(failure, offer.pool_id); } finally { setBusy(false); }
   };
   const readPublicTerms = async (offer) => {
     const version = readGeneration.current;
@@ -153,7 +164,7 @@ export function ControlledFinancePanel({ primary = false }) {
       const pack = await controlledRequest(`offerings/${offer.pool_id}/terms`);
       await verifyReadableTerms(pack, offer, status);
       if (version === readGeneration.current) setPublicTerms({ pool_id: offer.pool_id, pack });
-    } catch (failure) { if (version === readGeneration.current) fail(failure); }
+    } catch (failure) { if (version === readGeneration.current) fail(failure, offer.pool_id); }
     finally { setBusy(false); }
   };
   const confirm = async () => {
@@ -254,7 +265,9 @@ export function ControlledFinancePanel({ primary = false }) {
           <div className="finance-detail-head"><h2>{zh ? '资金池' : 'Funding pool'} #{offer.pool_id} · {offerLabel(offer)}</h2><button type="button" onClick={() => { setSelectedPool(null); detailOpener.current?.focus(); }}>{zh ? '关闭详情' : 'Close details'}</button></div>
           <p>{blockedReason(offer)}</p>
           <dl><div><dt>{zh ? '资产与责任' : 'Asset and responsibility'}</dt><dd>{zh ? '以完整公开条款中的货物、路线和责任主体为准；哈希不证明真实货权。' : 'Read the cargo, route and responsible parties in the full public terms. A hash does not prove real title.'}</dd></div>
-            <div><dt>{zh ? '募集 / 放款截止 / 到期' : 'Subscription / disbursement deadline / maturity'}</dt><dd>{[offer.subscription_deadline, offer.disbursement_deadline, offer.maturity].map(isoTime).join(' / ')}</dd></div>
+            <div><dt>{zh ? '募集截止' : 'Subscription deadline'}</dt><dd><ChainTime value={offer.subscription_deadline} zh={zh} /></dd></div>
+            <div><dt>{zh ? '放款截止' : 'Disbursement deadline'}</dt><dd><ChainTime value={offer.disbursement_deadline} zh={zh} /></dd></div>
+            <div><dt>{zh ? '到期' : 'Maturity'}</dt><dd><ChainTime value={offer.maturity} zh={zh} /></dd></div>
             <div><dt>{zh ? '进度' : 'Progress'}</dt><dd>{offer.subscribed} / {offer.shares} {zh ? '份；实收与回款见上表。' : 'shares; actual cash amounts appear above.'}</dd></div>
             <div><dt>{zh ? '退出责任' : 'Cash exit'}</dt><dd>{zh ? '出资人自行退款或领取；融资方实际回款。处置与异议按已签条款执行。' : 'Investors refund or claim for themselves; the borrower sends actual repayments. Resolution and disputes follow the signed terms.'}</dd></div></dl>
           <p>{zh ? '目标兑付不是预测收益；可能损失本金。公开条款在每次钱包授权前独立核验。' : 'Target redemption is not a return forecast; principal may be lost. Full terms are independently checked before wallet authorization.'}</p>
@@ -264,10 +277,11 @@ export function ControlledFinancePanel({ primary = false }) {
           <button type="button" className="finance-button-primary" disabled={busy || loading || demo || !wallet || !offer.subscription_open || Boolean(pending) || !/^[1-9]\d{0,8}$/u.test(shares)} onClick={() => startReview('subscribe', offer)}><span className="step-badge" aria-hidden="true">2</span>{zh ? '审阅认购' : 'Review subscription'}</button></div></div>
           <p className="small muted">{zh ? '第 1 步只在链上记录你同意当前条款，不转移资金；报价更新后需要重新同意。第 2 步才会请求代币授权并认购。' : 'Step 1 only records on chain that you accept these terms; no funds move, and a new quote needs a new acceptance. Step 2 asks for the token approval and the subscription.'}</p>
           <button type="button" disabled={busy || loading} onClick={() => readPublicTerms(offer)}>{zh ? '只读查看完整条款' : 'Read full terms without signing'}</button>
+          {problem?.scope === offer.pool_id && error && <p role="alert" className="finance-alert finance-alert-inline">{error}</p>}
           {publicTerms?.pool_id === offer.pool_id && <ReadableTerms pack={publicTerms.pack} zh={zh} />}
         </section>)}
         <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份价格 / 兑付' : 'Price / redemption per share'}</th><th>{zh ? '募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
-          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<time>{isoTime(offer.maturity).slice(0, 10)}</time></td>
+          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<ChainTime value={offer.maturity} zh={zh} dateOnly /></td>
             <td>{amount(offer.issue_price_atomic)} / {amount(offer.redemption_per_share_atomic)} TEST_USDC</td><td>{amount(offer.raised_atomic)} / {amount(offer.disbursed_atomic)} / {amount(offer.recovered_atomic)}</td>
             <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '查看详情' : 'View details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">{selectedPool === offer.pool_id ? '−' : '↑'}</span></button></td></tr>)}</tbody></table></div>
         {!offers.length && listing && listing.complete !== false && <p>{zh ? '此实例尚无发行。' : 'This instance has no offerings.'}</p>}
@@ -301,7 +315,7 @@ export function ControlledFinancePanel({ primary = false }) {
           <button type="button" disabled={busy || demo || (Boolean(review.offer) && !termsRead)} onClick={confirm}>{zh ? '确认并前往钱包' : 'Confirm and continue to wallet'}</button><button type="button" disabled={busy} onClick={() => setReview(null)}>{zh ? '取消' : 'Cancel'}</button></section>}
       </>}
       {busy && <p role="status">{zh ? '正在处理，请保留当前交易记录…' : 'Processing. Keep the current transaction record…'}</p>}
-      {error && <p role="alert" className="finance-alert">{error}{shownProblem.session && status?.active && <> <button type="button" className="finance-inline-action" onClick={verifyIdentity}>{zh ? '重新验证身份' : 'Verify identity again'}</button></>}</p>}{notice && <p role="status" className="controlled-notice">{notice}</p>}
+      {error && !(problem?.scope != null && problem.scope === selectedPool) && <p role="alert" className="finance-alert">{error}{shownProblem.session && status?.active && <> <button type="button" className="finance-inline-action" onClick={verifyIdentity}>{zh ? '重新验证身份' : 'Verify identity again'}</button></>}</p>}{notice && <p role="status" className="controlled-notice">{notice}</p>}
     </details>
   </aside>;
 }

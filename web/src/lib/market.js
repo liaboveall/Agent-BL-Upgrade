@@ -107,6 +107,16 @@ export function recommendedQuote(comparison) {
   return quotes.find((q) => q.payout_speed === speed) ?? quotes[0] ?? null;
 }
 
+/**
+ * The terms a case is offered on before its pool has loaded: the payout speed the case names, as the server's pool
+ * quotes it (BALANCED when it names none), so a card never shows a price that a subscription would not use.
+ */
+export function publishedQuote(comparison, entry) {
+  const quotes = comparison?.quotes ?? [];
+  const named = entry?.case?.financing?.payout_speed;
+  return quotes.find((q) => q.payout_speed === named) ?? quotes.find((q) => q.payout_speed === 'BALANCED') ?? recommendedQuote(comparison);
+}
+
 export function defaultMarketSubscription(quote) {
   const target = Number(quote?.expected_cash_to_exporter_usd ?? quote?.requested_cash_usd ?? 0);
   if (!Number.isFinite(target) || target <= 0) return 100000;
@@ -119,7 +129,7 @@ export function defaultMarketSubscription(quote) {
  */
 export function marketView(state, entry) {
   const pool = state.evidencePools.get(entry.case_id) ?? null;
-  const quote = pool?.quote ?? recommendedQuote(cachedComparison(state, entry.case_id));
+  const quote = pool?.quote ?? publishedQuote(cachedComparison(state, entry.case_id), entry);
   // A historical pool (kept only for its deployed testnet record) is never open for subscription.
   const availability = pool ? subscriptionAvailability({ ...pool, historical: entry.historical })
     : { can_subscribe: Boolean(quote && !entry.historical && !PAUSED_ACTIONS.has(quote.pricing_action)), remaining_usd: null };

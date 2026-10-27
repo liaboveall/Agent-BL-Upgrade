@@ -56,7 +56,38 @@ const COPY = Object.freeze({
   InsufficientEscrow: { text: ['池内托管余额不足，已停止领取。请联系运营方核对。', 'The pool escrow is short, so the claim stopped. Ask the operator to reconcile.'] },
   LotLimit: { text: ['此钱包在该池的分次认购已达上限（32 段），请联系运营方。', 'This wallet reached the limit of 32 separate subscriptions in this pool. Contact the operator.'] },
   EmergencyStopped: { text: ['资金池处于紧急停止状态。', 'The pool is under an emergency stop.'] },
-  TransferTaxNotSupported: { text: ['结算代币的实际到账金额与转账金额不符，已拒绝。', 'The settlement token delivered a different amount than sent, so it was refused.'] }
+  TransferTaxNotSupported: { text: ['结算代币的实际到账金额与转账金额不符，已拒绝。', 'The settlement token delivered a different amount than sent, so it was refused.'] },
+  // Server codes from the controlled financing and rights routes.
+  financing_disclosure_missing: { text: ['这个资金池的完整条款暂时无法读取，请不要签名。稍后重试，或请运营方提供已批准的条款。', 'The full terms of this pool cannot be read right now, so do not sign. Retry later or ask the operator for the approved terms.'] },
+  financing_review_required: { text: ['条款或报价已更新，请重新阅读完整条款后再操作。', 'The terms or the quote changed. Read the full terms again before continuing.'] },
+  rights_not_configured: { text: ['此服务未配置身份与条款存储，暂时无法读取完整条款，也不能发起业务操作。', 'This service has no identity and terms store configured, so it cannot show the full terms or start business actions.'] },
+  rights_vault_missing: { text: ['服务的身份与条款存储不可用，已停止新的操作。请联系运营方恢复。', 'The identity and terms store of this service is unavailable, so new actions are stopped. Ask the operator to restore it.'] },
+  rights_vault_busy: { text: ['服务正忙，请稍后重试。', 'The service is busy. Retry shortly.'] },
+  rights_plan_busy: { text: ['保存的操作刚刚发生变化，请重试。', 'The saved operation changed just now. Retry.'] },
+  legacy_exit_only: { text: ['这是旧版本实例，只保留退款、领取等既有退出操作。', 'This is a superseded instance; only existing exits such as refunds and claims remain.'] },
+  rights_legacy_exit_only: { text: ['这是旧版本实例，只保留退款、领取等既有退出操作。', 'This is a superseded instance; only existing exits such as refunds and claims remain.'] },
+  live_mode_required: { text: ['钱包操作只能在 Live 模式下发起。', 'Wallet actions can only start in Live mode.'] },
+  controlled_instance_unavailable: { text: ['此服务未配置受控测试网实例。', 'No controlled testnet instance is configured on this service.'] },
+  rights_chain_unavailable: { text: ['链上实例核验未通过或暂不可用，已停止操作。请稍后重试。', 'The on-chain instance could not be verified right now, so the action stopped. Retry later.'] },
+  rights_chain_not_configured: { text: ['链上实例核验未通过或暂不可用，已停止操作。请稍后重试。', 'The on-chain instance could not be verified right now, so the action stopped. Retry later.'] },
+  rpc_read_unavailable: { text: ['链上读取暂时不完整，请重试；缺失的数据不代表余额为零。', 'Chain reads are incomplete right now. Retry; missing data is not a zero balance.'] },
+  rpc_read_timeout: { text: ['链上读取超时，请重试。', 'A chain read timed out. Retry.'] },
+  rpc_read_busy: { text: ['链上读取排队已满，请稍后重试。', 'Too many chain reads are queued. Retry shortly.'] },
+  chain_reconciliation_required: { text: ['链上快照已变化（可能发生重组），请刷新后重试。', 'The chain snapshot changed (possibly a reorganization). Refresh and retry.'] },
+  controlled_pool_not_found: { text: ['此实例中没有这个资金池。', 'This instance has no such funding pool.'] },
+  quote_changed: { text: ['价格、报价版本或剩余份额已变化，请重新审阅。', 'The price, quote version or remaining shares changed. Review again.'] },
+  invalid_deadline: { text: ['认购截止已过，或审阅超过 15 分钟，请重新审阅。', 'The subscription deadline passed or the review is older than 15 minutes. Review again.'] },
+  pool_unavailable: { text: ['该资金池当前不接受此钱包认购（状态、资格或额度不符）。', 'This pool is not accepting a subscription from this wallet now (state, eligibility or remaining shares).'] },
+  position_not_claimable: { text: ['此持仓目前没有可领取的金额。', 'This position has nothing to claim right now.'] },
+  intent_transaction_mismatch: { text: ['这笔交易与保存的操作不一致，未被记入。', 'This transaction does not match the saved operation, so it was not recorded.'] },
+  nonce_consumed_by_other_transaction: { text: ['保存的 nonce 已被另一笔交易使用。请在钱包中核对，确认没有重复付款。', 'Another transaction used the saved nonce. Check your wallet and confirm nothing was paid twice.'] },
+  manual_reconciliation_required: { text: ['无法自动找到原交易。请在下方填写原钱包交易哈希后核对。', 'The original transaction could not be found automatically. Enter its wallet transaction hash below to reconcile.'] },
+  rights_manual_reconciliation_required: { text: ['无法自动找到原交易。请填写原钱包交易哈希后核对。', 'The original transaction could not be found automatically. Enter its wallet transaction hash to reconcile.'] },
+  rights_preflight_failed: { text: ['链上状态或权限拒绝了这笔操作，未发送任何交易。', 'The chain state or permissions reject this operation; nothing was sent.'] },
+  rights_role_required: { text: ['当前业务身份没有这项操作的权限。', 'Your business identity is not allowed to do this.'] },
+  // Controller require() reasons an investor can meet.
+  'terms changed': { text: ['链上条款或报价版本已变化，请重新阅读并同意最新条款。', 'The chain terms or quote version changed. Read and accept the latest terms again.'] },
+  'invalid acceptance expiry': { text: ['同意有效期无效（已过期或晚于募集截止），请重新审阅。', 'The acceptance expiry is invalid (past, or after the subscription deadline). Review again.'] }
 });
 
 const hexData = (value) => typeof value === 'string' && /^0x[0-9a-f]{8}/iu.test(value) ? value.slice(0, 10).toLowerCase() : null;
@@ -74,7 +105,8 @@ export function revertName(failure) {
 /** { message, session } for display; `session` means re-verifying the business identity may fix it. */
 export function describeFinanceError(failure, zh) {
   const code = failure?.code === 4001 ? 'ACTION_REJECTED' : failure?.code;
-  const key = COPY[code] ? code : revertName(failure);
+  const reason = failure?.reason ?? failure?.revert?.args?.[0];
+  const key = [code, revertName(failure), reason].find((candidate) => typeof candidate === 'string' && Object.hasOwn(COPY, candidate)) ?? null;
   const entry = key ? COPY[key] : null;
   if (!entry) return { message: failure?.message ?? String(failure), session: false };
   return { message: entry.text[zh ? 0 : 1], session: Boolean(entry.session) };

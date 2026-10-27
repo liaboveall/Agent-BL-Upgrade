@@ -230,9 +230,9 @@ const DICT = {
     ebld_action_OPEN: '可开盘', ebld_action_OPEN_WITH_WARNING: '可开盘，附带风险提示', ebld_action_HOLD_FOR_REVIEW: '挂起，等待人工复核', ebld_action_REJECT: '拒绝接入',
     ebld_field_bl_id: '提单编号', ebld_field_bl_no: '提单号', ebld_field_invoice_no: '发票号', ebld_field_cargo: '货物', ebld_field_quantity_mt: '数量（吨）', ebld_field_declared_value_usd: '申报价值（USD）', ebld_field_total_amount_usd: '总金额（USD）', ebld_field_unit_price_usd_per_mt: '每吨单价（USD）', ebld_field_currency: '币种', ebld_field_vessel: '船名', ebld_field_voyage_no: '航次', ebld_field_port_of_loading: '装货港', ebld_field_port_of_discharge: '卸货港', ebld_field_eta: '预计到达日期', ebld_field_issue_date: '签发日期', ebld_field_coverage_ratio: '保险覆盖比', ebld_field_insured_value_usd: '保险金额（USD）', ebld_field_expires_at: '保险到期日期',
     // topbar / subbar
-    document_title: 'AgentBL · eBL-backed RWA 投资市场',
+    document_title: 'AgentBL · 贸易单证融资研究',
     brand_tag: 'AI 为提单背书 RWA 动态定价 · 链上执行',
-    nav_market: '投资市场',
+    nav_market: '研究案例',
     nav_mint: '提单上链 · 铸造 RWA',
     nav_agent: 'Agent 控制台',
     ac_title: 'Agent 控制台',
@@ -517,7 +517,7 @@ const DICT = {
     chain_not_deployed: '○ 合约未部署 · 当前为模拟上链（运行 deploy 脚本后切真实链）',
 
     // marketplace
-    market_eyebrow: '投资市场',
+    market_eyebrow: '研究案例 · 测试资产',
     market_h1: '选择一笔由贸易单证支撑的研究项目。',
     market_subtitle: '浏览由规则引擎实时定价的贸易金融项目。每张卡片都绑定电子提单、航线风险评分、航运进度和认购进度。',
     market_sort_label: '项目排序',
@@ -1080,9 +1080,9 @@ const DICT = {
     ebld_action_OPEN: 'Eligible to open', ebld_action_OPEN_WITH_WARNING: 'Eligible to open with warnings', ebld_action_HOLD_FOR_REVIEW: 'Held for human review', ebld_action_REJECT: 'Rejected',
     ebld_field_bl_id: 'Bill identifier', ebld_field_bl_no: 'Bill number', ebld_field_invoice_no: 'Invoice number', ebld_field_cargo: 'Cargo', ebld_field_quantity_mt: 'Quantity (MT)', ebld_field_declared_value_usd: 'Declared value (USD)', ebld_field_total_amount_usd: 'Total amount (USD)', ebld_field_unit_price_usd_per_mt: 'Unit price (USD/MT)', ebld_field_currency: 'Currency', ebld_field_vessel: 'Vessel', ebld_field_voyage_no: 'Voyage', ebld_field_port_of_loading: 'Loading port', ebld_field_port_of_discharge: 'Discharge port', ebld_field_eta: 'Estimated arrival', ebld_field_issue_date: 'Issue date', ebld_field_coverage_ratio: 'Insurance coverage ratio', ebld_field_insured_value_usd: 'Insured value (USD)', ebld_field_expires_at: 'Insurance expiry',
     // topbar / subbar
-    document_title: 'AgentBL · eBL-backed RWA Investment Marketplace',
+    document_title: 'AgentBL · Trade-document financing research',
     brand_tag: 'AI-priced eBL-backed RWA · enforced on-chain',
-    nav_market: 'Investment Marketplace',
+    nav_market: 'Research cases',
     nav_mint: 'Pricing & Mint',
     nav_agent: 'Agent Console',
     ac_title: 'Agent Console',
@@ -1367,7 +1367,7 @@ const DICT = {
     chain_not_deployed: '○ Not deployed · simulated minting (run the deploy script to go live)',
 
     // marketplace
-    market_eyebrow: 'Investment marketplace',
+    market_eyebrow: 'Research cases · test assets',
     market_h1: 'Choose a document-backed trade project.',
     market_subtitle: 'Browse trade-finance offerings priced live by the rule engine. Each card is backed by an electronic bill of lading, route risk scoring, voyage progress, and a funding progress bar.',
     market_sort_label: 'Sort deals',

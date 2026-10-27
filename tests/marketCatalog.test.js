@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { CATEGORIES, caseCategory, caseSearchFields, categoryOptions, matchesSearch, searchTerms, visibleCases } from '../web/src/lib/market.js';
+import { CATEGORIES, caseCategory, caseSearchFields, categoryOptions, marketView, matchesSearch, publishedQuote, searchTerms, visibleCases } from '../web/src/lib/market.js';
 
 const casesDir = path.join(import.meta.dirname, '..', 'data', 'cases');
 // Entries shaped like /api/cases returns them: { case_id, cargo, case }.
@@ -60,4 +60,16 @@ test('category chips carry match counts and follow the search', () => {
   const searched = categoryOptions({ ...baseState, searchQuery: 'copper' });
   assert.deepEqual(Object.fromEntries(searched.map((o) => [o.name, o.count])), { all: 2, metal: 1, energy: 0, ore: 1, agriculture: 0 });
   assert.deepEqual(visibleCases({ ...baseState, searchQuery: 'copper', categoryFilter: 'ore' }).map((c) => c.case_id), ['CASE-EBL-CUCONC-ANF-LYG']);
+});
+
+test('before its pool loads, a card shows the price of the speed the case is offered at, not the recommendation', () => {
+  const quotes = ['FAST', 'BALANCED', 'LOW_COST'].map((speed, index) => ({ payout_speed: speed, final_issue_price_usd: 0.99 + index / 1000, pricing_action: 'OPEN_OFFERING' }));
+  const comparison = { recommended_payout_speed: 'BALANCED', quotes };
+  const fast = { case_id: 'A', case: { financing: { payout_speed: 'FAST' } } };
+  assert.equal(publishedQuote(comparison, fast).payout_speed, 'FAST');
+  assert.equal(publishedQuote(comparison, { case_id: 'B', case: { financing: { payout_speed: 'LEGACY' } } }).payout_speed, 'BALANCED');
+  const state = { evidencePools: new Map(), marketComparisons: { A: { comparison } } };
+  assert.equal(marketView(state, fast).quote.final_issue_price_usd, 0.99);
+  const pool = { status: 'Open', quote: { ...quotes[1], payout_speed: 'BALANCED' }, can_subscribe: true };
+  assert.equal(marketView({ ...state, evidencePools: new Map([['A', pool]]) }, fast).quote, pool.quote, 'a loaded pool always wins');
 });

@@ -131,3 +131,4 @@
   .positions-heading + p { margin: 16px; }
   .controlled-panel .controlled-position, .controlled-panel .controlled-confirm, .controlled-panel .controlled-pending, .controlled-panel .finance-alert { margin: 16px; }
 }
+.controlled-panel .finance-alert.finance-alert-inline { margin: 12px 0; }
