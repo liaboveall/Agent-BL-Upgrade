@@ -26,7 +26,10 @@
 .finance-empty { display: grid; gap: 16px; margin: 0 28px 28px; color: var(--text-2); font-size: var(--fs-13); }
 .finance-empty p { margin: 0; line-height: 1.7; }
 .finance-empty p strong { color: var(--text); font-size: var(--fs-14); }
-.finance-paths { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.finance-start { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.finance-start span { flex: 1 1 260px; color: var(--text-2); }
+.finance-empty p.finance-paths-label { color: var(--text-2); font-size: var(--fs-13); }
+.finance-paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 /* Three guide cards side by side leave ~95px per column on a phone; stack them. */
 @media (max-width: 767px) { .finance-paths { grid-template-columns: 1fr; } }
 .controlled-panel button.finance-path { display: grid; gap: 4px; align-content: start; min-height: 0; padding: 16px 18px; border-color: var(--line); border-radius: var(--r); background: var(--surface); text-align: left; }

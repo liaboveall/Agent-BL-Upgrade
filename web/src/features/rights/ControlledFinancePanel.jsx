@@ -218,8 +218,14 @@ export function ControlledFinancePanel({ primary = false }) {
       {loading && <p className="finance-loading" role="status">{zh ? '正在读取链上快照与持仓…' : 'Reading chain snapshot and positions…'}</p>}
       {!status?.active ? (!loading && <div className="finance-empty" role="status">
         <p><strong>{t('finance_empty_title')}</strong><br />{t('finance_empty_body')}</p>
+        {/* One clear first step; the other paths are alternatives, not three equal calls to action. */}
+        <div className="finance-start">
+          <button type="button" className="finance-button-primary" onClick={() => setView('agent')}>{t('finance_start_demo')}</button>
+          <span>{t('finance_start_demo_hint')}</span>
+        </div>
+        <p className="finance-paths-label">{t('finance_paths_label')}</p>
         <div className="finance-paths">
-          {[['market', 'finance_path_market'], ['mint', 'finance_path_mint'], ['agent', 'finance_path_agent']].map(([view, key]) => (
+          {[['market', 'finance_path_market'], ['mint', 'finance_path_mint']].map(([view, key]) => (
             <button key={view} type="button" className="finance-path" onClick={() => setView(view)}>
               <strong>{t(key)}</strong><span>{t(`${key}_hint`)}</span>
             </button>

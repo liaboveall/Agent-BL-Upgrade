@@ -102,12 +102,24 @@ export function MarketPage() {
           )}
         </section>
         <aside ref={aside} className="market-aside" aria-label={t('a11y_selected_project')}>
+          {/* Single column: the detail sits after the whole shelf, so say how to get back to the chosen card. */}
+          {selectionVisible ? (
+            <Button variant="ghost" size="sm" className="market-back" onClick={() => returnToCard(state.caseId)}>
+              <Icon name="arrowUp" size={14} />{t('market_back_to_card')}
+            </Button>
+          ) : null}
           <DetailPanel now={now} noMatches={!cases.length && state.cases.length > 0} selectionVisible={selectionVisible} />
         </aside>
       </div>
       <PortfolioDialog open={portfolioOpen} onClose={() => setPortfolioOpen(false)} />
     </div>
   );
+}
+
+function returnToCard(caseId) {
+  const node = document.querySelector(`[data-case="${CSS.escape(caseId ?? '')}"]`);
+  node?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
+  node?.focus({ preventScroll: true });
 }
 
 const SORT_LABELS = {

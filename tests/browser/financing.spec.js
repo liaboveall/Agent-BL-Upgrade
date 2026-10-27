@@ -63,7 +63,8 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
   await workspace.getByLabel(zh ? '本组织材料' : 'Organization materials').selectOption(materialId);
   await expect(workspace).toContainText(zh ? '你的职责' : 'Your responsibility');
   await workspace.getByLabel(zh ? '本次操作' : 'Next action').selectOption('disburse');
-  await workspace.getByLabel(zh ? '测试代币原子金额（1 = 0.000001 TEST_USDC）' : 'Test asset atomic amount (1 = 0.000001 TEST_USDC)').fill('8000000');
+  await workspace.getByLabel(zh ? '金额（TEST_USDC，最多 6 位小数）' : 'Amount (TEST_USDC, up to 6 decimals)').fill('8');
+  await expect(workspace.locator('#role-amount-exact')).toContainText('8000000');
   await workspace.getByLabel(zh ? '审查材料承诺' : 'Evidence commitment').fill(`0x${'bc'.repeat(32)}`);
   const prepare = workspace.getByRole('button', { name: zh ? '准备可读预览' : 'Prepare readable preview' }); await prepare.focus(); await page.keyboard.press('Enter');
   const preview = workspace.getByRole('region', { name: zh ? '角色操作预览' : 'Role action preview' }); await expect(preview).toContainText('8.000000 TEST_USDC');

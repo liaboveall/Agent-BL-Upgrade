@@ -498,7 +498,7 @@ const DICT = {
 	    cat_ore: '矿石与精矿',
 	    cat_agriculture: '农产品',
 	    cat_other: '其他',
-	    search_ph: '搜索提单或 AI 自然语言筛选…',
+	    search_ph: '搜索单证或用 AI 自然语言筛选…',
 	    ai_parse: 'AI 筛选',
 	    ai_search_title: 'AI 解析自然语言偏好，智能筛选提单',
 	    ai_searching: '🤖 AI 解析中…',
@@ -518,7 +518,7 @@ const DICT = {
 
     // marketplace
     market_eyebrow: '投资市场',
-    market_h1: '选择一笔 eBL 支撑的贸易项目。',
+    market_h1: '选择一笔由贸易单证支撑的研究项目。',
     market_subtitle: '浏览由规则引擎实时定价的贸易金融项目。每张卡片都绑定电子提单、航线风险评分、航运进度和认购进度。',
     market_sort_label: '项目排序',
     market_sort_recommended: '推荐排序',
@@ -604,9 +604,9 @@ const DICT = {
     speed_FAST_label: '快速',
     speed_BALANCED_label: '均衡',
     speed_LOW_COST_label: '低成本',
-    speed_FAST_blurb: '数小时内到账，以更高利润分成换速度。',
-    speed_BALANCED_blurb: '标准结算，融资成本与速度更均衡。',
-    speed_LOW_COST_blurb: '耐心资金，融资成本更低但到账更慢。',
+    speed_FAST_blurb: '定价假设：放款更快，折价更深。本版不承诺到账时间。',
+    speed_BALANCED_blurb: '定价假设：速度与融资成本居中。不构成到账承诺。',
+    speed_LOW_COST_blurb: '定价假设：放款较慢，折价更浅。不构成到账承诺。',
 
     // hero (view 1)
     hero_eyebrow: '提单上链 · RWA 折价发行',
@@ -680,7 +680,7 @@ const DICT = {
     src_valuation_detail: '落地价 × 数量，经波动率 haircut，并按 {cov}% 兑付覆盖率封顶安全敞口',
 
     // payout speeds (sub label)
-    speed_FAST_sub: '很快到账', speed_BALANCED_sub: '正常到账', speed_LOW_COST_sub: '耐心资本',
+    speed_FAST_sub: '较快放款假设', speed_BALANCED_sub: '标准假设', speed_LOW_COST_sub: '耐心资本假设',
 
     // waterfall
     wf_target: '目标兑付', wf_base: '基准锚点', wf_urgency: '急用折价', wf_risk: '风险折价',
@@ -1348,7 +1348,7 @@ const DICT = {
 	    cat_ore: 'Ores & Concentrates',
 	    cat_agriculture: 'Agriculture',
 	    cat_other: 'Other',
-	    search_ph: 'Search eBL or AI natural language filter…',
+	    search_ph: 'Search documents or filter in plain language…',
 	    ai_parse: 'AI Filter',
 	    ai_search_title: 'AI parses natural-language preferences to filter eBLs',
 	    ai_searching: 'AI parsing…',
@@ -1368,7 +1368,7 @@ const DICT = {
 
     // marketplace
     market_eyebrow: 'Investment marketplace',
-    market_h1: 'Choose an eBL-backed trade project.',
+    market_h1: 'Choose a document-backed trade project.',
     market_subtitle: 'Browse trade-finance offerings priced live by the rule engine. Each card is backed by an electronic bill of lading, route risk scoring, voyage progress, and a funding progress bar.',
     market_sort_label: 'Sort deals',
     market_sort_recommended: 'Recommended',
@@ -1454,9 +1454,9 @@ const DICT = {
     speed_FAST_label: 'Fast',
     speed_BALANCED_label: 'Balanced',
     speed_LOW_COST_label: 'Low cost',
-    speed_FAST_blurb: 'Cash in hours — give up more margin for speed.',
-    speed_BALANCED_blurb: 'Standard settlement — a balanced financing cost.',
-    speed_LOW_COST_blurb: 'Patient capital — cheapest financing, slower cash.',
+    speed_FAST_blurb: 'Pricing assumption: cash moves sooner, at a deeper discount. No payout time is promised in this version.',
+    speed_BALANCED_blurb: 'Pricing assumption: a middle path on speed and financing cost. Not a payout commitment.',
+    speed_LOW_COST_blurb: 'Pricing assumption: cash moves later, at a shallower discount. Not a payout commitment.',
 
     // hero (view 1)
     hero_eyebrow: 'Tokenize eBL · discounted RWA issuance',
@@ -1530,7 +1530,7 @@ const DICT = {
     src_valuation_detail: 'Landed price × quantity, after a volatility haircut, capped at {cov}% redemption coverage',
 
     // payout speeds (sub label)
-    speed_FAST_sub: 'cash in hours', speed_BALANCED_sub: 'standard settlement', speed_LOW_COST_sub: 'patient capital',
+    speed_FAST_sub: 'faster-cash assumption', speed_BALANCED_sub: 'standard assumption', speed_LOW_COST_sub: 'patient-capital assumption',
 
     // waterfall
     wf_target: 'Target', wf_base: 'Base anchor', wf_urgency: 'Urgency', wf_risk: 'Risk',

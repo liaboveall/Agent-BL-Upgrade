@@ -3,6 +3,8 @@
 .finance-intro { display: grid; gap: 12px; margin-bottom: 24px; max-width: 1100px; }
 .finance-intro h1 { font-size: var(--fs-28); }
 .finance-journey { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.finance-journey-details > summary { width: fit-content; min-height: 32px; color: var(--accent); font-size: var(--fs-13); font-weight: 600; cursor: pointer; }
+.finance-journey-details[open] > summary { margin-bottom: 10px; }
 .finance-journey li { display: grid; gap: 6px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
 .finance-journey span { color: var(--text-2); }
 .controlled-panel { width: 100%; min-width: 0; margin-top: 24px; padding: 0; }
@@ -40,6 +42,7 @@
 @media (max-width: 959px) {
   .market-layout { grid-template-columns: minmax(0, 1fr); }
   .market-aside { position: static; }
+  .market-back { display: inline-flex; margin-bottom: 8px; }
 }
 @media (max-width: 1199px) {
   .mint-layout, .mint-secondary, .agent-layout { grid-template-columns: minmax(0, 1fr); }
@@ -63,13 +66,18 @@
   .topbar-right { flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; max-width: 100%; }
   .network-select { flex: 1 1 auto; width: auto; max-width: none; min-width: 0; }
   .wallet-btn { min-width: 0; }
-  /* Tabs in an even grid instead of a ragged second line; only data regions scroll sideways. */
-  .nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .nav-tab { height: auto; min-height: 40px; padding: 6px 8px; border-radius: var(--r); font-size: var(--fs-13); line-height: 1.25; text-align: center; white-space: normal; }
-  .mode-strip-inner { padding-inline: 12px; }
-  .mode-actions { flex-wrap: wrap; gap: 12px; }
+  /* The first screen goes to the page, not the chrome: one row of five tabs, the network in the mode strip. */
+  .nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
+  .nav-tab { height: auto; min-height: 44px; padding: 4px 2px; border-radius: var(--r); font-size: var(--fs-12); line-height: 1.2; text-align: center; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; }
+  .topbar .network-select { display: none; }
+  .mode-strip-inner { flex-wrap: wrap; gap: 6px 10px; padding: 6px 12px; }
   .mode-strip-inner > * { min-width: 0; max-width: 100%; }
-  .mode-copy { flex: 1 1 220px; }
+  .mode-copy { flex: 1 1 0; font-size: var(--fs-12); line-height: 1.3; }
+  .mode-more { display: inline-flex; flex: none; }
+  .mode-strip:not(.is-expanded) .mode-details { display: none; }
+  .mode-strip.is-expanded .mode-details { display: flex; flex-basis: 100%; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 4px; }
+  .mode-strip.is-expanded .mode-network { display: block; flex: 1 1 100%; max-width: 100%; }
+  .mode-actions { flex-wrap: wrap; gap: 12px; }
   .page { padding-top: 24px; }
   .page-foot { flex-direction: column; gap: 8px; }
   .page-head-stats { gap: 16px; }

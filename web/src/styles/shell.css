@@ -84,6 +84,9 @@
 .mode-actions .link-btn { min-height: 24px; white-space: nowrap; }
 .mode-actions .link-btn:disabled { color: var(--text-2); cursor: default; text-decoration: none; }
 .mode-confirm { display: inline-flex; align-items: center; gap: var(--s-3); }
+/* Desktop shows the whole strip on one line; the details wrapper only groups what a phone folds away. */
+.mode-details { display: contents; }
+.mode-more, .mode-network { display: none; }
 .link-btn.is-danger { color: var(--crit); }
 
 /* activity: a hairline along the very top of the window, as in Safari */

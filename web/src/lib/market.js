@@ -143,6 +143,26 @@ export function marketDataSource(entry) {
   return { tone: 'muted', text: t('src_none') };
 }
 
+/** A card-sized form of marketDataSource: what kind of price this is, so comparisons carry their basis. */
+export function marketSourceShort(entry) {
+  if (entry.historical) return { tone: 'muted', text: t('src_short_historical') };
+  const data = entry.case ?? {}, status = data.real_data?.status ?? data.market?.data_status ?? null;
+  const date = (value) => (value ? f.fmtDate(String(value).slice(0, 10)).slice(5) : '—');
+  if (status === 'live') return { tone: 'ok', text: t('src_short_live') };
+  if (status === 'stale') return { tone: 'warn', text: t('src_short_stale') };
+  if (status === 'mixed') return { tone: 'warn', text: t('src_short_mixed') };
+  if (status === 'offline') return { tone: 'muted', text: t('src_short_offline', { date: date(data.real_data?.snapshot_captured_at) }) };
+  if (status === 'reference') return { tone: 'muted', text: t('src_short_reference', { date: date(data.market?.price_reference_date) }) };
+  return { tone: 'muted', text: t('src_short_none') };
+}
+
+/** The trade document behind a case: an electronic bill of lading or a warehouse receipt. */
+export function documentTypeLabel(entry) {
+  const type = entry.case?.bill_of_lading?.bl_type ?? '';
+  if (type === 'electronic_warehouse_receipt') return t('market_doc_ewr');
+  return type ? t('market_doc_ebl') : t('market_doc_other');
+}
+
 /** The pool's recorded subscriptions against its target; null when the pool has no record. */
 export function marketFunding(pool) {
   const raised = Number(pool?.subscribed_usd);

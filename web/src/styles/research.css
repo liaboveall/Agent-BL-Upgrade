@@ -62,6 +62,7 @@
   background: var(--surface); color: var(--text); font: 400 var(--fs-14)/1.4 var(--font);
 }
 .evidence-panel textarea, .role-workspace textarea { min-height: 84px; padding: 8px 12px; resize: vertical; }
+.role-workspace .role-exact { display: block; margin-top: -2px; color: var(--muted); font-size: var(--fs-12); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .role-workspace select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
 .evidence-panel input:hover, .evidence-panel textarea:hover, .role-workspace input:hover, .role-workspace select:hover, .role-workspace textarea:hover { border-color: var(--faint); }
 .evidence-panel input:focus, .evidence-panel textarea:focus, .role-workspace input:focus, .role-workspace select:focus, .role-workspace textarea:focus { outline: none; border-color: var(--accent-fill); box-shadow: var(--focus); }

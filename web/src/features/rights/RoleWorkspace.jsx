@@ -6,6 +6,7 @@ import { clearRightsSession, openRightsSession, rightsRequest, rightsSessionToke
 import { describeFinanceError } from '../../lib/finance-errors.js';
 import { sendRightsPlan } from '../../lib/rights.js';
 import { ReadableTerms } from './ReadableTerms.jsx';
+import { toAtomic, toUnixSeconds } from '../../lib/units.js';
 
 const labels = {
   investor_wallet: ['待批准出资钱包', 'Investor wallet to approve'], subjectHash: ['主体身份承诺', 'Subject identity commitment'], distribution_hash: ['分配方案承诺', 'Distribution commitment'], quote_version: ['报价版本', 'Quote version'],
@@ -41,6 +42,7 @@ const actions = [
   ['dispute_resolution', ['holder', 'investor', 'reviewer']], ['finalize_resolution', ['holder', 'investor', 'reviewer', 'custodian']]
 ];
 const atomic = (value) => `${BigInt(value ?? 0) / 1000000n}.${(BigInt(value ?? 0) % 1000000n).toString().padStart(6, '0')}`;
+const subjectKey = (wallet) => `agentbl.rights-subject:${wallet.toLowerCase()}`;
 function exportJson(value, name) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -49,9 +51,11 @@ function exportJson(value, name) {
 export function RoleWorkspace({ zh, status, wallet }) {
   const generation = useApp((s) => s.modeGeneration), demo = useApp((s) => s.demoMode), text = (key) => labels[key]?.[zh ? 0 : 1] ?? key;
   const [subjectId, setSubjectId] = useState(''), [principal, setPrincipal] = useState(null), [materials, setMaterials] = useState([]), [materialId, setMaterialId] = useState(''), [workflow, setWorkflow] = useState(null);
-  const [operation, setOperation] = useState(''), [file, setFile] = useState(null), [documentText, setDocumentText] = useState(''), [amount, setAmount] = useState(''), [evidence, setEvidence] = useState(''), [distribution, setDistribution] = useState('');
-  const [investorWallet, setInvestorWallet] = useState(''), [validUntil, setValidUntil] = useState(''), [plan, setPlan] = useState(null), [pending, setPending] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState(''), [file, setFile] = useState(null), [documentText, setDocumentText] = useState(''), [amountText, setAmountText] = useState(''), [evidence, setEvidence] = useState(''), [distribution, setDistribution] = useState('');
+  const [investorWallet, setInvestorWallet] = useState(''), [validUntilLocal, setValidUntilLocal] = useState(''), [plan, setPlan] = useState(null), [pending, setPending] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const viewContext = useRef(null), selectedMaterial = useRef('');
+  // People enter TEST_USDC and a local date-time; the exact atomic amount and Unix seconds are derived and shown.
+  const amount = toAtomic(amountText), validUntil = toUnixSeconds(validUntilLocal);
   const [approved, setApproved] = useState(false), [originalHash, setOriginalHash] = useState('');
   viewContext.current = { wallet, generation, materialId, operation, file, amount, evidence, distribution, investorWallet, validUntil, documentText };
   const capture = () => { const saved = { ...viewContext.current }; return () => { if (!Object.entries(saved).every(([name, value]) => viewContext.current[name] === value)) throw new Error('Wallet, mode, material or action changed. Review again.'); }; };
@@ -62,11 +66,18 @@ export function RoleWorkspace({ zh, status, wallet }) {
     selectedMaterial.current = ''; clearRightsSession(); setPrincipal(null); setMaterials([]); setWorkflow(null); setPlan(null); setApproved(false); setOperation(''); setFile(null);
     try { setPending(key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null); } catch { setPending({ invalid: true }); }
   }, [wallet, generation, key]);
+  // The enrolled identity ID is not a credential (login still needs the wallet's signature); remember it per wallet.
+  useEffect(() => {
+    let saved = null;
+    try { saved = wallet ? localStorage.getItem(subjectKey(wallet)) : null; } catch {}
+    setSubjectId(saved ?? '');
+  }, [wallet]);
   // The reviewer confirmed the preview as it read in the previous language; ask for that one confirmation again.
   useEffect(() => { setApproved(false); }, [zh]);
   const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(failure); } finally { setBusy(false); } };
   const reload = async () => { setMaterials((await rightsRequest('materials')).materials); if (materialId) setWorkflow(await rightsRequest(`materials/${materialId}/workflow`)); };
-  const login = (exitOnly = false) => run(async () => { const value = await openRightsSession(subjectId, { exitOnly }); setPrincipal(value); setMaterials(value.exit_only ? [] : (await rightsRequest('materials')).materials); });
+  const login = (exitOnly = false) => run(async () => { const value = await openRightsSession(subjectId, { exitOnly }); setPrincipal(value);
+    try { localStorage.setItem(subjectKey(wallet), subjectId); } catch {} setMaterials(value.exit_only ? [] : (await rightsRequest('materials')).materials); });
   const chooseMaterial = (id) => { selectedMaterial.current = id; setMaterialId(id); setWorkflow(null); setPlan(null); setApproved(false); if (id) run(async () => { const result = await rightsRequest(`materials/${id}/workflow`); if (selectedMaterial.current === id && rightsSessionToken()) setWorkflow(result); }); };
   const pack = workflow?.disclosure;
   const inputFor = () => {
@@ -104,7 +115,7 @@ export function RoleWorkspace({ zh, status, wallet }) {
       assertContext(); setPlan({ signing, preview: signing.value }); return;
     }
     if (operation === 'approve_repayment') {
-      if (!pack || !/^[1-9]\d*$/u.test(amount)) throw new Error(zh ? '请核对测试资产和精确原子金额。' : 'Check the test asset and positive atomic amount.');
+      if (!pack || !/^[1-9]\d*$/u.test(amount)) throw new Error(zh ? '请核对测试资产和金额（最多 6 位小数）。' : 'Check the test asset and a positive amount (up to six decimals).');
       setPlan({ allowance: true, preview: { asset: pack.terms.settlementAsset, spender: status.config.contracts.RWAOfferingPool, amount_atomic: amount } }); return;
     }
     const saved = await rightsRequest('transaction-plans', inputFor());
@@ -164,11 +175,13 @@ export function RoleWorkspace({ zh, status, wallet }) {
       <label>{zh ? '本次操作' : 'Next action'} <select value={operation} onChange={(e) => { setOperation(e.target.value); setPlan(null); setApproved(false); setFile(null); }}><option value="">{zh ? '选择操作' : 'Choose action'}</option>{actions.filter(([, roles]) => roles.some((role) => principal.roles.includes(role))).map(([name]) => <option key={name} value={name}>{text(name)}</option>)}</select></label>
       {operation === 'create_material' ? <label>{zh ? '虚构研究单证内容' : 'Fictional research title contents'} <textarea value={documentText} onChange={(e) => { setDocumentText(e.target.value); setPlan(null); }} /></label> : <>
         {['register_title', 'create_offering', 'disclosure', 'sign_issuance', 'sign_valuation', 'set_eligibility'].includes(operation) && <label>{zh ? '研究材料文件（JSON）' : 'Research package file (JSON)'} <input type="file" accept="application/json,.json" onChange={(e) => { const selected = e.target.files[0]; setPlan(null); setApproved(false); run(async () => { if (!selected) return; if (selected.size > 1048576) throw new Error('File exceeds 1 MiB'); setFile(JSON.parse(await selected.text())); }); }} /></label>}
-        {['disburse', 'repay_action', 'approve_repayment', 'settle', 'record_payment', 'notify_resolution'].includes(operation) && <label>{zh ? '测试代币原子金额（1 = 0.000001 TEST_USDC）' : 'Test asset atomic amount (1 = 0.000001 TEST_USDC)'} <input inputMode="numeric" value={amount} onChange={(e) => { setAmount(e.target.value); setPlan(null); }} /></label>}
+        {['disburse', 'repay_action', 'approve_repayment', 'settle', 'record_payment', 'notify_resolution'].includes(operation) && <><label>{zh ? '金额（TEST_USDC，最多 6 位小数）' : 'Amount (TEST_USDC, up to 6 decimals)'} <input inputMode="decimal" aria-describedby="role-amount-exact" value={amountText} onChange={(e) => { setAmountText(e.target.value); setPlan(null); }} /></label>
+          <small id="role-amount-exact" className="role-exact">{amount ? `= ${amount} ${zh ? '原子单位（链上精确值）' : 'atomic units (exact on-chain value)'}` : amountText ? (zh ? '请输入大于 0、最多 6 位小数的金额' : 'Enter an amount above 0 with at most six decimals') : (zh ? '1 TEST_USDC = 1,000,000 原子单位' : '1 TEST_USDC = 1,000,000 atomic units')}</small></>}
         {['disburse', 'mark_in_transit', 'record_payment', 'record_arrival', 'notify_resolution', 'review_resolution', 'dispute_resolution', 'set_eligibility', 'refresh_screening'].includes(operation) && <label>{zh ? '审查材料承诺' : 'Evidence commitment'} <input value={evidence} onChange={(e) => { setEvidence(e.target.value); setPlan(null); }} /></label>}
         {operation === 'notify_resolution' && <label>{zh ? '分配方案承诺' : 'Distribution commitment'} <input value={distribution} onChange={(e) => { setDistribution(e.target.value); setPlan(null); }} /></label>}
         {operation === 'set_eligibility' && <label>{zh ? '待审查出资钱包' : 'Investor wallet to approve'} <input value={investorWallet} onChange={(e) => { setInvestorWallet(e.target.value); setPlan(null); }} /></label>}
-        {['set_eligibility', 'refresh_screening'].includes(operation) && <label>{zh ? '有效截止（Unix秒）' : 'Validity deadline (Unix seconds)'} <input value={validUntil} onChange={(e) => { setValidUntil(e.target.value); setPlan(null); }} /></label>}
+        {['set_eligibility', 'refresh_screening'].includes(operation) && <><label>{zh ? '有效截止（本地时间）' : 'Valid until (local time)'} <input type="datetime-local" aria-describedby="role-valid-exact" value={validUntilLocal} onChange={(e) => { setValidUntilLocal(e.target.value); setPlan(null); }} /></label>
+          <small id="role-valid-exact" className="role-exact">{validUntil ? `= Unix ${validUntil} · ${new Date(Number(validUntil) * 1000).toISOString().replace('.000Z', 'Z')}` : (zh ? '链上以 Unix 秒记录' : 'Recorded on chain in Unix seconds')}</small></>}
       </>}
       <button type="button" disabled={busy || demo || !operation || Boolean(pending) || operation !== 'create_material' && !materialId} onClick={prepare}>{zh ? '准备可读预览' : 'Prepare readable preview'}</button>
       {plan && <section className="controlled-confirm" aria-label={zh ? '角色操作预览' : 'Role action preview'}><h4>{text(operation)}</h4>{plan.disclosurePreview && <ReadableTerms pack={plan.disclosurePreview} zh={zh} />}<dl>{Object.entries(plan.preview ?? {}).filter(([, value]) => value != null).map(([name, value]) => <div key={name}><dt>{text(name)}</dt><dd><code>{name === 'operation' ? text(value) : String(value)}</code></dd></div>)}</dl>

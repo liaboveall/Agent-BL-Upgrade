@@ -1,7 +1,8 @@
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import {
-  annualYieldText, cargoImage, marketClock, marketFunding, marketView, marketVoyageProgress, potentialYieldText, registryTag, routeText, shortCargoName, shortRoute
+  annualYieldText, cargoImage, documentTypeLabel, marketClock, marketFunding, marketSourceShort, marketView, marketVoyageProgress, potentialYieldText, registryTag, routeText,
+  shortCargoName, shortRoute
 } from '../../lib/market.js';
 import { selectCase } from '../../state/controller.js';
 import { Badge, Progress, cx } from '../../components/ui.jsx';
@@ -34,6 +35,7 @@ export function ProjectCard({ entry, state, now, tagged = false }) {
   const status = statusMeta(entry, view);
   const cargo = tData(bl.cargo || entry.cargo || entry.case_id);
   const highlighted = state.evidenceSelected?.case_id === entry.case_id;
+  const source = marketSourceShort(entry);
   return (
     <button
       type="button"
@@ -52,6 +54,11 @@ export function ProjectCard({ entry, state, now, tagged = false }) {
       <span className="deal-badges">
         <Badge tone={f.riskTone(quote?.risk_level)}>{quote ? t('market_risk_badge', { level: f.riskLabel(quote.risk_level) }) : '—'}</Badge>
         {status.tone !== 'ok' ? <Badge tone={status.tone}>{status.label}</Badge> : null}
+      </span>
+      {/* What the figures below rest on, visible while comparing cards rather than only in the detail. */}
+      <span className="deal-meta">
+        <span>{documentTypeLabel(entry)}</span>
+        <span className={`tone-text-${source.tone}`}>{source.text}</span>
       </span>
       {/* Label, value and note are one line each in both columns, so prices line up across a row of cards.
           The period return leads; the annualized figure of a short tenor is context, not the headline. */}

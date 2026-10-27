@@ -50,14 +50,15 @@ export function TopBar() {
   );
 }
 
-function NetworkSelect() {
+/** The protocol network. On a phone it lives in the expandable mode strip instead of the top bar. */
+export function NetworkSelect({ className = '' }) {
   const networks = useApp((state) => state.networks);
   const networkKey = useApp((state) => state.networkKey);
   const wallet = useApp((state) => state.wallet);
   if (!networks.length) return null;
   return (
     <select
-      className="select select-sm network-select"
+      className={`select select-sm network-select ${className}`.trim()}
       aria-label={t('a11y_network')}
       value={networkKey ?? ''}
       disabled={Boolean(wallet?.address)}
