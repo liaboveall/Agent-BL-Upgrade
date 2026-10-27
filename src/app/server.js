@@ -67,6 +67,8 @@ import { llmStatus, relayChat } from './llmProxy.js';
 import { isRecord, looksLikeCase } from './shapes.js';
 import { createX402ServiceDefinitions } from './x402Services.js';
 import { createLiveGateway } from '../x402/liveGateway.js';
+import { PayerRecoverySessions } from '../x402/payerRecovery.js';
+import { paymentSummary } from '../x402/settlement.js';
 import { createPricingDelegate } from '../interop/delegation.js';
 import { createInteropRoutes } from './interopRoutes.js';
 import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase } from './workspaceAccess.js';
@@ -680,6 +682,23 @@ async function getLiveGateway(server) {
   });
   return gatewayState.promise;
 }
+
+const payerRecovery = new PayerRecoverySessions({ getGeneration: () => demoModeController.snapshot().generation });
+const RECOVERY_STATUS = Object.freeze({ payment_not_found: 404, paid_report_not_found: 404, payment_request_mismatch: 409 });
+/** Payer recovery runs against the Live gateway's settlement records; its failures keep their codes. */
+async function withPayerRecovery(request, task) {
+  if (demoModeController.snapshot().mode !== 'live') throw new HttpError(409, 'live_mode_required', 'Payer recovery applies to Live x402 payments; Demo reports are re-read by id');
+  const payer = payerRecovery.payer(request.headers['x-x402-recovery']);
+  const gateway = await getLiveGateway(request.socket.server);
+  try { return await task(gateway, payer); }
+  catch (error) {
+    if (error instanceof HttpError || !/^[a-z0-9_]{1,80}$/u.test(error?.code ?? '')) throw error;
+    throw new HttpError(RECOVERY_STATUS[error.code] ?? 409, error.code, error.message);
+  }
+}
+const recoverySummary = ({ status, record, body, request_required: requestRequired }) => ({
+  ok: true, status, payment: paymentSummary(record), ...(requestRequired ? { request_required: true } : {}), ...(body ? { report: body } : {})
+});
 
 async function handlePaidService(request, response, service) {
   if (process.env.DEMO_MODE === 'false') {
@@ -1356,14 +1375,38 @@ async function routeRequest(request, response, url) {
     return;
   }
 
+  // Live payer recovery: a one-time wallet signature (no funds, no payment) opens a short session that
+  // lists, reconciles and re-reads only that payer's own payments, after the paying tab is gone.
+  if (method === 'POST' && pathname === '/api/x402/recovery/challenges') {
+    if (demoModeController.snapshot().mode !== 'live') throw new HttpError(409, 'live_mode_required', 'Payer recovery applies to Live x402 payments');
+    sendJson(response, 200, { ok: true, ...payerRecovery.challenge((await readJsonBody(request))?.payer) }); return;
+  }
+  if (method === 'POST' && pathname === '/api/x402/recovery/sessions') {
+    if (demoModeController.snapshot().mode !== 'live') throw new HttpError(409, 'live_mode_required', 'Payer recovery applies to Live x402 payments');
+    sendJson(response, 200, { ok: true, ...payerRecovery.open(await readJsonBody(request) ?? {}) }); return;
+  }
+  if (method === 'GET' && pathname === '/api/x402/recovery/payments') {
+    const payments = await withPayerRecovery(request, (gateway, payer) => gateway.runtime.settlementService.paymentsForPayer(payer));
+    sendJson(response, 200, { ok: true, payments }); return;
+  }
+  if (method === 'POST' && /^\/api\/x402\/recovery\/payments\/pay_[a-f0-9]{64}$/u.test(pathname)) {
+    const paymentId = pathname.slice('/api/x402/recovery/payments/'.length), input = await readJsonBody(request) ?? {};
+    const result = await withPayerRecovery(request, (gateway, payer) => gateway.recover({ payer, paymentId, request: Object.hasOwn(input, 'request') ? input.request : undefined }));
+    sendJson(response, 200, recoverySummary(result)); return;
+  }
+
   // x402 re-read: return an already-paid report by id within its TTL, with
   // no new charge. A miss (unknown id or expired) is a 404 — the caller must
   // pay again. This backs the UI's "purchased reports survive a refresh".
   if (method === 'GET' && pathname.startsWith('/api/x402/report/')) {
     const reportId = safeDecodeURIComponent(pathname.slice('/api/x402/report/'.length));
+    if (demoModeController.snapshot().mode === 'live' && request.headers['x-x402-recovery']) {
+      const data = await withPayerRecovery(request, (gateway, payer) => gateway.runtime.settlementService.reportForPayer(payer, reportId));
+      sendJson(response, 200, { ...data, cached: true }); return;
+    }
     if (demoModeController.snapshot().mode === 'live') {
       const header = request.headers['payment-signature'] ?? request.headers['x-payment'];
-      if (!header) throw new HttpError(401, 'payment_authorization_required', 'Re-send the original PAYMENT-SIGNATURE to retrieve this paid report without another charge');
+      if (!header) throw new HttpError(401, 'payment_authorization_required', 'Re-send the original PAYMENT-SIGNATURE, or recover it with a signed payer recovery session, to retrieve this paid report without another charge');
       let data;
       try {
         const { decodePaymentSignatureHeader } = await import('@injectivelabs/x402/client');

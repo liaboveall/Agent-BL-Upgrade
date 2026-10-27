@@ -1,4 +1,4 @@
-import { Contract, FetchRequest, Interface, JsonRpcProvider, verifyTypedData } from 'ethers';
+import { Contract, FetchRequest, Interface, JsonRpcProvider, Signature, verifyTypedData } from 'ethers';
 
 export const AUTHORIZATION_TYPES = { TransferWithAuthorization: [
   { name: 'from', type: 'address' }, { name: 'to', type: 'address' }, { name: 'value', type: 'uint256' },
@@ -35,11 +35,22 @@ export class IndependentPaymentVerifier {
     const token = new Contract(req.asset, PAYMENT_ABI, provider);
     const [name, version, decimals] = await Promise.all([token.name(), token.version(), token.decimals()]);
     if (name !== req.extra.name || version !== req.extra.version || Number(decimals) !== 6) fail('payment_asset_domain_mismatch');
+    if (!paymentPayload.payload.signature) fail('payment_signature_unavailable');
     let recovered;
     try { recovered = verifyTypedData({ name, version, chainId, verifyingContract: req.asset }, AUTHORIZATION_TYPES, auth, paymentPayload.payload.signature); }
     catch { fail('payment_authorization_invalid'); }
     if (!same(recovered, auth.from)) fail('payment_authorization_invalid');
     return { token, auth, chainId };
+  }
+  async #withExecutedSignature(provider, input, transaction) {
+    const tx = await provider.getTransaction(transaction);
+    if (!tx) fail('payment_receipt_pending');
+    let decoded;
+    try { decoded = abi.parseTransaction({ data: tx.data }); } catch { fail('payment_calldata_mismatch'); }
+    if (decoded?.name !== 'transferWithAuthorization') fail('payment_calldata_mismatch');
+    let signature;
+    try { signature = Signature.from({ v: decoded.args.v, r: decoded.args.r, s: decoded.args.s }).serialized; } catch { fail('payment_calldata_mismatch'); }
+    return { ...input, paymentPayload: { ...input.paymentPayload, payload: { ...input.paymentPayload.payload, signature } } };
   }
   async prepare(input) {
     return this.#read(async (provider) => {
@@ -62,6 +73,9 @@ export class IndependentPaymentVerifier {
   }
   async verify(input, transaction) {
     return this.#read(async (provider) => {
+      // A payer-signed recovery may carry the stored authorization without its EIP-3009 signature. An executed
+      // transferWithAuthorization holds that signature in its calldata; it is checked like a supplied one.
+      if (!input.paymentPayload?.payload?.signature) input = await this.#withExecutedSignature(provider, input, transaction);
       const { token, auth, chainId } = await this.#authorization(provider, input), req = input.paymentRequirements;
       const [receipt, tx, latest] = await Promise.all([provider.getTransactionReceipt(transaction), provider.getTransaction(transaction), provider.getBlockNumber()]);
       if (!receipt || !tx) fail('payment_receipt_pending');

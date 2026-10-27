@@ -62,6 +62,12 @@ test('W4 actual ERC-3009 EVM + HTTP: exact receipt, wrong terms, failed delivery
     { paymentPayload: { ...first.paymentPayload, payload: { ...first.paymentPayload.payload, signature: `0x${'aa'.repeat(65)}` } } }
   ]) await assert.rejects(verifier.verify({ ...first, ...change }, paid.record.transaction));
   assert.equal(await verifier.locate(first, checkpoint), paid.record.transaction);
+  // Payer recovery carries the stored authorization without its signature; the executed calldata supplies it,
+  // and an authorization that differs from what was executed still fails.
+  const unsigned = { ...first, paymentPayload: { ...first.paymentPayload, payload: { authorization: first.paymentPayload.payload.authorization } } };
+  assert.equal((await verifier.verify(unsigned, paid.record.transaction)).verified, true);
+  await assert.rejects(verifier.verify({ ...unsigned, paymentPayload: { ...unsigned.paymentPayload, payload: { authorization: { ...unsigned.paymentPayload.payload.authorization, nonce: id('other') } } } }, paid.record.transaction));
+  await assert.rejects(verifier.prepare(unsigned), (error) => error.code === 'payment_signature_unavailable');
   const restart = new X402SettlementService({ mode: 'live', verifier, adapter, store: new JsonReceiptStore({ filePath: storePath }), deliveryKey: randomBytes(32) });
   assert.equal((await restart.process(first)).replayed, true); assert.equal(settlements, 1);
   const unknown = await makeInput(); lost = true; await assert.rejects(restart.process(unknown)); lost = false;

@@ -7,7 +7,9 @@
 // Everything except payV2WithWallet's network/wallet calls is a pure function so it can
 // be unit-tested in Node (see tests/x402BrowserV2.test.js).
 
-import { paymentRecoveryStorage, paymentRequestKey, readPaymentRecovery, savePaymentRecovery } from './payment-recovery.js';
+import {
+  archivePaymentRecovery, completePaymentRecovery, paymentRecoveryStorage, paymentRequestKey, readPaymentRecovery, savePaymentRecovery
+} from './payment-recovery.js';
 
 export const SUPPORTED_NETWORKS = Object.freeze(['eip155:1439', 'eip155:1776']);
 
@@ -159,8 +161,10 @@ export async function readTokenName(provider, asset) {
  * @param {{request: Function}} options.provider  EIP-1193 wallet provider
  * @param {string} options.from            the paying account
  * @param {string|number} [options.expectedAmountAtomic]  price the UI displayed
- * @param {(stage: 'challenge'|'sign'|'settle') => void} [options.onStage]
- * @returns {Promise<{ response: Response, challenge: object|null, requirement?: object, authorization?: object }>}
+ * @param {(stage: 'challenge'|'sign'|'settle'|'reconcile') => void} [options.onStage]
+ * @param {boolean} [options.renew]  buy this exact request again as a new snapshot (a new charge), instead of
+ *   re-reading the completed purchase
+ * @returns {Promise<{ response: Response, challenge: object|null, requirement?: object, authorization?: object, replayed?: boolean }>}
  */
 export async function payV2WithWallet({
   endpoint,
@@ -172,7 +176,8 @@ export async function payV2WithWallet({
   fetchImpl = globalThis.fetch.bind(globalThis),
   now = () => Math.floor(Date.now() / 1000),
   nonce = randomNonce,
-  recoveryStore = paymentRecoveryStorage()
+  recoveryStore = paymentRecoveryStorage(),
+  renew = false
 }) {
   const request = (headers = {}) => fetchImpl(endpoint, {
     method: 'POST',
@@ -180,18 +185,28 @@ export async function payV2WithWallet({
     body: JSON.stringify(body ?? {})
   });
   const recoveryKey = recoveryStore ? await paymentRequestKey(endpoint, from, body) : null;
-  const previous = recoveryStore ? readPaymentRecovery(recoveryStore, recoveryKey, endpoint, from) : null;
-  const finish = async (response, saved) => {
+  let previous = recoveryStore ? readPaymentRecovery(recoveryStore, recoveryKey, endpoint, from) : null;
+  // A finished record is re-read (no charge) unless the buyer explicitly asks for a new snapshot; an
+  // authorization that expired unspent charged nothing and is simply bought again.
+  if (previous && (previous.status === 'void' || renew && previous.status === 'completed')) {
+    archivePaymentRecovery(recoveryStore, recoveryKey);
+    previous = readPaymentRecovery(recoveryStore, recoveryKey, endpoint, from);
+  }
+  const finish = async (response) => {
     if (recoveryStore && response.ok) {
       const report = await response.clone().json().catch(() => null);
-      savePaymentRecovery(recoveryStore, recoveryKey, { ...saved, completed: true, report_id: report?.report_envelope?.report_id ?? null });
+      completePaymentRecovery(recoveryStore, recoveryKey, report?.report_envelope?.report_id ?? null);
     }
     return response;
   };
   if (previous) {
+    if (!previous.header) {
+      throw new X402V2Error(previous.status === 'completed' ? 'purchase_recovery_required' : 'payment_recovery_required',
+        'This payment was signed in another tab or session. Recover it with a wallet-signed recovery request; no new payment is needed.');
+    }
     onStage?.('reconcile');
     const response = await request({ 'PAYMENT-SIGNATURE': previous.header, 'X-PAYMENT': previous.header });
-    await finish(response, previous);
+    await finish(response);
     return { response, challenge: { x402Version: 2, accepts: [previous.requirement] }, requirement: previous.requirement,
       authorization: previous.authorization, replayed: true };
   }
@@ -213,9 +228,8 @@ export async function payV2WithWallet({
 
   onStage?.('settle');
   const header = encodePaymentHeader(buildPaymentPayload({ requirement, authorization, signature }));
-  const recovery = { endpoint, from: from.toLowerCase(), requirement, authorization, header, completed: false };
-  savePaymentRecovery(recoveryStore, recoveryKey, recovery);
+  savePaymentRecovery(recoveryStore, recoveryKey, { endpoint, from: from.toLowerCase(), requirement, authorization, header, status: 'pending', request: body ?? {} });
   const response = await request({ 'PAYMENT-SIGNATURE': header, 'X-PAYMENT': header });
-  await finish(response, recovery);
+  await finish(response);
   return { response, challenge, requirement, authorization, replayed: false };
 }

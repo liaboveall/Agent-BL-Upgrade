@@ -8,7 +8,9 @@ import { createStore } from '../../state/store.js';
 import { appStore } from '../../state/app-store.js';
 import * as web3 from '../../lib/web3.js';
 import { payV2WithWallet } from '../../lib/x402-v2.js';
-import { reportAuthorization } from '../../lib/payment-recovery.js';
+import {
+  completePaymentRecovery, exportPaymentJournal, journalEntries, paymentRecoveryStorage, reportAuthorization, voidPaymentRecovery
+} from '../../lib/payment-recovery.js';
 import { t } from '../../lib/i18n.js';
 
 export const STEPS = ['challenge', 'pay', 'settle', 'unlock'];
@@ -26,7 +28,9 @@ export const x402Store = createStore({
   payment: null, // data for the payment evidence card
   impact: null, // { before, after, delta }
   report: null, // { data, source } once unlocked
-  purchased: [] // [{ entry, report }]
+  purchased: [], // [{ entry, report, needsRecovery?, unavailable? }]
+  pending: [], // unresolved Live payments from the persistent journal
+  duplicate: false // the last purchase matched one already completed: offer a re-read or an explicit new snapshot
 });
 
 const set = (patch) => x402Store.set(patch);
@@ -43,7 +47,7 @@ export function selectService(serviceId) {
 }
 
 export function resetFlow() {
-  set({ running: false, steps: idleSteps(), log: [], payment: null, impact: null });
+  set({ running: false, steps: idleSteps(), log: [], payment: null, impact: null, duplicate: false });
 }
 
 function step(name, status, text) {
@@ -98,22 +102,104 @@ function persistPurchase(envelope) {
   savePurchases(entries.slice(0, 12));
 }
 
-/** Confirm each remembered report is still re-readable on the server (a 404 means its cache expired). */
+// Live payer recovery session: memory only, bound to one wallet and runtime generation.
+let recoverySession = null;
+const recoveryHeaders = () => recoverySession && recoverySession.expires_at > Date.now() && recoverySession.generation === appStore.get().modeGeneration
+  ? { 'x-x402-recovery': recoverySession.token } : null;
+const journalSafe = () => { try { return journalEntries(); } catch { return []; } };
+
+/**
+ * Confirm each remembered report is still re-readable on the server (a 404 means its cache expired). In Live,
+ * a report this tab cannot authorize stays listed as needing wallet recovery instead of disappearing, and a
+ * read that fails for another reason stays listed as temporarily unavailable.
+ */
 export async function restorePurchases() {
-  const entries = loadPurchases();
-  if (!entries.length) { set({ purchased: [] }); return; }
+  const entries = loadPurchases(), live = !appStore.get().demoMode;
   const probes = await Promise.all(entries.map(async (entry) => {
     try {
       const authorization = reportAuthorization(entry.report_id);
-      const res = await fetch(`/api/x402/report/${encodeURIComponent(entry.report_id)}`, { headers: authorization ? { 'PAYMENT-SIGNATURE': authorization } : {} });
-      return res.ok ? { entry, report: await res.json() } : null;
+      const headers = authorization ? { 'PAYMENT-SIGNATURE': authorization } : live ? recoveryHeaders() : {};
+      if (!headers) return { entry, report: null, needsRecovery: true };
+      const res = await fetch(`/api/x402/report/${encodeURIComponent(entry.report_id)}`, { headers });
+      if (res.ok) return { entry, report: await res.json() };
+      if (res.status === 404) return null; // expired or unknown: the server is the authority
+      return live && [401, 409].includes(res.status) ? { entry, report: null, needsRecovery: true } : { entry, report: null, unavailable: true };
     } catch {
-      return null; // offline — can't re-open right now
+      return { entry, report: null, unavailable: true }; // offline: keep it listed
     }
   }));
-  const surviving = probes.filter(Boolean);
   savePurchases(entries);
-  set({ purchased: surviving });
+  set({ purchased: probes.filter(Boolean), pending: journalSafe().filter((entry) => entry.status === 'pending') });
+}
+
+async function requestJson(url, { body, headers = {} } = {}) {
+  const res = await fetch(url, body === undefined ? { headers } : { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || `Server returned ${res.status}`), { code: data.code, status: res.status });
+  return data;
+}
+
+/**
+ * Live: prove control of the paying wallet with a one-time recovery signature (no funds, no payment), then
+ * reconcile this browser's unresolved payments and re-open reports this tab cannot authorize. A payment the
+ * server never received is void once its authorization window has passed.
+ */
+export async function recoverWithWallet() {
+  if (get().running) return;
+  const eth = web3.getEthereumProvider();
+  if (!eth) { log(t('x402_live_wallet_required'), 'crit'); return; }
+  set({ running: true });
+  try {
+    await ensureWallet();
+    const [account] = await eth.request({ method: 'eth_requestAccounts' }), payer = String(account).toLowerCase();
+    if (!recoveryHeaders() || recoverySession.payer !== payer) {
+      log(t('x402_recover_sign_prompt'), 'accent');
+      const challenge = await requestJson('/api/x402/recovery/challenges', { body: { payer: account } });
+      const typed = { types: { EIP712Domain: [{ name: 'name', type: 'string' }, { name: 'version', type: 'string' }], ...challenge.types },
+        primaryType: 'PaidReportRecovery', domain: challenge.domain, message: challenge.message };
+      const signature = await eth.request({ method: 'eth_signTypedData_v4', params: [account, JSON.stringify(typed)] });
+      const opened = await requestJson('/api/x402/recovery/sessions', { body: { challenge_id: challenge.challenge_id, signature } });
+      recoverySession = { token: opened.token, payer: opened.payer, expires_at: opened.expires_at, generation: appStore.get().modeGeneration };
+    }
+    const headers = recoveryHeaders(), storage = paymentRecoveryStorage();
+    const { payments } = await requestJson('/api/x402/recovery/payments', { headers });
+    const counts = { delivered: 0, unspent: 0, open: 0 };
+    for (const entry of journalSafe().filter((item) => item.status === 'pending' && item.from === payer)) {
+      const payment = payments.find((item) => item.nonce?.toLowerCase() === String(entry.nonce).toLowerCase());
+      if (!payment) {
+        // Never received by the server, so never submitted: void once nobody can use it any more.
+        if (Number(entry.valid_before) * 1000 < Date.now()) { voidPaymentRecovery(storage, entry.key); counts.unspent++; } else counts.open++;
+        continue;
+      }
+      const result = await requestJson(`/api/x402/recovery/payments/${payment.payment_id}`, { headers, body: payment.report_id ? {} : { request: entry.request ?? {} } });
+      if (result.status === 'delivered') {
+        completePaymentRecovery(storage, entry.key, result.report?.report_envelope?.report_id ?? null);
+        persistPurchase(result.report?.report_envelope); counts.delivered++;
+      } else if (result.status === 'expired_unspent') { voidPaymentRecovery(storage, entry.key); counts.unspent++; }
+      else counts.open++;
+    }
+    // Reports this wallet bought in another browser or tab that this one does not list yet.
+    const known = new Set(loadPurchases().map((entry) => entry.report_id));
+    for (const payment of payments.filter((item) => item.report_id && !known.has(item.report_id)).slice(0, 12)) {
+      try { persistPurchase((await requestJson(`/api/x402/report/${encodeURIComponent(payment.report_id)}`, { headers })).report_envelope); counts.delivered++; }
+      catch { /* expired or awaiting reconciliation: it stays in the server list */ }
+    }
+    log(t('x402_recover_done', counts), counts.open ? 'warn' : 'ok');
+    if (counts.open) log(t('x402_recover_open_hint'), 'warn');
+    await restorePurchases();
+  } catch (error) {
+    log(t('x402_fail_log', { msg: error.message }), 'crit');
+    if (error.code === 4001 || error.code === 'ACTION_REJECTED' || error.code === 'REJECTED') log(t('x402_user_rejected'), 'warn');
+  } finally {
+    set({ running: false });
+  }
+}
+
+/** A signature-free JSON copy of this browser's payment journal, for manual reconciliation. */
+export function exportJournal() {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(exportPaymentJournal(), null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a'); link.href = url; link.download = `agentbl-x402-payments-${new Date().toISOString().slice(0, 10)}.json`; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function paymentCard(data) {
@@ -202,11 +288,12 @@ export async function runSmoke() {
   }
 }
 
-export async function purchase() {
+/** `renew`: Live only — buy the same request again as a new snapshot (a new payment) instead of re-reading it. */
+export async function purchase({ renew = false } = {}) {
   if (get().running) return;
   const service = currentService();
   if (appStore.get().demoMode) await purchaseWithWalletDemo(service.endpoint);
-  else await purchaseWithWalletLive(Number(service.priceUSDC), service.endpoint);
+  else await purchaseWithWalletLive(Number(service.priceUSDC), service.endpoint, { renew });
 }
 
 async function ensureWallet() {
@@ -288,7 +375,7 @@ async function purchaseWithWalletDemo(endpoint) {
  * authorization (eth_signTypedData_v4); the facilitator settles it on chain and the server attests
  * the report. The price the server asks must equal the price shown here, otherwise nothing is signed.
  */
-async function purchaseWithWalletLive(priceUSDC, endpoint) {
+async function purchaseWithWalletLive(priceUSDC, endpoint, { renew = false } = {}) {
   resetFlow();
   log(t('x402_initiating'));
   const eth = web3.getEthereumProvider();
@@ -301,11 +388,12 @@ async function purchaseWithWalletLive(priceUSDC, endpoint) {
   try {
     await ensureWallet();
     const accounts = await eth.request({ method: 'eth_requestAccounts' });
-    const { response } = await payV2WithWallet({
+    const { response, replayed } = await payV2WithWallet({
       endpoint,
       body: caseBody(),
       provider: eth,
       from: accounts[0],
+      renew,
       expectedAmountAtomic: Math.round(Number(priceUSDC) * 1_000_000),
       onStage: (stage) => {
         if (stage === 'challenge') {
@@ -328,7 +416,9 @@ async function purchaseWithWalletLive(priceUSDC, endpoint) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
     unlocked(data);
-    if (data.report_envelope) { persistPurchase(data.report_envelope); restorePurchases(); }
+    if (replayed && !renew) { set({ duplicate: true }); log(t('x402_already_purchased'), 'info'); }
+    if (data.report_envelope) persistPurchase(data.report_envelope);
+    restorePurchases();
     log(t('x402_unlocked_log', { summary: reportCountSummary(data) }), 'ok');
     for (const [labelKey, url] of [['x402_payment_link', data.payment?.explorerUrl], ['x402_attestation_link', data.payment?.attestationExplorerUrl]]) {
       // Only ever link to an https explorer page that came back from the chain layer.
@@ -336,9 +426,18 @@ async function purchaseWithWalletLive(priceUSDC, endpoint) {
     }
     log(t('x402_pass'), 'ok');
   } catch (error) {
-    step('settle', 'error', t('x402_failed'));
-    log(t('x402_fail_log', { msg: error.message }), 'crit');
-    if (error.code === 4001 || error.code === 'ACTION_REJECTED' || error.code === 'REJECTED') log(t('x402_user_rejected'), 'warn');
+    if (error.code === 'purchase_recovery_required') {
+      step('settle', 'done', t('x402_reconciling'));
+      set({ duplicate: true }); log(t('x402_already_purchased'), 'info'); log(t('x402_recover_needed'), 'warn');
+    } else if (error.code === 'payment_recovery_required') {
+      step('settle', 'error', t('x402_reconciling'));
+      log(t('x402_recover_needed'), 'warn');
+    } else {
+      step('settle', 'error', t('x402_failed'));
+      log(t('x402_fail_log', { msg: error.message }), 'crit');
+      if (error.code === 4001 || error.code === 'ACTION_REJECTED' || error.code === 'REJECTED') log(t('x402_user_rejected'), 'warn');
+    }
+    restorePurchases();
   } finally {
     set({ running: false });
   }

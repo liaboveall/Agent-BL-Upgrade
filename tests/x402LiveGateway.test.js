@@ -204,7 +204,7 @@ test('x402 live gateway on the real app server', async (t) => {
     await facilitator.close();
     await fs.rm(directory, { recursive: true, force: true });
   });
-  const payer = Wallet.createRandom().address;
+  const payerWallet = Wallet.createRandom(), payer = payerWallet.address;
   const counters = () => ({ supported: facilitator.state.supported, verify: facilitator.state.verify, settle: facilitator.state.settle });
 
   await t.test('an unavailable facilitator is a 503, and the gateway recovers once it is back', async () => {
@@ -363,6 +363,59 @@ test('x402 live gateway on the real app server', async (t) => {
     assert.equal(retried.status, 200, retried.text);
     assert.equal(counters().settle, before.settle + 1, 'the retry must reuse the settled payment');
     assert.equal(retried.data.payment.attestation, 'recorded');
+  });
+
+  await t.test('a payer whose tab is gone recovers by wallet signature: listed, delivered from the original request, never charged twice', async () => {
+    const session = async (signer, forPayer = signer.address) => {
+      const challenge = await post(app.base, '/api/x402/recovery/challenges', { payer: forPayer });
+      assert.equal(challenge.status, 200, challenge.text);
+      const { challenge_id: challengeId, domain, types, message } = challenge.data;
+      assert.match(message.purpose, /moves no funds/u);
+      return post(app.base, '/api/x402/recovery/sessions', { challenge_id: challengeId, signature: await signer.signTypedData(domain, types, message) });
+    };
+    // Settled, but the report was never delivered, and the PAYMENT-SIGNATURE left with the closed tab.
+    const lost = paymentHeader(requirement, payer);
+    oracle.failNext = Object.assign(new Error('rpc connection reset'), { code: 'NETWORK_ERROR' });
+    oracle.attested.clear();
+    assert.equal((await post(app.base, RISK, {}, { 'payment-signature': lost.header })).status, 502);
+    const before = counters();
+
+    assert.equal((await requestJson(app.base, 'GET', '/api/x402/recovery/payments')).status, 401);
+    const stranger = Wallet.createRandom();
+    assert.equal((await session(stranger, payer)).status, 401, 'another wallet cannot sign for the payer');
+    const opened = await session(payerWallet);
+    assert.equal(opened.status, 200, opened.text);
+    const headers = { 'x-x402-recovery': opened.data.token };
+
+    const listed = await requestJson(app.base, 'GET', '/api/x402/recovery/payments', undefined, headers);
+    assert.equal(listed.status, 200);
+    const found = listed.data.payments.find((entry) => entry.nonce === lost.payload.payload.authorization.nonce);
+    assert.equal(found.state, 'SETTLED'); assert.equal(found.report_id, null); assert.equal(found.path, RISK);
+    assert.ok(listed.data.payments.every((entry) => !('signature' in entry) && !('authorization_signature' in entry)));
+
+    const recoverPath = `/api/x402/recovery/payments/${found.payment_id}`;
+    const awaiting = await post(app.base, recoverPath, {}, headers);
+    assert.equal(awaiting.data.status, 'settled_awaiting_delivery'); assert.equal(awaiting.data.request_required, true);
+    const wrong = await post(app.base, recoverPath, { request: { case_id: 'another request' } }, headers);
+    assert.equal(wrong.status, 409); assert.equal(wrong.data.code, 'payment_request_mismatch');
+    const delivered = await post(app.base, recoverPath, { request: {} }, headers);
+    assert.equal(delivered.status, 200, delivered.text);
+    assert.equal(delivered.data.status, 'delivered');
+    assert.equal(delivered.data.payment.state, 'UNLOCKED');
+    const recoveredId = delivered.data.report.report_envelope.report_id;
+    assert.equal(delivered.data.report.payment.attestation, 'recorded');
+    assert.deepEqual(counters(), before, 'recovery never reaches the facilitator');
+
+    const reread = await requestJson(app.base, 'GET', `/api/x402/report/${recoveredId}`, undefined, headers);
+    assert.equal(reread.status, 200); assert.equal(reread.data.report_envelope.report_id, recoveredId);
+    assert.equal((await post(app.base, recoverPath, {}, headers)).data.status, 'delivered', 'a second recovery re-reads the same delivery');
+
+    const other = await session(stranger);
+    const otherHeaders = { 'x-x402-recovery': other.data.token };
+    assert.equal((await requestJson(app.base, 'GET', `/api/x402/report/${recoveredId}`, undefined, otherHeaders)).status, 404);
+    assert.deepEqual((await requestJson(app.base, 'GET', '/api/x402/recovery/payments', undefined, otherHeaders)).data.payments, []);
+    assert.equal((await post(app.base, recoverPath, {}, otherHeaders)).status, 404);
+    assert.deepEqual(counters(), before);
   });
 
   await t.test('without a configured attestor the report is not delivered (Live never fakes a receipt)', async () => {

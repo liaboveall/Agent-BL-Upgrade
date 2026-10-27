@@ -124,3 +124,6 @@
 .trace-value { display: block; padding: 4px 6px; border-radius: var(--r-xs); background: var(--surface-2); font-size: var(--fs-11); white-space: pre-wrap; }
 .purchased-list { display: grid; }
 .purchased-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--line); }
+.x402-duplicate { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); margin-top: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r); background: var(--surface-2); border: 1px solid var(--line); }
+.x402-duplicate p { margin: 0; flex: 1 1 260px; }
+.x402-records-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }

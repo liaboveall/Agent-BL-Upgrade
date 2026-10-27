@@ -13,12 +13,14 @@
 // Settlement is idempotent per signed authorization: if delivery fails after the
 // payment settled, re-sending the same PAYMENT-SIGNATURE re-runs delivery and never
 // charges twice (the response says so).
+import crypto from 'node:crypto';
 import express from 'express';
 import { decodePaymentSignatureHeader } from '@injectivelabs/x402/client';
 import { loadX402Config, X402_SERVICES } from './config.js';
 import { deliverPaidReport } from './delivery.js';
 import { createX402Runtime } from './server.js';
 import { paidRouteMap } from './discovery.js';
+import { PaymentSettlementError, stableStringify } from './settlement.js';
 import { rightsKey } from '../rights/vault.js';
 
 const JSON_LIMIT = '1mb';
@@ -134,48 +136,47 @@ export async function createLiveGateway(options = {}) {
   // 2) 402 challenge / verify + settle.
   app.use(runtime.middleware);
 
-  // 3) Delivery (only reachable once the payment middleware settled).
+  // 3) Delivery (only reachable once the payment middleware settled). The same function completes a
+  //    settled payment the payer recovers later, so both paths build exactly one report per payment.
+  const deliver = async ({ service, body, paymentId, payer, transaction }) => {
+    const definition = definitions[service.serviceId];
+    const record = await runtime.settlementService.get(paymentId);
+    const deliveredBody = await runtime.settlementService.deliver(paymentId, async (prepared, checkpoint) => {
+      const report = prepared?.report ?? await definition.handler({ body, payer, paymentTx: transaction, live: true });
+      const delivered = await deliverPaidReport({
+        preparedEnvelope: prepared?.envelope ?? null,
+        checkpoint,
+        serviceId: service.serviceId,
+        priceUSDC: service.priceUSDC,
+        payer,
+        payTo: config.payTo,
+        network: config.network,
+        asset: config.asset,
+        paymentTx: transaction,
+        settledAt: record?.settled_at ?? new Date().toISOString(),
+        live: true,
+        payment: {
+          independent_verification: record.independent_verification,
+          txHash: transaction,
+          explorerUrl: `${config.explorerUrl}/tx/${transaction}`,
+          live: true,
+          onchain: true
+        },
+        report,
+        attest: options.attest
+      });
+      return delivered.deliveredBody;
+    });
+    await runtime.settlementService.markUnlocked(paymentId, { resource: service.endpoint, delivery: 'durably_available' });
+    return deliveredBody;
+  };
   app.use(express.json({ limit: JSON_LIMIT }));
   for (const service of services) {
-    const definition = definitions[service.serviceId];
-    if (!definition?.handler) throw new TypeError(`No handler defined for ${service.serviceId}`);
+    if (!definitions[service.serviceId]?.handler) throw new TypeError(`No handler defined for ${service.serviceId}`);
     app.post(service.endpoint, async (req, res, next) => {
       const receipt = req.x402;
       try {
-        const record = await runtime.settlementService.get(receipt.paymentId);
-        const deliveredBody = await runtime.settlementService.deliver(receipt.paymentId, async (prepared, checkpoint) => {
-        const report = prepared?.report ?? await definition.handler({
-          body: req.body ?? null,
-          payer: receipt.payer,
-          paymentTx: receipt.transaction,
-          live: true
-        });
-        const delivered = await deliverPaidReport({
-          preparedEnvelope: prepared?.envelope ?? null,
-          checkpoint,
-          serviceId: service.serviceId,
-          priceUSDC: service.priceUSDC,
-          payer: receipt.payer,
-          payTo: config.payTo,
-          network: config.network,
-          asset: config.asset,
-          paymentTx: receipt.transaction,
-          settledAt: record?.settled_at ?? new Date().toISOString(),
-          live: true,
-          payment: {
-            independent_verification: record.independent_verification,
-            txHash: receipt.transaction,
-            explorerUrl: `${config.explorerUrl}/tx/${receipt.transaction}`,
-            live: true,
-            onchain: true
-          },
-          report,
-          attest: options.attest
-        });
-        return delivered.deliveredBody;
-        });
-        await runtime.settlementService.markUnlocked(receipt.paymentId, { resource: req.path, delivery: 'durably_available' });
-        res.json(deliveredBody);
+        res.json(await deliver({ service, body: req.body ?? null, paymentId: receipt.paymentId, payer: receipt.payer, transaction: receipt.transaction }));
       } catch (error) {
         // The buyer has already paid: say so, and that a retry is free.
         error.payment = {
@@ -213,10 +214,31 @@ export async function createLiveGateway(options = {}) {
     });
   });
 
+  /**
+   * Recover one of `payer`'s payments after the payer proved wallet control. A settled payment whose report
+   * was never built is delivered only with the original request body, checked against the digest bound
+   * into the payment when it was made.
+   */
+  const recover = async ({ payer, paymentId, request }) => {
+    const result = await runtime.settlementService.recoverForPayer(payer, paymentId);
+    if (result.status !== 'settled_awaiting_delivery') return result;
+    const [url, digest] = String(result.record.resource ?? '').split('#request=');
+    let pathname = null;
+    try { pathname = new URL(url).pathname; } catch {}
+    const service = services.find((entry) => entry.endpoint === pathname);
+    if (!service || request === undefined) return { ...result, request_required: Boolean(service) };
+    if (crypto.createHash('sha256').update(stableStringify(request ?? null)).digest('hex') !== digest) {
+      throw new PaymentSettlementError('payment_request_mismatch', 'This is not the request that was paid for', { paymentId });
+    }
+    const body = await deliver({ service, body: request ?? null, paymentId, payer: result.record.payer, transaction: result.record.transaction });
+    return { status: 'delivered', record: await runtime.settlementService.get(paymentId), body };
+  };
+
   return {
     app,
     config,
     runtime,
+    recover,
     /** Hand a raw http request/response pair to the gateway; resolves when the response is done. */
     handle(request, response) {
       return new Promise((resolve) => {

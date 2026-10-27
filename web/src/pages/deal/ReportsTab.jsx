@@ -9,7 +9,7 @@ import { Badge, Button, Card, CardHead, Disclosure, KV, cx } from '../../compone
 import { Icon } from '../../components/Icon.jsx';
 import { References } from '../../features/evidence/References.jsx';
 import {
-  STEPS, currentService, loadX402Config, purchase, reopenReport, reportCountSummary, resetFlow, restorePurchases, runSmoke, selectService, x402Store
+  STEPS, currentService, exportJournal, loadX402Config, purchase, recoverWithWallet, reopenReport, reportCountSummary, resetFlow, restorePurchases, runSmoke, selectService, x402Store
 } from './x402.js';
 
 const STEP_KEYS = { challenge: 'x402_step1_title', pay: 'x402_step2_title', settle: 'x402_step3_title', unlock: 'x402_step4_title' };
@@ -42,9 +42,9 @@ export function ReportsTab() {
   const generation = useApp((s) => s.modeGeneration);
   const caseId = useApp((s) => s.caseId);
   const x = useStore(x402Store, (s) => s);
-  useEffect(() => { loadX402Config(); restorePurchases(); }, []);
+  useEffect(() => { loadX402Config(); }, []);
   // A new runtime (mode switch, demo reset) or another case starts a clean flow.
-  useEffect(() => { resetFlow(); x402Store.set({ report: null }); }, [generation, caseId]);
+  useEffect(() => { resetFlow(); x402Store.set({ report: null }); restorePurchases(); }, [generation, caseId]);
   const service = currentService(x);
   return (
     <div className="reports-tab">
@@ -101,6 +101,12 @@ export function ReportsTab() {
               ))}
             </ol>
             <p className="muted small">{demoMode ? t('x402_demo_boundary') : t('x402_live_boundary')}</p>
+            {!demoMode && x.duplicate ? (
+              <div className="x402-duplicate" role="status">
+                <p className="small">{t('x402_already_purchased')}</p>
+                <Button variant="secondary" size="sm" disabled={x.running} onClick={() => purchase({ renew: true })}>{t('x402_buy_snapshot')}</Button>
+              </div>
+            ) : null}
             {x.log.length ? (
               <ul className="x402-log" aria-live="polite">
                 {x.log.map((line, index) => (
@@ -139,16 +145,38 @@ export function ReportsTab() {
               <CardHead id="x402-purchased-h" title={t('x402_purchased_heading')} level={4} />
               <p className="muted small">{t('x402_purchased_sub')}</p>
               <ul className="purchased-list">
-                {x.purchased.map(({ entry, report }) => (
+                {x.purchased.map(({ entry, report, needsRecovery, unavailable }) => (
                   <li key={entry.report_id}>
                     <div>
                       <strong>{entry.kind}</strong>
                       <p className="muted small">{`${entry.case_id || ''} · ${t('x402_purchased_expires', { time: new Date(entry.expires_at).toLocaleTimeString() })}`}</p>
+                      {needsRecovery ? <p className="small tone-text-warn">{t('x402_purchased_needs_recovery')}</p> : null}
+                      {unavailable ? <p className="small muted">{t('x402_purchased_unavailable')}</p> : null}
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => reopenReport(report)}>{t('x402_purchased_reread')}</Button>
+                    {report ? <Button variant="ghost" size="sm" onClick={() => reopenReport(report)}>{t('x402_purchased_reread')}</Button>
+                      : needsRecovery ? <Button variant="secondary" size="sm" disabled={x.running} onClick={recoverWithWallet}>{t('x402_recover_btn')}</Button> : null}
                   </li>
                 ))}
               </ul>
+            </Card>
+          ) : null}
+
+          {!demoMode ? (
+            <Card className="x402-records" aria-labelledby="x402-records-h">
+              <CardHead id="x402-records-h" title={t('x402_records_heading')} level={4} />
+              <p className="muted small">{t('x402_records_sub')}</p>
+              <h5 className="sub-title">{t('x402_records_pending')}</h5>
+              {x.pending.length ? (
+                <ul className="purchased-list">
+                  {x.pending.map((entry) => (
+                    <li key={entry.key}><span className="small">{t('x402_records_pending_item', { amount: (Number(entry.amount) / 1e6).toFixed(6), time: new Date(entry.created_at).toLocaleString() })}</span></li>
+                  ))}
+                </ul>
+              ) : <p className="muted small">{t('x402_records_none')}</p>}
+              <div className="x402-records-actions">
+                <Button variant="secondary" size="sm" disabled={x.running} onClick={recoverWithWallet}>{t('x402_recover_btn')}</Button>
+                <Button variant="ghost" size="sm" onClick={exportJournal}>{t('x402_export_btn')}</Button>
+              </div>
             </Card>
           ) : null}
         </section>

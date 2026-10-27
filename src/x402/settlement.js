@@ -284,6 +284,22 @@ function sameResource(left, right) {
   return String(left ?? '') === String(right ?? '');
 }
 
+const sameAddress = (left, right) => typeof left === 'string' && typeof right === 'string' && left.toLowerCase() === right.toLowerCase();
+
+/** What a payer may see about their own payment: terms, state and report binding. Never the signature or the report body. */
+export function paymentSummary(record) {
+  const [url, request] = String(record.resource ?? '').split('#request=');
+  let path = null;
+  try { path = new URL(url).pathname; } catch {}
+  return {
+    payment_id: record.payment_id, state: record.state, mode: record.mode, path, request_digest: request ?? null,
+    network: record.network, asset: record.asset, amount: record.amount, pay_to: record.pay_to, payer: record.payer, nonce: record.nonce,
+    valid_before: record.authorization?.validBefore ?? null, transaction: record.transaction ?? null, onchain: Boolean(record.onchain),
+    created_at: record.created_at, settled_at: record.settled_at ?? null, delivered_at: record.delivered_at ?? null,
+    report_id: record.delivered_report_id ?? null, error_code: record.error?.code ?? null
+  };
+}
+
 export class X402SettlementService {
   constructor(options = {}) {
     this.mode = options.mode ?? 'demo';
@@ -398,6 +414,11 @@ export class X402SettlementService {
       mode: this.mode,
       clock: this.clock
     });
+    // Sealed with the delivery key so the payer can later recover this exact payment by signing a
+    // recovery challenge, after the browser tab that held the PAYMENT-SIGNATURE is gone.
+    if (!existing && this.deliveryKey && paymentPayload.payload.signature) {
+      record = { ...record, authorization_signature: seal(this.deliveryKey, paymentPayload.payload.signature, `${paymentId}:signature-v1`) };
+    }
     if (!existing) await this.store.upsert(record);
     if (record.state === SETTLEMENT_STATES.CHALLENGED) {
       record = transition(record, SETTLEMENT_STATES.SIGNED, this.clock);
@@ -555,6 +576,65 @@ export class X402SettlementService {
   async get(paymentId) {
     await this.init();
     return this.store.get(paymentId);
+  }
+
+  /** The payer's payments in this mode, newest first, as summaries. The caller has proven control of `payer`. */
+  async paymentsForPayer(payer) {
+    await this.init();
+    const load = async () => (await this.store.list()).filter((record) => sameAddress(record.payer, payer) && (record.mode ?? this.mode) === this.mode);
+    const records = await (this.store.exclusive ? this.store.exclusive(load) : load());
+    return records.sort((left, right) => String(right.created_at).localeCompare(String(left.created_at))).map(paymentSummary);
+  }
+
+  /**
+   * Payer-authenticated recovery of one payment, without the browser's original PAYMENT-SIGNATURE.
+   * The stored authorization (and its sealed signature, when this server received it) is run through the
+   * same idempotent state machine as a replayed header: a settled payment is re-verified on chain, an
+   * interrupted one is reconciled read-only, a still-valid signed one may settle; nothing is charged twice.
+   * Returns { status, record, body? } where status is one of delivered, settled_awaiting_delivery,
+   * reconciling, expired_unspent, original_authorization_required or failed.
+   */
+  async recoverForPayer(payer, paymentId) {
+    await this.init();
+    const record = await this.get(paymentId);
+    if (!record || !sameAddress(record.payer, payer) || (record.mode ?? this.mode) !== this.mode) {
+      throw new PaymentSettlementError('payment_not_found', 'No payment by this payer has that id', { paymentId });
+    }
+    if (record.state === SETTLEMENT_STATES.FAILED) return { status: 'failed', record };
+    let signature = null;
+    if (record.authorization_signature && this.deliveryKey) {
+      try { signature = unseal(this.deliveryKey, record.authorization_signature, `${paymentId}:signature-v1`); } catch {}
+    }
+    const settled = [SETTLEMENT_STATES.SETTLED, SETTLEMENT_STATES.UNLOCKED].includes(record.state);
+    // Without the signature only an already-executed payment can be re-verified (its calldata carries the signature).
+    if (!signature && !settled && !(record.state === SETTLEMENT_STATES.RECONCILING && record.transaction)) {
+      return { status: 'original_authorization_required', record };
+    }
+    const paymentPayload = { x402Version: 2, payload: { authorization: record.authorization, ...(signature ? { signature } : {}) } };
+    let result;
+    try {
+      result = await this.process({ paymentPayload, paymentRequirements: record.requirements, resource: record.resource });
+    } catch (error) {
+      if (error?.code === 'payment_expired') return { status: 'expired_unspent', record: await this.get(paymentId) };
+      if (error?.code === 'settlement_reconciliation_required' || error?.retryable) return { status: 'reconciling', record: await this.get(paymentId) };
+      throw error;
+    }
+    const current = result.record;
+    if (current.delivered_body && this.deliveryKey) {
+      return { status: 'delivered', record: current, body: unseal(this.deliveryKey, current.delivered_body, `${current.payment_id}:delivered-v1`) };
+    }
+    return { status: 'settled_awaiting_delivery', record: current };
+  }
+
+  /** The delivered report with this id, if `payer` paid for it. */
+  async reportForPayer(payer, reportId) {
+    await this.init();
+    const load = async () => (await this.store.list()).find((record) => record.delivered_report_id === reportId);
+    const known = await (this.store.exclusive ? this.store.exclusive(load) : load());
+    if (!known || !sameAddress(known.payer, payer)) throw new PaymentSettlementError('paid_report_not_found', 'Paid report is unavailable for this payer');
+    const recovered = await this.recoverForPayer(payer, known.payment_id);
+    if (recovered.status !== 'delivered') throw new PaymentSettlementError('paid_report_reconciliation_required', 'The payment behind this report must be reconciled first', { paymentId: known.payment_id });
+    return recovered.body;
   }
   async readDeliveredReport(paymentPayload, reportId) {
     await this.init();
