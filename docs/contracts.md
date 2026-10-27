@@ -48,4 +48,12 @@ Hardhat 依赖安装使用 `npm --prefix hardhat ci`。当前保留 Zod 4.6.7 �
 | 低 | 一次认购最多 4 次钱包确认（同意条款、授权清零、授权、认购） | `RightsController.acknowledgeTerms` + ERC-20 授权 | 结算资产支持 ERC-3009/EIP-2612 时，用签名授权合并步骤 |
 | 可读性 | 大量 `if (!(!x)) revert` 机械转换写法；v2 下不可达的代码（`deductFee`、`setEmergencyStop`、`feeRecipient` 必填但费用恒为 0、未使用的事件/常量）；`recordImporterPayment` 传入的金额会被 `_sealRecovery` 覆盖 | `RWAOfferingPoolV5`、`RightsController` | 新版本一并清理，减少审计面 |
 
+### 下一版迁移的完成标准
+
+1. 冻结 v2：与 v1 一样把 v2 的 ABI/runtime 写入冻结产物，服务继续逐字节核验原实例，并保留其读取、退款、领取与处置退出；回归测试证明旧实例在新源码下仍可核验。
+2. 新控制版本的合约测试至少覆盖：到期前 `TRIGGER_LIQUIDATION` 只能经治理（OPERATOR 仍可 `FREEZE_POOL`）；已有认购后不能降价，或任何降价都满足 `tokenSupply × 新价 ≥ minRaise` 且按份额记录成本；`setIssuer` 轮换后存量提单仍有效、撤销才失效；终态池可幂等重试抵押释放；单池分次认购上限在发行披露中给出。
+3. 以新控制版本部署与激活（需 `--execute` 和同提交 CI 收据），新实例使用独立 Pool、账本与恢复检查点；不得以改源码代替部署来声称旧链上问题已修复。
+
+在新版本部署前，前端在认购确认中提示单池 32 段分次认购上限。
+
 治理固定为"任意 2 名成员批准"，与成员总数无关，且任一成员可单独取消提案；研究实例的角色由同一操作员保管，治理延时目前主要起流程约束作用。
