@@ -294,6 +294,7 @@ export function ControlledFinancePanel({ primary = false }) {
           {review.offer && <><p>{zh ? '条款承诺' : 'Terms commitment'}: <code>{review.offer.terms_hash}</code></p><p>{zh ? '报价版本' : 'Quote version'}: {review.offer.quote_version}</p></>}
           {review.pack && <><ReadableTerms pack={review.pack} zh={zh} /><label><input type="checkbox" checked={termsRead} onChange={(event) => setTermsRead(event.target.checked)} />{zh ? '我已核对责任主体、截止、零费、损失及退出条款' : 'I reviewed the parties, deadlines, zero fees, losses and exit terms'}</label></>}
           {review.kind === 'subscribe' && <p>{review.shares} × {amount(review.offer.issue_price_atomic)} = {amount(BigInt(review.shares) * BigInt(review.offer.issue_price_atomic))} TEST_USDC</p>}
+          {review.kind === 'subscribe' && <p className="small muted">{zh ? '同一钱包在同一资金池最多可分 32 次认购（合约上限）；较少、较大的认购可避免达到上限。' : 'One wallet can subscribe to a pool in at most 32 separate lots (a contract limit); fewer, larger subscriptions avoid reaching it.'}</p>}
           <p>{confirmationCopy(review, zh)}</p>
           {review.kind === 'claim' && <p>{zh ? '本次可领取' : 'Claimable now'}: {amount(review.position.claimable_atomic)} TEST_USDC</p>}
           {review.kind === 'refund' && <p>{zh ? '退回实付成本' : 'Cost to return'}: {amount(review.position.cost_atomic)} TEST_USDC</p>}

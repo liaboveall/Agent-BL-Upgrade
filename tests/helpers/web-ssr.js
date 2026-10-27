@@ -24,5 +24,6 @@ export async function loadWebSsr() {
     }
   });
   const module = await import(pathToFileURL(path.join(outDir, 'ssr.mjs')).href);
+  await module.preloadPages(); // views are code-split; render them synchronously like a warmed browser
   return { ...module, cleanup: () => fs.rm(outDir, { recursive: true, force: true }) };
 }

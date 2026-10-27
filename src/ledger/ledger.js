@@ -27,33 +27,37 @@ export class Ledger {
 
   static project(entries) {
     const positions = {};
-    for (const event of Ledger.activeEntries(entries)) {
-      if (!POSITION_KINDS.has(event.kind)) continue;
-      const investor = lower(event.investor ?? (event.kind === 'INVESTOR_DEPOSIT' ? event.from : event.to));
-      if (!investor) throw new Error('Investor missing from position event');
-      const key = `${Ledger.protocolInstanceKey(event.protocol_instance)}:${event.chain_pool_id}:${investor}`;
-      const pos = positions[key] ?? {
-        position_id: key, protocol_instance: event.protocol_instance, chain_pool_id: event.chain_pool_id,
-        investor, asset: lower(event.asset), shares: '0', cost_atomic: '0', claimed_atomic: '0', refunded_atomic: '0', status: 'active'
-      };
-      if (pos.asset !== lower(event.asset)) throw new Error('Position settlement asset changed');
-      if (event.kind === 'INVESTOR_DEPOSIT') {
-        pos.shares = String(BigInt(pos.shares) + BigInt(money(event.shares)));
-        pos.cost_atomic = String(BigInt(pos.cost_atomic) + BigInt(money(event.amount_atomic)));
-        pos.status = 'active';
-      } else if (event.kind === 'REFUND') {
-        pos.refunded_atomic = String(BigInt(pos.refunded_atomic) + BigInt(money(event.amount_atomic)));
-        pos.shares = '0';
-        pos.status = 'refunded';
-      } else {
-        const shares = BigInt(pos.shares) - BigInt(money(event.shares));
-        if (shares < 0n) throw new Error('Claim exceeds recorded shares; rebuild the complete history');
-        pos.shares = String(shares);
-        pos.claimed_atomic = String(BigInt(pos.claimed_atomic) + BigInt(money(event.amount_atomic)));
-        if (shares === 0n) pos.status = 'fully_claimed';
-      }
-      positions[key] = pos;
+    for (const event of Ledger.activeEntries(entries)) Ledger.applyPosition(positions, event);
+    return positions;
+  }
+
+  /** Fold one active entry into `positions`. Throws before changing anything, so it also validates the entry. */
+  static applyPosition(positions, event) {
+    if (!POSITION_KINDS.has(event.kind)) return positions;
+    const investor = lower(event.investor ?? (event.kind === 'INVESTOR_DEPOSIT' ? event.from : event.to));
+    if (!investor) throw new Error('Investor missing from position event');
+    const key = `${Ledger.protocolInstanceKey(event.protocol_instance)}:${event.chain_pool_id}:${investor}`;
+    const pos = positions[key] ? { ...positions[key] } : {
+      position_id: key, protocol_instance: event.protocol_instance, chain_pool_id: event.chain_pool_id,
+      investor, asset: lower(event.asset), shares: '0', cost_atomic: '0', claimed_atomic: '0', refunded_atomic: '0', status: 'active'
+    };
+    if (pos.asset !== lower(event.asset)) throw new Error('Position settlement asset changed');
+    if (event.kind === 'INVESTOR_DEPOSIT') {
+      pos.shares = String(BigInt(pos.shares) + BigInt(money(event.shares)));
+      pos.cost_atomic = String(BigInt(pos.cost_atomic) + BigInt(money(event.amount_atomic)));
+      pos.status = 'active';
+    } else if (event.kind === 'REFUND') {
+      pos.refunded_atomic = String(BigInt(pos.refunded_atomic) + BigInt(money(event.amount_atomic)));
+      pos.shares = '0';
+      pos.status = 'refunded';
+    } else {
+      const shares = BigInt(pos.shares) - BigInt(money(event.shares));
+      if (shares < 0n) throw new Error('Claim exceeds recorded shares; rebuild the complete history');
+      pos.shares = String(shares);
+      pos.claimed_atomic = String(BigInt(pos.claimed_atomic) + BigInt(money(event.amount_atomic)));
+      if (shares === 0n) pos.status = 'fully_claimed';
     }
+    positions[key] = pos;
     return positions;
   }
 
@@ -127,6 +131,9 @@ export class Ledger {
         history.push(marker);
       }
       const seen = new Map(Ledger.activeEntries(history).filter((entry) => entry.source).map((entry) => [Ledger.sourceKey(entry), entry]));
+      // New entries cannot be voided by markers already in the history, so the projection is extended one
+      // entry at a time instead of re-projecting the complete history for every event.
+      const positions = Ledger.project(history);
       const additions = [];
       for (const event of events) {
         const entry = this.#entry(event), key = Ledger.sourceKey(entry);
@@ -138,12 +145,11 @@ export class Ledger {
           continue;
         }
         // Validate the projection before committing the fact.
-        Ledger.project([...history, entry]);
+        Ledger.applyPosition(positions, entry);
         await this.writer.appendCashEntry(entry);
         history.push(entry); additions.push(entry);
         if (key) seen.set(key, entry);
       }
-      const positions = Ledger.project(history);
       await this.writer.writePositions(positions);
       if (cursor) {
         const cursors = await this.writer.readCursor();

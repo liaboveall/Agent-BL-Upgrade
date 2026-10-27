@@ -48,6 +48,7 @@ for (const language of ['zh', 'en']) for (const scheme of ['light', 'dark']) {
       await page.setViewportSize({ width, height: 900 });
       for (const view of ['finance', 'market', 'mint', 'agent', 'discover']) {
         await page.goto(`/#/${view}`); await expect(page.locator(`#view-${view}`)).toBeVisible();
+        await expect(page.locator(`#view-${view} .page-loading`)).toHaveCount(0); // views are code-split
         if (view === 'market') await expect(page.locator('.deal-card').first()).toBeVisible();
         if (view === 'finance') await expect(page.locator('#controlled-finance .finance-loading')).toHaveCount(0);
         const result = await fullScan(page);

@@ -97,6 +97,7 @@
 /* ---------- page ---------- */
 .page { flex: 1; width: 100%; max-width: var(--page-max); margin: 0 auto; padding: var(--s-8) var(--page-pad) var(--s-10); }
 .page:focus { outline: none; }
+.page-loading { padding: var(--s-8) 0; }
 /* A view settles into place; movement only, so its text is never caught half-faded. */
 .view { display: block; animation: viewIn var(--dur-slow) var(--spring); }
 @keyframes viewIn { from { transform: translateY(8px); } to { transform: none; } }

@@ -25,6 +25,24 @@ function child(code, args = []) {
 }
 
 describe('W2 durable capital ledger', () => {
+  it('extends the projection once per batch, matches a full rebuild, and commits nothing for an invalid event', async (t) => {
+    const { ledger, dir } = await fixture(t);
+    const tx = (index) => ({ tx_hash: `0x${index.toString(16).padStart(64, '0')}`, log_index: 0 });
+    await ledger.applyEvents(Array.from({ length: 40 }, (_, index) => event({ chain_pool_id: 1 + (index % 4), source: tx(index + 1) })));
+    const original = Ledger.project; let projections = 0;
+    Ledger.project = (entries) => { projections++; return original(entries); };
+    try {
+      const batch = Array.from({ length: 60 }, (_, index) => event({ chain_pool_id: 1 + (index % 4), source: tx(index + 100) }));
+      const { positions } = await ledger.applyEvents(batch);
+      assert.equal(projections, 1, 'one projection of the stored history, not one per event');
+      assert.deepEqual(positions, Object.values(original(await new Ledger({ baseDir: dir }).writer.readCashEntries())));
+      assert.equal(positions.find((pos) => pos.chain_pool_id === 1).shares, String(25 * 100));
+    } finally { Ledger.project = original; }
+    const before = await new Ledger({ baseDir: dir }).writer.readCashEntries();
+    await assert.rejects(ledger.applyEvents([event({ kind: 'CLAIM', from: pi.pool_address, to: investor, shares: '999999', source: tx(500) })]), /Claim exceeds/u);
+    assert.equal((await new Ledger({ baseDir: dir }).writer.readCashEntries()).length, before.length);
+  });
+
   it('retains intent terms and refuses a second transaction hash on restart', async (t) => {
     const { ledger, dir } = await fixture(t);
     const intent = await ledger.recordIntent({ protocol_instance: pi, chain_pool_id: 1, operation: 'SUBSCRIBE', investor, asset, amount_atomic: 80n, shares: 100n });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useApp, useLang } from './state/hooks.js';
 import { t } from './lib/i18n.js';
 import { TopBar } from './shell/TopBar.jsx';
@@ -6,11 +6,7 @@ import { ModeStrip } from './shell/ModeStrip.jsx';
 import { Toast } from './components/Toast.jsx';
 import { AppDialogs } from './components/AppDialogs.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
-import { MarketPage } from './pages/market/MarketPage.jsx';
-import { MintPage } from './pages/mint/MintPage.jsx';
-import { AgentPage } from './pages/agent/AgentPage.jsx';
-import { DiscoverPage } from './pages/discover/DiscoverPage.jsx';
-import { DealDialog } from './pages/deal/DealDialog.jsx';
+import { lazyPage } from './lib/lazy-page.jsx';
 import { CopilotLauncher } from './features/copilot/CopilotLauncher.jsx';
 import { VIEWS } from './state/controller.js';
 import { RightsPanel } from './features/rights/RightsPanel.jsx';
@@ -37,7 +33,16 @@ function FinanceIntro() {
     <p className="small muted">{zh ? '报告服务的 x402 付款只购买报告，不进入融资池，也不取得融资份额。真实手机钱包签名不在本次交付范围内，未经验证。' : 'An x402 payment buys a report; it does not fund a pool or purchase shares. Real mobile wallet signing is outside this delivery and has not been verified.'}</p>
   </header>;
 }
+// Views other than the default finance page, and the deal dialog, load on first use.
+const MarketPage = lazyPage(() => import('./pages/market/MarketPage.jsx').then((m) => m.MarketPage));
+const MintPage = lazyPage(() => import('./pages/mint/MintPage.jsx').then((m) => m.MintPage));
+const AgentPage = lazyPage(() => import('./pages/agent/AgentPage.jsx').then((m) => m.AgentPage));
+const DiscoverPage = lazyPage(() => import('./pages/discover/DiscoverPage.jsx').then((m) => m.DiscoverPage));
+const DealDialog = lazyPage(() => import('./pages/deal/DealDialog.jsx').then((m) => m.DealDialog));
 const PAGES = { finance: FinanceIntro, market: MarketPage, mint: MintPage, agent: AgentPage, discover: DiscoverPage };
+/** Load every lazy view now (SSR tests render synchronously). */
+export const preloadPages = () => Promise.all([MarketPage, MintPage, AgentPage, DiscoverPage, DealDialog].map((page) => page.preload()));
+const pageLoading = () => <p className="muted page-loading" role="status">{t('page_loading')}</p>;
 
 export function App() {
   const lang = useLang();
@@ -61,7 +66,7 @@ export function App() {
           const Page = PAGES[name];
           return (
             <section key={name} id={`view-${name}`} role="tabpanel" aria-labelledby={`tab-${name}`} hidden={view !== name} className="view">
-              {view === name ? <ErrorBoundary key={name}><Page /></ErrorBoundary> : null}
+              {view === name ? <ErrorBoundary key={name}><Suspense fallback={pageLoading()}><Page /></Suspense></ErrorBoundary> : null}
             </section>
           );
         })}
@@ -79,7 +84,7 @@ export function App() {
         <span>{t('footer_left')}</span>
         <span className="muted">{t('footer_right')}</span>
       </footer>
-      <DealDialog />
+      <Suspense fallback={null}><DealDialog /></Suspense>
       <CopilotLauncher />
       <AppDialogs />
       <Toast />

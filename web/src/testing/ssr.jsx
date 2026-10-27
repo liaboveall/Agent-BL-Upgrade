@@ -2,12 +2,12 @@
 // to static markup with a chosen app state, so the DOM contract (tabs, panels, dialogs, ids) is
 // checked against what React actually produces. Not part of the browser bundle.
 import { renderToStaticMarkup } from 'react-dom/server';
-import { App } from '../App.jsx';
+import { App, preloadPages } from '../App.jsx';
 import { appStore } from '../state/app-store.js';
 import { mysteryState, publish } from '../pages/discover/mystery.js';
 import { setLang } from '../lib/i18n.js';
 
-export { appStore, mysteryState, setLang };
+export { appStore, mysteryState, preloadPages, setLang };
 
 /** Render the whole dashboard after merging `state` into the app store (and `mystery` into the round). */
 export function renderApp({ state = {}, mystery = {} } = {}) {
