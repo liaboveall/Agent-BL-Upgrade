@@ -31,9 +31,11 @@ const ready = async (page) => {
   await page.locator('#case-dropdown').selectOption(copper); await expect(page.locator('#mint-btn')).toBeEnabled();
 };
 
-for (const language of ['zh', 'en']) {
-  test(`${language}: four desktop pages have no overflow, page errors or contrast violations`, async ({ page }, testInfo) => {
+// The glass and its dark appearance follow the system setting, so both schemes carry the same contrast bar.
+for (const language of ['zh', 'en']) for (const scheme of ['light', 'dark']) {
+  test(`${language}${scheme === 'dark' ? ' dark' : ''}: four desktop pages have no overflow, page errors or contrast violations`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
+    await page.emulateMedia({ colorScheme: scheme });
     await page.addInitScript((lang) => localStorage.setItem('ts_lang', lang), language);
     await ready(page);
     for (const view of ['market', 'mint', 'agent', 'discover']) {
@@ -42,7 +44,7 @@ for (const language of ['zh', 'en']) {
       const result = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
       expect(result.violations, JSON.stringify(result.violations.map((v) => v.nodes.map((n) => n.target)))).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await page.screenshot({ path: testInfo.outputPath(`${view}-${language}.png`), fullPage: true });
+      await page.screenshot({ path: testInfo.outputPath(`${view}-${language}-${scheme}.png`), fullPage: true });
     }
     await page.setViewportSize({ width: 1280, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

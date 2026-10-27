@@ -3,7 +3,7 @@
    form controls as the rest of the dashboard: one blue accent, quiet borders, 13px working text. */
 
 /* ---------- the "research tools" disclosure under every page ---------- */
-.research-tools { margin-top: var(--s-6); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
+.research-tools { margin-top: var(--s-6); border: 1px solid var(--card-edge); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow); }
 .research-tools > summary,
 .controlled-panel > details > summary { cursor: pointer; list-style: none; }
 .research-tools > summary::-webkit-details-marker,
@@ -17,7 +17,7 @@
 .research-tools > summary::after,
 .controlled-panel > details > summary::after {
   content: ''; flex: none; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
-  transform: rotate(45deg) translateY(-2px); transition: transform 0.15s ease;
+  transform: rotate(45deg) translateY(-2px); transition: transform var(--dur) var(--spring);
 }
 .research-tools[open] > summary::after,
 .controlled-panel > details[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
@@ -25,7 +25,7 @@
 .research-tools > aside + aside { border-top: 1px solid var(--line); }
 .research-tools > summary:focus-visible, .controlled-panel > details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* Off the financing page the panel is a footnote: the same quiet accordion as the research tools below it. */
-.controlled-panel.is-secondary > details { border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+.controlled-panel.is-secondary > details { border-radius: var(--r-lg); box-shadow: var(--shadow); }
 .controlled-panel.is-secondary > details > summary,
 .controlled-panel.is-secondary > details:not([open]) > summary { padding: 16px 20px; color: var(--text-2); font-size: var(--fs-14); font-weight: 600; letter-spacing: 0; }
 .controlled-panel.is-secondary > details > summary:hover { color: var(--text); }
@@ -38,7 +38,7 @@
 .rights-panel summary::-webkit-details-marker, .evidence-panel summary::-webkit-details-marker, .operations-panel summary::-webkit-details-marker { display: none; }
 .rights-panel summary::before, .evidence-panel summary::before, .operations-panel summary::before {
   content: ''; flex: none; width: 6px; height: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
-  transform: rotate(-45deg); transition: transform 0.15s ease;
+  transform: rotate(-45deg); transition: transform var(--dur) var(--spring);
 }
 .rights-panel details[open] > summary::before, .evidence-panel details[open] > summary::before, .operations-panel details[open] > summary::before { transform: rotate(45deg); }
 .rights-panel summary:focus-visible, .evidence-panel summary:focus-visible, .operations-panel summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
@@ -62,16 +62,18 @@
   background: var(--surface); color: var(--text); font: 400 var(--fs-14)/1.4 var(--font);
 }
 .evidence-panel textarea, .role-workspace textarea { min-height: 84px; padding: 8px 12px; resize: vertical; }
-.role-workspace select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.role-workspace select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
 .evidence-panel input:hover, .evidence-panel textarea:hover, .role-workspace input:hover, .role-workspace select:hover, .role-workspace textarea:hover { border-color: var(--faint); }
-.evidence-panel input:focus, .evidence-panel textarea:focus, .role-workspace input:focus, .role-workspace select:focus, .role-workspace textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus); }
+.evidence-panel input:focus, .evidence-panel textarea:focus, .role-workspace input:focus, .role-workspace select:focus, .role-workspace textarea:focus { outline: none; border-color: var(--accent-fill); box-shadow: var(--focus); }
 .evidence-panel button {
-  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: var(--r);
-  background: var(--surface); color: var(--text); font-size: var(--fs-14); font-weight: 550; box-shadow: var(--shadow-sm); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--r-pill);
+  background: var(--fill); color: var(--text); font-size: var(--fs-14); font-weight: 600; cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), transform var(--dur) var(--spring);
 }
-.evidence-panel button:hover:not(:disabled) { background: var(--surface-2); }
-.evidence-panel button[type="submit"] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); box-shadow: none; }
-.evidence-panel button[type="submit"]:hover:not(:disabled) { background: var(--accent-hover); }
+.evidence-panel button:hover:not(:disabled) { background: var(--fill-hover); }
+.evidence-panel button:active:not(:disabled) { transform: scale(0.97); }
+.evidence-panel button[type="submit"] { background: var(--accent-fill); color: var(--on-accent); }
+.evidence-panel button[type="submit"]:hover:not(:disabled) { background: var(--accent-fill-hover); }
 .evidence-panel button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 .evidence-panel button:focus-visible { outline: none; box-shadow: var(--focus); }
 .evidence-review-form { margin-top: var(--s-3); padding: 0 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); }
@@ -86,7 +88,7 @@
 .controlled-panel details { padding: 1rem; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
 .controlled-panel summary { font-weight: 650; }
 .controlled-panel code, .controlled-notice { overflow-wrap: anywhere; }
-.controlled-panel button { padding: .5rem .8rem; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface); color: var(--text-2); cursor: pointer; }
+.controlled-panel button { padding: .5rem .8rem; border: 1px solid transparent; border-radius: var(--r-pill); background: var(--fill); color: var(--text); cursor: pointer; }
 .controlled-panel button:disabled { opacity: .6; cursor: default; }
 .controlled-panel button:focus-visible, .controlled-panel input:focus-visible, .controlled-panel summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .controlled-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
@@ -116,7 +118,9 @@
 .controlled-confirm h4 { margin-bottom: var(--s-2); font-size: var(--fs-16); }
 
 /* ---------- research pricing feasibility (pricing page) ---------- */
-.research-constraints { display: grid; gap: var(--s-3); margin-top: var(--s-5); padding-top: var(--s-5); border-top: 1px solid var(--line); overflow-x: auto; }
+.research-constraints { display: grid; gap: var(--s-3); margin-top: var(--s-5); padding-top: var(--s-5); border-top: 1px solid var(--line); }
+.research-table { min-width: 0; overflow-x: auto; border-radius: var(--r-sm); }
+.research-table:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .research-constraints h3 { font-size: var(--fs-16); }
 .research-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); margin: 0; }
 .research-figures > div { display: grid; gap: 2px; padding: var(--s-3); border-radius: var(--r); background: var(--surface-2); }
@@ -131,7 +135,7 @@
 .research-constraints ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-12); }
 
 /* ---------- financing role workspace ---------- */
-.role-workspace { display: grid; gap: var(--s-3); margin-block: var(--s-4); padding: var(--s-5); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); color: var(--text-2); font-size: var(--fs-13); }
+.role-workspace { display: grid; gap: var(--s-3); margin-block: var(--s-4); padding: var(--s-5); border: 1px solid var(--card-edge); border-radius: var(--r-lg); background: var(--surface); color: var(--text-2); font-size: var(--fs-13); box-shadow: var(--shadow-sm); }
 .role-workspace h3 { color: var(--text); font-size: var(--fs-16); }
 .role-workspace p { margin: 0; }
 .role-workspace code, .role-workspace dd { overflow-wrap: anywhere; }

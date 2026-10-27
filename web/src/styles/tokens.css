@@ -1,47 +1,104 @@
-/* Design tokens: light, institutional. One blue accent; status colours only for status. */
+/* Design tokens: Apple-style Liquid Glass.
+   Two layers: controls and navigation float above the page in a translucent glass material; content
+   (terms, figures, tables) stays on opaque surfaces so it reads the same whatever scrolls beneath.
+   One blue accent; status colours only for status. Every text pair here meets WCAG AA in both schemes. */
 :root {
   color-scheme: light;
 
   /* surfaces */
-  --bg: #f6f7f9;
+  --bg: #f5f5f7;
   --surface: #ffffff;
-  --surface-2: #f2f4f7;
-  --surface-3: #e9edf2;
-  --overlay: rgba(15, 23, 42, 0.38);
+  --surface-2: #f2f2f7;
+  --surface-3: #e5e5ea;
+  --overlay: rgba(0, 0, 0, 0.24);
+  /* the faint colour field behind the page that the glass picks up */
+  --ambient: radial-gradient(1100px 620px at 8% -12%, rgba(0, 113, 227, 0.10), transparent 62%),
+    radial-gradient(900px 560px at 96% -6%, rgba(175, 82, 222, 0.08), transparent 60%),
+    radial-gradient(1000px 640px at 70% 108%, rgba(52, 199, 89, 0.06), transparent 62%);
+
+  /* fills: Apple's grey control fills, tinted by whatever they sit on */
+  --fill: rgba(120, 120, 128, 0.12);
+  --fill-hover: rgba(120, 120, 128, 0.2);
+  --fill-strong: #1d1d1f;
+  --on-fill-strong: #ffffff;
 
   /* text */
-  --text: #0f172a;
-  --text-2: #334155;
-  --muted: #526174;
-  --faint: #59677b;
+  --text: #1d1d1f;
+  --text-2: #3a3a3c;
+  --muted: #5f5f64;
+  --faint: #6e6e73;
 
   /* lines */
-  --line: #e4e7ec;
-  --line-strong: #d0d5dd;
+  --line: #e3e3e8;
+  --line-strong: #d1d1d6;
+  --card-edge: rgba(0, 0, 0, 0.06);
 
-  /* accent */
-  --accent: #2f5bea;
-  --accent-hover: #2249c9;
-  --accent-soft: #edf2ff;
-  --accent-line: #c7d4fb;
+  /* accent: --accent for text and icons, --accent-fill behind white text */
+  --accent: #0066cc;
+  --accent-hover: #0058b0;
+  --accent-fill: #0071e3;
+  --accent-fill-hover: #0062c4;
+  --accent-soft: #e8f1fc;
+  --accent-line: #b9d6f7;
   --on-accent: #ffffff;
 
-  /* status */
-  --ok: #096441;
-  --ok-soft: #e4f5ec;
-  --warn: #9a5a00;
-  --warn-soft: #fdf1d9;
-  --crit: #b42323;
-  --crit-soft: #fbe8e8;
-  --crit-line: #f0c3ba;
-  --info: #1d5bbf;
-  --info-soft: #e8f0fd;
-  --gain: #096441;
-  --cost: #b42323;
+  /* status: --x text/icon, --x-soft tinted background, --x-line its border, --x-ink body text on the tint */
+  --ok: #0a7a3b;
+  --ok-soft: #e3f5e9;
+  --ok-line: #a9dcbc;
+  --ok-ink: #075a2c;
+  --warn: #9a5800;
+  --warn-soft: #fdf1dc;
+  --warn-line: #efcf94;
+  --warn-ink: #6e3f00;
+  --crit: #c4111f;
+  --crit-soft: #fdeaea;
+  --crit-line: #f1bcbc;
+  --crit-ink: #8f0d17;
+  --crit-fill: #c4111f;
+  --info: #0060c0;
+  --info-soft: #e6f0fc;
+  --info-line: #bcd5f5;
+  --info-ink: #0b4a94;
+  --info-fill: #5e9cf0;
+  --gain: var(--ok);
+  --cost: var(--crit);
+
+  /* waterfall bars */
+  --chart-base: #8fb5f2;
+  --chart-mid: #b5c8ec;
+  --chart-down: #f2a5a5;
+  --chart-up: #8fd3ad;
+
+  /* code, terminal and the dark HUDs */
+  --code-bg: #1d1d1f;
+  --code-text: #e5e5ea;
+  --code-muted: #a8a8ad;
+  --code-ok: #6fe3a1;
+  --code-warn: #ffd36b;
+  --code-info: #8cbfff;
+
+  /* Liquid Glass */
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-thick: rgba(255, 255, 255, 0.86);
+  --glass-solid: #fbfbfd;
+  --glass-blur: blur(24px) saturate(180%);
+  --glass-blur-thick: blur(40px) saturate(190%);
+  --glass-edge: rgba(0, 0, 0, 0.08);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  /* the brighter lens a selected control sits in */
+  --lens: rgba(255, 255, 255, 0.94);
+  --lens-accent: var(--accent);
+  --lens-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 3px 10px rgba(0, 0, 0, 0.06), inset 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  --hud: rgba(29, 29, 31, 0.78);
+  --hud-crit: rgba(143, 13, 23, 0.86);
+  --on-hud: #ffffff;
+  --backdrop-blur: blur(6px);
 
   /* type */
-  --font: "Inter Variable", "Inter", "Segoe UI", system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  --mono: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  --mono: "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --fs-11: 11px;
   --fs-12: 12px;
   --fs-13: 13px;
@@ -50,13 +107,17 @@
   --fs-18: 18px;
   --fs-22: 22px;
   --fs-28: 28px;
+  --fs-32: 32px;
   --fs-36: 36px;
   --fs-40: 40px;
 
-  /* shape + space */
-  --r-sm: 6px;
-  --r: 8px;
-  --r-lg: 12px;
+  /* shape + space: continuous, generous corners */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --r-pill: 999px;
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -68,8 +129,127 @@
   --page-max: 1360px;
   --page-pad: 32px;
 
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-lg: 0 20px 48px rgba(16, 24, 40, 0.16), 0 4px 12px rgba(16, 24, 40, 0.08);
-  --focus: 0 0 0 3px rgba(47, 91, 234, 0.28);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.18), 0 6px 18px rgba(0, 0, 0, 0.08);
+  --focus: 0 0 0 4px rgba(0, 113, 227, 0.3);
+  --focus-crit: 0 0 0 4px rgba(196, 17, 31, 0.22);
+
+  /* motion: a soft spring (about 4% overshoot) for things that move, a plain ease-out for colour */
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.2, 0.9, 0.25, 1.05);
+  --dur-fast: 0.16s;
+  --dur: 0.28s;
+  --dur-slow: 0.5s;
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring: linear(0, 0.112, 0.34, 0.576, 0.768, 0.903, 0.983, 1.024, 1.038, 1.036, 1.029, 1.019, 1.011, 1.005, 1.002, 0.999, 0.999, 0.999, 0.999, 0.999, 0.999, 1, 1, 1, 1);
+  }
+}
+
+/* Dark: true black behind elevated greys, as on Apple platforms. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #0d0d10;
+    --surface: #1c1c1e;
+    --surface-2: #2c2c2e;
+    --surface-3: #3a3a3c;
+    --overlay: rgba(0, 0, 0, 0.5);
+    --ambient: radial-gradient(1100px 620px at 8% -12%, rgba(10, 132, 255, 0.16), transparent 62%),
+      radial-gradient(900px 560px at 96% -6%, rgba(191, 90, 242, 0.12), transparent 60%),
+      radial-gradient(1000px 640px at 70% 108%, rgba(48, 209, 88, 0.07), transparent 62%);
+
+    --fill: rgba(118, 118, 128, 0.24);
+    --fill-hover: rgba(118, 118, 128, 0.34);
+    --fill-strong: #f5f5f7;
+    --on-fill-strong: #1d1d1f;
+
+    --text: #f5f5f7;
+    --text-2: #d1d1d6;
+    --muted: #a1a1a6;
+    --faint: #8e8e93;
+
+    --line: #2f2f33;
+    --line-strong: #48484a;
+    --card-edge: rgba(255, 255, 255, 0.07);
+
+    --accent: #4aa3ff;
+    --accent-hover: #7bbcff;
+    --accent-fill: #0a6fdb;
+    --accent-fill-hover: #1a7fea;
+    --accent-soft: #0f2a4a;
+    --accent-line: #1f4f86;
+    --on-accent: #ffffff;
+
+    --ok: #4cd07d;
+    --ok-soft: #12301f;
+    --ok-line: #1f5a37;
+    --ok-ink: #8ce6ae;
+    --warn: #ffb340;
+    --warn-soft: #3a2a10;
+    --warn-line: #6b4d17;
+    --warn-ink: #ffd28a;
+    --crit: #ff6b62;
+    --crit-soft: #3d1716;
+    --crit-line: #7a2c29;
+    --crit-ink: #ffaba5;
+    --crit-fill: #d70015;
+    --info: #5eb0ff;
+    --info-soft: #10294a;
+    --info-line: #22508a;
+    --info-ink: #a6d1ff;
+    --info-fill: #3b82d6;
+
+    --chart-base: #3d6fc4;
+    --chart-mid: #4c5f8a;
+    --chart-down: #b5504c;
+    --chart-up: #2f9a63;
+
+    --code-bg: #000000;
+    --code-text: #e5e5ea;
+    --code-muted: #a1a1a6;
+
+    --glass: rgba(40, 40, 44, 0.7);
+    --glass-thick: rgba(32, 32, 36, 0.86);
+    --glass-solid: #232326;
+    --glass-edge: rgba(255, 255, 255, 0.1);
+    --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --lens: rgba(255, 255, 255, 0.16);
+    --lens-accent: #a6d1ff;
+    --lens-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+    --hud: rgba(58, 58, 62, 0.82);
+    --hud-crit: rgba(150, 24, 30, 0.9);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.6), 0 6px 18px rgba(0, 0, 0, 0.4);
+    --focus: 0 0 0 4px rgba(74, 163, 255, 0.45);
+    --focus-crit: 0 0 0 4px rgba(255, 107, 98, 0.35);
+  }
+}
+
+/* Glass needs a browser that can blur what is behind it; without that, and whenever the reader asks for
+   less transparency or more contrast, the same surfaces become opaque. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass: var(--glass-solid); --glass-thick: var(--glass-solid); --hud: var(--code-bg); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: var(--glass-solid); --glass-thick: var(--glass-solid); --hud: var(--code-bg);
+    --glass-blur: none; --glass-blur-thick: none; --backdrop-blur: none; --ambient: none;
+  }
+}
+@media (prefers-contrast: more) {
+  :root {
+    --glass: var(--glass-solid); --glass-thick: var(--glass-solid); --hud: var(--code-bg);
+    --glass-blur: none; --glass-blur-thick: none; --ambient: none;
+    --glass-edge: var(--line-strong); --card-edge: var(--line-strong); --line: var(--line-strong);
+    --muted: var(--text-2); --faint: var(--text-2);
+  }
 }

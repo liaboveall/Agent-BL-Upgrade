@@ -8,12 +8,15 @@
 @keyframes priceFlash { 0% { color: var(--accent); background: var(--accent-soft); } 100% { color: inherit; background: transparent; } }
 
 .risk-pulse { animation: riskPulse 1.4s ease-in-out 3; }
-@keyframes riskPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(180, 35, 35, 0); } 50% { box-shadow: 0 0 0 5px rgba(180, 35, 35, 0.16); } }
+@keyframes riskPulse { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--crit) 18%, transparent); } }
 
-.x402-impact-pop { animation: x402ImpactPop 0.45s ease-out; }
+.x402-impact-pop { animation: x402ImpactPop var(--dur-slow) var(--spring); }
 @keyframes x402ImpactPop { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 @keyframes particleFlow { from { background-position: -30% 0; } to { background-position: 130% 0; } }
+
+/* A result or detail that appears settles in on the spring rather than popping. */
+@keyframes settleIn { from { transform: translateY(6px) scale(0.99); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -25,8 +28,9 @@
 }
 
 @media print {
+  body::before { display: none; }
   .app-header, .page, .page-foot, .cp-launcher { display: none !important; }
-  .passport-share-modal { position: static; display: block; width: 100%; max-height: none; box-shadow: none; }
+  .passport-share-modal { position: static; display: block; width: 100%; max-height: none; border: 0; background: #fff; color: #000; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; animation: none; }
   .passport-share-modal .dialog-head, .passport-share-modal .button-row, .passport-share-modal .passport-advanced,
   .passport-share-modal #passport-json-preview, .passport-share-modal .field-label, .passport-share-modal #passport-share-nickname { display: none !important; }
   .share-preview { border: 0; font-size: var(--fs-16); }

@@ -3,7 +3,7 @@
 .finance-intro { display: grid; gap: 12px; margin-bottom: 24px; max-width: 1100px; }
 .finance-intro h1 { font-size: var(--fs-28); }
 .finance-journey { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.finance-journey li { display: grid; gap: 6px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.finance-journey li { display: grid; gap: 6px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
 .finance-journey span { color: var(--text-2); }
 .controlled-panel { width: 100%; min-width: 0; margin-top: 24px; padding: 0; }
 .controlled-panel p { margin-block: 10px; overflow-wrap: anywhere; }
@@ -13,11 +13,11 @@
 .controlled-panel table { min-width: 720px; }
 .controlled-panel td:last-child { max-width: 350px; }
 .pool-next { max-width: 36em; }
-.funding-detail { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; overflow-wrap: anywhere; }
+.funding-detail { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r); overflow-wrap: anywhere; }
 .funding-detail h2, .positions-heading { font-size: var(--fs-18); }
 .funding-detail dl > div { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr); gap: 12px; padding: 8px 0; }
 .funding-detail dt { font-weight: 600; }
-.topbar-inner { height: auto; min-height: 60px; flex-wrap: wrap; gap: 12px 16px; padding-block: 12px; }
+.topbar-inner { height: auto; min-height: 56px; flex-wrap: wrap; gap: 12px 16px; padding-block: 10px; }
 .topbar-right { min-width: 0; max-width: 100%; flex-wrap: wrap; }
 .nav { min-width: 0; flex-wrap: wrap; }
 .detail-panel, .detail-panel > * { min-width: 0; }
@@ -30,7 +30,8 @@
 
 /* Half-width desktop windows keep the project list and its detail card side by side; the header only wraps when it must. */
 @media (max-width: 1079px) {
-  .topbar-inner { height: auto; min-height: 60px; flex-wrap: wrap; padding-block: 12px; gap: 10px; }
+  .topbar-inner { height: auto; min-height: 56px; flex-wrap: wrap; padding-block: 10px; gap: 10px; }
+  .app-header::before { height: 186px; }
   .nav { order: 3; flex-basis: 100%; flex-wrap: wrap; }
   .mode-strip-inner { flex-wrap: wrap; padding-block: 8px; }
   .mode-copy, .mode-chain { min-width: 0; white-space: normal; }
@@ -54,14 +55,18 @@
 @media (max-width: 767px) {
   :root { --page-pad: 16px; }
   html { scroll-padding-top: 24px; }
-  .app-header { position: static; }
+  /* On a phone the bar scrolls away with the page, so it needs no scroll edge. */
+  .app-header { --bar-inset: 8px; position: static; padding-top: 8px; }
+  .app-header::before { display: none; }
+  .topbar { border-radius: 22px; }
   .topbar-inner { gap: 12px; }
   .topbar-right { flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; max-width: 100%; }
   .network-select { flex: 1 1 auto; width: auto; max-width: none; min-width: 0; }
   .wallet-btn { min-width: 0; }
   /* Tabs in an even grid instead of a ragged second line; only data regions scroll sideways. */
   .nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .nav-tab { height: auto; min-height: 40px; padding: 6px 8px; font-size: var(--fs-13); line-height: 1.25; text-align: center; white-space: normal; }
+  .nav-tab { height: auto; min-height: 40px; padding: 6px 8px; border-radius: var(--r); font-size: var(--fs-13); line-height: 1.25; text-align: center; white-space: normal; }
+  .mode-strip-inner { padding-inline: 12px; }
   .mode-actions { flex-wrap: wrap; gap: 12px; }
   .mode-strip-inner > * { min-width: 0; max-width: 100%; }
   .mode-copy { flex: 1 1 220px; }
@@ -91,7 +96,7 @@
   .research-tools > aside { max-width: 100%; }
   .dialog-wide, .dialog-center { width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
   .dialog-head, .dialog-body { padding: 16px; }
-  .tabs { padding-inline: 12px; flex-wrap: wrap; }
+  .tabs { max-width: calc(100% - 32px); margin-inline: 16px; border-radius: var(--r); }
   .dialog-body > *, .dialog-body section { min-width: 0; }
   .voyage { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .voyage-track { min-height: 30px; }
