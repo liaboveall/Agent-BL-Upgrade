@@ -16,7 +16,7 @@ import { sendRightsPlan } from '../web/src/lib/rights.js';
 import { loadRightsChain } from '../src/rights/chain.js';
 import { prepareRightsCandidate, writeRightsCandidate } from '../scripts/prepare-rights-candidate.mjs';
 import { Contract, ContractFactory, TypedDataEncoder } from 'ethers';
-import { titleDomain, ISSUANCE_TYPES, PLEDGE_TYPES, TERMS_TYPES, VALUATION_TYPES } from '../src/rights/typedData.js';
+import { titleDomain, rightsDomain, ISSUANCE_TYPES, PLEDGE_TYPES, TERMS_TYPES, VALUATION_TYPES } from '../src/rights/typedData.js';
 
 async function backend(c, t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'w3-cross-')), env = { AGENTBL_RIGHTS_KEY: randomBytes(32).toString('hex'), AGENTBL_ADMIN_TOKEN: 'synthetic-cross-layer-admin-w3' };
@@ -132,7 +132,7 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     const file = path.join(app.directory, 'instance.json');
     await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', rpc_url: node.url, chain_id: String(c.chainId), contracts }));
     const loaded = await loadRightsChain(file); t.after(() => loaded.provider.destroy());
-    assert.equal((await loaded.verify()).control_version, 2);
+    assert.equal((await loaded.verify()).control_version, 3);
     const expected = c.chain.chainId; c.chain.chainId = 1;
     await assert.rejects(c.chain.verify(), { code: 'rights_network_mismatch' }); c.chain.chainId = expected;
     const issue = await c.issuance(), plan = await app.plan(issuer, { operation: 'register_title', payload: issue });
@@ -148,7 +148,7 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     await c.provider.send('hardhat_setCode', [await c.governance.getAddress(), altered]);
     await assert.rejects(loaded.verify(), { code: 'rights_bytecode_mismatch' });
   });
-  it('prepares and executes an isolated unsigned v2 deployment while sharing historical identity reservations', async (t) => {
+  it('prepares and executes an isolated unsigned current-version deployment while sharing historical identity reservations', async (t) => {
     const c = await deployRightsRpc(node, t), directory = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-candidate-'));
     t.after(() => fs.rm(directory, { recursive: true, force: true }));
     const issue = await c.issuance(); await c.send(c.registry.registerTitle(issue.issuance, issue.signature));
@@ -171,14 +171,57 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     await assert.rejects(registry.registerTitle(duplicate, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, duplicate)), /asset already reserved/u);
     assert.equal(await pool.owner(), controller.target); assert.equal(await controller.intakeStopped(), true);
     const file = path.join(directory, 'instance.json');
-    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 2,
+    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 3,
       rpc_url: node.url, chain_id: 31337, contracts: prepared.contracts }));
     const loaded = await loadRightsChain(file); t.after(() => loaded.provider.destroy());
-    assert.equal((await loaded.verify()).control_version, 2);
+    assert.equal(prepared.control_version, 3); assert.equal(prepared.signature_domain.version, '3');
+    assert.equal((await loaded.verify()).control_version, 3);
     assert.equal((await loaded.verify()).exit_only, false);
     // An old instance's exact calldata/nonce journal cannot name the new pool.
     assert.notEqual(prepared.runtime_namespace, `controlled-capital-${String(c.pool.target).toLowerCase()}`);
     await assert.rejects(prepareRightsCandidate({ ...input, chain_id: 1 }));
+  });
+  it('loads frozen v2 code after recompilation, keeps its original rules, closes new risk and preserves exits', async (t) => {
+    const frozen = JSON.parse(await fs.readFile('scripts/config/rights-v2-artifacts.json', 'utf8')).contracts;
+    const c = await deployRightsRpc(node, t), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-legacy-v2-'));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    const deploy = async (name, args) => (await new ContractFactory(frozen[name].abi, frozen[name].bytecode, c.memberA).deploy(...args)).waitForDeployment();
+    const registry = await deploy('CommittedEBLRegistry', [c.governance.target, c.hub.target]), token = await deploy('ControlledRWAToken', []);
+    const pool = await deploy('RWAOfferingPoolV5', [registry.target, token.target]); await c.send(token.bindPool(pool.target));
+    const controller = await deploy('RightsController', [c.governance.target, registry.target, token.target, pool.target]);
+    await c.send(pool.transferOwnership(controller.target)); await c.send(controller.activate());
+    await c.govern(c.hub, 'setRegistry', [registry.target, true]); await c.govern(registry, 'bindController', [controller.target]);
+    const issue = await c.issuance(); await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
+    for (const [role, wallet] of [['ISSUER', c.issuer], ['VALUER', c.valuer], ['COMPLIANCE', c.compliance]]) await c.govern(controller, 'setRole', [await controller[role](), wallet.address, true]);
+    await c.govern(controller, 'setTestAsset', [c.usdc.target, true]); await c.govern(controller, 'setIntakeStopped', [false, c.fresh()]);
+    issue.issuance.validUntil = String(await c.now() + 100000n);
+    await c.send(registry.registerTitle(issue.issuance, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, issue.issuance)));
+    const { terms, valuation: current } = await c.offering(1, issue.issuance), oldDomain = rightsDomain(c.chainId, controller.target, 2);
+    const hash = TypedDataEncoder.hash(oldDomain, TERMS_TYPES, terms), valuation = { ...current, termsHash: hash };
+    const pledge = { eblId: 1, pool: pool.target, termsHash: hash, nonce: await registry.holderNonce(1), validUntil: terms.subscribeUntil };
+    await c.send(registry.pledge(1, pool.target, hash, terms.subscribeUntil, await c.holder.signTypedData(titleDomain(c.chainId, registry.target), PLEDGE_TYPES, pledge)));
+    await c.send(controller.connect(c.issuer).createControlledOffering(terms, valuation, c.valuer.address, await c.valuer.signTypedData(oldDomain, VALUATION_TYPES, valuation)));
+    await c.send(controller.connect(c.compliance).setEligibility(c.investor.address, c.fresh(), c.fresh(), await c.now() + 100000n));
+    await c.send(controller.connect(c.compliance).refreshScreening(await c.now() + 80000n, c.fresh()));
+    await c.send(controller.connect(c.investor).acknowledgeTerms(1, hash, 1, terms.subscribeUntil));
+    await c.send(c.usdc.mint(c.investor.address, 800000n)); await c.send(c.usdc.connect(c.investor).approve(pool.target, 800000n));
+    await c.send(pool.connect(c.investor).subscribe(1, 1));
+    const file = path.join(dir, 'v2.json');
+    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 2,
+      rpc_url: node.url, chain_id: 31337, contracts: { RightsGovernance: c.governance.target, AssetIdentityHub: c.hub.target,
+        CommittedEBLRegistry: registry.target, RightsController: controller.target, ControlledRWAToken: token.target, RWAOfferingPoolV5: pool.target } }));
+    const legacy = await loadRightsChain(file); t.after(() => legacy.provider.destroy());
+    assert.deepEqual([(await legacy.verify()).control_version, (await legacy.verify()).exit_only], [2, true]);
+    await assert.rejects(legacy.prepare({ wallet: c.issuer.address, roles: ['issuer'] }, { operation: 'register_title' }), { code: 'rights_legacy_exit_only' });
+    await assert.rejects(legacy.prepare({ wallet: c.investor.address, roles: ['investor'] }, { operation: 'acknowledge_terms', pool_id: '1' }), { code: 'rights_legacy_exit_only' });
+    // Exits pass the legacy filter and reach the chain preflight, which still applies the old instance's rules.
+    await assert.rejects(legacy.prepare({ wallet: c.investor.address, roles: ['investor'] }, { operation: 'start_exit', pool_id: '1' }), { code: 'rights_preflight_failed' });
+    // Source changes do not repair a deployed instance: frozen v2 still drops the title when its issuer key rotates.
+    await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.outsider.address]);
+    assert.equal(await registry.isActive(1), false);
+    await c.advance(BigInt(terms.subscribeUntil) + 1n);
+    await c.send(pool.connect(c.investor).refundInvestor(1, c.investor.address));
+    assert.equal(await pool.escrowed(1, c.usdc.target), 0n); assert.equal(await token.balanceOf(1, c.investor.address), 0n);
   });
   it('loads frozen v1 code after recompilation, closes its risk entry, and preserves funded wallet exits', async (t) => {
     const frozen = JSON.parse(await fs.readFile('scripts/config/rights-v1-artifacts.json', 'utf8')).contracts;

@@ -24,6 +24,8 @@ export async function runCandidateFunding({ directory, candidate, state, save, t
     work.execution_sources.push({ base_head: source.base_head, source_sha256: source.source_sha256, observed_at: new Date().toISOString() }); await save();
   }
   const contract = (name) => new Contract(state.contracts[name], candidate.artifacts[name].abi, provider);
+  // Version 2 candidates predate the version field in their disclosures and signing domain.
+  const version = candidate.control_version ?? 2;
   const controller = contract('RightsController'), registry = contract('CommittedEBLRegistry'), pool = contract('RWAOfferingPoolV5'), token = contract('ControlledRWAToken'), usdc = contract('MockAuthorizationUSDC');
   const call = (label, target, method, args, actor = 'governorA') => txSend(`funding:${label}`, signers[actor], { to: target.target, data: target.interface.encodeFunctionData(method, args) });
   const now = async () => (await provider.getBlock('latest')).timestamp;
@@ -51,7 +53,7 @@ export async function runCandidateFunding({ directory, candidate, state, save, t
           public_summary: { asset_class: 'copper', settlement: 'TEST_USDC', tenor_days: 1, terms_hash: id(`provisional:${tag}`), risk_flags: ['simulated_title', 'test_asset', 'capital_at_risk'] } });
         const issuance = { assetKey: assetIdentity('AGENTBL N5 SYNTHETIC ISSUER', `${registry.target}:${tag}`), documentHash: material.document_hash,
           issuerOrg: id('AGENTBL_N5_SYNTHETIC_ISSUER'), holder: signers.holder.address, revision: 1, previousHash: ZeroHash, nonce: String(BigInt(id(`issuance:${tag}`))), validUntil: String(time + 604800) };
-        const input = { revision: 1, instance: { chain_id: state.chain_id, controller: controller.target, pool: pool.target },
+        const input = { revision: 1, instance: { chain_id: state.chain_id, controller: controller.target, pool: pool.target, ...(version >= 3 ? { control_version: version } : {}) },
           terms: { eblId, assetKey: issuance.assetKey, documentHash: material.document_hash, settlementAsset: usdc.target, exporter: signers.holder.address,
             feeRecipient: signers.governorA.address, supply: '10', issuePrice: '800000', target: '1000000', minRaise: '8000000',
             subscribeUntil: String(time + (tag === 'refund' ? 300 : tag === 'loss' ? 600 : 7200)),
@@ -73,7 +75,7 @@ export async function runCandidateFunding({ directory, candidate, state, save, t
       p.valuation ??= { termsHash: p.pack.terms_hash, assetKey: p.pack.terms.assetKey, settlementAsset: usdc.target, netValue: '20000000', coverageBps: 15000,
         valuedAt: String(await now()), validUntil: p.pack.terms.disburseUntil, nonce: String(BigInt(id(`valuation:${tag}`))) }; await save();
       const created = await call(`${tag}:create`, controller, 'createControlledOffering', [p.pack.terms, p.valuation, signers.valuer.address,
-        await signers.valuer.signTypedData(rightsDomain(state.chain_id, controller.target), VALUATION_TYPES, p.valuation)], 'issuer');
+        await signers.valuer.signTypedData(rightsDomain(state.chain_id, controller.target, version), VALUATION_TYPES, p.valuation)], 'issuer');
       const event = created.receipt.logs.map((log) => { try { return controller.interface.parseLog(log); } catch { return null; } }).find((log) => log?.name === 'TermsCommitted');
       ensure(event, 'Offering receipt missing'); p.pool_id = String(event.args.poolId); await save();
       ensure((await service.financingDisclosure(p.pack.disclosure_hash)).terms_hash === await controller.termsHash(p.pool_id), 'Readable terms differ from chain');

@@ -16,7 +16,7 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   }, { language, wallet });
   let total = 25, snapshot = 500, partial = false, outage = false, positionsOutage = false, delay = false;
   const requests = [];
-  const config = { chainIdDecimal: 1439, controlVersion: 2, contracts: { RWAOfferingPool: pool } };
+  const config = { chainIdDecimal: 1439, controlVersion: 3, contracts: { RWAOfferingPool: pool } };
   await page.route('**/api/demo/mode', (route) => route.fulfill({ json: { demoMode: false, liveAvailable: true, generation: 4 } }));
   await page.route('**/api/controlled/status', (route) => route.fulfill({ json: { active: true, config } }));
   await page.route('**/api/controlled/positions?**', (route) => route.fulfill(positionsOutage ? { status: 503, json: { error: 'Position unavailable' } } : { json: { complete: true, positions: [], next_cursor: null } }));

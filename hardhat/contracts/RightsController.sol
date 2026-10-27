@@ -14,6 +14,7 @@ import {RightsGovernance} from "./RightsGovernance.sol";
 contract RightsController is EIP712 {
     error InvalidSetup();
     error InvalidOperation();
+    error GovernanceRequired();
     struct OfferingTerms {
         uint256 eblId;
         bytes32 assetKey;
@@ -69,7 +70,7 @@ contract RightsController is EIP712 {
     bytes32 public constant GUARDIAN = keccak256("GUARDIAN");
     uint64 public constant NOTICE_PERIOD = 1 days;
     uint64 public constant MAX_RESOLUTION_PERIOD = 3 days;
-    uint256 public constant controlVersion = 2;
+    uint256 public constant controlVersion = 3;
     bytes32 public constant scope = keccak256("RESEARCH_TEST_ASSETS_ONLY");
     address public immutable governance;
     CommittedEBLRegistry public immutable registry;
@@ -110,7 +111,7 @@ contract RightsController is EIP712 {
     modifier onlyGovernance() { require(msg.sender == governance, "not governance"); _; }
     modifier onlyRole(bytes32 role) { require(roles[role][msg.sender], "role required"); _; }
 
-    constructor(address governance_, address registry_, address token_, address pool_) EIP712("AgentBL Rights", "2") {
+    constructor(address governance_, address registry_, address token_, address pool_) EIP712("AgentBL Rights", "3") {
         if (governance_.code.length == 0 || registry_.code.length == 0) revert InvalidSetup();
         if (RightsGovernance(governance_).delay() < 1 hours || RightsGovernance(governance_).memberCount() < 3
             || CommittedEBLRegistry(registry_).governance() != governance_) revert InvalidSetup();
@@ -234,9 +235,13 @@ contract RightsController is EIP712 {
         if (!ok) assembly ("memory-safe") { revert(add(result, 32), mload(result)) }
         emit LifecycleExecuted(selector, poolId, msg.sender);
     }
-    function applyPricingAction(uint256 poolId, uint256 price, uint8 action, bytes32 evidenceHash, bytes32 quoteHash) external onlyRole(OPERATOR) {
+    /// @notice An operator may reprice, pause, freeze or resume. Before maturity only delayed
+    ///         governance may start liquidation; an operator's emergency brake is FREEZE_POOL.
+    function applyPricingAction(uint256 poolId, uint256 price, uint8 action, bytes32 evidenceHash, bytes32 quoteHash) external {
+        require(roles[OPERATOR][msg.sender] || msg.sender == governance, "role required");
         if (termsHash[poolId] == bytes32(0) || action < 2 || action > 6) revert InvalidOperation();
         if (action == 2 && (intakeStopped || price == 0 || price >= pool.issuePriceOf(poolId))) revert InvalidOperation();
+        if (action == 5 && msg.sender != governance && block.timestamp < pool.maturityAt(poolId)) revert GovernanceRequired();
         pool.applyPricingAction(poolId, price, action, evidenceHash, quoteHash);
     }
     function notifyResolution(uint256 poolId, bytes32 evidenceHash, bytes32 distributionHash, uint256 expectedRecovery) external onlyRole(DISPOSER) {

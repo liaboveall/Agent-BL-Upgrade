@@ -391,7 +391,7 @@ export class RightsService {
     const principal = await this.principal(token);
     if (!this.chain) throw new HttpError(503, 'rights_chain_not_configured', 'Verified chain unavailable');
     const binding = await this.chain.verify({ read: this.readPool.budget(100).read });
-    if (binding.exit_only || this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'live_mode_required', 'An active v2 Live instance is required');
+    if (binding.exit_only || this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'live_mode_required', 'An active current-version Live instance is required');
     const material = await this.readMaterial(token, materialId), registryAddress = await this.chain.registry.getAddress();
     const kind = input?.kind, value = input?.value;
     const fields = kind === 'issuance' ? ISSUANCE_TYPES.Issuance : kind === 'valuation' ? VALUATION_TYPES.Valuation : [];
@@ -401,7 +401,7 @@ export class RightsService {
       const pack = Object.values(state.financing_disclosures ?? {}).find((entry) => entry.material_id === materialId && entry.pack.terms_hash === record.public_summary.terms_hash)?.pack;
       if (kind === 'valuation' && current.roles.includes('valuer') && pack && value?.termsHash === pack.terms_hash && value?.assetKey === pack.terms.assetKey
         && value?.settlementAsset?.toLowerCase() === pack.terms.settlementAsset.toLowerCase()) {
-        return { domain: rightsDomain(Number(this.chain.chainId), binding.controller), types: VALUATION_TYPES, value, kind, terms: pack };
+        return { domain: rightsDomain(Number(this.chain.chainId), binding.controller, binding.control_version), types: VALUATION_TYPES, value, kind, terms: pack };
       }
       if (kind === 'issuance' && current.roles.includes('issuer') && record.owner_id === current.subject_id && value?.documentHash === material.document_hash) {
         return { domain: titleDomain(Number(this.chain.chainId), registryAddress), types: ISSUANCE_TYPES, value, kind };
@@ -493,7 +493,7 @@ export class RightsService {
         }
         const pack = state.financing_disclosures?.[input.payload?.terms?.disclosureHash]?.pack;
         if (!pack || !verifyDisclosure(pack) || pack.terms_hash !== plan.terms_hash
-          || String(pack.document.instance.chain_id) !== plan.chain_id
+          || String(pack.document.instance.chain_id) !== plan.chain_id || (pack.document.instance.control_version ?? 2) !== plan.control_version
           || pack.document.instance.controller.toLowerCase() !== plan.controller.toLowerCase()
           || pack.document.instance.pool.toLowerCase() !== plan.pool.toLowerCase()) throw new HttpError(409, 'financing_disclosure_missing', 'Issuance requires complete immutable readable terms for this instance');
       }

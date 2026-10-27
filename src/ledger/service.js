@@ -5,6 +5,7 @@ import { buildPositionView, balanceKey } from './positionView.js';
 import { PROTOCOL_V5_ABI } from '../chain/protocolV5Abi.js';
 import { chainStateName } from '../agent/runtime/poolRules.js';
 import { RpcReadPool, mapReads, assertSnapshot, snapshotInfo, boundedProvider } from '../rights/reads.js';
+import { CONTROL_VERSION } from '../rights/typedData.js';
 
 const fail = (code, message, status = 409) => { throw Object.assign(new Error(message), { code, status, expose: true }); };
 const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
@@ -80,7 +81,7 @@ export class CapitalLedgerService {
     } catch { chainPositions.clear(); syncError = 'chain_reconciliation_required'; }
     const positions = buildPositionView({ wallet, demoInvestments,
       ledgerPositions: Number(this.chainConfig?.protocolVersion) === 5 ? (ledgerAtSnapshot ?? await this.ledger.listPositions()).filter((pos) => pos.chain_pool_id >= from && pos.chain_pool_id < from + limit) : [], chainPositions })
-      .map((position) => ({ ...position, recovery_rights_retained: position.mode === 'live' && this.chainConfig?.controlVersion === 2 }));
+      .map((position) => ({ ...position, recovery_rights_retained: position.mode === 'live' && this.chainConfig?.controlVersion >= 2 }));
     return { wallet: wallet.toLowerCase(), positions, complete: !syncError && failures.length === 0 && positions.every((pos) => pos.mode !== 'live' || pos.reconciled),
       failures, next_cursor: nextCursor, from, limit, total_pools: total, snapshot, read_metrics: budget.stats,
       ...(syncError || failures.length ? { warning: syncError ?? 'partial_position_reads' } : {}) };
@@ -88,7 +89,7 @@ export class CapitalLedgerService {
 
   async prepareSubscription({ wallet, chain_pool_id: poolId, shares, max_unit_price: maxPrice, expected_quote_version: expectedVersion, deadline, reviewed_disclosure_hash: disclosureHash, authorization_subject, authorization_session }) {
     const generation = this.getGeneration();
-    if (this.chainConfig?.controlVersion === 1) fail('legacy_exit_only', 'This instance accepts existing exits only');
+    if (this.chainConfig?.controlVersion != null && this.chainConfig.controlVersion < CONTROL_VERSION) fail('legacy_exit_only', 'This instance accepts existing exits only');
     if (this.getMode() !== 'live') fail('live_mode_required', 'Switch to Live before preparing a wallet transaction');
     if (!isAddress(wallet) || !/^\d+$/u.test(String(shares)) || BigInt(shares) <= 0n || !Number.isSafeInteger(Number(poolId)) || Number(poolId) < 1) fail('invalid_subscription', 'A wallet, pool and positive whole shares are required', 400);
     const ctx = await this.context(), cfg = this.chainConfig;

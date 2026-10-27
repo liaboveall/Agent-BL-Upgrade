@@ -91,7 +91,7 @@ export function planTransition(action, pool) {
       if (!subscribed) return no('nobody subscribed, so there is no loss to allocate', 'no_subscribers');
       return ok('LossSettled');
     case 'RESOLVE_LIQUIDATION':
-      if (from !== 'Liquidation' && !(pool.controlVersion === 2 && from === 'Defaulted')) return no('the offering is not liquidating');
+      if (from !== 'Liquidation' && !(pool.controlVersion >= 2 && from === 'Defaulted')) return no('the offering is not liquidating');
       if (!subscribed) return ok('Cancelled');
       return ok(BigInt(pool.recoveredAtomic ?? 0) >= BigInt(pool.outstandingAtomic ?? 0) ? 'Repaid' : 'LossSettled');
     case 'UNFREEZE':
@@ -99,7 +99,7 @@ export function planTransition(action, pool) {
       return ok(pool.stateBeforePause && isActive(pool.stateBeforePause) ? pool.stateBeforePause : 'Open');
     case 'DISBURSE':
       if (from !== 'Funded' && from !== 'InTransit') return no('only funded or in-transit offering can disburse');
-      if (pool.controlVersion === 2 && (!pool.drawSourcesValid || pool.chainTimestamp == null || pool.disbursementDeadline == null || pool.maturityAt == null
+      if (pool.controlVersion >= 2 && (!pool.drawSourcesValid || pool.chainTimestamp == null || pool.disbursementDeadline == null || pool.maturityAt == null
         || BigInt(pool.chainTimestamp) >= BigInt(pool.disbursementDeadline) || BigInt(pool.chainTimestamp) >= BigInt(pool.maturityAt))) return no('draw sources or time bounds do not allow new risk');
       return ok(from, false);
     case 'REFUND':
@@ -111,7 +111,7 @@ export function planTransition(action, pool) {
       if (!pool.deadlinePassed || !pool.minimumRaised) return no('funding terms are not satisfied');
       return ok('Funded');
     case 'DEDUCT_FEE':
-      if (pool.controlVersion === 2) return no('the controlled candidate has zero fees');
+      if (pool.controlVersion >= 2) return no('the controlled candidate has zero fees');
       if (!['Repaid', 'LossSettled'].includes(from) || pool.claimsStarted) return no('fees are locked');
       return ok(from, false);
     case 'CLAIM':

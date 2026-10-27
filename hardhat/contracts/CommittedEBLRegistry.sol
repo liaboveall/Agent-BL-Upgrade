@@ -47,8 +47,10 @@ contract CommittedEBLRegistry is EIP712 {
     mapping(uint256 => address) public pledgedTo;
     mapping(uint256 => bytes32) public pledgeTerms;
     mapping(uint256 => bool) public invalidated;
+    mapping(bytes32 => mapping(address => bool)) public revokedIssuer;
 
     event IssuerSet(bytes32 indexed organization, address indexed issuer);
+    event IssuerRevoked(bytes32 indexed organization, address indexed issuer, bytes32 evidenceHash);
     event ControllerBound(address indexed controller);
     event TitleRegistered(uint256 indexed eblId, bytes32 indexed assetKey, bytes32 documentHash, address holder, uint64 revision);
     event TitleAmended(uint256 indexed eblId, bytes32 previousHash, bytes32 documentHash, uint64 revision);
@@ -63,10 +65,23 @@ contract CommittedEBLRegistry is EIP712 {
         require(governance_.code.length > 0 && hub_.code.length > 0, "dependencies missing");
         governance = governance_; hub = AssetIdentityHub(hub_);
     }
+    /// @notice Rotation: the new signer issues from now on; titles signed by earlier keys stay active.
     function setIssuer(bytes32 organization, address signer) external {
         require(msg.sender == governance && organization != bytes32(0), "not governance");
+        require(!revokedIssuer[organization][signer], "issuer revoked");
         issuerForOrg[organization] = signer;
         emit IssuerSet(organization, signer);
+    }
+    /// @notice Revocation: every title this key signed for the organization becomes inactive, permanently.
+    function revokeIssuer(bytes32 organization, address signer, bytes32 evidenceHash) external {
+        require(msg.sender == governance && signer != address(0) && evidenceHash != bytes32(0), "not governance");
+        require(!revokedIssuer[organization][signer], "issuer revoked");
+        revokedIssuer[organization][signer] = true;
+        if (issuerForOrg[organization] == signer) {
+            issuerForOrg[organization] = address(0);
+            emit IssuerSet(organization, address(0));
+        }
+        emit IssuerRevoked(organization, signer, evidenceHash);
     }
     function bindController(address account) external {
         require(msg.sender == governance && controller == address(0) && account.code.length > 0, "controller binding locked");
@@ -158,7 +173,7 @@ contract CommittedEBLRegistry is EIP712 {
     }
     function isActive(uint256 eblId) public view returns (bool) {
         Title storage t = titles[eblId];
-        return t.holder != address(0) && !t.surrendered && !invalidated[eblId] && issuerForOrg[t.issuerOrg] == t.issuer && hub.registry(address(this));
+        return t.holder != address(0) && !t.surrendered && !invalidated[eblId] && !revokedIssuer[t.issuerOrg][t.issuer] && hub.registry(address(this));
     }
     function holderOf(uint256 eblId) external view returns (address) { return titles[eblId].holder; }
     function cargoHashOf(uint256 eblId) external view returns (bytes32) { return titles[eblId].assetKey; }

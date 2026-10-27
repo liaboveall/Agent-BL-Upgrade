@@ -103,6 +103,8 @@ export async function runAcceptance({ directory, candidate, state, save, txSend,
   ensure(['prepare', 'screening', 'repay'].includes(stage), 'Unknown acceptance stage');
   const input = parseAcceptanceInput(raw, state.actors);
   const { controller, registry, pool, usdc } = contracts(state, candidate, provider);
+  // Version 2 candidates predate the version field in their disclosures and signing domain.
+  const version = candidate.control_version ?? 2;
   state.acceptance ??= { schema: 'agentbl-n5-acceptance-v1', chain_id: state.chain_id, runs: {}, real_business: false, human_verified: false };
   const work = state.acceptance.runs[input.run] ??= { run: input.run, investors: {}, scenarios: {}, screenings: [], execution_sources: [] };
   const source = await releaseSourceSnapshot();
@@ -146,7 +148,7 @@ export async function runAcceptance({ directory, candidate, state, save, txSend,
             public_summary: { asset_class: 'copper', settlement: 'TEST_USDC', tenor_days: Math.min(366, Math.ceil((timing.maturity - time) / DAY)), terms_hash: id(`provisional:${name}`), risk_flags: ['simulated_title', 'test_asset', 'capital_at_risk'] } });
           const issuance = { assetKey: assetIdentity('AGENTBL N5 SYNTHETIC ISSUER', `${registry.target}:${name}`), documentHash: material.document_hash,
             issuerOrg: id('AGENTBL_N5_SYNTHETIC_ISSUER'), holder: signers.holder.address, revision: 1, previousHash: ZeroHash, nonce: String(BigInt(id(`issuance:${name}`))), validUntil: String(time + 7 * DAY) };
-          const pack = await service.createFinancingDisclosure(sessions.issuer, material.material_id, { revision: 1, instance: { chain_id: state.chain_id, controller: controller.target, pool: pool.target },
+          const pack = await service.createFinancingDisclosure(sessions.issuer, material.material_id, { revision: 1, instance: { chain_id: state.chain_id, controller: controller.target, pool: pool.target, ...(version >= 3 ? { control_version: version } : {}) },
             terms: { eblId, assetKey: issuance.assetKey, documentHash: material.document_hash, settlementAsset: usdc.target, exporter: signers.holder.address, feeRecipient: signers.governorA.address,
               ...ACCEPTANCE_TERMS, subscribeUntil: String(timing.subscribeUntil), disburseUntil: String(timing.disburseUntil), maturity: String(timing.maturity), maxFee: '0', nonce: String(BigInt(id(`terms:${name}`))) },
             parties: Object.fromEntries(['issuer', 'holder', 'operator', 'valuer', 'compliance', 'disposer', 'reviewer', 'governance'].map((role) => [role, role === 'governance' ? state.contracts.RightsGovernance : signers[role].address])),
@@ -164,7 +166,7 @@ export async function runAcceptance({ directory, candidate, state, save, txSend,
         p.valuation ??= { termsHash: p.pack.terms_hash, assetKey: p.pack.terms.assetKey, settlementAsset: usdc.target, netValue: '20000000', coverageBps: 15000,
           valuedAt: String(await now()), validUntil: p.pack.terms.disburseUntil, nonce: String(BigInt(id(`valuation:${name}`))) }; await save();
         const created = await call(`${tag}:create`, controller, 'createControlledOffering', [p.pack.terms, p.valuation, signers.valuer.address,
-          await signers.valuer.signTypedData(rightsDomain(state.chain_id, controller.target), VALUATION_TYPES, p.valuation)], 'issuer');
+          await signers.valuer.signTypedData(rightsDomain(state.chain_id, controller.target, version), VALUATION_TYPES, p.valuation)], 'issuer');
         const event = created.receipt.logs.map((log) => { try { return controller.interface.parseLog(log); } catch { return null; } }).find((log) => log?.name === 'TermsCommitted');
         ensure(event, 'Offering receipt missing'); p.pool_id = String(event.args.poolId); await save();
         ensure((await service.financingDisclosure(p.pack.disclosure_hash)).terms_hash === await controller.termsHash(p.pool_id), 'Readable terms differ from chain');

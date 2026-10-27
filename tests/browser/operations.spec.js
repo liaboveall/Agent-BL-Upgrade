@@ -39,7 +39,7 @@ for (const language of ['zh', 'en']) {
       } };
     }, { language, wallet });
     await page.route('**/api/demo/mode', (route) => route.fulfill({ json: { mode: 'live', demoMode: false, liveAvailable: true, generation: 3 } }));
-    const config = { chainIdDecimal: 1439, protocolVersion: 5, confirmations: 3, contracts: { RWAOfferingPool: pool, RWAToken: `0x${'78'.repeat(20)}` }, abis: { RWAOfferingPool: [] } };
+    const config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 3, confirmations: 3, contracts: { RWAOfferingPool: pool, RWAToken: `0x${'78'.repeat(20)}` }, abis: { RWAOfferingPool: [] } };
     const pack = { ...disclosureFixture(), pool_id: 1, quote_version: '3' };
     await page.route('**/api/controlled/offerings/1/terms*', (route) => route.fulfill({ json: pack }));
     await page.route('**/api/controlled/status', (route) => route.fulfill({ json: { active: true, config, controller: `0x${'90'.repeat(20)}` } }));

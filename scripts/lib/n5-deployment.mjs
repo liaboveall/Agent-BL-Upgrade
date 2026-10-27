@@ -142,7 +142,7 @@ export async function executeCandidate({ directory, candidate, provider, signers
     await candidateRuntime(provider, candidate, state);
     state.active = true; state.activated_at ??= new Date().toISOString(); await save();
   }
-  const manifest = { schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 2, instance_id: candidate.instance_id,
+  const manifest = { schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: candidate.control_version, instance_id: candidate.instance_id,
     chain_id: chainId, rpc_url: candidate.rpc_url ?? candidate.predecessor.manifest.rpc_url, contracts: state.contracts, actors: state.actors,
     deployment_block: state.transactions.find((tx) => tx.label === 'deploy:RightsController')?.block_number };
   await writeJsonAtomic(path.join(directory, 'rights-instance.json'), manifest, { durable: true });

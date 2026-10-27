@@ -20,7 +20,7 @@ export async function financingReview(chain, disclosures, poolId) {
     ...['issuer', 'operator', 'valuer', 'compliance', 'disposer', 'reviewer'].map((role) => view(chain.controller, 'roles', id(role.toUpperCase()), parties[role], at))]);
   const matches = Number(pack.document.instance.chain_id) === Number(chain.chainId)
     && equal(pack.document.instance.controller, controller) && equal(pack.document.instance.pool, pool)
-    && equal(pack.terms_hash, hash) && equal(hashOfferingTerms(chain.chainId, controller, pack.terms), hash)
+    && equal(pack.terms_hash, hash) && equal(hashOfferingTerms(chain.chainId, controller, pack.terms, pack.document.instance.control_version ?? 2), hash)
     && TERMS_TYPES.OfferingTerms.every(({ name }) => equal(terms[name], pack.terms[name]))
     && equal(offer.issuePrice, terms.issuePrice) && equal(offer.targetRedemptionValue, terms.target)
     && equal(offer.tokenSupply, terms.supply) && equal(offer.settlementAsset, terms.settlementAsset)

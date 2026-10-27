@@ -26,12 +26,13 @@ async function funded(ctx, tag, options = {}) {
 }
 
 describe('protocol v5 capital safety and conservation', () => {
-  it('reprices v5 without changing funded debt or paid cost', async () => {
+  it('fixes the price once shares are sold, leaving funded debt and paid cost unchanged', async () => {
     const ctx = await deployProtocolV5();
     const { poolId } = await funded(ctx, 'v5-oracle');
     const before = await ctx.pool.outstandingDebt(poolId);
-    await send(applyPricing(ctx, poolId, 700_000n, ACTION.REPRICE_DOWN));
-    expect(await ctx.pool.quoteVersion(poolId)).to.equal(2n);
+    await expect(applyPricing(ctx, poolId, 700_000n, ACTION.REPRICE_DOWN)).to.be.revertedWithCustomError(ctx.pool, 'HasSubscribers');
+    await expect(applyPricing(ctx, poolId, 900_000n, ACTION.OPEN_OFFERING)).to.be.revertedWithCustomError(ctx.pool, 'HasSubscribers');
+    expect(await ctx.pool.quoteVersion(poolId)).to.equal(1n);
     expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Funded);
     expect(await ctx.pool.outstandingDebt(poolId)).to.equal(before);
     expect(await ctx.pool.investorPaid(poolId, await ctx.usdc.getAddress(), ctx.investor.address)).to.equal(10n * ISSUE_PRICE);
@@ -126,12 +127,13 @@ describe('protocol v5 capital safety and conservation', () => {
     await send(ctx.pool.disburseToExporter(poolId, 8n * ISSUE_PRICE, ctx.exporter.address, uniqueHash('valid')));
   });
 
-  it('refunds actual paid amounts after repricing even when every share sold below the minimum', async () => {
+  it('refuses a repricing that cannot reach the minimum and refunds exact paid amounts of a failed raise', async () => {
     const ctx = await deployProtocolV5();
     const { poolId, deadline } = await newOfferingV5(ctx, 'below-min', { supply: 10n, minRaise: 10n * ISSUE_PRICE });
+    await expect(ctx.pool.applyPricingAction(poolId, ISSUE_PRICE / 2n, ACTION.REPRICE_DOWN, uniqueHash('price'), uniqueHash('quote'))).to.be.revertedWithCustomError(ctx.pool, 'MinRaiseAboveMax');
     await subscribe(ctx, poolId, ctx.investor, 5n);
-    await send(ctx.pool.applyPricingAction(poolId, ISSUE_PRICE / 2n, ACTION.REPRICE_DOWN, uniqueHash('price'), uniqueHash('quote')));
-    await subscribe(ctx, poolId, ctx.outsider, 5n, ISSUE_PRICE / 2n);
+    await expect(ctx.pool.applyPricingAction(poolId, ISSUE_PRICE / 2n, ACTION.REPRICE_DOWN, uniqueHash('price'), uniqueHash('quote'))).to.be.revertedWithCustomError(ctx.pool, 'HasSubscribers');
+    await subscribe(ctx, poolId, ctx.outsider, 4n);
     expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Subscribed);
     await advance(deadline + 1n);
     await send(ctx.pool.refundInvestor(poolId, ctx.investor.address));
@@ -139,7 +141,7 @@ describe('protocol v5 capital safety and conservation', () => {
     await expect(ctx.pool.refundInvestor(poolId, ctx.investor.address)).to.be.revertedWithCustomError(ctx.pool, 'NothingToRefund');
     await send(ctx.pool['refundAllOnFailure(uint256,uint256,uint256)'](poolId, 0n, 100n));
     expect(await ctx.usdc.balanceOf(ctx.investor.address)).to.equal(5n * ISSUE_PRICE);
-    expect(await ctx.usdc.balanceOf(ctx.outsider.address)).to.equal(5n * ISSUE_PRICE / 2n);
+    expect(await ctx.usdc.balanceOf(ctx.outsider.address)).to.equal(4n * ISSUE_PRICE);
     expect(await ctx.pool.stateOf(poolId)).to.equal(STATE.Cancelled);
     expect(await ctx.token.totalSupply(poolId)).to.equal(0n);
   });
@@ -270,6 +272,10 @@ describe('protocol v5 model and pending-raise exits', () => {
         const model = { ...offering, asset, deposits: 0n, recovery: 0n, disbursed: 0n, claimed: 0n, fees: 0n };
         pools.push(model);
         let price = ISSUE_PRICE, remaining = 20n;
+        if (random(2)) {
+          price -= BigInt(random(10_000) + 1);
+          await send(ctx.pool.applyPricingAction(model.poolId, price, ACTION.REPRICE_DOWN, uniqueHash('model-price'), uniqueHash('model-quote')));
+        }
         while (remaining > 0n) {
           const shares = remaining < 5n ? remaining : BigInt(random(5) + 1);
           const signer = investors[random(investors.length)];
@@ -278,8 +284,8 @@ describe('protocol v5 model and pending-raise exits', () => {
           await check();
           expect((await ctx.pool.offerings(model.poolId)).targetRedemptionValue).to.equal(TARGET);
           if (remaining && random(2)) {
-            price -= BigInt(random(10_000) + 1);
-            await send(ctx.pool.applyPricingAction(model.poolId, price, ACTION.REPRICE_DOWN, uniqueHash('model-price'), uniqueHash('model-quote')));
+            await expect(ctx.pool.applyPricingAction(model.poolId, price - 1n, ACTION.REPRICE_DOWN, uniqueHash('model-price'), uniqueHash('model-quote')))
+              .to.be.revertedWithCustomError(ctx.pool, 'HasSubscribers');
           }
         }
         await send(ctx.pool.disburseToExporter(model.poolId, model.deposits, ctx.exporter.address, uniqueHash('model-drawdown')));

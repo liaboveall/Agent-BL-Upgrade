@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ContractFactory, Interface, getCreateAddress, isAddress, ZeroAddress } from 'ethers';
 import { releaseRoot, releaseSourceSnapshot, digest } from './lib/release-source.mjs';
+import { CONTROL_VERSION } from '../src/rights/typedData.js';
 
 const names = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'ControlledRWAToken', 'RWAOfferingPoolV5', 'RecoveryEntitlements', 'RightsController'];
 export async function prepareRightsCandidate(input) {
@@ -46,17 +47,18 @@ export async function prepareRightsCandidate(input) {
     { target: contracts.CommittedEBLRegistry, data: new Interface(artifacts.CommittedEBLRegistry.abi).encodeFunctionData('bindController', [contracts.RightsController]) }
   ];
   return { schema: 'agentbl-rights-candidate-v2', instance_id: input.instance_id, scope: 'research_test_assets_only',
-    control_version: 2, chain_id: input.chain_id, signature_domain: { name: 'AgentBL Rights', version: '2' },
+    control_version: CONTROL_VERSION, chain_id: input.chain_id, signature_domain: { name: 'AgentBL Rights', version: String(CONTROL_VERSION) },
     execution: 'unsigned_only', broadcast: false, active: false, source, contracts, transactions, governance_calls: governanceCalls,
     artifacts, artifact_sha256: Object.fromEntries(names.map((name) => [name, digest(JSON.stringify(artifacts[name]))])),
-    predecessor: { manifest: legacy, artifact_inventory: 'scripts/config/rights-v1-artifacts.json', new_risk_enabled: false,
+    predecessor: { manifest: legacy, new_risk_enabled: false,
+      artifact_inventory: legacy.control_version < CONTROL_VERSION ? `scripts/config/rights-v${legacy.control_version}-artifacts.json` : 'hardhat/artifacts/contracts',
       exit_policy: 'Retain original configuration, ABI, ledger and wallet exits; do not reuse deployment checkpoints or pending intents' },
     runtime_namespace: `controlled-capital-${contracts.RWAOfferingPoolV5.toLowerCase()}`,
     activation_requirements: ['Confirm canonical chain, unused deployer nonce and shared governance/hub runtime before each deployment',
       'Reconcile each original nonce/hash; never resend unknown transactions', 'Verify every runtime including pool-created RecoveryEntitlements and its immutable pool',
       'Two governors enroll the new registry and bind its controller after delay; retain all existing hub reservations',
       'Approve issuer, distinct operational roles and standard test asset; default intake stays stopped until independently verified',
-      'Record actual deployment block and create a new agentbl-rights-instance-v1 manifest with control_version=2',
+      `Record actual deployment block and create a new agentbl-rights-instance-v1 manifest with control_version=${CONTROL_VERSION}`,
       'Complete N5.2 acceptance, then switch both public configs together; archive predecessor configs without changing its funds'] };
 }
 

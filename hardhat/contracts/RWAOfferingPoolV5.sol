@@ -937,6 +937,10 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (newIssuePrice > 0 && newIssuePrice != o.issuePrice) {
             if (!(newIssuePrice <= o.targetRedemptionValue)) revert PriceAboveTarget();
             if (!(action != REPRICE_DOWN || newIssuePrice < o.issuePrice)) revert RepriceNotDown();
+            // Every share carries the same claim, so the price is fixed once anyone has paid it,
+            // and a full raise at the new price must still reach the minimum.
+            if (o.subscribed != 0) revert HasSubscribers();
+            if (o.tokenSupply * newIssuePrice < o.minRaise) revert MinRaiseAboveMax();
             uint256 oldPrice = o.issuePrice;
             o.issuePrice = newIssuePrice;
             quoteVersion[poolId] += 1;
@@ -984,6 +988,20 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!(oldState != newState)) revert DuplicateState();
         o.state = newState;
         emit OfferingStateChanged(poolId, oldState, newState, action);
+    }
+
+    /// @notice Anyone may retry a terminal pool's collateral release after the in-line attempt failed.
+    ///         Returns false, without changes, once the title is no longer pledged for this pool.
+    function retryCollateralRelease(uint256 poolId) external nonReentrant returns (bool) {
+        Offering storage o = offerings[poolId];
+        if (!(o.state == OfferingState.Repaid || o.state == OfferingState.LossSettled
+            || (o.state == OfferingState.Cancelled && o.raisedAtomic == 0))) revert BadState();
+        uint256 current = poolOfEbl[o.eblId];
+        if ((current != 0 && current != poolId) || eblRegistry.pledgedTo(o.eblId) != address(this)) return false;
+        if (current == poolId) delete poolOfEbl[o.eblId];
+        eblRegistry.releasePledge(o.eblId);
+        emit CollateralReleased(poolId, o.eblId);
+        return true;
     }
 
     function _releaseCollateral(uint256 poolId, uint256 eblId) internal {

@@ -22,7 +22,7 @@ export async function rightsDeploymentPlan() {
     required_inputs: ['three independent governor addresses', 'issuer / holder / valuer / operator / attestor / compliance / disposer / reviewer / guardian addresses',
       'reviewed test settlement asset', 'shared hub and historical title alias inventory', 'encrypted material custody and separately backed-up vault key', 'approved notice and distribution policy'],
     steps: ['freeze source and artifacts; inventory existing instances read-only', 'deploy governance with 2-of-3 membership and minimum 3600 second delay',
-      'reuse the enrolled identity hub and governance; deploy a fresh committed registry', 'deploy token and pool; bind token; deploy v2 controller with their fixed addresses; nominate it as pool owner',
+      'reuse the enrolled identity hub and governance; deploy a fresh committed registry', 'deploy token and pool; bind token; deploy the current-version controller with their fixed addresses; nominate it as pool owner',
       'activate controller once; verify pool owner/oracle/gate/mode and token binding', 'two governors approve registry enrollment, source issuer and controller binding; wait the delay',
       'two governors approve operational roles and test-asset allowlist; verify no raw pool executor', 'import reviewed legacy aliases before permitting controlled issuance',
       'verify identities, sign source and valuation credentials, collect holder consent, publish two-reviewer disclosure',

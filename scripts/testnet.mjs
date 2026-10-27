@@ -69,7 +69,7 @@ try {
         hub: predecessor.contracts.AssetIdentityHub, deployer: signers.governorA.address, nonce: latest });
       candidate.contracts.MockAuthorizationUSDC = predecessor.contracts.MockAuthorizationUSDC;
       candidate.artifacts.MockAuthorizationUSDC = await readJson(path.join(releaseRoot, 'hardhat/artifacts/contracts/MockAuthorizationUSDC.sol/MockAuthorizationUSDC.json'));
-      candidate.authorization = '2026-10-19 direct user authorization: commits, pushes, deployments and test broadcasts';
+      candidate.authorization = `${new Date().toISOString().slice(0, 10)} direct user authorization: control version ${candidate.control_version} commits, pushes, deployment and activation`;
       await fs.mkdir(directory, { recursive: true });
       await fs.writeFile(candidateFile, JSON.stringify(candidate, null, 2) + '\n', { flag: 'wx' });
       await fs.writeFile(path.join(directory, 'predecessor-rights.json'), JSON.stringify(predecessor, null, 2) + '\n', { flag: 'wx' });

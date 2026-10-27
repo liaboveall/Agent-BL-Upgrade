@@ -4,7 +4,7 @@ import { disclosureFixture } from '../helpers/disclosure.js';
 
 for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440]) test(`N3 ${language} ${width}: pages, partial failures, role preview and wallet invalidation`, async ({ page }, info) => {
   const zh = language === 'zh', wallet = `0x${'12'.repeat(20)}`, pack = disclosureFixture(), materialId = '11111111-1111-4111-8111-111111111111';
-  const snapshot = { block_number: 500, block_hash: `0x${'ab'.repeat(32)}` }, config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 2,
+  const snapshot = { block_number: 500, block_hash: `0x${'ab'.repeat(32)}` }, config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 3,
     contracts: { RWAOfferingPool: pack.document.instance.pool }, abis: { RWAOfferingPool: [] } };
   await page.setViewportSize({ width, height: 1000 });
   await page.addInitScript(({ language, wallet }) => {

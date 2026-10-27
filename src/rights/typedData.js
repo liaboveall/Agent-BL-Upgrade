@@ -25,9 +25,11 @@ export const VALUATION_TYPES = Object.freeze({ Valuation: fields([
 export const SESSION_TYPES = Object.freeze({ BusinessSession: fields([
   ['subject', 'bytes32'], ['organization', 'bytes32'], ['wallet', 'address'], ['nonce', 'bytes32'], ['validUntil', 'uint64']
 ]) });
-export function rightsDomain(chainId, verifyingContract) { return { name: 'AgentBL Rights', version: '2', chainId, verifyingContract }; }
+/** Control version of newly deployed instances. Older instances keep their own signing domain. */
+export const CONTROL_VERSION = 3;
+export function rightsDomain(chainId, verifyingContract, version = CONTROL_VERSION) { return { name: 'AgentBL Rights', version: String(version), chainId, verifyingContract }; }
 export function titleDomain(chainId, verifyingContract) { return { name: 'AgentBL Title', version: '1', chainId, verifyingContract }; }
-export function hashOfferingTerms(chainId, controller, terms) { return TypedDataEncoder.hash(rightsDomain(chainId, controller), TERMS_TYPES, terms); }
+export function hashOfferingTerms(chainId, controller, terms, version = CONTROL_VERSION) { return TypedDataEncoder.hash(rightsDomain(chainId, controller, version), TERMS_TYPES, terms); }
 
 /** Only normalized, issuer-stable identifiers belong in this reservation domain.
  * The issuer must assign the same original identity to amendments and replacements.

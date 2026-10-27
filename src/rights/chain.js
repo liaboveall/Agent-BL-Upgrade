@@ -3,6 +3,7 @@ import { Contract, Interface, JsonRpcProvider, FetchRequest, id } from 'ethers';
 import { readJson } from '../lib/jsonStore.js';
 import { HttpError } from '../app/http.js';
 import { RpcReadPool } from './reads.js';
+import { CONTROL_VERSION } from './typedData.js';
 
 export const RIGHTS_CONTROLLER_ABI = [
   'function governance() view returns (address)', 'function registry() view returns (address)', 'function token() view returns (address)',
@@ -18,6 +19,11 @@ const requireThat = (condition, code) => { if (!condition) throw new HttpError(4
 const uint = (value) => { requireThat(typeof value === 'string' && /^(?:0|[1-9]\d*)$/u.test(value) && BigInt(value) < 2n ** 256n, 'rights_integer_invalid'); return value; };
 const ARTIFACTS = path.resolve(import.meta.dirname, '../../hardhat/artifacts/contracts');
 const CONTRACTS = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5'];
+// Earlier instances are verified against the ABI/runtime frozen before the next version's edits.
+const FROZEN_ARTIFACTS = { 1: 'rights-v1-artifacts.json', 2: 'rights-v2-artifacts.json' };
+// Superseded instances keep only exits that add no new risk; v1 predates the public exit paths.
+const LEGACY_OPERATIONS = { 1: ['notify_resolution', 'review_resolution', 'finalize_resolution'],
+  2: ['repay', 'record_payment', 'record_arrival', 'settle', 'mark_default', 'notify_resolution', 'review_resolution', 'finalize_resolution', 'start_exit', 'dispute_resolution'] };
 export function maskImmutableBytecode(bytecode, artifact) {
   let code = String(bytecode).toLowerCase();
   for (const ranges of Object.values(artifact.immutableReferences ?? {})) for (const { start, length } of ranges) {
@@ -42,7 +48,7 @@ export class RightsChainService {
       view(this.governance, 'memberCount'), view(this.governance, 'delay'), view(this.controller, 'scope'), view(this.pool, 'protocolVersion'), view(this.registry, 'governance'), view(this.registry, 'hub'),
       view(this.pool, 'oracle'), view(this.pool, 'eblRegistry'), view(this.pool, 'rwaToken'), view(this.controller, 'eip712Domain'), view(this.registry, 'eip712Domain')
     ]);
-    requireThat(BigInt(network.chainId) === BigInt(this.chainId) && [1n, 2n].includes(BigInt(version)) && BigInt(capitalVersion) === 5n
+    requireThat(BigInt(network.chainId) === BigInt(this.chainId) && BigInt(version) >= 1n && BigInt(version) <= BigInt(CONTROL_VERSION) && BigInt(capitalVersion) === 5n
       && [1439n, 31337n].includes(BigInt(network.chainId)) && scope === id('RESEARCH_TEST_ASSETS_ONLY'), 'rights_network_mismatch');
     requireThat(equal(owner, await this.controller.getAddress()) && equal(actualPool, await this.pool.getAddress())
       && equal(actualRegistry, await this.registry.getAddress()) && equal(actualToken, await this.token.getAddress())
@@ -64,7 +70,7 @@ export class RightsChainService {
       const code = await read(() => this.provider.getCode(addresses[name], readAt?.blockTag));
       requireThat(maskImmutableBytecode(code, a) === maskImmutableBytecode(a.deployedBytecode, a), 'rights_bytecode_mismatch');
     }
-    if (BigInt(version) === 2n) {
+    if (BigInt(version) >= 2n) {
       const rightsAddress = await view(this.pool, 'recoveryRights');
       const rights = new Contract(rightsAddress, ['function pool() view returns (address)'], this.provider);
       requireThat(await view(this.pool, 'cumulativeClaims') && BigInt(await view(this.pool, 'executorCount')) === 0n
@@ -73,11 +79,11 @@ export class RightsChainService {
       requireThat(a?.deployedBytecode && maskImmutableBytecode(await read(() => this.provider.getCode(rightsAddress, readAt?.blockTag)), a)
         === maskImmutableBytecode(a.deployedBytecode, a), 'rights_bytecode_mismatch');
     }
-    return { chain_id: String(network.chainId), controller: owner, pool: actualPool, governance: gov, control_version: Number(version), exit_only: BigInt(version) === 1n };
+    return { chain_id: String(network.chainId), controller: owner, pool: actualPool, governance: gov, control_version: Number(version), exit_only: Number(version) < CONTROL_VERSION };
   }
   async prepare(principal, input) {
     const binding = await this.verify();
-    requireThat(!binding.exit_only || ['notify_resolution', 'review_resolution', 'finalize_resolution'].includes(input?.operation), 'rights_legacy_exit_only');
+    requireThat(!binding.exit_only || LEGACY_OPERATIONS[binding.control_version].includes(input?.operation), 'rights_legacy_exit_only');
     requireThat(input && Object.keys(input).every((key) => ['operation', 'pool_id', 'terms_hash', 'quote_version', 'valid_until', 'amount_atomic', 'evidence_hash', 'distribution_hash', 'payload', 'material_id', 'reviewed_disclosure_hash'].includes(key)), 'rights_plan_invalid');
     const operations = {
       register_title: { roles: ['issuer'], contract: this.registry, method: 'registerTitle', args: () => [input.payload?.issuance, input.payload?.signature] },
@@ -97,7 +103,8 @@ export class RightsChainService {
       review_resolution: { roles: ['reviewer'], method: 'reviewResolution', args: () => [uint(input.pool_id), input.evidence_hash] },
       finalize_resolution: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'finalizeResolution', args: () => [uint(input.pool_id)] },
       start_exit: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'startExit', args: () => [uint(input.pool_id)] },
-      dispute_resolution: { roles: ['holder', 'investor', 'reviewer'], method: 'disputeResolution', args: () => [uint(input.pool_id), input.evidence_hash] }
+      dispute_resolution: { roles: ['holder', 'investor', 'reviewer'], method: 'disputeResolution', args: () => [uint(input.pool_id), input.evidence_hash] },
+      retry_collateral_release: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator', 'reviewer'], contract: this.pool, method: 'retryCollateralRelease', args: () => [uint(input.pool_id)] }
     };
     const operation = operations[input.operation];
     if (!operation) throw new HttpError(400, 'rights_plan_operation_unknown', 'Unsupported rights transaction plan');
@@ -172,9 +179,9 @@ export async function loadRightsChain(file) {
   const provider = new JsonRpcProvider(rpc, undefined, { cacheTimeout: -1 });
   try {
   const version = Number(await new Contract(cfg.contracts.RightsController, RIGHTS_CONTROLLER_ABI, provider).controlVersion());
-  requireThat([1, 2].includes(version) && (cfg.control_version == null || cfg.control_version === version), 'rights_signature_domain_mismatch');
-  const artifacts = version === 1
-    ? (await readJson(path.resolve(import.meta.dirname, '../../scripts/config/rights-v1-artifacts.json')))?.contracts
+  requireThat(Number.isSafeInteger(version) && version >= 1 && version <= CONTROL_VERSION && (cfg.control_version == null || cfg.control_version === version), 'rights_signature_domain_mismatch');
+  const artifacts = FROZEN_ARTIFACTS[version]
+    ? (await readJson(path.resolve(import.meta.dirname, '../../scripts/config', FROZEN_ARTIFACTS[version])))?.contracts
     : Object.fromEntries(await Promise.all([...CONTRACTS, 'RecoveryEntitlements'].map(async (name) => [name, await readJson(path.join(ARTIFACTS, `${name}.sol`, `${name}.json`))])));
   requireThat(CONTRACTS.every((name) => artifacts?.[name]?.abi), 'rights_artifact_missing');
   const contract = (name) => new Contract(cfg.contracts[name], new Interface(artifacts[name].abi), provider);

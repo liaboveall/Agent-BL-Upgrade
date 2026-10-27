@@ -16,8 +16,9 @@ async function funded(c, patch = {}, amounts = [5n, 5n]) {
   return p;
 }
 const draw = (c, p, amount = 8_000_000n) => send(c.controller.connect(c.operator).disburse(p.poolId, amount, uniqueHash()));
+// Before maturity only delayed governance may start liquidation.
 async function liquidate(c, p) {
-  await send(c.controller.connect(c.operator).applyPricingAction(p.poolId, 0, ACTION.TRIGGER_LIQUIDATION, uniqueHash(), uniqueHash()));
+  await c.govern(c.controller, 'applyPricingAction', [p.poolId, 0, ACTION.TRIGGER_LIQUIDATION, uniqueHash(), uniqueHash()]);
   const cash = await c.pool.recoveredAtomic(p.poolId) + p.terms.supply * p.terms.issuePrice - await c.pool.disbursedAtomic(p.poolId);
   await send(c.controller.connect(c.disposer).notifyResolution(p.poolId, uniqueHash(), uniqueHash(), cash));
 }
@@ -47,7 +48,7 @@ describe('N0/N1 bounded exits, permanent recovery rights and zero fees', () => {
       if (revoke === 'expiry') await c.advance(p.valuation.validUntil);
       if (revoke === 'valuer') await c.govern(c.controller, 'setRole', [await c.controller.VALUER(), c.valuer.address, false]);
       if (revoke === 'asset') await c.govern(c.controller, 'setTestAsset', [await c.usdc.getAddress(), false]);
-      if (revoke === 'issuer') await c.govern(c.registry, 'setIssuer', [c.organization, ethers.ZeroAddress]);
+      if (revoke === 'issuer') await c.govern(c.registry, 'revokeIssuer', [c.organization, c.issuer.address, uniqueHash()]);
       await send(c.controller.connect(c.compliance).refreshScreening((await c.now()) + 80000n, uniqueHash()));
       await expect(draw(c, p)).to.be.revertedWith(revoke === 'issuer' ? 'intake unavailable' : 'draw sources unavailable');
       if (revoke === 'valuer') await c.govern(c.controller, 'setRole', [await c.controller.VALUER(), c.valuer.address, true]);

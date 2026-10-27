@@ -91,13 +91,14 @@ describe('W3 committed rights and controlled capital instance', () => {
     await send(attempt({}));
   });
   it('fails closed for missing/expired/revoked qualification, screening and changed quote acceptance', async () => {
-    const c = await deployRights(), p = await c.create();
+    const c = await deployRights(), p = await c.create({ minRaise: 7_000_000n });
     await send(c.usdc.mint(c.investor.address, 10_000_000n)); await send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), ethers.MaxUint256));
     await expect(c.pool.connect(c.investor).subscribe(p.poolId, 1)).to.be.revertedWithCustomError(c.pool, 'NotEligible');
-    await c.eligible(p); await send(c.pool.connect(c.investor).subscribeWithTerms(p.poolId, 1, 800000, 1, p.terms.subscribeUntil));
+    await c.eligible(p);
     await send(c.controller.connect(c.operator).applyPricingAction(p.poolId, 700000, ACTION.REPRICE_DOWN, uniqueHash(), uniqueHash()));
     await expect(c.pool.connect(c.investor).subscribe(p.poolId, 1)).to.be.revertedWithCustomError(c.pool, 'NotEligible');
     await send(c.controller.connect(c.investor).acknowledgeTerms(p.poolId, p.hash, 2, p.terms.subscribeUntil));
+    await send(c.pool.connect(c.investor).subscribeWithTerms(p.poolId, 1, 700000, 2, p.terms.subscribeUntil));
     await send(c.pool.connect(c.investor).subscribe(p.poolId, 1));
     await send(c.controller.connect(c.compliance).setEligibility(c.investor.address, uniqueHash(), uniqueHash(), 0));
     await expect(c.pool.connect(c.investor).subscribe(p.poolId, 1)).to.be.revertedWithCustomError(c.pool, 'NotEligible');
@@ -109,7 +110,7 @@ describe('W3 committed rights and controlled capital instance', () => {
     await send(c.pool.connect(c.investor).subscribe(p.poolId, 2));
     await send(c.controller.connect(c.guardian).setIntakeStopped(true, uniqueHash()));
     await expect(c.controller.connect(c.guardian).setIntakeStopped(false, uniqueHash())).to.be.revertedWith('not authorized');
-    await c.govern(c.registry, 'setIssuer', [c.organization, ethers.ZeroAddress]);
+    await c.govern(c.registry, 'revokeIssuer', [c.organization, c.issuer.address, uniqueHash()]);
     await c.advance(p.terms.subscribeUntil + 1n);
     await send(c.pool.connect(c.investor).refundInvestor(p.poolId, c.investor.address));
     expect(await c.token.balanceOf(p.poolId, c.investor.address)).to.equal(0n);
@@ -202,7 +203,7 @@ describe('W3 committed rights and controlled capital instance', () => {
     const c = await deployRights(), p = await c.create(); await c.eligible(p);
     await send(c.pool.connect(c.investor).subscribe(p.poolId, 10));
     await send(c.controller.connect(c.operator).disburse(p.poolId, 8_000_000n, uniqueHash()));
-    await send(c.controller.connect(c.operator).applyPricingAction(p.poolId, 0, ACTION.TRIGGER_LIQUIDATION, uniqueHash(), uniqueHash()));
+    await c.govern(c.controller, 'applyPricingAction', [p.poolId, 0, ACTION.TRIGGER_LIQUIDATION, uniqueHash(), uniqueHash()]);
     await send(c.controller.connect(c.disposer).notifyResolution(p.poolId, uniqueHash(), uniqueHash(), 0));
     await c.govern(c.controller, 'setRole', [await c.controller.REVIEWER(), c.disposer.address, true]);
     await expect(c.controller.connect(c.disposer).reviewResolution(p.poolId, uniqueHash())).to.be.revertedWith('review unavailable');
@@ -218,7 +219,7 @@ describe('W3 committed rights and controlled capital instance', () => {
     for (const recovery of [0n, 10_000_000n]) {
       const p = await c.create(); await c.eligible(p); await send(c.pool.connect(c.investor).subscribe(p.poolId, 10));
       await send(c.controller.connect(c.operator).disburse(p.poolId, 8_000_000n, uniqueHash()));
-      await send(c.controller.connect(c.operator).applyPricingAction(p.poolId, 0, ACTION.TRIGGER_LIQUIDATION, uniqueHash(), uniqueHash()));
+      await c.govern(c.controller, 'applyPricingAction', [p.poolId, 0, ACTION.TRIGGER_LIQUIDATION, uniqueHash(), uniqueHash()]);
       if (recovery) {
         await send(c.usdc.mint(c.holder.address, recovery)); await send(c.usdc.connect(c.holder).approve(await c.pool.getAddress(), recovery));
         await send(c.pool.connect(c.holder).repay(p.poolId, recovery));

@@ -7,7 +7,7 @@ import { releaseSourceSnapshot } from './release-source.mjs';
 
 export async function measureCandidateCapacity({ manifest, directory, seconds = 600 }) {
   const source = await releaseSourceSnapshot(), chain = await loadRightsChain(manifest), observations = [];
-  const chainId = Number(chain.chainId), startedAt = new Date().toISOString();
+  const chainId = Number(chain.chainId), startedAt = new Date().toISOString(), controlVersion = (await chain.verify()).control_version;
   let requests = 0;
   chain.provider.on('debug', (event) => { if (event.action === 'sendRpcPayload') requests += Array.isArray(event.payload) ? event.payload.length : 1; });
   const start = performance.now();
@@ -17,7 +17,7 @@ export async function measureCandidateCapacity({ manifest, directory, seconds = 
       try {
         let query = { from: 1, limit: 10 }, result;
         do {
-          result = await readOfferings(chain, { controlVersion: 2 }, chain.readPool, query);
+          result = await readOfferings(chain, { controlVersion }, chain.readPool, query);
           ensure(result.complete, 'Page incomplete');
           ids.push(...result.offerings.map((row) => row.pool_id)); snapshots.push(result.snapshot.block_hash);
           pages.push({ from: result.from, calls: result.read_metrics.calls, failures: result.failures });

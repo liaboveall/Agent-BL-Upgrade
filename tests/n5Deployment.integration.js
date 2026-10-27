@@ -43,7 +43,7 @@ it('deploys a new instance against a shared hub, enforces delay, resumes canonic
     assert.equal(run.state.transactions.length, 46); assert.equal(run.state.active, true);
     assert.equal(await c.hub.registry(c.registry.target), before, 'Predecessor enrollment is retained');
     const chain = await loadRightsChain(path.join(directory, 'rights-instance.json'));
-    assert.equal((await chain.verify()).control_version, 2); assert.equal(await chain.controller.intakeStopped(), false); await chain.provider.destroy();
+    assert.equal((await chain.verify()).control_version, 3); assert.equal(await chain.controller.intakeStopped(), false); await chain.provider.destroy();
     const nonceBefore = await c.provider.getTransactionCount(signers.governorA.address);
     await executeCandidate({ directory, candidate, provider: c.provider, signers, action: 'activate', confirmations: 1 });
     assert.equal(await c.provider.getTransactionCount(signers.governorA.address), nonceBefore);

@@ -5,7 +5,7 @@ import { disclosureFixture } from '../helpers/disclosure.js';
 for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440]) {
   test(`N2 ${language} ${width}: complete terms, keyboard consent, changed/missing/corrupt material block signatures`, async ({ page }, info) => {
     const pack = { ...disclosureFixture(), pool_id: 1, quote_version: '3' }, wallet = `0x${'12'.repeat(20)}`;
-    const config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 2, contracts: { RWAOfferingPool: pack.document.instance.pool }, abis: { RWAOfferingPool: [] } };
+    const config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 3, contracts: { RWAOfferingPool: pack.document.instance.pool }, abis: { RWAOfferingPool: [] } };
     const offer = { pool_id: 1, state: 'Open', shares: '10', subscribed: '0', issue_price_atomic: pack.terms.issuePrice, redemption_per_share_atomic: pack.terms.target,
       settlement_asset: pack.terms.settlementAsset, raised_atomic: '0', disbursed_atomic: '0', recovered_atomic: '0', maturity: pack.terms.maturity,
       subscription_deadline: pack.terms.subscribeUntil, disbursement_deadline: pack.terms.disburseUntil, quote_version: '3', terms_hash: pack.terms_hash,

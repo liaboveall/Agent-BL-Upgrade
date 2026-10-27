@@ -7,6 +7,8 @@ contract RecoveryEntitlements {
     error Unauthorized();
     error LotLimit();
     address public immutable pool = msg.sender;
+    /// @notice Separate subscription segments one investor may hold in one pool; disclosed at issuance.
+    uint256 public constant MAX_LOTS = 32;
     struct Lot { uint128 start; uint128 shares; }
     mapping(uint256 => mapping(address => Lot[])) private _lots;
 
@@ -17,10 +19,11 @@ contract RecoveryEntitlements {
         if (lots.length > 0 && uint256(lots[lots.length - 1].start) + lots[lots.length - 1].shares == start) {
             lots[lots.length - 1].shares += uint128(shares);
         } else {
-            if (lots.length >= 32) revert LotLimit();
+            if (lots.length >= MAX_LOTS) revert LotLimit();
             lots.push(Lot(uint128(start), uint128(shares)));
         }
     }
+    function lotCount(uint256 id, address investor) external view returns (uint256) { return _lots[id][investor].length; }
     function entitlement(uint256 id, address investor, uint256 cash, uint256 supply) external view returns (uint256 amount) {
         if (supply == 0) return 0;
         uint256 quotient = cash / supply;

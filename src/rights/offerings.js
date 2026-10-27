@@ -1,6 +1,7 @@
 import { HttpError } from '../app/http.js';
 import { chainStateName } from '../agent/runtime/poolRules.js';
 import { assertSnapshot, mapReads, readSnapshot, snapshotInfo } from './reads.js';
+import { CONTROL_VERSION } from './typedData.js';
 
 export async function readOfferings(chain, config, pool, query = {}) {
   const budget = pool.budget(480), { read } = budget;
@@ -23,7 +24,7 @@ export async function readOfferings(chain, config, pool, query = {}) {
         raised_atomic: String(offer.raisedAtomic), disbursed_atomic: String(disbursed), recovered_atomic: String(recovered), escrow_atomic: String(escrow),
         subscription_deadline: String(deadline), disbursement_deadline: terms.disburseUntil == null ? null : String(terms.disburseUntil), maturity: String(maturity),
         quote_version: String(version), terms_hash: termsHash, policy_hash: terms.policyHash, disclosure_hash: terms.disclosureHash, block_number: block.number,
-        subscription_open: config.controlVersion !== 1 && [2, 3, 6].includes(Number(offer.state)) && Number(deadline) >= block.timestamp && offer.subscribed < offer.tokenSupply } };
+        subscription_open: config.controlVersion === CONTROL_VERSION && [2, 3, 6].includes(Number(offer.state)) && Number(deadline) >= block.timestamp && offer.subscribed < offer.tokenSupply } };
     } catch { return { pool_id: poolId, code: 'pool_read_unavailable' }; }
   });
   await assertSnapshot(chain.provider, block, read);

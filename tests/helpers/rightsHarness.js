@@ -47,7 +47,7 @@ export async function deployRightsRpc(node, t) {
       settlementAsset: await usdc.getAddress(), exporter: holder.address, feeRecipient: memberC.address, supply: '10', issuePrice: '800000', target: '1000000', minRaise: '8000000',
       maturity: String(time + 200000n), subscribeUntil: String(time + 80000n), disburseUntil: String(time + 90000n), maxFee: '0', policyHash: fresh('disposal-policy'), disclosureHash: fresh('disclosure'), nonce: String(serial++) };
     const { policyHash: _policy, disclosureHash: _disclosure, ...rawTerms } = terms;
-    const pack = createDisclosure({ revision: 1, instance: { chain_id: Number(chainId), controller: await controller.getAddress(), pool: await pool.getAddress() }, terms: rawTerms,
+    const pack = createDisclosure({ revision: 1, instance: { chain_id: Number(chainId), controller: await controller.getAddress(), pool: await pool.getAddress(), control_version: 3 }, terms: rawTerms,
       parties: { issuer: issuer.address, holder: holder.address, operator: operator.address, valuer: valuer.address, compliance: compliance.address, disposer: disposer.address, reviewer: reviewer.address, governance: await governance.getAddress() },
       sources: ['invoice', 'cost', 'collateral', 'risk'].map((field) => ({ field, status: 'fixture', reference: 'synthetic research fixture; not real cargo' })) });
     Object.assign(terms, pack.terms);
