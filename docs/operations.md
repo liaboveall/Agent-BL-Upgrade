@@ -63,7 +63,7 @@ docker stop -t 210 <容器>
 
 ## 备份与恢复
 
-`data/runtime/` 保存材料、资金历史、原交易和恢复检查点，不属于开发垃圾。备份前停止所有相关写入者；备份实例父目录时，还要检查应用子目录租约及 `owner-cli` 锁。
+`data/runtime/` 保存材料、资金历史、原交易和恢复检查点，不属于开发垃圾。其中 `rights/public-disclosures/` 是已批准条款的公开副本，不含私有材料；要让其他实例或新 checkout 显示这些条款，可复制到 `data/disclosures/` 并提交。备份前停止所有相关写入者；备份实例父目录时，还要检查应用子目录租约及 `owner-cli` 锁。
 
 ```sh
 npm run runtime:backup -- create --directory <已停止目录> --key-file <独立密钥文件> --output <新加密包> --configuration <实例JSON> --revision <源码版本>
