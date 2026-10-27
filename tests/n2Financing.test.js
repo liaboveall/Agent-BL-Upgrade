@@ -72,6 +72,17 @@ test('N2 public disclosure requires issuing authority and two approved bindings;
   await service.bindTerms(issuer.token, material.material_id, second.terms_hash);
   await assert.rejects(service.financingDisclosure(second.disclosure_hash), { code: 'financing_disclosure_unverified' });
   assert.deepEqual(await service.financingDisclosure(pack.disclosure_hash), pack);
+
+  // Approved terms stay readable without the vault key, from the public copy alone; an unapproved revision never leaks.
+  const keyless = new RightsService({ directory, env: {} });
+  assert.deepEqual(await keyless.financingDisclosure(pack.disclosure_hash), pack);
+  await assert.rejects(keyless.financingDisclosure(second.disclosure_hash), { code: 'rights_not_configured' });
+  const copy = path.join(directory, 'public-disclosures', `${pack.disclosure_hash.toLowerCase()}.json`);
+  assert.equal(JSON.stringify(JSON.parse(await fs.readFile(copy, 'utf8'))).includes('DO-NOT-PUBLISH-N2'), false);
+  const altered = JSON.parse(await fs.readFile(copy, 'utf8')); altered.terms.issuePrice = '1';
+  await fs.writeFile(copy, JSON.stringify(altered));
+  await assert.rejects(keyless.financingDisclosure(pack.disclosure_hash), { code: 'rights_not_configured' });
+  await assert.rejects(keyless.financingDisclosure('../vault'), { code: 'rights_not_configured' });
 });
 test('N2 canonical review refuses missing or corrupt terms, altered pool terms, cross-instance bindings, revoked roles and reorgs', async () => {
   const pack = disclosureFixture(), t = pack.terms; let price = t.issuePrice, reorg = false, revoked = false;

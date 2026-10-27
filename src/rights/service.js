@@ -16,6 +16,8 @@ import { createDisclosure, verifyDisclosure } from './disclosure.js';
 import { financingReview } from './financingReview.js';
 import { materialWorkflow } from './workflow.js';
 import { RpcReadPool } from './reads.js';
+import { verifyChain } from './chain.js';
+import { SHIPPED_DISCLOSURES, readPublicDisclosure, savePublicDisclosure } from './public-disclosures.js';
 
 const VAULT_AAD = 'agentbl-rights-vault-v1';
 const ROLES = ['issuer', 'holder', 'investor', 'reviewer', 'custodian', 'compliance', 'governance', 'valuer', 'operator', 'attestor', 'disposer'];
@@ -37,6 +39,26 @@ export function pruneExpiredAccess(state, now) {
   for (const [key, session] of Object.entries(state.sessions)) if (session?.expires_at <= cutoff) delete state.sessions[key];
 }
 
+// The vault is re-encrypted whole on every write, so records past their purpose leave it. Material past its
+// retention period (already unreadable, 410) and the evidence built on it go after a month's grace; wallet plans that
+// can no longer send anything (unsent drafts, confirmed or reverted receipts) go after half a year. Plans still
+// waiting for reconciliation, publications, approved disclosures and identities are always kept.
+export const EXPIRED_MATERIAL_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+export const SETTLED_PLAN_RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
+export function pruneExpiredRecords(state, now) {
+  const removed = new Set();
+  for (const [key, material] of Object.entries(state.materials ?? {})) {
+    if (material?.retention_until + EXPIRED_MATERIAL_GRACE_MS <= now) { removed.add(key); delete state.materials[key]; }
+  }
+  for (const [key, entry] of Object.entries(state.evidence ?? {})) {
+    if (removed.has(entry?.material_id) || Date.parse(entry?.bundle?.expires_at) + EXPIRED_MATERIAL_GRACE_MS <= now) delete state.evidence[key];
+  }
+  for (const [key, review] of Object.entries(state.evidence_reviews ?? {})) if (!state.evidence?.[review?.evidence_id]) delete state.evidence_reviews[key];
+  for (const [key, plan] of Object.entries(state.plans ?? {})) {
+    if (['draft', 'confirmed', 'reverted'].includes(plan?.status) && (plan.checkpoint_at ?? plan.prepared_at) + SETTLED_PLAN_RETENTION_MS <= now) delete state.plans[key];
+  }
+}
+
 // The vault is one encrypted file behind one writer, so its queue must stay short. Chain reads happen outside
 // it; these bounds keep a burst (or a stuck disk) from growing an unbounded line of waiting requests.
 export const VAULT_QUEUE_LIMIT = 64;
@@ -52,6 +74,7 @@ export class RightsService {
     this.directory = directory; this.env = env; this.clock = clock; this.chain = chain;
     this.getVersion = getVersion; this.getMode = getMode; this.getGeneration = getGeneration; this.readPool = readPool;
     this.queueLimit = queueLimit; this.waitMs = waitMs;
+    this.publicDisclosureDirectory = path.join(directory, 'public-disclosures');
     this.writer = new LedgerWriter(directory);
   }
   /** Observable vault queue: requests waiting now and how long recent ones waited for the lock. */
@@ -60,7 +83,7 @@ export class RightsService {
     let configured = false;
     try { configured = Boolean(rightsKey(this.env)); } catch {}
     let active = false, unavailable = false;
-    if (this.chain) { try { await this.chain.verify(); active = true; } catch { unavailable = true; } }
+    if (this.chain) { try { await verifyChain(this.chain); active = true; } catch { unavailable = true; } }
     return { scope: 'research_test_assets_only', business_enabled: false, candidate: active ? 'deployed_research_instance' : 'local_source',
       active_control_plane: active, unavailable, identity_configured: configured,
       external_rights_verified: false, trusted_provider_verified: false, vault_queue: this.queueMetrics() };
@@ -98,6 +121,7 @@ export class RightsService {
     const result = await callback(state, context);
     if (context.dirty) {
       pruneExpiredAccess(state, context.now);
+      pruneExpiredRecords(state, context.now);
       state.revision++;
       await writeJsonAtomic(file, seal(key, state, VAULT_AAD), { durable: true });
       if (!initialized) await writeJsonAtomic(marker, { schema: VAULT_AAD, initialized: true }, { durable: true });
@@ -223,16 +247,30 @@ export class RightsService {
       ctx.dirty = true; return pack;
     });
   }
-  financingDisclosure(disclosureHash) {
-    return this.#transaction((state) => {
-      const entry = state.financing_disclosures?.[disclosureHash];
-      if (!entry) throw new HttpError(409, 'financing_disclosure_missing', 'Readable financing terms are unavailable; do not sign');
-      const approved = [...Object.values(state.publications), ...(state.publication_history ?? [])].some((publication) =>
-        publication.publication_id === entry.material_id && publication.summary.terms_hash === entry.pack.terms_hash
-        && publication.document_hash === entry.pack.terms.documentHash);
-      if (!approved || !verifyDisclosure(entry.pack)) throw new HttpError(409, 'financing_disclosure_unverified', 'Terms must match an approved publication and intact commitments');
-      return entry.pack;
-    });
+  /**
+   * Approved, readable terms by their disclosure hash. Approved packs are public and are also kept outside the
+   * encrypted vault (see public-disclosures.js), so an instance without this vault or its key still serves them;
+   * an unapproved pack never leaves the vault. Callers bind the pack to the chain before anyone signs.
+   */
+  async financingDisclosure(disclosureHash) {
+    try {
+      const pack = await this.#transaction((state) => {
+        const entry = state.financing_disclosures?.[disclosureHash];
+        if (!entry) throw new HttpError(409, 'financing_disclosure_missing', 'Readable financing terms are unavailable; do not sign');
+        const approved = [...Object.values(state.publications), ...(state.publication_history ?? [])].some((publication) =>
+          publication.publication_id === entry.material_id && publication.summary.terms_hash === entry.pack.terms_hash
+          && publication.document_hash === entry.pack.terms.documentHash);
+        if (!approved || !verifyDisclosure(entry.pack)) throw new HttpError(409, 'financing_disclosure_unverified', 'Terms must match an approved publication and intact commitments');
+        return entry.pack;
+      });
+      await savePublicDisclosure(this.publicDisclosureDirectory, pack).catch(() => {});
+      return pack;
+    } catch (error) {
+      if (!['financing_disclosure_missing', 'rights_not_configured', 'rights_vault_missing'].includes(error?.code)) throw error;
+      const published = await readPublicDisclosure(disclosureHash, [this.publicDisclosureDirectory, SHIPPED_DISCLOSURES]);
+      if (published) return published;
+      throw error;
+    }
   }
   createEvidence(token, input) {
     const body = checked(z.object({ material_id: z.string().uuid(), kind: z.string(), source: z.unknown(),
