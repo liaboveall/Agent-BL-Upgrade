@@ -3,6 +3,7 @@ import { appStore } from '../../state/app-store.js';
 import { useApp } from '../../state/hooks.js';
 import { connectedAddress, currentWalletSession, loadEthers } from '../../lib/web3.js';
 import { clearRightsSession, openRightsSession, rightsRequest, rightsSessionToken } from '../../lib/rights-session.js';
+import { describeFinanceError } from '../../lib/finance-errors.js';
 import { sendRightsPlan } from '../../lib/rights.js';
 import { ReadableTerms } from './ReadableTerms.jsx';
 
@@ -59,7 +60,7 @@ export function RoleWorkspace({ zh, status, wallet }) {
     selectedMaterial.current = ''; clearRightsSession(); setPrincipal(null); setMaterials([]); setWorkflow(null); setPlan(null); setApproved(false); setOperation(''); setFile(null);
     try { setPending(key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null); } catch { setPending({ invalid: true }); setError(zh ? '原操作记录损坏，请保留钱包记录并人工核对。' : 'Saved operation is corrupt. Keep the wallet record for manual reconciliation.'); }
   }, [wallet, generation, key, zh]);
-  const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(failure.message); } finally { setBusy(false); } };
+  const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(describeFinanceError(failure, zh).message); } finally { setBusy(false); } };
   const reload = async () => { setMaterials((await rightsRequest('materials')).materials); if (materialId) setWorkflow(await rightsRequest(`materials/${materialId}/workflow`)); };
   const login = (exitOnly = false) => run(async () => { const value = await openRightsSession(subjectId, { exitOnly }); setPrincipal(value); setMaterials(value.exit_only ? [] : (await rightsRequest('materials')).materials); });
   const chooseMaterial = (id) => { selectedMaterial.current = id; setMaterialId(id); setWorkflow(null); setPlan(null); setApproved(false); if (id) run(async () => { const result = await rightsRequest(`materials/${id}/workflow`); if (selectedMaterial.current === id && rightsSessionToken()) setWorkflow(result); }); };
