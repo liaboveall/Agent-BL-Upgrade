@@ -43,6 +43,11 @@ export async function getCases() {
   }];
 }
 
+/** The working copy this browser uses for a public sample case (uploads and preferences never write the sample). */
+export function getWorkspaceCopy(caseId) {
+  return fetchJson(`/api/agent/workspace/copies/${encodeURIComponent(caseId)}`);
+}
+
 /** WP2.8: the exporter's preferences for a case, as the agent holds them (the server is the source of truth). */
 export function getExporterPreferences(caseId) {
   return fetchJson(`/api/agent/cases/${encodeURIComponent(caseId)}/preferences`);

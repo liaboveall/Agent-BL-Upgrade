@@ -165,6 +165,10 @@ h4.card-title { font-size: var(--fs-14); }
 .callout.tone-crit { background: var(--crit-soft); color: var(--crit-ink); }
 .notice { padding: var(--s-3) var(--s-4); border-radius: var(--r); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-13); }
 .cp-warning { color: var(--warn); font-size: var(--fs-13); }
+/* A preference save that failed stays visible, with retry and undo, until one of them succeeds. */
+.pref-unsaved { display: grid; gap: 8px; margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--warn-line); border-radius: var(--r); background: var(--warn-soft); color: var(--warn-ink); font-size: var(--fs-13); }
+.pref-unsaved p { margin: 0; }
+.pref-unsaved-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .empty { display: grid; gap: 4px; justify-items: center; padding: var(--s-8) var(--s-4); border: 1px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--muted); text-align: center; }
 .empty strong { color: var(--text-2); }
 .empty-action { margin-top: var(--s-2); }

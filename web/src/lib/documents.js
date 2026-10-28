@@ -3,6 +3,8 @@ import { t } from './i18n.js';
 
 export const MAX_FILE_BYTES = 8_388_608;
 export const MAX_FILES = 12;
+// All files of one upload together: the server refuses a larger request (src/agent/runtime/config.js).
+export const MAX_BATCH_BYTES = 25_165_824;
 
 export function fileDocument(file, Reader = FileReader) {
   if (file.size > MAX_FILE_BYTES) return Promise.reject(new Error(t('ebld_too_large')));

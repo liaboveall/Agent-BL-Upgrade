@@ -23,7 +23,7 @@ const get = () => appStore.get();
 const set = (patch) => appStore.set(patch);
 const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
 
-const versions = { evidence: 0, selection: 0, caseVersion: 0, search: 0 };
+const versions = { evidence: 0, selection: 0, caseVersion: 0, search: 0, preference: 0 };
 // Decision verbs worth a toast when the agent emits them.
 const NOTIFY_DECISION_ACTIONS = new Set(['REPRICE', 'PAUSE', 'RESUME', 'FREEZE', 'LIQUIDATE', 'SETTLE']);
 const DEMO_WALLET = '0xDemoWallet';
@@ -248,9 +248,8 @@ export function closeDeal() {
 // Case selection + quotes
 // ---------------------------------------------------------------------------------------------
 
-/** The preferences the form shows, in the shape the server stores. Empty fields are left out. */
-function currentExporterPreferences() {
-  const { minPrice, speed } = get().preferences;
+/** Preferences from the form, in the shape the server stores. Empty fields are left out. */
+function exporterPreferencesOf({ minPrice, speed }) {
   const preferences = {};
   const floor = minPrice !== '' ? Number(minPrice) : NaN;
   if (Number.isFinite(floor) && floor >= 0 && floor <= 1) preferences.min_acceptable_issue_price = floor;
@@ -258,68 +257,110 @@ function currentExporterPreferences() {
   return preferences;
 }
 
-/** WP2.8: the agent enforces these, so the server must hold them, not just this browser tab. */
-async function persistExporterPreferences() {
-  const { caseId } = get();
-  if (!caseId) return;
+/** The server case this browser writes for a catalog case: its own working copy of a public sample. */
+async function resolveWorkspaceCase(caseId) {
+  try { return (await api.getWorkspaceCopy(caseId))?.case_id ?? caseId; } catch { return caseId; }
+}
+
+/**
+ * WP2.8: the agent enforces these, so the server must hold them, not just this browser tab. A failure is thrown to
+ * the caller: nothing may act on preferences the server did not keep.
+ */
+async function persistExporterPreferences(caseId, draft) {
+  const target = (get().caseId === caseId && get().workspaceCaseId) || caseId;
   try {
-    await api.saveExporterPreferences(caseId, currentExporterPreferences());
-    agentLog(t('pref_saved'), 'muted', 'pref_saved');
+    await api.saveExporterPreferences(target, exporterPreferencesOf(draft));
   } catch (error) {
-    toast(t('pref_save_failed', { msg: error.message }), true);
+    // A public sample is read-only; the server names this browser's own copy.
+    const copy = error.status === 409 && error.details?.workspace_case_id;
+    if (!copy) throw error;
+    await api.saveExporterPreferences(copy, exporterPreferencesOf(draft));
+    if (get().caseId === caseId) set({ workspaceCaseId: copy });
   }
+  agentLog(t('pref_saved'), 'muted', 'pref_saved');
 }
 
 /** Show what the agent already holds for a case instead of whatever the previous case left in the form. */
 async function loadExporterPreferences(caseId, version, generation) {
   try {
-    const stored = (await api.getExporterPreferences(caseId))?.preferences ?? {};
+    const workspaceCaseId = get().workspaceCaseId ?? caseId;
+    let stored = await api.getExporterPreferences(workspaceCaseId);
+    // A copy that saved nothing yet starts from what the sample itself holds.
+    if (workspaceCaseId !== caseId && !stored?.updated_at) stored = await api.getExporterPreferences(caseId);
     if (get().caseId !== caseId || version !== versions.caseVersion || generation !== get().modeGeneration) return;
+    const values = stored?.preferences ?? {};
     const preferences = {
-      minPrice: Number.isFinite(stored.min_acceptable_issue_price) ? String(stored.min_acceptable_issue_price) : '',
-      speed: stored.payout_speed_preference ?? ''
+      minPrice: Number.isFinite(values.min_acceptable_issue_price) ? String(values.min_acceptable_issue_price) : '',
+      speed: values.payout_speed_preference ?? ''
     };
-    set((state) => ({ preferences, preferencesError: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
+    set((state) => ({ preferences, preferencesError: null, preferencesUnsaved: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
   } catch {
     if (version === versions.caseVersion && generation === get().modeGeneration) set({ preferencesError: t('pref_load_failed') });
     throw new Error(t('pref_load_failed'));
   }
 }
 
+/** Edit the form only. Quotes and the agent keep using the saved preferences until a save succeeds. */
 export function setPreferenceDraft(patch) {
   if (get().busy || get().preferencesError) return;
-  set((state) => {
-    const preferences = { ...state.preferences, ...patch };
-    return { preferences, preferencesByCase: { ...state.preferencesByCase, [state.caseId]: preferences } };
-  });
+  set((state) => ({ preferences: { ...state.preferences, ...patch } }));
 }
 
-/** The price floor was committed (blur / Enter): store it for the agent and reprice. */
-export async function commitMinPrice() {
-  if (get().busy || get().preferencesError) return;
+/**
+ * Save the form. Only after the server kept it do the new values become the ones quotes use, and only then is the
+ * change logged. A failure leaves the saved values in force and marks the form unsaved, with retry and undo.
+ * A later save, a case switch or a mode change makes an earlier reply irrelevant.
+ */
+async function commitPreferences(logLine) {
+  if (get().busy || get().preferencesError) return false;
   const { caseId, cases, preferences } = get();
-  const version = ++versions.caseVersion, generation = get().modeGeneration;
   const entry = cases.find((c) => c.case_id === caseId);
-  if (!entry) return;
+  if (!entry) return false;
+  const save = ++versions.preference, version = versions.caseVersion, generation = get().modeGeneration;
+  const current = () => save === versions.preference && get().caseId === caseId && version === versions.caseVersion && generation === get().modeGeneration;
   set({ busy: true });
   try {
-    await persistExporterPreferences();
-    agentLog(t('pref_price_updated', { value: preferences.minPrice }));
+    await persistExporterPreferences(caseId, preferences);
+  } catch (error) {
+    if (current()) set({ busy: false, preferencesUnsaved: t('pref_unsaved', { msg: error.message }) });
+    toast(t('pref_save_failed', { msg: error.message }), true);
+    return false;
+  }
+  if (!current()) return false;
+  set((state) => ({ preferencesUnsaved: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
+  if (logLine) agentLog(logLine);
+  try {
     const comparison = await getCaseComparison(entry, true);
-    if (get().caseId === caseId && version === versions.caseVersion && generation === get().modeGeneration) set({ comparison });
+    if (current()) set({ comparison });
   } catch (error) {
     toast(t('t_reprice_fail', { msg: error.message }), true);
   } finally {
-    if (version === versions.caseVersion && generation === get().modeGeneration) set({ busy: false });
+    if (current()) set({ busy: false });
   }
+  return true;
 }
 
-export function commitSpeedPreference(value) {
+/** The price floor was committed (blur / Enter): store it for the agent and reprice. */
+export function commitMinPrice() {
+  return commitPreferences(t('pref_price_updated', { value: get().preferences.minPrice }));
+}
+
+export async function commitSpeedPreference(value) {
   if (get().busy || get().preferencesError) return;
   setPreferenceDraft({ speed: value });
-  persistExporterPreferences();
-  agentLog(t('pref_speed_updated', { value: value ? f.SPEED_META[value]?.label ?? value : t('pref_ai_recommended') }));
-  selectSpeed(value || (get().comparison?.recommended_payout_speed ?? 'BALANCED'));
+  const saved = await commitPreferences(t('pref_speed_updated', { value: value ? f.SPEED_META[value]?.label ?? value : t('pref_ai_recommended') }));
+  if (saved) selectSpeed(value || (get().comparison?.recommended_payout_speed ?? 'BALANCED'));
+}
+
+/** Retry the unsaved form as it stands. */
+export function retryPreferences() {
+  return commitPreferences(t('pref_retried'));
+}
+
+/** Put the form back to what the server saved. */
+export function discardPreferenceDraft() {
+  const { caseId, preferencesByCase } = get();
+  set({ preferences: preferencesByCase[caseId] ?? { minPrice: '', speed: '' }, preferencesUnsaved: null });
 }
 
 export function getCaseComparison(entry, forceUpdate = false) {
@@ -363,11 +404,14 @@ export async function selectCase(caseId) {
   if (!entry) return;
   const version = ++versions.caseVersion, generation = get().modeGeneration;
   if (get().evidenceSelected?.case_id !== caseId) clearEvidenceSelection();
-  set({ caseId, caseData: entry.case, comparison: null, busy: true, preferences: { minPrice: '', speed: '' }, preferencesError: null,
-    financingUsd: null, mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: [], marketSubscriptionResult: null });
+  set({ caseId, caseData: entry.case, comparison: null, busy: true, preferences: { minPrice: '', speed: '' }, preferencesError: null, preferencesUnsaved: null,
+    workspaceCaseId: null, financingUsd: null, mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: [], marketSubscriptionResult: null });
   emit('agentbl:casechange', { case_id: caseId });
   subscribeToAgentActivity(caseId);
   try {
+    const workspaceCaseId = await resolveWorkspaceCase(caseId);
+    if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
+    set({ workspaceCaseId });
     await loadExporterPreferences(caseId, version, generation);
     if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
     const comparison = await getCaseComparison(entry);

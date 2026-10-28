@@ -1,21 +1,27 @@
 // eBL, invoice and insurance upload for the selected case. Files go to the agent's ingest pipeline
 // (actual bytes, base64); each job's steps, extracted fields with their source lines, compliance
 // screening and findings are listed, and refresh live from the case's activity stream.
+// A public sample is never written: uploads, jobs and the stream use this browser's own working copy of it.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp, useLang } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import { agentRequest } from '../../lib/agent-api.js';
-import { fileDocument, MAX_FILES } from '../../lib/documents.js';
+import { fileDocument, MAX_BATCH_BYTES, MAX_FILES } from '../../lib/documents.js';
 import { Badge, Button, Card, CardHead, Disclosure } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
 import { DecisionButton } from '../../features/evidence/References.jsx';
 import { Compliance } from './Compliance.jsx';
 
 const JOB_TONE = { DONE: 'ok', RUNNING: 'info', QUEUED: 'muted', FAILED: 'crit', INTERRUPTED: 'warn' };
+// Intake refusals with their own sentence; anything else keeps the server's message.
+const UPLOAD_ERRORS = new Set(['upload_quota_exceeded', 'upload_batch_too_large', 'intake_storage_full', 'operations_not_ready', 'duplicate_asset_documents']);
+const uploadError = (failure) => UPLOAD_ERRORS.has(failure?.code) ? t(`ebld_error_${failure.code}`) : failure.message;
 
 export function Documents() {
   useLang();
-  const caseId = useApp((s) => s.caseId);
+  const sourceCaseId = useApp((s) => s.caseId);
+  // Until the copy is resolved nothing is listed or uploaded, so a sample's public jobs never stand in for the copy's.
+  const caseId = useApp((s) => s.workspaceCaseId);
   const generation = useApp((s) => s.modeGeneration);
   const [jobs, setJobs] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -52,6 +58,8 @@ export function Documents() {
   const upload = async (files) => {
     if (busy || !files?.length) return;
     if (files.length > MAX_FILES) { setError(t('ebld_too_many')); return; }
+    if (Array.from(files).reduce((sum, file) => sum + file.size, 0) > MAX_BATCH_BYTES) { setError(t('ebld_batch_too_large', { mb: MAX_BATCH_BYTES / 1_048_576 })); return; }
+    if (!caseId) return;
     const requestVersion = version.current, forCase = caseId, reviewing = reviewId.current;
     reviewId.current = null;
     setBusy(true); setError('');
@@ -63,7 +71,7 @@ export function Documents() {
       setJobs((current) => [data.job, ...current.filter((job) => job.job_id !== data.job.job_id)]);
       await refresh(forCase, requestVersion);
     } catch (failure) {
-      if (requestVersion === version.current) setError(failure.message);
+      if (requestVersion === version.current) setError(uploadError(failure));
     } finally {
       setBusy(false);
       if (input.current) input.current.value = '';
@@ -84,10 +92,11 @@ export function Documents() {
         <p>{t('ebl_upload_drop')}</p>
         <p className="muted small">
           {t('ebl_upload_or')}{' '}
-          <button id="ebl-browse-btn" type="button" className="link-btn" disabled={busy} onClick={() => { reviewId.current = null; input.current?.click(); }}>{t('ebl_upload_browse')}</button>{' '}
+          <button id="ebl-browse-btn" type="button" className="link-btn" disabled={busy || !caseId} onClick={() => { reviewId.current = null; input.current?.click(); }}>{t('ebl_upload_browse')}</button>{' '}
           {t('ebl_upload_device')}
         </p>
         <p className="muted small">{t('ebl_upload_types')}</p>
+        {caseId && caseId !== sourceCaseId ? <p className="muted small">{t('ebld_workspace_copy', { id: caseId, source: sourceCaseId })}</p> : null}
         <input ref={input} id="ebl-file-input" type="file" accept=".md,.txt,.pdf,.png,.jpg,.jpeg" multiple hidden onChange={(event) => upload(event.target.files)} />
       </div>
       <div id="ebl-upload-status" className="jobs" aria-live="polite">

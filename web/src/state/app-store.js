@@ -45,9 +45,14 @@ export const appStore = createStore({
   evidenceSelected: null,
 
   // exporter preferences the agent enforces
+  // `preferences` is the form (a draft); `preferencesByCase` holds what the server saved, and only that prices quotes.
   preferences: { minPrice: '', speed: '' },
   preferencesByCase: {},
   preferencesError: null,
+  // A save that failed: the draft stays visible, marked unsaved, until it is retried or undone.
+  preferencesUnsaved: null,
+  // The server case this browser writes for the selected one: its own working copy of a public sample.
+  workspaceCaseId: null,
 
   // mint module
   financingUsd: null,
