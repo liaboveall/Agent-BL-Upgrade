@@ -1,6 +1,11 @@
 // Thin API client for the AgentBL harness backend. Every pricing call goes
 // through the SAME endpoints the contract mock and CLI demo use, so the frontend
 // shows real engine output — never hard-coded numbers.
+//
+// Exporter preferences and workspace cases are agent-runtime resources: they go through agentRequest, which sends the
+// admin token this tab holds and asks for it when Live answers 401, like every other intake call.
+
+import { agentRequest } from './agent-api.js';
 
 async function fetchJson(url, options) {
   const res = await fetch(url, options);
@@ -45,21 +50,22 @@ export async function getCases() {
 
 /** The working copy this browser uses for a public sample case (uploads and preferences never write the sample). */
 export function getWorkspaceCopy(caseId) {
-  return fetchJson(`/api/agent/workspace/copies/${encodeURIComponent(caseId)}`);
+  return agentRequest(`/api/agent/workspace/copies/${encodeURIComponent(caseId)}`);
+}
+
+/** Cases this browser's own uploads produced (never part of the public catalog). */
+export async function getWorkspaceCases() {
+  return (await agentRequest('/api/agent/workspace/cases'))?.cases ?? [];
 }
 
 /** WP2.8: the exporter's preferences for a case, as the agent holds them (the server is the source of truth). */
 export function getExporterPreferences(caseId) {
-  return fetchJson(`/api/agent/cases/${encodeURIComponent(caseId)}/preferences`);
+  return agentRequest(`/api/agent/cases/${encodeURIComponent(caseId)}/preferences`);
 }
 
 /** WP2.8: store the preferences the agent must respect (a price floor, a payout speed, a financing target). */
 export function saveExporterPreferences(caseId, preferences) {
-  return fetchJson(`/api/agent/cases/${encodeURIComponent(caseId)}/preferences`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(preferences ?? {})
-  });
+  return agentRequest(`/api/agent/cases/${encodeURIComponent(caseId)}/preferences`, { method: 'PUT', body: preferences ?? {} });
 }
 
 /** Unwrap a catalog entry to its raw case object. /api/cases returns { case_id, label, …, case: rawCase },

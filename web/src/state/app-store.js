@@ -53,6 +53,12 @@ export const appStore = createStore({
   preferencesUnsaved: null,
   // The server case this browser writes for the selected one: its own working copy of a public sample.
   workspaceCaseId: null,
+  // Cases this browser's uploads produced (catalog-shaped entries, `private: true`); never part of `cases`.
+  workspaceCases: [],
+  // What the shown comparison was computed for (case, mode generation, saved preferences): see quoteCurrent().
+  comparisonKey: null,
+  // Why repricing with newly saved preferences failed; the old comparison is then shown for reference only.
+  quoteError: null,
 
   // mint module
   financingUsd: null,
@@ -86,6 +92,21 @@ export const appStore = createStore({
 export const getAppState = () => appStore.get();
 
 /** The PricingQuote for the currently selected payout speed (or the first). */
+/** The selected case, whether it is a public sample or one of this browser's own working cases. */
+export function findCase(state, caseId = state.caseId) {
+  return state.cases.find((entry) => entry.case_id === caseId) ?? state.workspaceCases.find((entry) => entry.case_id === caseId) ?? null;
+}
+
+/** What a comparison for `caseId` must have been computed with: the mode generation and the preferences the server saved. */
+export function quoteKey(state, caseId = state.caseId) {
+  return JSON.stringify([caseId, state.modeGeneration, state.preferencesByCase[caseId] ?? null]);
+}
+
+/** Whether the shown comparison still prices the saved constraints; only then may anything be issued from it. */
+export function quoteCurrent(state = appStore.get()) {
+  return Boolean(state.comparison) && state.comparisonKey === quoteKey(state);
+}
+
 export function selectedQuote(state = appStore.get()) {
   const quotes = state.comparison?.quotes ?? [];
   const quote = quotes.find((quote) => quote.payout_speed === state.speed) ?? quotes[0] ?? null;

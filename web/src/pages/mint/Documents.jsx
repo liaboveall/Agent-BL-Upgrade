@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp, useLang } from '../../state/hooks.js';
 import { t } from '../../lib/i18n.js';
 import { agentRequest } from '../../lib/agent-api.js';
+import { openWorkspaceCase, refreshWorkspaceCases } from '../../state/controller.js';
 import { fileDocument, MAX_BATCH_BYTES, MAX_FILES } from '../../lib/documents.js';
 import { Badge, Button, Card, CardHead, Disclosure } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
@@ -14,7 +15,10 @@ import { Compliance } from './Compliance.jsx';
 
 const JOB_TONE = { DONE: 'ok', RUNNING: 'info', QUEUED: 'muted', FAILED: 'crit', INTERRUPTED: 'warn' };
 // Intake refusals with their own sentence; anything else keeps the server's message.
-const UPLOAD_ERRORS = new Set(['upload_quota_exceeded', 'upload_batch_too_large', 'intake_storage_full', 'operations_not_ready', 'duplicate_asset_documents']);
+const UPLOAD_ERRORS = new Set(['upload_quota_exceeded', 'upload_batch_too_large', 'intake_storage_full', 'operations_not_ready', 'duplicate_asset_documents',
+  'upload_job_quota_exceeded', 'intake_jobs_full']);
+// A finished upload that produced a case: that case can be priced on this page instead of the sample.
+const opened = (job) => job.status === 'DONE' && ['OPEN', 'OPEN_WITH_WARNING'].includes(job.result_action);
 const uploadError = (failure) => UPLOAD_ERRORS.has(failure?.code) ? t(`ebld_error_${failure.code}`) : failure.message;
 
 export function Documents() {
@@ -30,11 +34,19 @@ export function Documents() {
   const input = useRef(null);
   const reviewId = useRef(null);
   const version = useRef(0);
+  const announced = useRef(new Set());
 
   const refresh = useCallback(async (forCase, requestVersion) => {
     try {
       const data = await agentRequest(`/api/agent/jobs?case_id=${encodeURIComponent(forCase)}&limit=8`);
-      if (requestVersion === version.current) setJobs(data.jobs ?? []);
+      if (requestVersion !== version.current) return;
+      setJobs(data.jobs ?? []);
+      // The case a finished upload produced belongs in the case selector ("My working cases"): ask once per such job.
+      const fresh = (data.jobs ?? []).filter((job) => opened(job) && !announced.current.has(job.job_id));
+      if (fresh.length) {
+        for (const job of fresh) announced.current.add(job.job_id);
+        refreshWorkspaceCases();
+      }
     } catch (failure) {
       if (requestVersion === version.current) setError(failure.message);
     }
@@ -148,6 +160,9 @@ export function Documents() {
               return <p key={index} className={finding.severity === 'info' ? 'muted' : 'cp-warning'}>{translated === key ? finding.detail : translated}</p>;
             })}
             {(job.decision_ids ?? []).map((id) => <DecisionButton key={id} id={id} />)}
+            {opened(job) ? (job.case_id === sourceCaseId
+              ? <p className="muted small">{t('ebld_using_case')}</p>
+              : <Button variant="primary" size="sm" disabled={busy} onClick={() => openWorkspaceCase(job.case_id)}>{t('ebld_use_case')}</Button>) : null}
             {job.error ? <p className="cp-warning">{job.error.message}</p> : null}
             {job.review_required ? (
               <div className="job-review">

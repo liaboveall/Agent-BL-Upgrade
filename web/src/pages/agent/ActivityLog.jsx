@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useApp } from '../../state/hooks.js';
+import { findCase } from '../../state/app-store.js';
 import { t } from '../../lib/i18n.js';
 import { shortLabel } from '../../lib/market.js';
 import { actionLabel } from '../../lib/agent-format.js';
@@ -12,7 +13,7 @@ import { Card, CardHead } from '../../components/ui.jsx';
 export function ActivityLog() {
   const logs = useApp((s) => s.agentLogs);
   const activities = useApp((s) => s.agentActivities);
-  const entry = useApp((s) => s.cases.find((c) => c.case_id === s.caseId));
+  const entry = useApp((s) => findCase(s));
   const box = useRef(null);
   useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [logs]);
   return (

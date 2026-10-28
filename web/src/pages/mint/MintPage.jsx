@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useApp } from '../../state/hooks.js';
-import { selectedQuote } from '../../state/app-store.js';
+import { findCase, selectedQuote } from '../../state/app-store.js';
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import { caseOptionLabel, cargoQuantity } from '../../lib/market.js';
@@ -18,6 +18,7 @@ import { ProtocolEvidence } from './ProtocolEvidence.jsx';
 export function MintPage() {
   const state = useApp((s) => s);
   const quote = selectedQuote(state);
+  const selected = findCase(state);
   const bl = state.caseData?.bill_of_lading ?? {};
   const focusRequest = state.focusRequest;
   const aside = useRef(null);
@@ -48,10 +49,22 @@ export function MintPage() {
         <div className="case-picker">
           <label className="field-label" htmlFor="case-dropdown">{t('case_label')}</label>
           <select id="case-dropdown" className="select" value={state.caseId ?? ''} onChange={(event) => selectCase(event.target.value)}>
-            {state.cases.map((entry) => <option key={entry.case_id} value={entry.case_id}>{caseOptionLabel(state, entry)}</option>)}
+            {state.workspaceCases.length ? (
+              <>
+                <optgroup label={t('case_group_public')}>
+                  {state.cases.map((entry) => <option key={entry.case_id} value={entry.case_id}>{caseOptionLabel(state, entry)}</option>)}
+                </optgroup>
+                <optgroup label={t('case_group_private')}>
+                  {state.workspaceCases.map((entry) => <option key={entry.case_id} value={entry.case_id}>{`${t('case_private_tag')} · ${caseOptionLabel(state, entry)} · ${entry.case.bill_of_lading?.bl_id ?? entry.case_id}`}</option>)}
+                </optgroup>
+              </>
+            ) : state.cases.map((entry) => <option key={entry.case_id} value={entry.case_id}>{caseOptionLabel(state, entry)}</option>)}
           </select>
         </div>
       </header>
+      <p className="muted small quote-source" id="quote-source">{selected?.private
+        ? t('quote_source_private', { id: selected.case_id, from: selected.source_case_id ? t('quote_source_from', { source: selected.source_case_id }) : '' })
+        : t('quote_source_public', { id: state.caseId ?? '—' })}</p>
 
       <dl className="deal-strip" aria-label={t('mint_strip_label')}>
         {strip.map(([label, value]) => (

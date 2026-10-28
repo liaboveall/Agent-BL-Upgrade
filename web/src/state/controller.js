@@ -5,7 +5,7 @@
 // Every async path checks that the case, the runtime generation and the wallet it started with are
 // still current before it writes, so a slow reply never overwrites a newer selection.
 
-import { appStore, selectedQuote } from './app-store.js';
+import { appStore, selectedQuote, findCase, quoteKey, quoteCurrent } from './app-store.js';
 import * as api from '../lib/api.js';
 import * as web3 from '../lib/web3.js';
 import * as f from '../lib/format.js';
@@ -113,7 +113,10 @@ export async function boot() {
     return;
   }
   set({ cases: loaded.cases, casesError: null });
-  await selectCase(get().cases[0]?.case_id);
+  // A working case this tab had selected comes back after a reload (it is private, so it is not in the catalog).
+  await refreshWorkspaceCases();
+  const remembered = rememberedWorkspaceCase();
+  await selectCase(remembered && get().view !== 'market' && findCase(get(), remembered) ? remembered : get().cases[0]?.case_id);
   // Quotes for the other projects are requested by the market page when it is shown. The evidence and the portfolio
   // were requested with the mode; ask again only when that failed or a saved wallet came back after the first read.
   if (!modeLoaded) refreshEvidence();
@@ -175,11 +178,13 @@ export async function toggleRuntimeMode() {
     const { response, data } = await postWithAdminToken('/api/demo/mode', { mode: target });
     if (!response.ok) throw new Error(data.error || `Could not switch to ${target}`);
     versions.caseVersion++;
-    set({ demoMode: data.demoMode, liveAvailable: data.liveAvailable, modeGeneration: data.generation, comparison: null, marketComparisons: {},
-      preferencesByCase: {}, mint: null, financingUsd: null, marketSubscriptionResult: null });
+    set({ demoMode: data.demoMode, liveAvailable: data.liveAvailable, modeGeneration: data.generation, comparison: null, comparisonKey: null, quoteError: null,
+      marketComparisons: {}, preferencesByCase: {}, mint: null, financingUsd: null, marketSubscriptionResult: null });
     resetEvidence();
     resetCopilotUi();
-    await selectCase(get().caseId);
+    // Demo and Live working cases never share a list: a case of the other mode is not selectable after the switch.
+    await refreshWorkspaceCases();
+    await selectCase(findCase(get(), get().caseId) ? get().caseId : get().cases[0]?.case_id);
     warmMarketQuotes();
     toast(t(target === 'live' ? 'mode_switched_live' : 'mode_switched_demo'));
   } catch (error) {
@@ -198,6 +203,7 @@ export async function resetDemo() {
     });
     resetEvidence();
     resetCopilotUi();
+    await refreshWorkspaceCases();
     await selectCase(get().cases[0]?.case_id);
     warmMarketQuotes();
     toast(t('demo_reset_done'));
@@ -220,6 +226,11 @@ export const VIEWS = ['finance', 'market', 'mint', 'agent', 'discover'];
 export function setView(name, { history = 'push' } = {}) {
   if (!VIEWS.includes(name)) return;
   set({ view: name });
+  // The market is the public research shelf: a private working case is priced on the Mint page only.
+  if (name === 'market' && findCase(get())?.private) {
+    const source = findCase(get())?.source_case_id;
+    selectCase(get().cases.some((entry) => entry.case_id === source) ? source : get().cases[0]?.case_id);
+  }
   // A decision drawer belongs to the Agent console it was opened in.
   if (name !== 'agent') agentStore.set({ openDecisionId: null });
   if (name === 'market') refreshPortfolio();
@@ -255,6 +266,49 @@ function exporterPreferencesOf({ minPrice, speed }) {
   if (Number.isFinite(floor) && floor >= 0 && floor <= 1) preferences.min_acceptable_issue_price = floor;
   if (speed) preferences.payout_speed_preference = speed;
   return preferences;
+}
+
+// ---------------------------------------------------------------------------------------------
+// This browser's own working cases (what its uploads produced). They are private: listed only for the workspace
+// that owns them, never added to the public catalog, and remembered for this tab so a reload returns to them.
+// ---------------------------------------------------------------------------------------------
+
+const WORKSPACE_SELECTION_KEY = 'agentbl.workspaceCase';
+
+function rememberedWorkspaceCase() {
+  try { return sessionStorage.getItem(WORKSPACE_SELECTION_KEY) || null; } catch { return null; }
+}
+
+function rememberWorkspaceCase(caseId) {
+  try {
+    if (caseId) sessionStorage.setItem(WORKSPACE_SELECTION_KEY, caseId);
+    else sessionStorage.removeItem(WORKSPACE_SELECTION_KEY);
+  } catch { /* storage unavailable: a reload starts from the first sample */ }
+}
+
+function workspaceEntry(data) {
+  const bl = data.bill_of_lading ?? {};
+  return { case_id: data.case_id, label: `${bl.cargo ?? 'Trade case'} · ${bl.port_of_loading ?? '?'} → ${bl.port_of_discharge ?? '?'}`,
+    route: `${bl.port_of_loading ?? '?'} → ${bl.port_of_discharge ?? '?'}`, cargo: bl.cargo ?? null, risk_hint: null,
+    private: true, source_case_id: data.source_case_id ?? null, case: data };
+}
+
+/** The working cases of the current mode; Demo and Live material never appear in one list. */
+export async function refreshWorkspaceCases() {
+  const generation = get().modeGeneration, mode = get().demoMode ? 'demo' : 'live';
+  try {
+    const cases = await api.getWorkspaceCases();
+    if (generation !== get().modeGeneration) return;
+    set({ workspaceCases: cases.filter((data) => (data.mode ?? 'demo') === mode).map(workspaceEntry) });
+  } catch { /* the public samples still work; the list is asked for again after the next upload */ }
+}
+
+/** Switch the page to the case an upload produced, so the quote, the preferences and the evidence are about it. */
+export async function openWorkspaceCase(caseId) {
+  await refreshWorkspaceCases();
+  if (!findCase(get(), caseId)) { toast(t('t_pricing_fail', { msg: caseId }), true); return false; }
+  await selectCase(caseId);
+  return true;
 }
 
 /** The server case this browser writes for a catalog case: its own working copy of a public sample. */
@@ -313,8 +367,8 @@ export function setPreferenceDraft(patch) {
  */
 async function commitPreferences(logLine) {
   if (get().busy || get().preferencesError) return false;
-  const { caseId, cases, preferences } = get();
-  const entry = cases.find((c) => c.case_id === caseId);
+  const { caseId, preferences } = get();
+  const entry = findCase(get(), caseId);
   if (!entry) return false;
   const save = ++versions.preference, version = versions.caseVersion, generation = get().modeGeneration;
   const current = () => save === versions.preference && get().caseId === caseId && version === versions.caseVersion && generation === get().modeGeneration;
@@ -327,12 +381,16 @@ async function commitPreferences(logLine) {
     return false;
   }
   if (!current()) return false;
-  set((state) => ({ preferencesUnsaved: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
+  // From here the comparison on screen prices the previous constraints: quoteCurrent() is false, so nothing can be
+  // issued from it, until repricing with the saved ones succeeds. A failure keeps it visible for reference only.
+  set((state) => ({ preferencesUnsaved: null, quoteError: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
   if (logLine) agentLog(logLine);
+  const key = quoteKey(get());
   try {
     const comparison = await getCaseComparison(entry, true);
-    if (current()) set({ comparison });
+    if (current()) set({ comparison, comparisonKey: key });
   } catch (error) {
+    if (current()) set({ quoteError: error.message });
     toast(t('t_reprice_fail', { msg: error.message }), true);
   } finally {
     if (current()) set({ busy: false });
@@ -355,6 +413,26 @@ export async function commitSpeedPreference(value) {
 /** Retry the unsaved form as it stands. */
 export function retryPreferences() {
   return commitPreferences(t('pref_retried'));
+}
+
+/** Ask again for the quote of the saved constraints (after repricing with them failed). */
+export async function requote() {
+  const state = get(), entry = findCase(state);
+  if (state.busy || !entry) return false;
+  const caseId = state.caseId, version = versions.caseVersion, generation = state.modeGeneration, key = quoteKey(state);
+  const current = () => get().caseId === caseId && version === versions.caseVersion && generation === get().modeGeneration && key === quoteKey(get());
+  set({ busy: true });
+  try {
+    const comparison = await getCaseComparison(entry, true);
+    if (current()) set({ comparison, comparisonKey: key, quoteError: null });
+    return true;
+  } catch (error) {
+    if (current()) set({ quoteError: error.message });
+    toast(t('t_reprice_fail', { msg: error.message }), true);
+    return false;
+  } finally {
+    if (version === versions.caseVersion) set({ busy: false });
+  }
 }
 
 /** Put the form back to what the server saved. */
@@ -400,11 +478,12 @@ export function warmMarketQuotes() {
 }
 
 export async function selectCase(caseId) {
-  const entry = get().cases.find((c) => c.case_id === caseId);
+  const entry = findCase(get(), caseId);
   if (!entry) return;
   const version = ++versions.caseVersion, generation = get().modeGeneration;
   if (get().evidenceSelected?.case_id !== caseId) clearEvidenceSelection();
-  set({ caseId, caseData: entry.case, comparison: null, busy: true, preferences: { minPrice: '', speed: '' }, preferencesError: null, preferencesUnsaved: null,
+  rememberWorkspaceCase(entry.private ? caseId : null);
+  set({ caseId, caseData: entry.case, comparison: null, comparisonKey: null, quoteError: null, busy: true, preferences: { minPrice: '', speed: '' }, preferencesError: null, preferencesUnsaved: null,
     workspaceCaseId: null, financingUsd: null, mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: [], marketSubscriptionResult: null });
   emit('agentbl:casechange', { case_id: caseId });
   subscribeToAgentActivity(caseId);
@@ -414,10 +493,11 @@ export async function selectCase(caseId) {
     set({ workspaceCaseId });
     await loadExporterPreferences(caseId, version, generation);
     if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
+    const key = quoteKey(get());
     const comparison = await getCaseComparison(entry);
     if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
     const speed = get().preferences.speed || comparison.recommended_payout_speed || comparison.quotes?.[0]?.payout_speed || 'BALANCED';
-    set({ comparison, speed });
+    set({ comparison, comparisonKey: key, speed });
     const quote = selectedQuote();
     set({
       financingUsd: Math.round(quote?.requested_cash_usd ?? quote?.expected_cash_to_exporter_usd ?? 0),
@@ -593,6 +673,8 @@ export function setFinancing(value) {
 export async function mint() {
   const state=get(), quote=selectedQuote(state);
   if (state.busy || state.minting || state.preferencesError || !quote || quote.case_id !== state.caseId || PAUSED_ACTIONS.has(quote.pricing_action)) return;
+  // A quote computed before the constraints now saved can be shown, never issued.
+  if (!quoteCurrent(state)) { toast(t('quote_stale_blocked'), true); return; }
   if (!state.demoMode) { toast(t('controlled_issuance_required'), true); return; }
   const financing=Number(state.financingUsd)||0;
   if(financing<=0){toast(t('t_need_financing'),true);return;}
@@ -600,7 +682,7 @@ export async function mint() {
   set({minting:true});
   try {
     const result=await web3.simulatedMint(caseId,quote,financing);
-    if(get().caseId===caseId && get().modeGeneration===generation && selectedQuote()?.quote_hash===hash) {set({mint:result});toast(t('t_minted_sim',{n:f.int(result.mintedAmount)}));}
+    if(get().caseId===caseId && get().modeGeneration===generation && selectedQuote()?.quote_hash===hash && quoteCurrent()) {set({mint:result});toast(t('t_minted_sim',{n:f.int(result.mintedAmount)}));}
   } finally {set({minting:false});}
 }
 

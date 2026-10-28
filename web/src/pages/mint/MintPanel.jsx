@@ -3,7 +3,8 @@ import { t } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import * as web3 from '../../lib/web3.js';
 import { PAUSED_ACTIONS, potentialYieldText } from '../../lib/market.js';
-import { mint, selectSpeed, setFinancing, setView } from '../../state/controller.js';
+import { mint, requote, selectSpeed, setFinancing, setView } from '../../state/controller.js';
+import { quoteCurrent } from '../../state/app-store.js';
 import { Badge, Button, Card, Field, KV, cx, useRovingKeys } from '../../components/ui.jsx';
 import { RichT } from '../../components/RichText.jsx';
 
@@ -19,6 +20,9 @@ export function MintPanel({ quote }) {
   const busy = useApp((s) => s.busy);
   const demoMode = useApp((s) => s.demoMode);
   const result = useApp((s) => s.mint);
+  // A comparison computed before the constraints now saved stays on screen for reference, but cannot be issued.
+  const current = useApp((s) => quoteCurrent(s));
+  const quoteError = useApp((s) => s.quoteError);
   const quotes = comparison?.quotes ?? [];
   const recommended = comparison?.recommended_payout_speed;
   const available = SPEEDS.filter((name) => quotes.some((q) => q.payout_speed === name));
@@ -44,6 +48,13 @@ export function MintPanel({ quote }) {
             ? <p className="muted small">{t('live_pool_terms', { speed: f.SPEED_META[pool.quote.payout_speed]?.label ?? pool.quote.payout_speed, price: f.price(pool.quote.final_issue_price_usd) })}</p> : null}
         </div>
       </header>
+
+      {current ? null : (
+        <div className="callout tone-warn" id="quote-stale" role="status">
+          <p>{quoteError ? t('quote_stale', { msg: quoteError }) : t('quote_stale_pending')}</p>
+          {quoteError ? <Button variant="secondary" size="sm" disabled={busy} onClick={requote}>{t('quote_retry')}</Button> : null}
+        </div>
+      )}
 
       <div className="speed-group">
         <span className="field-label" id="speed-label">{t('payout_speed_label')}</span>
@@ -84,7 +95,7 @@ export function MintPanel({ quote }) {
         <div className="input-row">
           <input id="mint-financing" className="input" type="number" min="0" step="100000" inputMode="numeric" value={String(financing)} disabled={paused}
             onChange={(event) => setFinancing(event.target.value)} />
-          <Button id="mint-btn" variant="primary" disabled={paused || minting || busy || !demoMode} onClick={mint}>{minting ? t('minting') : t(demoMode ? 'mint_demo_btn' : 'mint_lab_btn')}</Button>
+          <Button id="mint-btn" variant="primary" disabled={paused || minting || busy || !demoMode || !current} onClick={mint}>{minting ? t('minting') : t(demoMode ? 'mint_demo_btn' : 'mint_lab_btn')}</Button>
         </div>
       </Field>
       {paused ? (

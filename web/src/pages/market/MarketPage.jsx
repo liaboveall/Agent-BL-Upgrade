@@ -59,12 +59,13 @@ export function MarketPage() {
           <p className="eyebrow">{t('market_eyebrow')}</p>
           <h1 id="market-title">{t('market_h1')}</h1>
           <p className="page-sub">{t('market_subtitle_short')}</p>
+          {/* Sample statistics of fictional research cases are context, not the task: one quiet line, with what they are. */}
+          <p className="muted small market-sample-stats" aria-live="polite">
+            {`${t('market_stat_target')} ${f.usdCompact(stats.target)} (${t('market_stat_sample_hint')}) · ${t('market_stat_yield')} ${stats.avgYield == null ? '—' : f.bpsToPct(stats.avgYield)} (${t('market_stat_yield_hint')})`}
+          </p>
         </div>
         <div className="page-head-stats" aria-live="polite">
           <Stat label={t('market_stat_open')} value={`${stats.open} / ${stats.priced}`} />
-          {/* Sample statistics of fictional research cases: said next to the figures, not only in the footer. */}
-          <Stat label={t('market_stat_target')} value={f.usdCompact(stats.target)} hint={t('market_stat_sample_hint')} />
-          <Stat label={t('market_stat_yield')} value={stats.avgYield == null ? '—' : f.bpsToPct(stats.avgYield)} hint={t('market_stat_yield_hint')} />
           <Button variant="secondary" className="portfolio-btn" onClick={() => setPortfolioOpen(true)} aria-haspopup="dialog">
             <Icon name="briefcase" size={15} />{t('portfolio_h')}{holdings ? <span className="count-pill">{holdings}</span> : null}
           </Button>
