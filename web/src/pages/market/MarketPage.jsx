@@ -62,8 +62,9 @@ export function MarketPage() {
         </div>
         <div className="page-head-stats" aria-live="polite">
           <Stat label={t('market_stat_open')} value={`${stats.open} / ${stats.priced}`} />
-          <Stat label={t('market_stat_target')} value={f.usdCompact(stats.target)} />
-          <Stat label={t('market_stat_yield')} value={stats.avgYield == null ? '—' : f.bpsToPct(stats.avgYield)} />
+          {/* Sample statistics of fictional research cases: said next to the figures, not only in the footer. */}
+          <Stat label={t('market_stat_target')} value={f.usdCompact(stats.target)} hint={t('market_stat_sample_hint')} />
+          <Stat label={t('market_stat_yield')} value={stats.avgYield == null ? '—' : f.bpsToPct(stats.avgYield)} hint={t('market_stat_yield_hint')} />
           <Button variant="secondary" className="portfolio-btn" onClick={() => setPortfolioOpen(true)} aria-haspopup="dialog">
             <Icon name="briefcase" size={15} />{t('portfolio_h')}{holdings ? <span className="count-pill">{holdings}</span> : null}
           </Button>

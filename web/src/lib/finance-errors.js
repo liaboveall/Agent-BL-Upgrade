@@ -85,6 +85,9 @@ const COPY = Object.freeze({
   rights_manual_reconciliation_required: { text: ['无法自动找到原交易。请填写原钱包交易哈希后核对。', 'The original transaction could not be found automatically. Enter its wallet transaction hash to reconcile.'] },
   rights_preflight_failed: { text: ['链上状态或权限拒绝了这笔操作，未发送任何交易。', 'The chain state or permissions reject this operation; nothing was sent.'] },
   rights_role_required: { text: ['当前业务身份没有这项操作的权限。', 'Your business identity is not allowed to do this.'] },
+  rights_material_archived: { text: ['这份材料已过保留期并归档，只能阅读，不能再追加证据、审核或发起操作。', 'This material is archived after its retention period. It can be read, but no evidence, review or action can be added.'] },
+  rights_material_expired: { text: ['这份材料的归档期已结束，已不再保存。', 'This material’s archive period has ended and it is no longer kept.'] },
+  identity_lookup_invalid: { text: ['身份查找请求已过期或签名不属于当前钱包，请重新查找。', 'The identity lookup expired or the signature is not from this wallet. Look up again.'] },
   // Controller require() reasons an investor can meet.
   'terms changed': { text: ['链上条款或报价版本已变化，请重新阅读并同意最新条款。', 'The chain terms or quote version changed. Read and accept the latest terms again.'] },
   'invalid acceptance expiry': { text: ['同意有效期无效（已过期或晚于募集截止），请重新审阅。', 'The acceptance expiry is invalid (past, or after the subscription deadline). Review again.'] }
@@ -102,6 +105,21 @@ export function revertName(failure) {
   return failure?.revert?.name ?? null;
 }
 
+// Why signed terms no longer accept new operations (src/rights/financingReview.js `current.reasons`).
+const TERMS_REASONS = Object.freeze({
+  legacy_exit_only: ['旧版本实例只保留退出', 'superseded instance, exits only'], offering_changed: ['链上发行价格或份额已与签署条款不同', 'the on-chain price or supply differs from the signed terms'],
+  holder_changed: ['单证持有人已变更', 'the title holder changed'], governance_changed: ['治理地址已变更', 'governance changed'], valuer_changed: ['估值人已变更', 'the valuer changed'],
+  issuer: ['签发方', 'issuer'], operator: ['放款运营方', 'operator'], valuer: ['估值方', 'valuer'], compliance: ['资格审查方', 'compliance'], disposer: ['处置提议方', 'disposer'], reviewer: ['处置审核方', 'reviewer']
+});
+/** The reasons as one localized phrase, e.g. "the valuer's role was revoked; the title holder changed". */
+export function termsReasons(reasons, zh) {
+  return (reasons ?? []).map((reason) => {
+    const role = /^(\w+)_revoked$/u.exec(reason)?.[1];
+    if (role && TERMS_REASONS[role]) return zh ? `签约角色“${TERMS_REASONS[role][0]}”已被撤销` : `the ${TERMS_REASONS[role][1]} role was revoked`;
+    return TERMS_REASONS[reason]?.[zh ? 0 : 1] ?? reason;
+  }).join(zh ? '；' : '; ');
+}
+
 /** { message, session } for display; `session` means re-verifying the business identity may fix it. */
 export function describeFinanceError(failure, zh) {
   const code = failure?.code === 4001 ? 'ACTION_REJECTED' : failure?.code;
@@ -109,5 +127,6 @@ export function describeFinanceError(failure, zh) {
   const key = [code, revertName(failure), reason].find((candidate) => typeof candidate === 'string' && Object.hasOwn(COPY, candidate)) ?? null;
   const entry = key ? COPY[key] : null;
   if (!entry) return { message: failure?.message ?? String(failure), session: false };
-  return { message: entry.text[zh ? 0 : 1], session: Boolean(entry.session) };
+  const detail = termsReasons(failure?.reasons ?? failure?.details?.reasons, zh);
+  return { message: detail ? `${entry.text[zh ? 0 : 1]}${zh ? '原因：' : ' Reason: '}${detail}${zh ? '。' : '.'}` : entry.text[zh ? 0 : 1], session: Boolean(entry.session) };
 }

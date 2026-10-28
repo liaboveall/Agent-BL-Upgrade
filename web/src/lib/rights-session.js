@@ -19,6 +19,16 @@ export async function rightsRequest(route, body) {
   if (!response.ok) throw Object.assign(new Error(result.error ?? 'Role workspace unavailable'), { code: result.code });
   return result;
 }
+/** The business identities enrolled for the connected wallet, found by one lookup signature (no funds, no session). */
+export async function findRightsIdentities() {
+  const session = currentWalletSession(), wallet = connectedAddress()?.toLowerCase(), generation = appStore.get().modeGeneration;
+  if (!session?.signer || !wallet) throw new Error('Connect your enrolled wallet first');
+  const challenge = await rightsRequest('identity-challenges', { wallet });
+  if (challenge.message.wallet.toLowerCase() !== wallet) throw new Error('The lookup belongs to a different wallet');
+  const signature = await session.signer.signTypedData(challenge.domain, challenge.types, challenge.message);
+  if (currentWalletSession() !== session || connectedAddress()?.toLowerCase() !== wallet || appStore.get().modeGeneration !== generation) throw new Error('Wallet or mode changed. Look up again.');
+  return (await rightsRequest('identities', { challenge_id: challenge.challenge_id, signature })).identities;
+}
 export async function openRightsSession(subjectId, { exitOnly = false } = {}) {
   const session = currentWalletSession(), wallet = connectedAddress()?.toLowerCase(), generation = appStore.get().modeGeneration;
   if (!session?.signer || !wallet) throw new Error('Connect your enrolled wallet first');

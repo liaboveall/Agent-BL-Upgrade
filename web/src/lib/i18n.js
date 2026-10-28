@@ -398,7 +398,7 @@ const DICT = {
     ac_execution: '执行',
     ac_no_execution: '没有执行记录。',
     ac_exec_mode: '方式',
-    ac_exec_chain: '链上（真实交易）',
+    ac_exec_chain: '链上（测试网交易）',
     ac_exec_demo: 'Demo 模拟（链下池子）',
     ac_exec_signer: '签名角色',
     ac_exec_tx: '交易',
@@ -482,8 +482,8 @@ const DICT = {
 
     // runtime mode
     demo_mode_copy: '演示模式 · 无需钱包 · 模拟回执不是链上交易',
-    live_mode_copy: '真实模式 · 使用真实钱包、USDC 与链上交易',
-    switch_to_live: '切换至真实模式',
+    live_mode_copy: 'Live 测试网 · 钱包逐笔确认 · 测试资产与测试网交易',
+    switch_to_live: '切换至 Live 测试网',
     switch_to_demo: '切换至演示模式',
     demo_reset: '重置演示',
     demo_reset_done: '演示状态已重置',
@@ -513,7 +513,7 @@ const DICT = {
     keyword_ai_unavailable_toast: '关键词匹配 {n} 张 eBL（AI 暂不可用）',
 
     // chain status
-    chain_deployed: '● 已配置 {network} 合约 · 真实操作需在 Live 中逐笔确认',
+    chain_deployed: '● 已配置 {network} 合约 · 测试网操作需在 Live 中逐笔确认',
     chain_not_deployed: '○ 合约未部署 · 当前为模拟上链（运行 deploy 脚本后切真实链）',
 
     // marketplace
@@ -532,8 +532,10 @@ const DICT = {
     market_empty: '没有匹配的 eBL 项目。',
     market_loading: '定价中…',
     market_stat_deals: '可见项目',
-    market_stat_target: '融资目标',
-    market_stat_yield: '平均年化（参考）',
+    market_stat_target: '样本融资目标',
+    market_stat_yield: '样本平均年化',
+    market_stat_sample_hint: '虚构研究样本 · 非可投资规模',
+    market_stat_yield_hint: '研究报价统计 · 非收益预测',
     market_stat_open: '开放项目',
     market_summary_visible: '可见',
     market_summary_selected: '已选',
@@ -1248,7 +1250,7 @@ const DICT = {
     ac_execution: 'Execution',
     ac_no_execution: 'No execution recorded.',
     ac_exec_mode: 'Mode',
-    ac_exec_chain: 'On-chain (real transaction)',
+    ac_exec_chain: 'On-chain (testnet transaction)',
     ac_exec_demo: 'Demo simulation (offchain pool)',
     ac_exec_signer: 'Signer role',
     ac_exec_tx: 'Transaction',
@@ -1332,8 +1334,8 @@ const DICT = {
 
     // runtime mode
     demo_mode_copy: 'Demo · no wallet needed · simulated receipts are not chain transactions',
-    live_mode_copy: 'LIVE MODE · Real wallet, USDC and on-chain transactions',
-    switch_to_live: 'Switch to Live',
+    live_mode_copy: 'LIVE TESTNET · wallet approvals · test assets and testnet transactions',
+    switch_to_live: 'Switch to Live testnet',
     switch_to_demo: 'Switch to Demo',
     demo_reset: 'Reset demo',
     demo_reset_done: 'Demo state reset',
@@ -1363,7 +1365,7 @@ const DICT = {
     keyword_ai_unavailable_toast: 'Keyword matched {n} eBL deals (AI unavailable)',
 
     // chain status
-    chain_deployed: '● {network} contracts configured · real actions are confirmed one by one in Live',
+    chain_deployed: '● {network} contracts configured · testnet actions are confirmed one by one in Live',
     chain_not_deployed: '○ Not deployed · simulated minting (run the deploy script to go live)',
 
     // marketplace
@@ -1382,8 +1384,10 @@ const DICT = {
     market_empty: 'No matching eBL-backed deals.',
     market_loading: 'Pricing…',
     market_stat_deals: 'Visible deals',
-    market_stat_target: 'Funding target',
-    market_stat_yield: 'Avg annualized (indicative)',
+    market_stat_target: 'Sample funding target',
+    market_stat_yield: 'Sample avg annualized',
+    market_stat_sample_hint: 'Fictional research sample, not investable size',
+    market_stat_yield_hint: 'Research quote statistic, not a forecast',
     market_stat_open: 'Open deals',
     market_summary_visible: 'Visible',
     market_summary_selected: 'Selected',

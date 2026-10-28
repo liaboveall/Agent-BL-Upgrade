@@ -74,7 +74,9 @@ export function readPage(params) {
     || (number == null) !== (hash == null) || number != null && (!/^\d+$/u.test(number) || !Number.isSafeInteger(Number(number)) || !/^0x[a-fA-F0-9]{64}$/u.test(hash))) {
     throw new HttpError(400, 'invalid_pagination', 'Use a positive cursor, limit up to 20 and a complete snapshot reference');
   }
-  return { from, limit, ...(number == null ? {} : { block_number: Number(number), block_hash: hash }) };
+  const status = params.get('status');
+  if (status != null && !['all', 'open', 'active', 'closed'].includes(status)) throw new HttpError(400, 'invalid_pagination', 'Filter by all, open, active or closed');
+  return { from, limit, ...(status == null ? {} : { status }), ...(number == null ? {} : { block_number: Number(number), block_hash: hash }) };
 }
 
 export async function readSnapshot(provider, query, read) {

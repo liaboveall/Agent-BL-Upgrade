@@ -5,7 +5,7 @@ export async function controlledRequest(route, body) {
   const response = await fetch(`/api/controlled/${route}`, { ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
     headers: { 'content-type': 'application/json', ...(token ? { 'x-rights-session': token } : {}) } });
   const value = await response.json();
-  if (!response.ok) throw Object.assign(new Error(value.error ?? value.message ?? 'Controlled financing unavailable'), { code: value.code });
+  if (!response.ok) throw Object.assign(new Error(value.error ?? value.message ?? 'Controlled financing unavailable'), { code: value.code, details: value.details });
   return value;
 }
 export function controlledIntentOptions(config, onIntent, assertCurrent, disclosureHash) {

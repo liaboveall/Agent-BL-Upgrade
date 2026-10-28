@@ -49,6 +49,27 @@ test('N3 stable 25-pool snapshots cover every page and distinguish failures, new
   assert.ok(calls > 250);
 });
 
+test('N3 directory filters scan forward on one snapshot, report unreadable pools and continue from their cursor', async () => {
+  const block = { number: 77, hash: `0x${'ab'.repeat(32)}`, timestamp: 1_000_000 };
+  // Pools cycle through Funded with subscribers (active), Repaid and fully claimed (closed) and Cancelled with escrow left (active).
+  const kind = (id) => [[4n, 5n, 0n], [9n, 5n, 0n], [12n, 5n, 3n]][id % 3];
+  const chain = { provider: { getBlock: async () => block }, verify: async () => ({}),
+    controller: { termsHash: async () => 'commitment', terms: async () => ({ disburseUntil: 5000, policyHash: 'policy', disclosureHash: 'disclosure' }) },
+    pool: { nextPoolId: async () => 26, offerings: async (id) => { if (id === 9) throw new Error('Unavailable');
+      return { state: kind(id)[0], tokenSupply: 10n, subscribed: kind(id)[1], issuePrice: 800000n, targetRedemptionValue: 1000000n, settlementAsset: 'asset', raisedAtomic: 0n }; },
+    quoteVersion: async () => 1, subscriptionDeadline: async () => block.timestamp - 10, maturityAt: async () => block.timestamp + 10, disbursedAtomic: async () => 0n,
+    recoveredAtomic: async () => 0n, escrowed: async (id) => kind(id)[2] } };
+  const pool = new RpcReadPool(), config = { controlVersion: 2 };
+  const closed = await readOfferings(chain, config, pool, { from: 1, limit: 3, status: 'closed' });
+  assert.deepEqual(closed.offerings.map((offer) => offer.pool_id), [1, 4, 7]); assert.equal(closed.next_cursor, 8); assert.equal(closed.status, 'closed');
+  const active = await readOfferings(chain, config, pool, { from: 8, limit: 10, status: 'active', block_number: 77, block_hash: block.hash });
+  assert.deepEqual(active.failures, [{ pool_id: 9, code: 'pool_read_unavailable' }], 'an unreadable pool is reported, never filtered out');
+  assert.deepEqual(active.offerings.map((offer) => offer.pool_id), [8, 11, 12, 14, 15, 17, 18, 20, 21, 23]); assert.equal(active.next_cursor, 24);
+  assert.equal((await readOfferings(chain, config, pool, { from: 24, limit: 10, status: 'open' })).next_cursor, null);
+  assert.equal(readPage(new URLSearchParams('status=active')).status, 'active');
+  assert.throws(() => readPage(new URLSearchParams('status=mine')), { code: 'invalid_pagination' });
+});
+
 test('N3 a current pool opens only when screening, valuation, valuer, title, asset and intake allow every investor', async () => {
   const block = { number: 50, hash: `0x${'ab'.repeat(32)}`, timestamp: 1_000_000 }, ZERO = `0x${'0'.repeat(40)}`, CONTROLLER = `0x${'c0'.repeat(20)}`;
   const s = {};

@@ -98,6 +98,16 @@
 .finance-resolution dt { font-size: var(--fs-12); opacity: 0.8; }
 .finance-resolution p { margin: 6px 0 0; }
 .finance-next-step { margin: 0 0 14px; padding: 12px 16px; border-top: 1px solid var(--accent-line); color: var(--text-2); }
+/* What this wallet should do first, above the full directory. */
+.finance-tasks { margin: 0 28px 20px; padding: 16px 20px; border: 1px solid var(--accent-line); border-radius: var(--r); background: var(--surface); }
+.controlled-panel .finance-tasks h2 { font-size: var(--fs-16); letter-spacing: -.01em; }
+.finance-tasks ul { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.finance-tasks li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: var(--fs-13); }
+.finance-tasks p { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 0; color: var(--muted); font-size: var(--fs-12); }
+.finance-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 28px 14px; }
+.controlled-panel .finance-filters button { min-height: 32px; padding: 6px 12px; font-size: var(--fs-12); background: var(--surface-2); color: var(--text-2); }
+.controlled-panel .finance-filters button[aria-pressed="true"] { background: var(--accent-fill); color: var(--on-accent); }
+.chain-time-utc { margin-left: 6px; color: var(--muted); font-size: var(--fs-12); user-select: all; }
 .controlled-panel .positions-heading { margin-top: 20px; padding: 24px 28px 0; border-top: 1px solid var(--line); font-size: var(--fs-18); }
 .positions-heading + p { margin: 16px 28px 28px; padding: 20px; border: 1px dashed var(--line-strong); border-radius: var(--r); color: var(--muted); background: var(--surface-2); }
 .controlled-panel .controlled-position, .controlled-panel .controlled-confirm { margin: 16px 28px; padding: 20px; border-color: var(--line); border-radius: var(--r-lg); }

@@ -128,6 +128,17 @@ async function instanceAvailability(chain, read, at) {
   return { intake_stopped: intake == null ? null : Boolean(intake), screening_valid_until: screening == null ? null : String(screening), controller };
 }
 
+// Directory filters. `open` takes new money; `active` still holds money (escrow, or subscribers in a pool that has not
+// ended); `closed` is over or never got a subscriber. `all` (reads.js readPage) lists every pool in order.
+const ENDED = ['Repaid', 'Cancelled', 'LossSettled'];
+export function offeringFilter(offering) {
+  if (offering.subscription_open) return 'open';
+  return BigInt(offering.escrow_atomic ?? 0) > 0n || !ENDED.includes(offering.state) && BigInt(offering.subscribed) > 0n ? 'active' : 'closed';
+}
+// A filtered page scans forward in chunks and stops early rather than spend the whole read budget; it may then hold
+// fewer rows than the limit, and `next_cursor` says where the scan continues.
+const SCAN_CHUNK = 10, SCAN_BUDGET = 320;
+
 export async function readOfferings(chain, config, pool, query = {}) {
   const budget = pool.budget(480), { read } = budget;
   const block = await readSnapshot(chain.provider, query, read), at = { blockTag: block.number };
@@ -135,17 +146,32 @@ export async function readOfferings(chain, config, pool, query = {}) {
   const next = Number(await read(() => chain.pool.nextPoolId(at)));
   if (!Number.isSafeInteger(next) || next < 1) throw new HttpError(503, 'pool_count_invalid', 'Pool discovery is unavailable');
   const from = query.pool_id ?? query.from ?? 1, limit = query.pool_id ? 1 : query.limit ?? 10;
+  const filter = !query.pool_id && query.status && query.status !== 'all' ? query.status : null;
   if (query.pool_id && from >= next) throw new HttpError(404, 'controlled_pool_not_found', 'Funding pool not found in this instance');
-  const ids = Array.from({ length: Math.max(0, Math.min(next - from, limit)) }, (_, index) => from + index);
+  const range = (start, count) => Array.from({ length: Math.max(0, Math.min(next - start, count)) }, (_, index) => start + index);
   const instance = await instanceAvailability(chain, read, at);
   // A failed batch (an RPC that rejects large calls, say) falls back to the per-view reads rather than failing the page.
-  const multicall = ids.length ? await multicallFor(chain.provider, read) : null;
-  const rows = (multicall && await batchedRows(chain, config, instance, multicall, ids, block, read).catch(() => null)) || await singleRows(chain, config, instance, ids, block, read);
+  const multicall = next > from ? await multicallFor(chain.provider, read) : null;
+  const readRows = async (ids) => (multicall && await batchedRows(chain, config, instance, multicall, ids, block, read).catch(() => null)) || singleRows(chain, config, instance, ids, block, read);
+  let rows, cursor;
+  if (!filter) { rows = await readRows(range(from, limit)); cursor = from + limit; }
+  else {
+    rows = []; cursor = from;
+    // Unreadable pools cannot be classified, so they are always reported rather than silently filtered out.
+    while (cursor < next && rows.filter((row) => row.offering).length < limit && (cursor === from || budget.stats.calls < SCAN_BUDGET)) {
+      const ids = range(cursor, SCAN_CHUNK), chunk = await readRows(ids);
+      for (const [index, row] of chunk.entries()) {
+        cursor = ids[index] + 1;
+        if (!row.offering || offeringFilter(row.offering) === filter) rows.push(row);
+        if (rows.filter((item) => item.offering).length >= limit) break;
+      }
+    }
+  }
   await assertSnapshot(chain.provider, block, read);
   const failed = rows.filter((row) => !row.offering);
   const { controller: _controller, ...availability } = instance;
   return { offerings: rows.flatMap((row) => row.offering ? [row.offering] : []), failures: failed, complete: failed.length === 0,
-    total_pools: next - 1, from, limit, next_cursor: from + limit < next ? from + limit : null,
+    total_pools: next - 1, from, limit, status: filter ?? 'all', next_cursor: cursor < next ? cursor : null,
     availability: { ...availability, screening_valid: availability.screening_valid_until == null ? null : Number(availability.screening_valid_until) >= block.timestamp },
     snapshot: snapshotInfo(block), read_metrics: budget.stats, scope: 'research_test_assets_only', config };
 }

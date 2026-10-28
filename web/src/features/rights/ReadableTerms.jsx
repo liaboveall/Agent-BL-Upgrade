@@ -1,6 +1,7 @@
 import { sourceFieldLabel, sourceStatusLabel } from '../../lib/source-status.js';
+import { termsReasons } from '../../lib/finance-errors.js';
+import { ChainTime } from './ChainTime.jsx';
 const amount = (v) => `${BigInt(v) / 1000000n}.${(BigInt(v) % 1000000n).toString().padStart(6, '0')}`;
-const time = (v) => new Date(Number(v) * 1000).toISOString();
 export function ReadableTerms({ pack, zh }) {
   const { document: doc, terms: t } = pack, current = doc.instance?.control_version >= 3;
   const roles = { issuer: ['研究签发方', 'Research issuer'], holder: ['单证持有人', 'Title holder'], operator: ['放款运营方', 'Disbursement operator'],
@@ -8,15 +9,17 @@ export function ReadableTerms({ pack, zh }) {
     reviewer: ['处置审核方', 'Resolution reviewer'], governance: ['延时治理', 'Delayed governance'] };
   return <div className="readable-terms">
     <h3>{zh ? '完整融资条款' : 'Complete financing terms'} · v{doc.revision}</h3>
+    {/* Signed terms stay readable as history; the server says whether anything new may still be signed on them. */}
+    {pack.current?.ok === false && <p className="finance-next-step" role="note">{zh ? '这是该池签署时的条款，承诺与链上一致，可继续核对与下载；但当前不能据此新增同意或认购。原因：' : 'These are the terms as signed. Their commitments match the chain and they can still be checked and downloaded, but no new acceptance or subscription can rely on them. Reason: '}{termsReasons(pack.current.reasons, zh)}{zh ? '。已有持仓的退款与领取不受影响。' : '. Refunds and claims of existing positions are unaffected.'}</p>}
     <p>{zh ? '虚构铜货物' : 'Fictional copper'} · {doc.scenario.origin} → {doc.scenario.destination} · {zh ? '研究签发方 · 测试代币。地址分工不证明独立组织、真实货权或可执行处置权。' : 'research issuer · test assets. Role addresses do not prove independent organizations, real title or enforceable disposal rights.'}</p>
     <dl>{Object.entries(doc.parties).map(([role, value]) => <div key={role}><dt>{roles[role][zh ? 0 : 1]}</dt><dd><code>{value}</code></dd></div>)}
       <div><dt>{zh ? '单证登记编号' : 'Registered title ID'}</dt><dd>{t.eblId}</dd></div>
       <div><dt>{zh ? '单证材料承诺' : 'Title material commitment'}</dt><dd><code>{t.documentHash}</code></dd></div>
       <div><dt>{zh ? '融资收款人' : 'Financing recipient'}</dt><dd><code>{t.exporter}</code></dd></div>
       <div><dt>{zh ? '测试资产 / 小数位' : 'Test asset / decimals'}</dt><dd><code>{t.settlementAsset}</code> · 6 · TEST_USDC</dd></div>
-      <div><dt>{zh ? '募集截止（含）' : 'Subscription deadline (inclusive)'}</dt><dd>{time(t.subscribeUntil)}</dd></div>
-      <div><dt>{zh ? '放款截止（不含）' : 'Disbursement deadline (exclusive)'}</dt><dd>{time(t.disburseUntil)}</dd></div>
-      <div><dt>{zh ? '债务到期' : 'Debt maturity'}</dt><dd>{time(t.maturity)}</dd></div>
+      <div><dt>{zh ? '募集截止（含）' : 'Subscription deadline (inclusive)'}</dt><dd><ChainTime value={t.subscribeUntil} zh={zh} utc /></dd></div>
+      <div><dt>{zh ? '放款截止（不含）' : 'Disbursement deadline (exclusive)'}</dt><dd><ChainTime value={t.disburseUntil} zh={zh} utc /></dd></div>
+      <div><dt>{zh ? '债务到期' : 'Debt maturity'}</dt><dd><ChainTime value={t.maturity} zh={zh} utc /></dd></div>
       <div><dt>{zh ? '每份实付 / 目标兑付' : 'Paid / target per share'}</dt><dd>{amount(t.issuePrice)} / {amount(t.target)} TEST_USDC</dd></div>
       <div><dt>{zh ? '份额上限 / 最低募集' : 'Share supply / minimum raise'}</dt><dd>{t.supply} / {amount(t.minRaise)} TEST_USDC</dd></div>
       <div><dt>{zh ? '平台费用上限' : 'Platform fee cap'}</dt><dd>0 TEST_USDC</dd></div>
