@@ -49,9 +49,11 @@ try {
     const source = await releaseSourceSnapshot();
     const ciFile = path.join(releaseRoot, 'artifacts/n5-publish', source.base_head, 'ci.json');
     const ci = await readJson(ciFile);
+    // Every job .github/workflows/ci.yml runs, matrix legs included (16 since the fresh release install job).
+    const ciJobs = 16;
     if (!ci || ci.headSha !== source.base_head || ci.conclusion !== 'success'
-      || ci.jobs.filter((job) => job.conclusion === 'success').length !== 15
-      || ci.jobs.some((job) => !['success', 'skipped'].includes(job.conclusion))) throw new Error('Require the 15-job same-commit CI receipt before external signing');
+      || ci.jobs.filter((job) => job.conclusion === 'success').length !== ciJobs
+      || ci.jobs.some((job) => !['success', 'skipped'].includes(job.conclusion))) throw new Error(`Require the ${ciJobs}-job same-commit CI receipt before external signing`);
     const previousChain = await loadRightsChain(path.join(releaseRoot, 'public/rights-instance.json'));
     await previousChain.provider.destroy();
     const keyDirectory = process.env.AGENTBL_W5_KEY_DIR || path.join(os.homedir(), '.agentbl/w5-2026-10-18');
