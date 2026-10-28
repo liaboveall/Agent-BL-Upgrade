@@ -91,9 +91,14 @@ test('invalid or oversized tree/proof inputs fail closed', () => {
 test('enabling anchoring does not change the agent version; policy, model and source changes do', () => {
   const create = (c = config, e = {}, source = hash('source')) => createAgentVersion(c, e, source);
   assert.deepEqual(create(), create({ ...config, anchorEnabled: true, anchorIntervalSec: 17, anchorMinBatch: 3 }));
-  for (const next of [create({ ...config, maxPriceMoveBps: 2 }), create(config, { LLM_MODEL: 'other-model' }), create(config, {}, hash('new source'))]) {
+  const provider = { LLM_BASE_URL: 'http://127.0.0.1:1', LLM_API_KEY: 'fixture-only' };
+  for (const next of [create({ ...config, maxPriceMoveBps: 2 }), create(config, { ...provider, LLM_MODEL: 'other-model' }), create(config, {}, hash('new source'))]) {
     assert.notEqual(create().version_id, next.version_id);
   }
+  // Without a usable provider no model can run, so a model name alone does not change what the version commits.
+  assert.equal(create().model_id, 'none:deterministic-only');
+  assert.deepEqual(create(config, { LLM_MODEL: 'other-model' }), create());
+  assert.deepEqual(create(config, { ...provider, LLM_PROXY_ENABLED: 'false' }), create());
 });
 
 test('anchor model metadata matches provider normalization for absent, empty, whitespace and explicit model names', () => {

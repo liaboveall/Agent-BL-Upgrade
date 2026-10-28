@@ -57,7 +57,8 @@ export async function proposeAction({ query, turn, context, recommendations, get
   if (context.mode === 'demo') return actionSchema.parse({ ...base, amount_usd: amount, price_usd: item.price_usd, shares: String(amount / item.price_usd) });
   let live;
   try { live = await getLiveOffering(item.pool_id); } catch { return blocked(type, 'chain_unavailable'); }
-  if (!live) return blocked(type, 'chain_unavailable');
+  // Research cases are not mapped to the controlled testnet pools; Live wallet financing starts from a pool's full terms.
+  if (!live) return blocked(type, 'live_wallet_flow');
   if (!live.exists || live.emergency_stopped || !['Open', 'Repriced', 'Subscribed'].includes(live.status)) return blocked(type, 'pool_unavailable');
   const price = BigInt(live.price_e6);
   const atomicBudget = usdMicros(amount);

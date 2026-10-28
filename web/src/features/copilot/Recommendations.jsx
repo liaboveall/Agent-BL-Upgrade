@@ -9,6 +9,7 @@ import { useApp } from '../../state/hooks.js';
 import { copilotQuery, watchPool } from '../../lib/copilot-api.js';
 import { executeAction, postAction } from '../../lib/copilot-actions.js';
 import { Badge, Button, Disclosure } from '../../components/ui.jsx';
+import { setView } from '../../state/controller.js';
 import { DecisionButton } from '../evidence/References.jsx';
 
 export function poolStateLabel(status) {
@@ -143,6 +144,7 @@ function ActionForm({ result, scope, onRefresh }) {
   return (
     <>
       <p>{t(`cp_block_${action?.blocked ?? 'select_pool'}`)}</p>
+      {action?.blocked === 'live_wallet_flow' && <p><Button type="button" variant="ghost" onClick={() => setView('finance')}>{t('cp_open_finance')}</Button></p>}
       <form className="cp-action-form" onSubmit={async (event) => {
         event.preventDefault(); if (disabled) return; setBusy(true);
         try {

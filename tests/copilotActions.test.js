@@ -106,6 +106,8 @@ test('Copilot actions: unmapped, paused, empty and tiny Live offerings fail clos
     const { service, query } = fixture({ runtimeMode: () => ({ demoMode: false, generation: 1 }), getLiveOffering: async () => chain });
     const context = await service.create(); const result = await query(context);
     assert.ok(result.action_proposal.blocked); assert.equal(result.action_proposal.id, undefined);
+    // A research case without an on-chain pool points to the wallet flow; it is not reported as a chain outage.
+    if (chain === null) assert.equal(result.action_proposal.blocked, 'live_wallet_flow');
     assert.equal(storeState.investments.length, 0);
   }
 });

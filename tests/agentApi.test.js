@@ -87,7 +87,7 @@ test('agent API (Demo)', async (t) => {
     const { version, ...anchoring } = res.data.anchoring;
     assert.deepEqual(Object.keys(version).sort(), ['code_commit', 'model_id', 'policy_hash', 'version_id']);
     for (const name of ['code_commit', 'policy_hash', 'version_id']) assert.match(version[name], /^0x[0-9a-f]{64}$/u);
-    assert.equal(version.model_id, 'x-test-2');
+    assert.equal(version.model_id, 'none:deterministic-only', 'No configured model is recorded as no model');
     assert.doesNotMatch(JSON.stringify({ ...res.data, anchoring }), /PRIVATE_KEY|0x[0-9a-f]{64}/u);
     await service.stop();
   });
