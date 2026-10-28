@@ -56,6 +56,7 @@
     "build:clean": "node scripts/clean-build.mjs",
     "testnet:legacy": "node scripts/legacy-testnet.mjs",
     "terms:verify": "node scripts/verify-financing-terms.mjs",
+    "disclosures:import": "node scripts/import-disclosures.mjs",
     "test:finance": "node scripts/test-integration.mjs finance",
     "verify:release": "node scripts/verify-release.mjs",
     "testnet": "node scripts/testnet.mjs"

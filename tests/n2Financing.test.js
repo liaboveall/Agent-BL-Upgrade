@@ -57,7 +57,7 @@ test('N2 public disclosure requires issuing authority and two approved bindings;
     asset_class: 'copper', settlement: 'TEST_USDC', tenor_days: 3, terms_hash: disclosureFixture().terms_hash, risk_flags: ['simulated_title'] } });
   const input = inputOf(disclosureFixture()); input.parties.issuer = issuer.wallet.address; input.terms.documentHash = material.document_hash;
   const wrongScenario = structuredClone(input); wrongScenario.scenario.asset_class = 'oil';
-  assert.throws(() => service.createFinancingDisclosure(issuer.token, material.material_id, wrongScenario), { code: 'financing_disclosure_invalid' });
+  await assert.rejects(service.createFinancingDisclosure(issuer.token, material.material_id, wrongScenario), { code: 'financing_disclosure_invalid' });
   await assert.rejects(service.createFinancingDisclosure(investor.token, material.material_id, input));
   const pack = await service.createFinancingDisclosure(issuer.token, material.material_id, input);
   await assert.rejects(service.financingDisclosure(pack.disclosure_hash), { code: 'financing_disclosure_unverified' });
@@ -174,4 +174,34 @@ test('N2 valuation failure propagates to both agent pipelines and paid reports, 
   assert.equal(current.pipeline.find((step) => step.step === 'cargo_valuation').status, 'REVIEW');
   const paid = await buildPremiumValuation(data, { valuation: options });
   assert.equal(paid.human_takeover.required, true); assert.equal(paid.model_status, 'failed'); assert.equal(paid.provider_verified, false);
+});
+
+test('N2 terms can take price, supply and minimum raise from the deterministic quote; a moved or paused quote is refused', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'n2-quoted-')); t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  let quote = priceRwaOffering(base); const requests = [];
+  const service = new RightsService({ directory, env: { AGENTBL_RIGHTS_KEY: 'cd'.repeat(32) }, quoteCase: async (request, terms) => { requests.push({ request, terms }); return quote; } });
+  const wallet = Wallet.createRandom(), subject = await service.createSubject({ wallet: wallet.address, roles: ['issuer'], organization: 'research' });
+  const challenge = await service.createChallenge(subject.subject_id);
+  const { token } = await service.openSession({ challenge_id: challenge.challenge_id, signature: await wallet.signTypedData(challenge.domain, challenge.types, challenge.message) });
+  const material = await service.createMaterial(token, { material: { private_title: 'quoted' }, public_summary: {
+    asset_class: 'copper', settlement: 'TEST_USDC', tenor_days: 3, terms_hash: disclosureFixture().terms_hash, risk_flags: ['simulated_title'] } });
+  const input = inputOf(disclosureFixture()); input.parties.issuer = wallet.address; input.terms.documentHash = material.document_hash; input.terms.minRaise = '1';
+  const from_quote = { case_id: 'CASE-EBL-CU-SIN-SHA', payout_speed: 'BALANCED', requested_cash_usd: 1000 };
+  const preview = await service.createFinancingDisclosure(token, material.material_id, { ...input, from_quote }, { save: false });
+  const { source_quote: source, ...pack } = preview;
+  assert.equal(verifyDisclosure(pack), true, 'The quote reference travels beside an intact pack');
+  assert.equal(pack.terms.issuePrice, quote.atomic_economics.issue_price_atomic);
+  assert.equal(pack.terms.supply, String(quote.recommended_token_supply));
+  assert.equal(pack.terms.minRaise, '1', 'A smaller minimum from the file is kept');
+  assert.deepEqual([source.quote_hash, source.payout_speed, requests[0].terms.maturity], [quote.quote_hash, 'BALANCED', input.terms.maturity]);
+  const saved = await service.createFinancingDisclosure(token, material.material_id, { ...input, from_quote, expected_terms_hash: preview.terms_hash });
+  assert.equal(saved.terms_hash, preview.terms_hash);
+  quote = priceRwaOffering({ ...base, risk_score_bps: 400 });
+  assert.notEqual(quote.atomic_economics.issue_price_atomic, pack.terms.issuePrice);
+  await assert.rejects(service.createFinancingDisclosure(token, material.material_id, { ...input, revision: 2, from_quote, expected_terms_hash: preview.terms_hash }), { code: 'financing_quote_changed' });
+  quote = priceRwaOffering({ ...base, gross_profit_usd: 1 });
+  await assert.rejects(service.createFinancingDisclosure(token, material.material_id, { ...input, revision: 2, from_quote }), { code: 'financing_quote_not_openable' });
+  for (const wrong of [{ ...from_quote, case_id: 'CASE-EBL-OIL-FUJ-SIN' }, { ...from_quote, requested_cash_usd: 1000000 }, { ...from_quote, payout_speed: 'NOW' }]) {
+    await assert.rejects(service.createFinancingDisclosure(token, material.material_id, { ...input, from_quote: wrong }, { save: false }), { code: 'financing_quote_invalid' });
+  }
 });

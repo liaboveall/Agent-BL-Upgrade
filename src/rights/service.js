@@ -12,7 +12,10 @@ import { rightsKey, seal, unseal } from './vault.js';
 import { createEvidence, evidenceHash, evidenceProjection, verifyEvidencePackage } from '../evidence/schema.js';
 import { createAgentVersion } from '../agent/runtime/agentVersion.js';
 import { loadAgentConfig } from '../agent/runtime/config.js';
-import { createDisclosure, verifyDisclosure } from './disclosure.js';
+import { createDisclosure, disclosureFromPricingQuote, verifyDisclosure } from './disclosure.js';
+import { quoteFromCase } from '../core/pricingEngine.js';
+import { PAYOUT_SPEEDS, normalizePricingQuoteHashes } from '../core/pricingSchema.js';
+import { loadCuratedCase } from '../core/curatedCases.js';
 import { financingReview } from './financingReview.js';
 import { materialWorkflow } from './workflow.js';
 import { RpcReadPool } from './reads.js';
@@ -20,6 +23,16 @@ import { verifyChain } from './chain.js';
 import { SHIPPED_DISCLOSURES, readPublicDisclosure, savePublicDisclosure } from './public-disclosures.js';
 
 const VAULT_AAD = 'agentbl-rights-vault-v1';
+// The research case whose cargo and route match the disclosure scenario (copper, Singapore -> Shanghai).
+export const TERMS_QUOTE_CASE = Object.freeze({ case_id: 'CASE-EBL-CU-SIN-SHA', file: path.resolve(import.meta.dirname, '../../data/cases/copper-sg-shanghai.case.json') });
+const fromQuoteSchema = z.object({ case_id: z.literal(TERMS_QUOTE_CASE.case_id), payout_speed: z.enum(PAYOUT_SPEEDS),
+  requested_cash_usd: z.number().positive().max(900_000) }).strict();
+/** The deterministic quote for the scenario case, priced for the terms' own funding window and tenor. */
+async function quoteScenarioCase({ payout_speed, requested_cash_usd }, terms) {
+  const iso = (seconds) => new Date(Number(seconds) * 1000).toISOString();
+  return normalizePricingQuoteHashes(quoteFromCase(await loadCuratedCase(TERMS_QUOTE_CASE.file), { payout_speed, requested_cash_usd,
+    require_source_validation: true, funded_at: iso(terms.subscribeUntil), maturity_at: iso(terms.maturity) }));
+}
 const ROLES = ['issuer', 'holder', 'investor', 'reviewer', 'custodian', 'compliance', 'governance', 'valuer', 'operator', 'attestor', 'disposer'];
 const subjectSchema = z.object({ organization: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/u),
   wallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/u), roles: z.array(z.enum(ROLES)).min(1).max(ROLES.length) }).strict();
@@ -70,8 +83,8 @@ const STALE = Symbol('stale plan');
 export class RightsService {
   #queue = { queued: 0, completed: 0, last_wait_ms: 0, max_wait_ms: 0, rejected: 0 };
   constructor({ env = process.env, directory = runtimePath('rights', env), clock = () => Date.now(), chain = null, getVersion = null, getMode = null, getGeneration = () => 0, readPool = chain?.readPool ?? new RpcReadPool(),
-    queueLimit = VAULT_QUEUE_LIMIT, waitMs = VAULT_WAIT_MS } = {}) {
-    this.directory = directory; this.env = env; this.clock = clock; this.chain = chain;
+    queueLimit = VAULT_QUEUE_LIMIT, waitMs = VAULT_WAIT_MS, quoteCase = quoteScenarioCase } = {}) {
+    this.directory = directory; this.env = env; this.clock = clock; this.chain = chain; this.quoteCase = quoteCase;
     this.getVersion = getVersion; this.getMode = getMode; this.getGeneration = getGeneration; this.readPool = readPool;
     this.queueLimit = queueLimit; this.waitMs = waitMs;
     this.publicDisclosureDirectory = path.join(directory, 'public-disclosures');
@@ -228,10 +241,35 @@ export class RightsService {
     });
   }
   principal(token, options) { return this.#transaction((state, ctx) => this.#principal(state, token, ctx.now, options)); }
-  createFinancingDisclosure(token, materialId, input, { save = true } = {}) {
-    let pack;
-    try { pack = createDisclosure(input); } catch { throw new HttpError(400, 'financing_disclosure_invalid', 'Complete valid research financing terms are required'); }
-    return this.#transaction((state, ctx) => {
+  /**
+   * Terms whose price, supply and minimum raise come from the deterministic quote of the scenario case instead of the
+   * imported file. Parties, instance, dates and sources still come from the file; nothing a model wrote sets a number.
+   */
+  async #quotedDisclosure(input, fromQuote) {
+    const request = fromQuoteSchema.safeParse(fromQuote);
+    if (!request.success) throw new HttpError(400, 'financing_quote_invalid', 'Choose the scenario case, a payout speed and a research amount up to 900,000');
+    let quote;
+    try { quote = await this.quoteCase(request.data, input?.terms ?? {}); } catch { throw new HttpError(400, 'financing_quote_invalid', 'The terms dates cannot be priced'); }
+    if (!['OPEN_OFFERING', 'OPEN_WITH_WARNING'].includes(quote.pricing_action) || quote.research_feasibility?.status !== 'FEASIBLE_RESEARCH_ONLY') {
+      throw new HttpError(409, 'financing_quote_not_openable', 'The deterministic quote is paused or infeasible for these dates; terms cannot be generated from it');
+    }
+    const maximum = BigInt(quote.recommended_token_supply) * BigInt(Math.round(quote.final_issue_price_usd * 1000000));
+    const requested = /^[1-9]\d*$/u.test(String(input?.terms?.minRaise ?? '')) ? BigInt(input.terms.minRaise) : maximum;
+    const pack = disclosureFromPricingQuote({ ...input, terms: { ...input.terms, minRaise: String(requested <= maximum ? requested : maximum) } }, quote);
+    return { pack, source_quote: { ...request.data, final_issue_price_usd: quote.final_issue_price_usd, recommended_token_supply: quote.recommended_token_supply,
+      tenor_days: quote.tenor_days, quote_hash: quote.quote_hash, evidence_hash: quote.evidence_hash, data_status: quote.data_quality?.status ?? null } };
+  }
+  async createFinancingDisclosure(token, materialId, input, { save = true } = {}) {
+    let pack, sourceQuote = null;
+    const { from_quote: fromQuote, expected_terms_hash: expected, ...terms } = input ?? {};
+    if (fromQuote !== undefined) ({ pack, source_quote: sourceQuote } = await this.#quotedDisclosure(terms, fromQuote).catch((error) => {
+      if (error instanceof HttpError) throw error;
+      throw new HttpError(400, 'financing_disclosure_invalid', 'Complete valid research financing terms are required');
+    }));
+    else try { pack = createDisclosure(terms); } catch { throw new HttpError(400, 'financing_disclosure_invalid', 'Complete valid research financing terms are required'); }
+    // A quote can move between the preview someone read and the save; the saved terms must be the ones reviewed.
+    if (expected !== undefined && expected !== pack.terms_hash) throw new HttpError(409, 'financing_quote_changed', 'The quote changed after the preview; review the new terms');
+    const saved = await this.#transaction((state, ctx) => {
       const subject = this.#principal(state, token, ctx.now), material = this.#material(state, subject, materialId, ctx.now);
       if (material.owner_id !== subject.subject_id || !subject.roles.includes('issuer')
         || material.public_summary.asset_class !== pack.document.scenario.asset_class
@@ -246,6 +284,8 @@ export class RightsService {
       state.financing_disclosures[pack.disclosure_hash] = { material_id: materialId, pack };
       ctx.dirty = true; return pack;
     });
+    // The quote reference travels beside the pack; the pack itself stays exactly what the hash commits to.
+    return sourceQuote ? { ...saved, source_quote: sourceQuote } : saved;
   }
   /**
    * Approved, readable terms by their disclosure hash. Approved packs are public and are also kept outside the
