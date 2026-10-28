@@ -24,7 +24,9 @@ npm run dev
 | `AGENTBL_RELEASE_REVISION` | 运行版本标识 |
 | `LLM_HTTP_RELAY` | 设为 `true` 才开放浏览器 LLM 中继 `POST /api/llm/chat`；默认关闭，Copilot 等服务端模型功能不受影响 |
 | `AGENTBL_INTAKE_KEY` | 研究上传的独立封存密钥（32 字节十六进制）；未设置时在 `research-agent/ingest-uploads.key` 生成，只保护上传目录的单独副本 |
-| `AGENT_UPLOAD_BATCH_MAX_BYTES` / `AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES` / `AGENT_UPLOAD_TOTAL_QUOTA_BYTES` | 单次上传合计、每个浏览器工作区与整个上传存储的容量；默认 24 MiB、96 MiB、1 GiB |
+| `AGENT_UPLOAD_BATCH_MAX_BYTES` / `AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES` / `AGENT_UPLOAD_TOTAL_QUOTA_BYTES` | 单次上传合计、每个浏览器工作区与整个上传存储的容量；默认 24 MiB、48 MiB、128 MiB。上传存储最多占一次运行备份上限（256 MiB）的一半，更大的设置按 128 MiB 处理 |
+| `AGENT_INGEST_MAX_JOBS` / `AGENT_INGEST_WORKSPACE_MAX_JOBS` / `AGENT_INGEST_JOB_RETENTION_DAYS` | 保留的上传任务总数、每个工作区的任务数，以及已完成且无需复核的任务保留天数；默认 500、100、30。排队、处理中和待复核的任务不会为腾出空间而删除，任务表被它们占满时新上传返回 507 `intake_jobs_full`（单个工作区为 413 `upload_job_quota_exceeded`） |
+| `AGENTBL_BACKUP_BUDGET_INTERVAL_MS` / `AGENTBL_BACKUP_WARN_RATIO` | 运维监测按此间隔（默认 60 秒）测量运行目录相对备份上限的大小；达到该比例（默认 0.8）时向运维告警 `backup_budget_near`，超过上限时 `backup_budget_exceeded` 并暂停新的进件 |
 | `AGENTBL_ALLOWED_HOSTS` | 除 localhost/127.0.0.1 外允许的主机名；经回环到达但 Host 不在名单内的请求返回 421（防 DNS 重绑定）。Compose 默认 `localhost,127.0.0.1`，反向代理提供公网域名时加入该域名 |
 
 合资格钱包连接 Live 后按角色工作台操作。管理员登记身份，链上角色另行核对；参与者逐次确认钱包请求。材料创建、完整条款绑定、双审、发布和交易准备均检查当前版本与权限。测试代币与 gas 由实际研究账户准备，不要把私钥放入公开 JSON。
