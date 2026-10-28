@@ -31,6 +31,11 @@ async function until(predicate) {
   assert.ok(predicate(), 'the condition was reached');
 }
 const TOKEN_KEY = 'agentbl.adminToken';
+// Node before 25 has no Web Storage global: give the controller a tab-scoped store the way the browser does.
+if (typeof globalThis.sessionStorage === 'undefined') {
+  const items = new Map();
+  globalThis.sessionStorage = { getItem: (key) => items.get(key) ?? null, setItem: (key, value) => { items.set(key, String(value)); }, removeItem: (key) => { items.delete(key); } };
+}
 
 test('a failed save keeps the saved floor in force, marks the form unsaved and asks for no quote', async () => {
   reset();
