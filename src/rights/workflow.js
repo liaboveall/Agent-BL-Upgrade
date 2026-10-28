@@ -38,12 +38,21 @@ export async function materialWorkflow(chain, principal, record, pack, published
     result.steps[4].status = issued ? 'complete' : 'pending';
     if (issued) {
       result.steps[3].status = 'complete';
-      const [offer, disbursed, recovery, screening] = await Promise.all([
+      const [offer, disbursed, recovery, screening, finalized, deadline] = await Promise.all([
         read(() => chain.pool.offerings(poolId, at)), read(() => chain.pool.disbursedAtomic(poolId, at)),
-        read(() => chain.pool.recoveredAtomic(poolId, at)), read(() => chain.controller.screeningValidUntil(at)) ]);
-      result.pool_id = Number(poolId); result.state = chainStateName(offer.state);
+        read(() => chain.pool.recoveredAtomic(poolId, at)), read(() => chain.controller.screeningValidUntil(at)),
+        read(() => chain.pool.fundingFinalized(poolId, at)), read(() => chain.pool.subscriptionDeadline(poolId, at)) ]);
+      result.pool_id = Number(poolId); result.state = chainStateName(offer.state); result.funding_finalized = Boolean(finalized);
       result.steps[5].status = Number(screening) >= block.timestamp ? 'check_each_investor' : 'pending';
-      result.steps[6].status = offer.raisedAtomic >= BigInt(pack.terms.minRaise) ? 'complete' : 'pending';
+      // Reaching the minimum is not funding: a partial raise is closed by finalizeFunding() after the deadline, and only
+      // a finalized raise can be drawn. A full raise finalizes itself on its last subscription.
+      const closable = !finalized && offer.subscribed > 0n && offer.raisedAtomic >= BigInt(pack.terms.minRaise)
+        && Number(deadline) < block.timestamp && [2, 3, 6].includes(Number(offer.state));
+      result.steps[6].status = finalized ? 'complete' : closable ? 'finalize_required' : 'pending';
+      if (closable) {
+        Object.assign(result.steps[6], { next: 'finalize_funding', roles: ['operator', 'custodian', 'issuer', 'holder', 'investor'] });
+        result.steps[6].assigned_to_you = result.steps[6].roles.some((role) => principal.roles.includes(role));
+      }
       result.steps[7].status = disbursed > 0n ? 'complete' : 'pending';
       result.steps[8].status = [9, 14].includes(Number(offer.state)) ? 'complete' : 'pending';
       result.steps[9].status = [9, 14].includes(Number(offer.state)) ? 'claim_available' : 'check_refund_or_wait';

@@ -21,10 +21,10 @@ const uint = (value) => { requireThat(typeof value === 'string' && /^(?:0|[1-9]\
 const ARTIFACTS = path.resolve(import.meta.dirname, '../../hardhat/artifacts/contracts');
 const CONTRACTS = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5'];
 // Earlier instances are verified against the ABI/runtime frozen before the next version's edits.
-const FROZEN_ARTIFACTS = { 1: 'rights-v1-artifacts.json', 2: 'rights-v2-artifacts.json' };
+export const FROZEN_ARTIFACTS = Object.freeze({ 1: 'rights-v1-artifacts.json', 2: 'rights-v2-artifacts.json' });
 // Superseded instances keep only exits that add no new risk; v1 predates the public exit paths.
 const LEGACY_OPERATIONS = { 1: ['notify_resolution', 'review_resolution', 'finalize_resolution'],
-  2: ['repay', 'record_payment', 'record_arrival', 'settle', 'mark_default', 'notify_resolution', 'review_resolution', 'finalize_resolution', 'start_exit', 'dispute_resolution'] };
+  2: ['repay', 'record_payment', 'record_arrival', 'settle', 'mark_default', 'notify_resolution', 'review_resolution', 'finalize_resolution', 'start_exit', 'dispute_resolution', 'cancel_offering'] };
 export function maskImmutableBytecode(bytecode, artifact) {
   let code = String(bytecode).toLowerCase();
   for (const ranges of Object.values(artifact.immutableReferences ?? {})) for (const { start, length } of ranges) {
@@ -142,7 +142,11 @@ export class RightsChainService {
       finalize_resolution: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'finalizeResolution', args: () => [uint(input.pool_id)] },
       start_exit: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'startExit', args: () => [uint(input.pool_id)] },
       dispute_resolution: { roles: ['holder', 'investor', 'reviewer'], method: 'disputeResolution', args: () => [uint(input.pool_id), input.evidence_hash] },
-      retry_collateral_release: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator', 'reviewer'], contract: this.pool, method: 'retryCollateralRelease', args: () => [uint(input.pool_id)] }
+      retry_collateral_release: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator', 'reviewer'], contract: this.pool, method: 'retryCollateralRelease', args: () => [uint(input.pool_id)] },
+      // Anyone may close a raise that reached its minimum once subscriptions end; only then can the draw happen.
+      finalize_funding: { roles: ['operator', 'custodian', 'issuer', 'holder', 'investor'], contract: this.pool, method: 'finalizeFunding', args: () => [uint(input.pool_id)] },
+      // An offering nobody subscribed is cancelled by the operator, which releases the pledged title.
+      cancel_offering: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('cancelOffering', [uint(input.pool_id), input.evidence_hash])] }
     };
     const operation = operations[input.operation];
     if (!operation) throw new HttpError(400, 'rights_plan_operation_unknown', 'Unsupported rights transaction plan');
