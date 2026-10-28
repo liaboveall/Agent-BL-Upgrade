@@ -230,7 +230,8 @@ export function setView(name, { history = 'push' } = {}) {
 }
 
 export function viewFromHash(hash) {
-  const name = String(hash ?? '').replace(/^#\/?/u, '');
+  // A funding pool's own address (#/finance/pool/7) belongs to the finance page; the panel opens that pool.
+  const name = String(hash ?? '').replace(/^#\/?/u, '').replace(/^finance\/pool\/[1-9]\d{0,8}$/u, 'finance');
   return VIEWS.includes(name) ? name : null;
 }
 

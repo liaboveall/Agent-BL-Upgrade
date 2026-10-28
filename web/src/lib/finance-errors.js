@@ -24,7 +24,9 @@ const REVERT_NAMES = Object.freeze({
   '0xdaec864b': 'TransferTaxNotSupported'
 });
 
-// [zh, en]; `session: true` offers the identity check in the role workspace.
+// [zh, en]; `session: true` offers the identity check in the role workspace. `funds` says what may have happened to
+// money: 'none' (nothing was sent, or the chain refused before any transfer) or 'check' (a transaction may be out:
+// reconcile the original before anything else).
 const COPY = Object.freeze({
   rights_session_required: { session: true, text: ['业务会话已过期或尚未验证。请在“融资方与审查人”工作台用登记钱包重新验证身份，然后重试。', 'Your business session has expired or was never verified. Verify your identity with the enrolled wallet in the borrower and reviewer workspace, then retry.'] },
   rights_challenge_invalid: { session: true, text: ['身份验证请求已过期，请重新发起验证。', 'The identity check expired. Start it again.'] },
@@ -33,8 +35,18 @@ const COPY = Object.freeze({
   operations_not_ready: { text: ['服务暂停接收新的融资操作，已有退出不受影响。请稍后重试。', 'The service is not accepting new financing actions right now; existing exits are unaffected. Retry later.'] },
   financing_terms_changed: { text: ['链上条款或报价已变化，请重新阅读最新条款。', 'The chain terms or quote changed. Read the latest terms again.'] },
   financing_disclosure_unverified: { text: ['条款与已发布版本不一致，已停止操作。', 'The terms differ from the published version, so the action stopped.'] },
-  ACTION_REJECTED: { text: ['你在钱包中拒绝了请求，资金没有移动。', 'You rejected the request in your wallet. No funds moved.'] },
-  REJECTED: { text: ['你在钱包中拒绝了请求，资金没有移动。', 'You rejected the request in your wallet. No funds moved.'] },
+  ACTION_REJECTED: { funds: 'none', text: ['你在钱包中拒绝了请求，资金没有移动。', 'You rejected the request in your wallet. No funds moved.'] },
+  REJECTED: { funds: 'none', text: ['你在钱包中拒绝了请求，资金没有移动。', 'You rejected the request in your wallet. No funds moved.'] },
+  // A transaction left the wallet but its outcome is not known yet.
+  subscription_reconciliation_required: { funds: 'check', text: ['交易已发出，但还没有确认结果（可能仍在打包，也可能失败）。请用“核对原交易”查看结论，不要重复发送。', 'The transaction was sent but its outcome is not confirmed yet (still pending, or failed). Use “Reconcile original transaction” for the result; do not send again.'] },
+  claim_reconciliation_required: { funds: 'check', text: ['领取交易已发出，但还没有确认结果。请用“核对原交易”查看结论，不要重复发送。', 'The claim was sent but its outcome is not confirmed yet. Use “Reconcile original transaction” for the result; do not send again.'] },
+  RECONCILIATION_REQUIRED: { funds: 'check', text: ['退款交易已发出，但还没有确认结果。请用“核对原交易”查看结论，不要重复发送。', 'The refund was sent but its outcome is not confirmed yet. Use “Reconcile original transaction” for the result; do not send again.'] },
+  wallet_reconciliation_required: { funds: 'check', text: ['此钱包还有一笔没有结论的操作，为避免重复付款，新的发送已暂停。请先核对原交易；如果钱包确实没有发出，可选择“钱包没有发送，释放记录”。', 'This wallet has an operation without an outcome, so new sends are paused to avoid paying twice. Reconcile the original first; if the wallet really did not send it, choose “The wallet did not send it: release”.'] },
+  released_operation_mined: { funds: 'check', text: ['你此前报告“钱包未发送”的操作实际已上链。请先核对持仓，确认是否还要再操作一次。', 'An operation you reported as not sent was mined after all. Check your positions before deciding to do it again.'] },
+  transaction_pending: { funds: 'check', text: ['原交易仍在等待打包，不能释放。可在钱包中加速或取消它，打包后再核对。', 'The original transaction is still pending, so it cannot be released. Speed it up or cancel it in the wallet, then reconcile once it is mined.'] },
+  wallet_nonce_pending: { funds: 'check', text: ['钱包里有一笔使用相同 nonce 的待处理交易。等它打包后先核对原交易，再重新操作。', 'A pending wallet transaction uses the saved nonce. Once it is mined, reconcile the original before trying again.'] },
+  wallet_nonce_reserved: { funds: 'check', text: ['已释放的操作仍预留着 nonce，请先核对原交易再发送。', 'A released operation still reserves its nonce. Reconcile the original before sending.'] },
+  intent_state_conflict: { text: ['这笔操作的状态刚刚变化，请刷新后再核对。', 'The state of this operation just changed. Refresh and reconcile again.'] },
   CONTEXT_CHANGED: { text: ['钱包或运行模式已变化，请重新审阅。', 'The wallet or mode changed. Review again.'] },
   WALLET_CHANGED: { text: ['钱包已切换，请用当前钱包重新审阅。', 'The wallet changed. Review again with the current wallet.'] },
   INTENT_CHANGED: { text: ['保存的操作与当前条款不一致，已停止发送。请重新审阅。', 'The saved operation no longer matches the terms, so nothing was sent. Review again.'] },
@@ -80,7 +92,7 @@ const COPY = Object.freeze({
   pool_unavailable: { text: ['该资金池当前不接受此钱包认购（状态、资格或额度不符）。', 'This pool is not accepting a subscription from this wallet now (state, eligibility or remaining shares).'] },
   position_not_claimable: { text: ['此持仓目前没有可领取的金额。', 'This position has nothing to claim right now.'] },
   intent_transaction_mismatch: { text: ['这笔交易与保存的操作不一致，未被记入。', 'This transaction does not match the saved operation, so it was not recorded.'] },
-  nonce_consumed_by_other_transaction: { text: ['保存的 nonce 已被另一笔交易使用。请在钱包中核对，确认没有重复付款。', 'Another transaction used the saved nonce. Check your wallet and confirm nothing was paid twice.'] },
+  nonce_consumed_by_other_transaction: { funds: 'check', text: ['保存的 nonce 已被另一笔交易使用。请在钱包中核对，确认没有重复付款。', 'Another transaction used the saved nonce. Check your wallet and confirm nothing was paid twice.'] },
   manual_reconciliation_required: { text: ['无法自动找到原交易。请在下方填写原钱包交易哈希后核对。', 'The original transaction could not be found automatically. Enter its wallet transaction hash below to reconcile.'] },
   rights_manual_reconciliation_required: { text: ['无法自动找到原交易。请填写原钱包交易哈希后核对。', 'The original transaction could not be found automatically. Enter its wallet transaction hash to reconcile.'] },
   rights_preflight_failed: { text: ['链上状态或权限拒绝了这笔操作，未发送任何交易。', 'The chain state or permissions reject this operation; nothing was sent.'] },
@@ -120,13 +132,23 @@ export function termsReasons(reasons, zh) {
   }).join(zh ? '；' : '; ');
 }
 
-/** { message, session } for display; `session` means re-verifying the business identity may fix it. */
+const FUNDS = Object.freeze({
+  none: ['资金：没有移动。', 'Funds: nothing moved.'],
+  check: ['资金：可能已有交易发出，请先核对原交易，不要重复发送。', 'Funds: a transaction may be out. Reconcile the original first; do not send again.']
+});
+/**
+ * { message, session, funds } for display; `session` means re-verifying the business identity may fix it, `funds`
+ * (when known) says in one line whether money could have moved. A contract revert before sending moved nothing.
+ */
 export function describeFinanceError(failure, zh) {
   const code = failure?.code === 4001 ? 'ACTION_REJECTED' : failure?.code;
   const reason = failure?.reason ?? failure?.revert?.args?.[0];
-  const key = [code, revertName(failure), reason].find((candidate) => typeof candidate === 'string' && Object.hasOwn(COPY, candidate)) ?? null;
+  const reverted = revertName(failure);
+  const key = [code, reverted, reason].find((candidate) => typeof candidate === 'string' && Object.hasOwn(COPY, candidate)) ?? null;
   const entry = key ? COPY[key] : null;
-  if (!entry) return { message: failure?.message ?? String(failure), session: false };
+  const fundsKey = entry?.funds ?? (failure?.txHash ? 'check' : reverted ? 'none' : null);
+  const funds = fundsKey ? FUNDS[fundsKey][zh ? 0 : 1] : null;
+  if (!entry) return { message: failure?.message ?? String(failure), session: false, funds };
   const detail = termsReasons(failure?.reasons ?? failure?.details?.reasons, zh);
-  return { message: detail ? `${entry.text[zh ? 0 : 1]}${zh ? '原因：' : ' Reason: '}${detail}${zh ? '。' : '.'}` : entry.text[zh ? 0 : 1], session: Boolean(entry.session) };
+  return { message: detail ? `${entry.text[zh ? 0 : 1]}${zh ? '原因：' : ' Reason: '}${detail}${zh ? '。' : '.'}` : entry.text[zh ? 0 : 1], session: Boolean(entry.session), funds };
 }

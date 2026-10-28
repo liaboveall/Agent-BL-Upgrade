@@ -48,7 +48,7 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
   const walletPositions = page.waitForResponse((response) => response.url().includes('/api/controlled/positions?wallet='));
   await page.goto('/#/finance'); const panel = page.locator('.controlled-panel');
   await walletPositions; await expect(panel.getByRole('button', { name: /0x121212.*1212/u })).toBeVisible();
-  await panel.getByRole('button', { name: zh ? '打开工作台：融资方与审查人的角色待办' : 'Open workspace: borrower and reviewer responsibilities', exact: true }).click();
+  await panel.getByRole('button', { name: zh ? '打开工作台：身份验证与角色待办' : 'Open workspace: identity and role responsibilities', exact: true }).click();
   const next = panel.getByRole('button', { name: zh ? '下一页' : 'Next page', exact: true });
   await expect(panel.locator('tbody tr').first()).toContainText('#1'); await next.click(); await expect(panel.locator('tbody tr').first()).toContainText('#11');
   partial = true; await next.click(); await expect(panel).toContainText(zh ? '尚未读到的池' : 'Unread pools'); await expect(panel.locator('tbody tr').last()).toContainText('#25');

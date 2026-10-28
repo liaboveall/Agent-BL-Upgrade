@@ -15,6 +15,14 @@ export function controlledIntentOptions(config, onIntent, assertCurrent, disclos
     attachIntent: async (id, txHash) => (await controlledRequest(`intents/${id}/transaction`, { tx_hash: txHash })).intent,
     beforeBroadcast: async (intent) => { const { intent: checkpoint } = await controlledRequest(`intents/${intent.intent_id}/broadcast`, {}); onIntent(checkpoint); return checkpoint; } };
 }
+/** The wallet reported that it did not send: the server checks the chain and releases, resolves or refuses. */
+export async function releaseControlledIntent(intentId) {
+  return (await controlledRequest(`intents/${intentId}/release`, {})).intent;
+}
+/** Saved operations of this wallet that still need attention, so a cleared or another browser can find them. */
+export async function openControlledIntents(wallet) {
+  return (await controlledRequest(`intents?wallet=${encodeURIComponent(wallet)}`)).intents;
+}
 export async function acknowledgeControlledTerms(offer, status, assertCurrent, revalidate = async () => {}) {
   const session = currentWalletSession(); if (!session?.signer) throw new Error('Connect an EVM wallet');
   const { Contract } = await loadEthers();

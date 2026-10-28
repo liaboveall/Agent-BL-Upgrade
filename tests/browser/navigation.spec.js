@@ -46,16 +46,20 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   await next.click(); await expect(rows.first()).toContainText('#21 ·'); await expect(rows.last()).toContainText('#25 ·'); await expect(next).toBeDisabled();
   expect(requests.find((url) => url.searchParams.get('from') === '21').searchParams.get('block_number')).toBe('500');
   total = 26; snapshot = 501;
+  // "First page" and "Get latest data" read the latest block; only paging keeps the snapshot (application review F8).
   await panel.getByRole('button', { name: zh ? '首页' : 'First page', exact: true }).click(); await expect(rows.first()).toContainText('#1 ·');
-  await panel.getByRole('button', { name: zh ? '末页' : 'Last page', exact: true }).click(); await expect(rows.last()).toContainText('#25 ·');
-  await panel.getByRole('button', { name: zh ? '刷新与对账' : 'Refresh and reconcile' }).click(); await expect(rows.first()).toContainText('#1 ·');
+  expect(requests.at(-1).searchParams.get('block_number')).toBeNull();
+  await panel.getByRole('button', { name: zh ? '末页' : 'Last page', exact: true }).click(); await expect(rows.last()).toContainText('#26 ·');
+  expect(requests.at(-1).searchParams.get('block_number')).toBe('501');
+  await panel.getByRole('button', { name: zh ? '获取最新数据' : 'Get latest data', exact: true }).click(); await expect(rows.first()).toContainText('#1 ·');
+  expect(requests.at(-1).searchParams.get('block_number')).toBeNull();
   await panel.getByRole('button', { name: zh ? '末页' : 'Last page', exact: true }).click(); await expect(rows.last()).toContainText('#26 ·');
   await panel.getByLabel(zh ? '指定池编号' : 'Pool ID', { exact: true }).fill('25');
   await panel.getByRole('button', { name: zh ? '查找' : 'Find pool', exact: true }).click(); await expect(rows).toHaveCount(1);
   await panel.getByRole('button', { name: `${zh ? '查看详情' : 'View details'} #25`, exact: true }).click();
   await expect(panel.getByRole('region', { name: zh ? '融资详情' : 'Financing details', exact: true })).toContainText(zh ? '当前不接受新认购' : 'New subscriptions are closed');
   positionsOutage = true;
-  const retry = panel.getByRole('button', { name: zh ? '刷新数据' : 'Refresh data', exact: true });
+  const retry = panel.getByRole('button', { name: zh ? '获取最新数据' : 'Get latest data', exact: true });
   await retry.click(); await expect(panel).toContainText(zh ? '余额未知' : 'Balances are unknown'); await expect(rows).toHaveCount(1);
   await expect(panel.getByText(zh ? '此钱包在当前实例没有已发现的持仓。' : 'No positions were found for this wallet in this instance.', { exact: true })).toHaveCount(0);
   positionsOutage = false; outage = true; await retry.click(); await expect(panel.getByRole('alert')).toContainText('RPC unavailable');
@@ -64,7 +68,10 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   await expect(rows).toHaveCount(1); delay = false;
   await panel.getByRole('button', { name: zh ? '首页' : 'First page', exact: true }).click(); await expect(rows).toHaveCount(10);
   partial = true; await next.click(); await expect(rows.first()).toContainText('#11 ·'); await expect(panel).toContainText(zh ? '尚未读到的池' : 'Unread pools');
-  partial = false; await retry.click(); await expect(rows).toHaveCount(10); await expect(rows.nth(1)).toContainText('#12 ·');
+  // Retrying the unread pools stays on the snapshot the page was read at.
+  partial = false; await panel.getByRole('button', { name: zh ? '重试本页（同一快照）' : 'Retry this page (same snapshot)', exact: true }).click();
+  await expect(rows).toHaveCount(10); await expect(rows.nth(1)).toContainText('#12 ·');
+  expect(requests.at(-1).searchParams.get('block_number')).toBe('501');
   await page.evaluate(() => window.n4Handlers.accountsChanged([])); await expect(rows.first()).toContainText('#1 ·');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath(`finance-${language}-${width}.png`), fullPage: true });

@@ -1,14 +1,27 @@
 import { connectedAddress, currentWalletSession, provideRightsSessionToken } from './web3.js';
 import { appStore } from '../state/app-store.js';
 
-let authorization = null;
-export function clearRightsSession() { authorization = null; }
+let authorization = null, expiry = null;
+// Every surface that shows "signed in" listens for this, so an expired or replaced session is never displayed as live.
+// It is dispatched after the current call returns: a read during a render must not update another component.
+const changed = () => setTimeout(() => globalThis.window?.dispatchEvent(new CustomEvent('agentbl:rightssession')), 0);
+function remember(value) {
+  authorization = value;
+  clearTimeout(expiry);
+  if (value) expiry = setTimeout(() => rightsSessionToken(), Math.max(0, Math.min(value.expires_at - Date.now() + 50, 2_147_000_000)));
+  changed();
+}
+export function clearRightsSession() { if (authorization) remember(null); }
 export function rightsSessionToken() {
   if (!authorization) return null;
   const current = appStore.get();
   if (authorization.wallet !== connectedAddress()?.toLowerCase() || authorization.session !== currentWalletSession()
     || authorization.generation !== current.modeGeneration || authorization.expires_at <= Date.now()) { clearRightsSession(); return null; }
   return authorization.token;
+}
+/** What the identity status line shows: whether a business session is live, until when, and whether it is exit-only. */
+export function rightsSessionInfo() {
+  return rightsSessionToken() ? { active: true, expires_at: authorization.expires_at, exit_only: Boolean(authorization.exit_only) } : { active: false };
 }
 provideRightsSessionToken(rightsSessionToken);
 export async function rightsRequest(route, body) {
@@ -39,6 +52,6 @@ export async function openRightsSession(subjectId, { exitOnly = false } = {}) {
   if (challenge.message.wallet.toLowerCase() !== wallet) throw new Error('The enrolled role belongs to a different wallet');
   const signature = await session.signer.signTypedData(challenge.domain, challenge.types, challenge.message); assertCurrent();
   const result = await rightsRequest('sessions', { challenge_id: challenge.challenge_id, signature }); assertCurrent();
-  authorization = { ...result, wallet, generation, session };
+  remember({ ...result, wallet, generation, session, exit_only: exitOnly });
   return rightsRequest(`me${exitOnly ? '?exit_only=1' : ''}`);
 }

@@ -91,6 +91,18 @@ export function RoleWorkspace({ zh, status, wallet }) {
     selectedMaterial.current = ''; clearRightsSession(); setPrincipal(null); setMaterials([]); setWorkflow(null); setPlan(null); setApproved(false); setOperation(''); setFile(null);
     try { setPending(key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null); } catch { setPending({ invalid: true }); }
   }, [wallet, generation, key]);
+  // A session that expired (or was replaced) must not keep reading as signed in while every request goes without a token.
+  const signedIn = useRef(false);
+  signedIn.current = Boolean(principal);
+  useEffect(() => {
+    const check = () => {
+      if (!signedIn.current || rightsSessionToken()) return;
+      setPrincipal(null); setWorkflow(null); setMaterials([]); setPlan(null);
+      setNotice(zh ? '业务会话已过期，请重新验证身份。' : 'Your business session expired. Verify your identity again.');
+    };
+    window.addEventListener('agentbl:rightssession', check);
+    return () => window.removeEventListener('agentbl:rightssession', check);
+  }, [zh]);
   // The enrolled identity ID is not a credential (login still needs the wallet's signature); remember it per wallet.
   useEffect(() => {
     let saved = null;
