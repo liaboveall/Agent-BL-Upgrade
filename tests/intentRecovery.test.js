@@ -115,3 +115,68 @@ test('a release is refused while the node still knows the transaction, and a dra
   assert.equal((await capital.releaseIntent((await ledger.recordIntent(claim(2))).intent_id)).status, 'abandoned');
   await assert.rejects(ledger.checkpointBroadcast((await ledger.recordIntent(claim(3))).intent_id, { nonce: intent.broadcast_nonce + 1, block: 12 }), { code: 'wallet_nonce_reserved' });
 });
+
+test('a nonce another transaction took ends the operation only once that transaction is deep; a reorganisation re-opens it (A03)', async () => {
+  const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-intents-'));
+  temporary.push(baseDir);
+  const ledger = new Ledger({ baseDir });
+  // The wallet's nonce 7 is used at block 10 by a plain transfer to itself, not by the saved claim.
+  const chain = { latest: 10, reorg: false, reads: 0 };
+  const canonical = (number) => chain.reorg && number >= 10 ? `0x${'bb'.repeat(32)}` : `0x${'aa'.repeat(32)}`;
+  const other = { hash: hash(1), from: wallet, to: wallet, nonce: 7, data: '0x', value: 0n, chainId: 31337n, blockNumber: 10 };
+  const count = (tag) => chain.reorg ? 7 : typeof tag === 'number' && tag < 10 ? 7 : 8;
+  const provider = {
+    getNetwork: async () => ({ chainId: 31337n }), getBlockNumber: async () => { chain.reads += 1; return chain.latest; },
+    call: async () => iface.encodeFunctionResult('protocolVersion', [5]), getLogs: async () => [],
+    getBlock: async (number) => { chain.reads += 1; return { number, hash: canonical(number), timestamp: 1_800_000_000, transactions: !chain.reorg && number === 10 ? [other.hash] : [] }; },
+    getTransaction: async () => { chain.reads += 1; return chain.reorg ? null : other; },
+    getTransactionReceipt: async () => { chain.reads += 1; return chain.reorg ? null : { status: 1, blockNumber: 10, blockHash: canonical(10), hash: other.hash, logs: [] }; },
+    getTransactionCount: async (_address, tag) => { chain.reads += 1; return count(tag); }
+  };
+  const capital = new CapitalLedgerService({ ledger, confirmations: 3, getMode: () => 'live', getContext: async () => ({ provider }),
+    chainConfig: { protocolVersion: 5, chainIdDecimal: 31337, contracts: { RWAOfferingPool: pool }, deployments: { RWAOfferingPool: { blockNumber: 0 } } } });
+  const original = await ledger.recordIntent({ ...claim(), created_block: 8 });
+  await ledger.checkpointBroadcast(original.intent_id, { nonce: 7, block: 9 });
+
+  // One block deep is not enough: the operation keeps blocking this wallet and stays listed.
+  const shallow = await capital.recoverIntent(original.intent_id);
+  assert.equal(shallow.status, 'broadcast_prepared');
+  assert.equal(shallow.confirmation_pending, true);
+  assert.deepEqual((await capital.openIntents(wallet)).map((intent) => intent.intent_id), [original.intent_id]);
+  await assert.rejects(ledger.checkpointBroadcast((await ledger.recordIntent(claim(2))).intent_id, { nonce: 8, block: 11 }), { code: 'wallet_reconciliation_required' });
+
+  // Three blocks deep, canonical: now it can never be mined, and the block that proves it is kept.
+  chain.latest = 12;
+  const superseded = await capital.recoverIntent(original.intent_id);
+  assert.equal(superseded.status, 'superseded');
+  assert.equal(superseded.superseded_block_number, 10);
+  assert.equal(superseded.superseded_block_hash, canonical(10));
+  assert.equal(superseded.superseded_from, 'broadcast_prepared');
+  await capital.sync();
+
+  // The block is reorganised away: the ledger replay returns the operation to what it was before.
+  chain.reorg = true;
+  await capital.sync();
+  const reopened = await ledger.getIntent(original.intent_id);
+  assert.equal(reopened.status, 'broadcast_prepared');
+  assert.equal(reopened.superseded_by_tx_hash, null);
+  assert.deepEqual((await capital.openIntents(wallet)).map((intent) => intent.intent_id), [original.intent_id]);
+
+  // A recovery reads the chain again instead of trusting the earlier verdict.
+  const before = chain.reads;
+  const recovered = await capital.recoverIntent(original.intent_id);
+  assert.ok(chain.reads > before);
+  assert.equal(recovered.status, 'broadcast_prepared');
+  assert.equal(recovered.reconciliation_required, true);
+});
+
+test('a superseded operation whose recorded transaction disappeared is re-opened by recovery alone (A03)', async () => {
+  const { ledger, chain, capital } = await harness();
+  const intent = await capital.checkpointBroadcast((await ledger.recordIntent(claim())).intent_id);
+  await ledger.supersedeIntent(intent.intent_id, { by_tx_hash: hash(9), block_number: 3, block_hash: blockHash });
+  // The node no longer knows the superseding transaction and the nonce is unused again.
+  chain.latest = intent.broadcast_nonce;
+  const recovered = await capital.recoverIntent(intent.intent_id);
+  assert.equal(recovered.status, 'broadcast_prepared');
+  assert.equal((await ledger.getIntent(intent.intent_id)).reopened_by, 'chain_reorganization');
+});

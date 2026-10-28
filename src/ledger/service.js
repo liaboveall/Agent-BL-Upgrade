@@ -150,10 +150,16 @@ export class CapitalLedgerService {
     const receipt = await read(() => ctx.provider.getTransactionReceipt(intent.tx_hash));
     if (!receipt) return intent.status === 'reverted' ? this.ledger.reconcileIntent(intentId, intent.tx_hash) : intent;
     if (Number(receipt.status) !== 0) return intent;
-    const [block, latest] = await Promise.all([read(() => ctx.provider.getBlock(receipt.blockNumber)), read(() => ctx.provider.getBlockNumber())]);
-    if (!block?.hash || !same(block.hash, receipt.blockHash) || Number(latest) - Number(receipt.blockNumber) + 1 < this.confirmations) return intent;
+    if (!await this.#settled(receipt, ctx, read)) return intent;
     if (intent.status === 'reverted' && same(intent.block_hash, receipt.blockHash)) return intent;
     return this.ledger.revertIntent(intentId, intent.tx_hash, { block_number: receipt.blockNumber, block_hash: receipt.blockHash });
+  }
+
+  /** A receipt the ledger may act on: in the canonical block it names, and as deep as the configured confirmations. */
+  async #settled(receipt, ctx, read) {
+    if (!receipt?.blockHash) return false;
+    const [block, latest] = await Promise.all([read(() => ctx.provider.getBlock(receipt.blockNumber)), read(() => ctx.provider.getBlockNumber())]);
+    return Boolean(block?.hash) && same(block.hash, receipt.blockHash) && Number(latest) - Number(receipt.blockNumber) + 1 >= this.confirmations;
   }
 
   async prepareRefund({ wallet, chain_pool_id: poolId, authorization_subject, authorization_session }) {
@@ -200,6 +206,10 @@ export class CapitalLedgerService {
       // The nonce was used meanwhile: by something else (the operation can never be mined), or by the released
       // operation after all. Then the wallet did send it, and this send must not repeat it without the user seeing so.
       const settled = await this.#resolveConsumedNonce(other, ctx, read);
+      if (settled.confirmation_pending) {
+        throw Object.assign(new Error('Another transaction used the saved nonce but is not confirmed yet; wait for its confirmations, then reconcile'),
+          { code: 'wallet_nonce_unconfirmed', status: 409, expose: true, details: { intent_ids: [other.intent_id] } });
+      }
       if (settled.status !== 'superseded') {
         throw Object.assign(new Error('An operation the wallet reported as not sent was mined after all; review it before sending again'),
           { code: 'released_operation_mined', status: 409, expose: true, details: { intent_ids: [other.intent_id] } });
@@ -208,7 +218,11 @@ export class CapitalLedgerService {
     return open.length ? Math.min(...open) : null;
   }
 
-  /** The saved nonce was consumed: bind the transaction if it is this operation (perhaps re-sent), else supersede it. */
+  /**
+   * The saved nonce was consumed: bind the transaction if it is this operation (perhaps re-sent), else supersede it --
+   * but only once that other transaction is canonical and deep. Until then the operation keeps its status (and so keeps
+   * blocking or reserving), and the result says the confirmation is pending.
+   */
   async #resolveConsumedNonce(intent, ctx, read) {
     const latest = await read(() => ctx.provider.getBlockNumber());
     let found;
@@ -223,7 +237,9 @@ export class CapitalLedgerService {
     // A later send of the same call can carry the reserved nonce; then that operation owns the transaction.
     const boundElsewhere = (await this.ledger.listIntents({ investor: intent.investor })).some((other) => other.intent_id !== intent.intent_id && same(other.tx_hash ?? '', hash));
     if (boundElsewhere || !same(tx.to, intent.protocol_instance.pool_address) || !same(tx.data, intent.calldata) || BigInt(tx.value) !== 0n) {
-      return this.ledger.supersedeIntent(intent.intent_id, { by_tx_hash: hash });
+      const receipt = await read(() => ctx.provider.getTransactionReceipt(hash));
+      if (!await this.#settled(receipt, ctx, read)) return { ...intent, confirmation_pending: true, nonce_used_by_tx_hash: hash.toLowerCase() };
+      return this.ledger.supersedeIntent(intent.intent_id, { by_tx_hash: hash, block_number: receipt.blockNumber, block_hash: receipt.blockHash });
     }
     if (intent.tx_hash && !same(intent.tx_hash, hash)) await this.ledger.replaceTransaction(intent.intent_id, hash, intent.tx_hash);
     return this.attach(intent.intent_id, hash);
@@ -258,10 +274,16 @@ export class CapitalLedgerService {
   }
 
   async recoverIntent(intentId) {
-    const intent = await this.ledger.getIntent(intentId);
+    let intent = await this.ledger.getIntent(intentId);
     if (!intent) fail('invalid_intent', 'Saved transaction not found', 404);
-    if (['superseded', 'abandoned'].includes(intent.status)) return intent;
+    if (intent.status === 'abandoned') return intent;
     const ctx = await this.context(), { read } = this.readPool.budget(2000);
+    if (intent.status === 'superseded') {
+      // Superseded stays final only while the transaction that took the nonce is still where it was recorded.
+      const receipt = await read(() => ctx.provider.getTransactionReceipt(intent.superseded_by_tx_hash));
+      if (receipt && (!intent.superseded_block_hash || same(receipt.blockHash, intent.superseded_block_hash)) && await this.#settled(receipt, ctx, read)) return intent;
+      intent = await this.ledger.reopenSuperseded(intentId);
+    }
     if (intent.tx_hash) {
       if (await read(() => ctx.provider.getTransaction(intent.tx_hash))) return this.attach(intentId, intent.tx_hash);
       // The hash is unknown to the node: dropped, replaced by a re-send with the same nonce, or never propagated.
@@ -272,6 +294,6 @@ export class CapitalLedgerService {
     }
     if (intent.broadcast_nonce === undefined) return intent;
     const settled = await this.#resolveConsumedNonce(intent, ctx, read);
-    return settled === intent && intent.status !== 'released' ? { ...intent, reconciliation_required: true } : settled;
+    return (settled === intent || settled.confirmation_pending) && intent.status !== 'released' ? { ...settled, reconciliation_required: true } : settled;
   }
 }

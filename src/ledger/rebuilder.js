@@ -121,6 +121,8 @@ export class ChainEventRebuilder {
         if (reorg && intent.status === 'confirmed' && intent.tx_hash) await this.ledger.reconcileIntent(intent.intent_id, intent.tx_hash);
         // A failure recorded in a block the replay re-read is checked again; the reorganised chain may differ.
         else if (reorg && intent.status === 'reverted' && intent.tx_hash && Number(intent.block_number) >= scanFrom) await this.ledger.reconcileIntent(intent.intent_id, intent.tx_hash);
+        // So is a nonce another transaction took: the operation returns to what it was and is resolved again.
+        else if (reorg && intent.status === 'superseded' && !(Number(intent.superseded_block_number) < scanFrom)) await this.ledger.reopenSuperseded(intent.intent_id);
         continue;
       }
       const occupied = await this.ledger.writer.readIntents((row) => row.tx_hash && same(row.tx_hash, entry.source.tx_hash) && row.intent_id !== intent.intent_id);

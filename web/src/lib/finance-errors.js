@@ -45,6 +45,7 @@ const COPY = Object.freeze({
   released_operation_mined: { funds: 'check', text: ['你此前报告“钱包未发送”的操作实际已上链。请先核对持仓，确认是否还要再操作一次。', 'An operation you reported as not sent was mined after all. Check your positions before deciding to do it again.'] },
   transaction_pending: { funds: 'check', text: ['原交易仍在等待打包，不能释放。可在钱包中加速或取消它，打包后再核对。', 'The original transaction is still pending, so it cannot be released. Speed it up or cancel it in the wallet, then reconcile once it is mined.'] },
   wallet_nonce_pending: { funds: 'check', text: ['钱包里有一笔使用相同 nonce 的待处理交易。等它打包后先核对原交易，再重新操作。', 'A pending wallet transaction uses the saved nonce. Once it is mined, reconcile the original before trying again.'] },
+  wallet_nonce_unconfirmed: { funds: 'check', text: ['另一笔交易已经用掉保存的 nonce，但还没有达到要求的确认块数（仍可能被重组撤销）。请等几个区块后再核对原交易。', 'Another transaction used the saved nonce but does not have the required confirmations yet (a reorganization could still undo it). Wait a few blocks, then reconcile the original.'] },
   wallet_nonce_reserved: { funds: 'check', text: ['已释放的操作仍预留着 nonce，请先核对原交易再发送。', 'A released operation still reserves its nonce. Reconcile the original before sending.'] },
   intent_state_conflict: { text: ['这笔操作的状态刚刚变化，请刷新后再核对。', 'The state of this operation just changed. Refresh and reconcile again.'] },
   CONTEXT_CHANGED: { text: ['钱包或运行模式已变化，请重新审阅。', 'The wallet or mode changed. Review again.'] },

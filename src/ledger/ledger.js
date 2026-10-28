@@ -8,10 +8,11 @@ const POSITION_KINDS = new Set(['INVESTOR_DEPOSIT', 'REFUND', 'CLAIM']);
 //                │                    └──────► reconciliation_required (not found; re-checked on request)
 //                ├─► released    the wallet reported it did not send; its nonce stays reserved for the next send,
 //                │               so at most one of the two can ever be mined
-//                └─► superseded  another transaction used the saved nonce; this operation can never be mined
+//                └─► superseded  another transaction used the saved nonce, in a canonical block as deep as the
+//                                ledger's confirmations; this operation can never be mined
 //   draft ─► abandoned          nothing was checkpointed
 // The chain decides last: a cash event that matches any of them confirms it, and a reorganisation re-opens
-// `confirmed` and `reverted` for reconciliation.
+// `confirmed` and `reverted` for reconciliation and returns `superseded` to the status it had before.
 export const BLOCKING_INTENT_STATUSES = Object.freeze(['broadcast_prepared', 'broadcast', 'reconciliation_required']);
 export const SETTLED_INTENT_STATUSES = Object.freeze(['confirmed', 'reverted', 'superseded', 'released', 'abandoned']);
 const money = (value) => {
@@ -104,7 +105,7 @@ export class Ledger {
       if (!intent) throw new Error('intent not found');
       if (intent.status === status) return intent;
       if (!allowed.includes(intent.status)) throw Object.assign(new Error(`A ${intent.status} operation cannot become ${status}`), { code: 'intent_state_conflict', status: 409, expose: true });
-      const updated = { ...intent, ...extra, status, [`${status}_at`]: new Date().toISOString() };
+      const updated = { ...intent, ...(typeof extra === 'function' ? extra(intent) : extra), status, [`${status}_at`]: new Date().toISOString() };
       await this.writer.appendIntent(updated);
       return updated;
     });
@@ -160,9 +161,27 @@ export class Ledger {
   }
   /** The wallet reported that it never sent the checkpointed operation. The caller has checked its nonce is unused. */
   releaseIntent(intentId) { return this.#settle(intentId, 'released', ['broadcast_prepared', 'broadcast', 'reconciliation_required']); }
-  /** Another transaction consumed the saved nonce, so this operation can never be mined. */
-  supersedeIntent(intentId, { by_tx_hash: byTxHash }) {
-    return this.#settle(intentId, 'superseded', ['broadcast_prepared', 'broadcast', 'reconciliation_required', 'released'], { superseded_by_tx_hash: lower(byTxHash) });
+  /**
+   * Another transaction consumed the saved nonce, so this operation can never be mined. The caller has checked that
+   * transaction's receipt is canonical and deep enough; its block is kept so a reorganisation can re-open this.
+   */
+  supersedeIntent(intentId, { by_tx_hash: byTxHash, block_number: blockNumber, block_hash: blockHash }) {
+    return this.#settle(intentId, 'superseded', ['broadcast_prepared', 'broadcast', 'reconciliation_required', 'released'], (intent) => ({
+      superseded_by_tx_hash: lower(byTxHash), superseded_from: intent.status,
+      ...(blockNumber == null ? {} : { superseded_block_number: Number(blockNumber), superseded_block_hash: lower(blockHash) }) }));
+  }
+  /** The superseding transaction left the canonical chain: the operation is what it was before, and is resolved again. */
+  reopenSuperseded(intentId) {
+    return this.writer.exclusive(async () => {
+      const intent = await this.getIntent(intentId);
+      if (!intent) throw new Error('intent not found');
+      if (intent.status !== 'superseded') return intent;
+      const previous = [...BLOCKING_INTENT_STATUSES, 'released'].includes(intent.superseded_from) ? intent.superseded_from : 'reconciliation_required';
+      const updated = { ...intent, status: previous, superseded_by_tx_hash: null, superseded_block_number: null, superseded_block_hash: null,
+        reopened_at: new Date().toISOString(), reopened_by: 'chain_reorganization' };
+      await this.writer.appendIntent(updated);
+      return updated;
+    });
   }
   /** A draft that never reached a checkpoint. */
   abandonIntent(intentId) { return this.#settle(intentId, 'abandoned', ['draft']); }
