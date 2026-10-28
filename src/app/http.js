@@ -113,7 +113,11 @@ export function describeError(error) {
   // Agent-runtime errors (invalid event, approval state conflicts, mode rules, ...) are the caller's
   // to see: they carry their own 4xx status and a message written for an operator.
   if (error?.expose === true && Number.isInteger(error.status) && error.status < 500) {
-    return { status: error.status, code: error.code, message: error.message, details: error.issues };
+    return { status: error.status, code: error.code, message: error.message, details: error.details ?? error.issues };
+  }
+  // A deliberate "not now" (paused intake, an unavailable dependency, a full store) keeps its status and code.
+  if (error?.expose === true && [503, 507].includes(error.status)) {
+    return { status: error.status, code: error.code, message: error.message, details: error.details };
   }
   if (error?.code === 'paid_report_invalid') {
     return { status: 400, code: error.code, message: error.message, details: error.errors };

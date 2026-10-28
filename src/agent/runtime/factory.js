@@ -93,6 +93,10 @@ export function createAgentService(options = {}) {
   const ingest = options.ingest ?? new IngestService({
     dir,
     maxBytes: config.uploadMaxBytes,
+    maxBatchBytes: config.uploadBatchMaxBytes,
+    maxOwnerBytes: config.uploadWorkspaceQuotaBytes,
+    maxStoredBytes: config.uploadTotalQuotaBytes,
+    env,
     now: options.now,
     getMode
   });
@@ -211,6 +215,7 @@ export function createAgentService(options = {}) {
     sleep: options.sleep,
     sources,
     preferences,
+    intakeGate: options.intakeGate,
     orchestrator: options.orchestrator
   });
   service.capital = capital;

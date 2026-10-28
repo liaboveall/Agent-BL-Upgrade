@@ -91,6 +91,9 @@ export class AgentService {
       riskTracker: deps.riskTracker ?? null,
       chainWatcher: deps.chainWatcher ?? null,
       anchoring: deps.anchoring ?? null,
+      // Whether new material may enter (the server's readiness). Every intake entry point calls the service, so
+      // the gate holds for aliases and retries without each route having to remember it.
+      intakeGate: deps.intakeGate ?? (() => ({ ok: true })),
       env: deps.env ?? process.env
     });
     this.mutex = new KeyedMutex();
@@ -351,6 +354,8 @@ export class AgentService {
     const mode = this.getMode();
     await this.init();
     if (!this.ingest) throw new AgentServiceError('ingest_unavailable', 'This runtime has no document intake', 503);
+    // Demo scenarios replay curated fixtures; anything else is new material and waits while operations are not ready.
+    if (source !== 'scenario') this.#assertIntakeOpen();
     const {
       job,
       documents,
@@ -376,7 +381,10 @@ export class AgentService {
         } : {}),
         data: {
           job_id: job.job_id,
-          document_ids: job.document_ids
+          document_ids: job.document_ids,
+          ...(job.source_case_id ? {
+            template_case_id: job.source_case_id
+          } : {})
         }
       });
     }
@@ -386,6 +394,10 @@ export class AgentService {
       created,
       idempotency_key: accepted?.idempotency_key ?? `event:${job.event_id}`
     };
+  }
+  #assertIntakeOpen() {
+    const readiness = this.intakeGate();
+    if (readiness && readiness.ok === false) throw new AgentServiceError('operations_not_ready', 'New intake is paused. Preserve existing records and reconcile operational health.', 503);
   }
   async setPreferences(caseId, input) {
     await this.init();
@@ -405,12 +417,14 @@ export class AgentService {
     if (!original) throw new AgentServiceError('job_not_found', 'Unknown ingest job', 404);
     if (original.status !== 'DONE' || !original.review_required) throw new AgentServiceError('review_not_required', 'Only a completed HOLD job can receive corrected documents', 409);
     if (!body || typeof body.note !== 'string' || !body.note.trim() || body.note.length > 500) throw new AgentServiceError('review_note_required', 'A review note (1-500 characters) is required', 400);
+    this.#assertIntakeOpen();
     const result = await this.ingest.accept({
       case_id: original.case_id,
       documents: body.documents
     }, {
       reviewOf: jobId,
-      ownerId: original.owner_id
+      ownerId: original.owner_id,
+      visibility: original.visibility
     });
     if (!result.created) return {
       job: result.job,
@@ -429,7 +443,10 @@ export class AgentService {
         document_ids: result.job.document_ids,
         reviewed_job_id: jobId,
         resolution: 'approve',
-        note: body.note.trim()
+        note: body.note.trim(),
+        ...(original.source_case_id ? {
+          template_case_id: original.source_case_id
+        } : {})
       }
     });
     return {
@@ -603,11 +620,14 @@ export class AgentService {
       caseId: event.case_id,
       poolId: pool?.poolId
     });
+    // A working copy of a public sample has no pool of its own yet: the sample's case is its template, never its pool.
+    const templateId = event.data?.template_case_id;
+    const template = pool ?? (templateId ? this.store.pools.get(templateId) ?? this.#poolByCase(templateId) : null);
     return run.span('ingest_pipeline', async () => proposeFromIngest(event, {
       ingest: this.ingest,
       orchestrator: this.orchestrator,
       preferences: this.preferences,
-      pool,
+      pool: template,
       forceDeterministic: event.source === 'scenario' || !this.config.valuationLlm,
       valuation: {
         env: event.source === 'scenario' ? {} : this.env
@@ -1336,7 +1356,7 @@ export class AgentService {
   } = {}) {
     const all = await this.logger.list();
     let items = all;
-    if (caseFilter) items = items.filter(record => caseFilter(record.case_id));
+    if (caseFilter) items = items.filter(record => caseFilter(record.case_id, record));
     if (caseId) items = items.filter(record => record.case_id === caseId);
     if (poolId) items = items.filter(record => record.pool_id === poolId);
     if (status) items = items.filter(record => record.status === status);

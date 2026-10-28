@@ -1,9 +1,19 @@
 // Document intake: validate an upload, store it by content
 // and open a job that the ingest pipeline works through.
 //
-//   POST /api/agent/ingest ─► validate (type, magic bytes, size) ─► store by SHA-256 ─► job
-//                                                                      │
-//                                         DOCUMENTS_INGESTED event ◄───┘  (the AgentService submits it)
+//   POST /api/agent/ingest ─► validate the whole batch ─► claim the case ─► seal + store by SHA-256 ─► job
+//                                                                                        │
+//                                         DOCUMENTS_INGESTED event ◄─────────────────────┘  (the AgentService submits it)
+//
+// Who may read a case is a business record of its own (`ingest-case-access.json`). It is written before the
+// job and survives job retention, failed runs, restarts and a Demo reset; a job is only a run record and can
+// be dropped. Curated sample IDs are a read-only public namespace: a private upload against one works on the
+// uploader's own copy (`WS-<hash>-<sample id>`), so nobody's upload changes what anybody else can read.
+//
+// Raw bytes: the whole batch is validated before anything is written. Each content hash is stored once,
+// sealed with AES-256-GCM (AGENTBL_INTAKE_KEY, or a local key file created with owner-only permissions), and
+// removed when no retained job references it. Per-workspace and total quotas bound what the store can hold,
+// and the in-memory copy of the bytes is a bounded cache.
 //
 // What this module does NOT do: it never reads document content as instructions, and it never claims
 // an upload was verified. The ENI record is a MOCK acknowledgement and says so (`mode: 'mock'`).
@@ -14,6 +24,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createWriteQueue, readJson, writeFileAtomic, writeJsonAtomic } from '../../lib/jsonStore.js';
 import { cargoIdentityHashV2 } from '../../chain/cargoIdentity.js';
+import { curatedCaseIds } from './publicCases.js';
 
 export const ALLOWED_MIME_TYPES = Object.freeze({
   'text/markdown': { ext: 'md', kind: 'text' },
@@ -24,9 +35,14 @@ export const ALLOWED_MIME_TYPES = Object.freeze({
 });
 
 export const MAX_DOCUMENTS_PER_UPLOAD = 12;
+export const DEFAULT_BATCH_MAX_BYTES = 25_165_824; // 24 MiB of documents in one request
 const MAX_JOBS = 500;
 const MAX_NAME_LENGTH = 255;
 const CASE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,127}$/u;
+const ACCESS_SCHEMA = 'agentbl-case-access-v1';
+const SEALED = Buffer.from('AGBLUP01');
+const STORED_FILE = /^[0-9a-f]{64}\.(?:md|txt|pdf|png|jpg)(?:\.sealed)?$/u;
+const UPLOAD_EVENT = /^(?:ingest|review):(job_[a-f0-9]{20})/u;
 
 export class IngestError extends Error {
   constructor(code, message, status = 400) {
@@ -105,34 +121,86 @@ export function validateDocumentInput(input, maxBytes = 8_388_608) {
   return { name, mime, allowed, buffer };
 }
 
+/** The upload key: a separately managed AGENTBL_INTAKE_KEY, or a key file next to the store (created owner-only). */
+async function intakeKey(env, dir) {
+  const raw = env.AGENTBL_INTAKE_KEY;
+  if (raw) {
+    if (!/^[a-fA-F0-9]{64}$/u.test(raw)) throw new IngestError('intake_key_invalid', 'AGENTBL_INTAKE_KEY must be 32 bytes of hex', 503);
+    return Buffer.from(raw, 'hex');
+  }
+  const file = path.join(dir, 'ingest-uploads.key');
+  try { return Buffer.from(await fs.readFile(file, 'utf8'), 'base64'); }
+  catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    await fs.mkdir(dir, { recursive: true });
+    try { await fs.writeFile(file, crypto.generateKeySync('aes', { length: 256 }).export().toString('base64'), { flag: 'wx', mode: 0o600 }); }
+    catch (race) { if (race.code !== 'EEXIST') throw race; }
+    return Buffer.from(await fs.readFile(file, 'utf8'), 'base64');
+  }
+}
+
+const aad = (digest) => Buffer.from(`agentbl-upload-v1:${digest}`);
+function seal(key, digest, buffer) {
+  const iv = crypto.randomBytes(12), cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  cipher.setAAD(aad(digest));
+  const data = Buffer.concat([cipher.update(buffer), cipher.final()]);
+  return Buffer.concat([SEALED, iv, cipher.getAuthTag(), data]);
+}
+function open(key, digest, stored) {
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, stored.subarray(8, 20));
+  decipher.setAAD(aad(digest));
+  decipher.setAuthTag(stored.subarray(20, 36));
+  return Buffer.concat([decipher.update(stored.subarray(36)), decipher.final()]);
+}
+
 export class IngestService {
   /**
    * @param {object} options
    * @param {string|null} options.dir     runtime directory; null keeps everything in memory
-   * @param {number} options.maxBytes
+   * @param {number} options.maxBytes      one document
+   * @param {number} [options.maxBatchBytes]   all documents of one request
+   * @param {number} [options.maxOwnerBytes]   stored bytes per workspace
+   * @param {number} [options.maxStoredBytes]  stored bytes in total
+   * @param {number} [options.blobCacheBytes]  bytes kept in memory when a directory holds the store
+   * @param {Iterable<string>} [options.publicCaseIds]  the read-only public sample IDs
    * @param {() => Date} [options.now]
    */
-  constructor({ dir = null, maxBytes = 8_388_608, now = () => new Date(), getMode = () => 'demo' } = {}) {
+  constructor({ dir = null, maxBytes = 8_388_608, maxBatchBytes = DEFAULT_BATCH_MAX_BYTES, maxOwnerBytes = 100_663_296,
+    maxStoredBytes = 1_073_741_824, blobCacheBytes = 67_108_864, publicCaseIds = curatedCaseIds(), env = process.env,
+    now = () => new Date(), getMode = () => 'demo' } = {}) {
     this.dir = dir;
     this.maxBytes = maxBytes;
+    this.maxBatchBytes = Math.max(maxBatchBytes, maxBytes);
+    this.maxOwnerBytes = maxOwnerBytes;
+    this.maxStoredBytes = maxStoredBytes;
+    this.blobCacheBytes = blobCacheBytes;
+    this.publicCaseIds = new Set(publicCaseIds);
+    this.env = env;
     this.now = now;
     this.getMode = getMode;
     this.documents = new Map(); // document_id -> record
-    this.blobs = new Map();     // document_id -> Buffer (memory mode, and a cache)
-    this.jobs = new Map();      // job_id -> job
+    this.blobs = new Map();     // document_id -> Buffer (the store in memory mode, a bounded cache otherwise)
+    this.cachedBytes = 0;
+    this.jobs = new Map();      // job_id -> job (a run record, bounded)
     this.cases = new Map();     // case_id -> case built from uploaded documents
+    this.access = new Map();    // case_id -> who may read it (never evicted)
     this.casesLoaded = false;
     this.queue = createWriteQueue();
-    this.initialized = false;
+    this.commits = createWriteQueue(); // ownership, blobs, documents and jobs change together
+    this.loading = null;
   }
 
   get documentsFile() { return this.dir ? path.join(this.dir, 'ingest-documents.json') : null; }
   get jobsFile() { return this.dir ? path.join(this.dir, 'ingest-jobs.json') : null; }
+  get accessFile() { return this.dir ? path.join(this.dir, 'ingest-case-access.json') : null; }
 
-  async init() {
-    if (this.initialized) return this;
-    this.initialized = true;
-    if (!this.dir) return this;
+  init() {
+    this.loading ??= this.#load().then(() => this);
+    return this.loading;
+  }
+
+  async #load() {
+    if (!this.dir) return;
     const documents = await readJson(this.documentsFile, {});
     for (const record of Object.values(documents ?? {})) this.documents.set(record.document_id, { ...record,
       ...evidenceMetadata({ ...record, observed_at: record.observed_at ?? record.created_at ?? null }, { mode: record.source_status ?? 'fixture' }) });
@@ -145,7 +213,24 @@ export class IngestService {
       }
       this.jobs.set(job.job_id, job);
     }
-    return this;
+    // A corrupt access file stops the intake from starting: guessing ownership would make private cases public.
+    const access = await readJson(this.accessFile, null);
+    if (access && access.schema !== ACCESS_SCHEMA) throw new Error('Unsupported case access file');
+    // Jobs written by this version (they record their mode) prove an access file existed: its loss is not a fresh start.
+    if (!access && [...this.jobs.values()].some((job) => job.mode)) throw new Error('Case access records are missing; restore ingest-case-access.json');
+    for (const record of Object.values(access?.cases ?? {})) this.access.set(record.case_id, record);
+    // Runtimes written before the access file existed: their jobs and saved cases are the only ownership records left.
+    await this.#loadCases();
+    let migrated = false;
+    const adopt = (caseId, ownerId, visibility, at) => {
+      if (!caseId || this.access.has(caseId) || this.publicCaseIds.has(caseId)) return;
+      this.access.set(caseId, { case_id: caseId, owner_id: ownerId ?? 'local-operator', visibility: visibility === 'public-demo' ? 'public-demo' : 'private', created_at: at ?? null, migrated: true });
+      migrated = true;
+    };
+    for (const job of this.jobs.values()) adopt(job.case_id, job.owner_id, job.visibility, job.created_at);
+    for (const data of this.cases.values()) adopt(data.case_id, data.workspace_owner_id, data.visibility, null);
+    if (migrated) await this.#persistAccess();
+    await this.#sweepUploads();
   }
 
   #persist() {
@@ -156,9 +241,96 @@ export class IngestService {
     });
   }
 
+  #persistAccess() {
+    if (!this.dir) return Promise.resolve();
+    return this.queue(() => writeJsonAtomic(this.accessFile, { schema: ACCESS_SCHEMA, cases: Object.fromEntries(this.access) }, { durable: true }));
+  }
+
+  // ---------------------------------------------------------------- who may read a case
+
+  /** A curated sample, or a case a Demo scenario published. Anyone may read it; nobody's upload changes it. */
+  isPublicCase(caseId) {
+    return this.publicCaseIds.has(caseId) || this.access.get(caseId)?.visibility === 'public-demo';
+  }
+
+  isPrivateCase(caseId) {
+    if (this.publicCaseIds.has(caseId)) return false;
+    const record = this.access.get(caseId);
+    return Boolean(record) && record.visibility !== 'public-demo';
+  }
+
+  caseOwner(caseId) { return this.access.get(caseId)?.owner_id ?? null; }
+
+  /** The private working copy a workspace uses for a public sample: stable for that workspace, unguessable for others. */
+  workspaceCaseId(ownerId, sourceCaseId) {
+    return `WS-${sha256(`${ownerId}:${sourceCaseId}`).slice(0, 10).toUpperCase()}-${sourceCaseId}`.slice(0, 128);
+  }
+
+  /** The case an upload (or a preference) of this workspace lands on. Public samples are never written directly. */
+  resolveUploadCase(caseId, ownerId, visibility = 'private') {
+    if (caseId !== undefined && caseId !== null && !CASE_ID_PATTERN.test(String(caseId))) {
+      throw new IngestError('invalid_case_id', 'case_id must be 3-128 characters: letters, digits, dot, dash, underscore');
+    }
+    if (visibility !== 'public-demo' && caseId && this.isPublicCase(String(caseId))) {
+      return { case_id: this.workspaceCaseId(ownerId, String(caseId)), source_case_id: String(caseId) };
+    }
+    return { case_id: caseId ? String(caseId) : null, source_case_id: null };
+  }
+
+  /** Record who may read a case before anything is stored for it. Ownership is never taken over. */
+  async claimCase(caseId, { ownerId = 'local-operator', visibility = 'private', sourceCaseId = null } = {}) {
+    await this.init();
+    if (!CASE_ID_PATTERN.test(String(caseId))) throw new IngestError('invalid_case_id', 'case_id must be 3-128 characters: letters, digits, dot, dash, underscore');
+    if (visibility !== 'public-demo' && this.publicCaseIds.has(caseId)) throw new IngestError('public_case_read_only', 'Public sample cases are read-only; use your own working copy', 409);
+    const existing = this.access.get(caseId);
+    if (existing) {
+      if (existing.owner_id !== ownerId && !(existing.visibility === 'public-demo' && visibility === 'public-demo')) {
+        throw new IngestError('case_owner_conflict', 'This case identifier belongs to another workspace', 409);
+      }
+      if (existing.visibility !== visibility) throw new IngestError('case_visibility_conflict', 'This case is already published with another visibility', 409);
+      return structuredClone(existing);
+    }
+    const record = { case_id: caseId, owner_id: ownerId, visibility: visibility === 'public-demo' ? 'public-demo' : 'private',
+      ...(sourceCaseId ? { source_case_id: sourceCaseId } : {}), created_at: this.now().toISOString() };
+    this.access.set(caseId, record);
+    try { await this.#persistAccess(); }
+    catch (error) { this.access.delete(caseId); throw error; }
+    return structuredClone(record);
+  }
+
+  getAccess(caseId) {
+    const record = this.access.get(caseId);
+    return record ? structuredClone(record) : null;
+  }
+
+  canReadCase(caseId, { ownerId = null, admin = false } = {}) {
+    if (admin || !this.isPrivateCase(caseId)) return true;
+    return Boolean(ownerId) && this.caseOwner(caseId) === ownerId;
+  }
+
+  canReadJob(job, { ownerId = null, admin = false } = {}) {
+    if (admin || job?.visibility === 'public-demo') return true;
+    return Boolean(ownerId) && job?.owner_id === ownerId;
+  }
+
+  /**
+   * A record produced from an upload (a decision of DOCUMENTS_INGESTED / REVIEW_RESOLVED) follows its job while the
+   * job is retained and its case's access record afterwards. With neither, nobody but an operator can read it.
+   */
+  canReadUploadRecord(caseId, eventId, { ownerId = null, admin = false } = {}) {
+    if (admin) return true;
+    const job = this.jobs.get(UPLOAD_EVENT.exec(String(eventId ?? ''))?.[1]);
+    if (job) return this.canReadJob(job, { ownerId });
+    const record = this.access.get(caseId);
+    if (!record) return false;
+    return record.visibility === 'public-demo' || Boolean(ownerId) && record.owner_id === ownerId;
+  }
+
+  // ---------------------------------------------------------------- uploads
+
   /**
    * Validate and store an upload, and open (or return) its job. Re-uploading the same content for the
-   * same case is idempotent: it returns the same job.
+   * same case is idempotent: it returns the same job. Nothing is stored unless the whole batch is valid.
    * @param {{case_id?: string, documents: object[], exporter_preferences?: object}} body
    * @returns {Promise<{job: object, documents: object[], created: boolean}>}
    */
@@ -168,75 +340,100 @@ export class IngestService {
     const inputs = body.documents;
     if (!Array.isArray(inputs) || inputs.length === 0) throw new IngestError('invalid_request', 'documents must be a non-empty array');
     if (inputs.length > MAX_DOCUMENTS_PER_UPLOAD) throw new IngestError('too_many_documents', `At most ${MAX_DOCUMENTS_PER_UPLOAD} documents per upload`);
-    if (body.case_id !== undefined && !CASE_ID_PATTERN.test(String(body.case_id))) {
-      throw new IngestError('invalid_case_id', 'case_id must be 3-128 characters: letters, digits, dot, dash, underscore');
-    }
+    const target = reviewOf ? { case_id: String(body.case_id), source_case_id: this.jobs.get(reviewOf)?.source_case_id ?? null }
+      : this.resolveUploadCase(body.case_id, ownerId, visibility);
 
-    const stored = [];
-    for (const input of inputs) stored.push(await this.#store(input, ownerId));
-    const unique = [...new Map(stored.map((record) => [record.document_id, record])).values()];
+    // 1. every document is checked before any byte is stored
+    const items = inputs.map((input) => {
+      const { name, mime, allowed, buffer } = validateDocumentInput(input, this.maxBytes);
+      const digest = sha256(buffer);
+      return { input, name, mime, allowed, buffer, digest, document_id: `doc_${sha256(`${ownerId}:${digest}`).slice(0, 16)}` };
+    });
+    const batchBytes = items.reduce((sum, item) => sum + item.buffer.length, 0);
+    if (batchBytes > this.maxBatchBytes) throw new IngestError('upload_batch_too_large', `One upload may carry at most ${this.maxBatchBytes} bytes of documents`, 413);
+    const unique = [...new Map(items.map((item) => [item.document_id, item])).values()];
+    const ids = unique.map((item) => `0x${item.digest}`).sort();
 
-    const ids = unique.map((record) => record.sha256).sort();
-    if (body.case_id && this.isPrivateCase(body.case_id) && this.caseOwner(body.case_id) !== ownerId) {
-      throw new IngestError('case_owner_conflict', 'This case identifier belongs to another workspace', 409);
-    }
-    const duplicate = [...this.jobs.values()].find((job) => (body.case_id && job.case_id !== body.case_id || job.owner_id !== ownerId)
-      && JSON.stringify(job.document_ids.map((id) => this.documents.get(id)?.sha256).sort()) === JSON.stringify(ids));
-    if (duplicate && !reviewOf) throw new IngestError('duplicate_asset_documents', 'These documents already belong to an existing case; review that case instead of creating another asset', 409);
-    if (reviewOf) {
-      const original = this.jobs.get(reviewOf);
-      const originalIds = original?.document_ids.map((id) => this.documents.get(id)?.sha256).sort();
-      if (JSON.stringify(originalIds) === JSON.stringify(ids)) {
+    return this.commits(async () => {
+      // 2. ownership, duplicates and idempotency, still without writing anything
+      const fingerprint = sha256(JSON.stringify({ owner_id: ownerId, case_id: target.case_id, ids, ...(reviewOf ? { review_of: reviewOf } : {}) }));
+      const caseId = target.case_id ?? `CASE-UP-${fingerprint.slice(0, 12).toUpperCase()}`;
+      const access = this.access.get(caseId);
+      if (access && access.owner_id !== ownerId && !(access.visibility === 'public-demo' && (visibility === 'public-demo' || reviewOf))) {
+        throw new IngestError('case_owner_conflict', 'This case identifier belongs to another workspace', 409);
+      }
+      const shaOf = (job) => JSON.stringify(job.document_ids.map((id) => this.documents.get(id)?.sha256).sort());
+      const duplicate = [...this.jobs.values()].find((job) => (job.case_id !== caseId || job.owner_id !== ownerId) && shaOf(job) === JSON.stringify(ids));
+      if (duplicate && !reviewOf) throw new IngestError('duplicate_asset_documents', 'These documents already belong to an existing case; review that case instead of creating another asset', 409);
+      if (reviewOf && shaOf(this.jobs.get(reviewOf) ?? { document_ids: [] }) === JSON.stringify(ids)) {
         throw new IngestError('review_unchanged', 'Correct the documents before submitting a review', 409);
       }
-    }
-    // A review is a new, narrowly scoped attempt even when its corrected bytes occurred in an
-    // older successful upload. Ordinary upload fingerprints remain unchanged.
-    const fingerprint = sha256(JSON.stringify({ owner_id: ownerId, case_id: body.case_id ?? null, ids, ...(reviewOf ? { review_of: reviewOf } : {}) }));
-    const jobId = `job_${fingerprint.slice(0, 20)}`;
-    const caseId = body.case_id ? String(body.case_id) : `CASE-UP-${fingerprint.slice(0, 12).toUpperCase()}`;
-    const existing = this.jobs.get(jobId);
-    if (existing && !['FAILED', 'INTERRUPTED'].includes(existing.status)) {
-      return { job: structuredClone(existing), documents: unique.map((record) => structuredClone(record)), created: false };
-    }
+      // A review is a new, narrowly scoped attempt even when its corrected bytes occurred in an
+      // older successful upload. Ordinary upload fingerprints remain unchanged.
+      const jobId = `job_${fingerprint.slice(0, 20)}`;
+      const existing = this.jobs.get(jobId);
+      if (existing && !['FAILED', 'INTERRUPTED'].includes(existing.status) && unique.every((item) => this.documents.has(item.document_id))) {
+        return { job: structuredClone(existing), documents: unique.map((item) => structuredClone(this.documents.get(item.document_id))), created: false };
+      }
+      const fresh = unique.filter((item) => !this.documents.has(item.document_id));
+      const freshBytes = fresh.reduce((sum, item) => sum + item.buffer.length, 0);
+      const stored = [...this.documents.values()];
+      const ownerBytes = stored.filter((record) => record.owner_id === ownerId).reduce((sum, record) => sum + record.size, 0);
+      if (ownerBytes + freshBytes > this.maxOwnerBytes) throw new IngestError('upload_quota_exceeded', 'This workspace has reached its upload storage quota; finished jobs release space as they expire', 413);
+      if (stored.reduce((sum, record) => sum + record.size, 0) + freshBytes > this.maxStoredBytes) throw new IngestError('intake_storage_full', 'The intake store is full; try again later', 507);
 
-    const at = this.now().toISOString();
-    // A retry of a failed or interrupted job is a new event: reusing the first event id would be
-    // dropped by the bus as a duplicate and the retry would never run.
-    const attempt = existing ? (existing.attempt ?? 1) + 1 : 1;
-    const job = {
-      job_id: jobId,
-      owner_id: ownerId,
-      visibility,
-      case_id: caseId,
-      status: 'QUEUED',
-      document_ids: unique.map((record) => record.document_id),
-      steps: [],
-      decision_ids: [],
-      ...(attempt > 1 ? { attempt, previous_decision_ids: [...(existing.previous_decision_ids ?? []), ...(existing.decision_ids ?? [])] } : {}),
-      event_id: attempt > 1 ? `ingest:${jobId}:attempt-${attempt}` : `ingest:${jobId}`,
-      created_at: at,
-      updated_at: at
-    };
-    this.jobs.set(jobId, job);
-    while (this.jobs.size > MAX_JOBS) this.jobs.delete(this.jobs.keys().next().value);
-    await this.#persist();
-    return { job: structuredClone(job), documents: unique.map((record) => structuredClone(record)), created: true };
+      // 3. commit: the access record first, then the bytes, then the records that point at them
+      if (!access) await this.claimCase(caseId, { ownerId, visibility, sourceCaseId: target.source_case_id });
+      const records = [], written = [];
+      try {
+        for (const item of fresh) {
+          const record = this.#record(item, ownerId);
+          if (await this.#writeBlob(record, item.buffer)) written.push(record.stored_as);
+          records.push([record, item.buffer]);
+        }
+      } catch (error) {
+        // Only bytes this request wrote are removed; content another document shares was not written here.
+        for (const file of written) await fs.rm(path.join(this.dir, file), { force: true }).catch(() => {});
+        throw error;
+      }
+      for (const [record, buffer] of records) {
+        this.documents.set(record.document_id, record);
+        this.#cache(record.document_id, buffer);
+      }
+
+      const at = this.now().toISOString();
+      // A retry of a failed or interrupted job is a new event: reusing the first event id would be
+      // dropped by the bus as a duplicate and the retry would never run.
+      const attempt = existing ? (existing.attempt ?? 1) + 1 : 1;
+      const job = {
+        job_id: jobId,
+        owner_id: ownerId,
+        visibility: (access ?? this.access.get(caseId))?.visibility ?? visibility,
+        mode: this.getMode(),
+        case_id: caseId,
+        ...(target.source_case_id ? { source_case_id: target.source_case_id } : {}),
+        status: 'QUEUED',
+        document_ids: unique.map((item) => item.document_id),
+        steps: [],
+        decision_ids: [],
+        ...(attempt > 1 ? { attempt, previous_decision_ids: [...(existing.previous_decision_ids ?? []), ...(existing.decision_ids ?? [])] } : {}),
+        event_id: attempt > 1 ? `ingest:${jobId}:attempt-${attempt}` : `ingest:${jobId}`,
+        created_at: at,
+        updated_at: at
+      };
+      this.jobs.set(jobId, job);
+      while (this.jobs.size > MAX_JOBS) this.jobs.delete(this.jobs.keys().next().value);
+      await this.#persist();
+      await this.#collect();
+      return { job: structuredClone(job), documents: unique.map((item) => structuredClone(this.documents.get(item.document_id))), created: true };
+    });
   }
 
-  async #store(input, ownerId) {
-    const { name, mime, allowed, buffer } = validateDocumentInput(input, this.maxBytes);
-
-    const digest = sha256(buffer);
-    const documentId = `doc_${sha256(`${ownerId}:${digest}`).slice(0, 16)}`;
-    const existing = this.documents.get(documentId);
-    if (existing) {
-      this.blobs.set(documentId, buffer);
-      return existing;
-    }
-    const record = {
+  #record({ input, name, mime, allowed, buffer, digest, document_id: documentId }, ownerId) {
+    return {
       ...evidenceMetadata({}, { now: this.now().getTime(), mode: this.getMode() }),
       document_id: documentId,
+      owner_id: ownerId,
       sha256: `0x${digest}`,
       name,
       mime_type: mime,
@@ -245,13 +442,81 @@ export class IngestService {
       declared_type: typeof input.declared_type === 'string' ? input.declared_type.slice(0, 40) : null,
       // Stand-in for an ENI/TradeGo acknowledgement: nothing was sent to any registry.
       eni: { mode: 'mock', document_id: `ENI-MOCK-${digest.slice(0, 8).toUpperCase()}`, verified: false },
-      stored_as: this.dir ? `uploads/${digest}.${allowed.ext}` : null,
+      stored_as: this.dir ? `uploads/${digest}.${allowed.ext}.sealed` : null,
       created_at: this.now().toISOString()
     };
-    if (this.dir) await writeFileAtomic(path.join(this.dir, record.stored_as), buffer);
-    this.documents.set(documentId, record);
-    this.blobs.set(documentId, buffer);
-    return record;
+  }
+
+  #key() {
+    this.keyLoading ??= intakeKey(this.env, this.dir).catch((error) => { this.keyLoading = null; throw error; });
+    return this.keyLoading;
+  }
+
+  /** Seal and write the bytes unless another document already stored the same content. True when this call wrote them. */
+  async #writeBlob(record, buffer) {
+    if (!this.dir) return false;
+    const file = path.join(this.dir, record.stored_as);
+    if (await fs.access(file).then(() => true, () => false)) return false;
+    await writeFileAtomic(file, seal(await this.#key(), record.sha256.slice(2), buffer), { mode: 0o600 });
+    return true;
+  }
+
+  async #readBlob(record) {
+    const stored = await fs.readFile(path.join(this.dir, record.stored_as)).catch(() => null);
+    if (!stored) return null;
+    let buffer = stored;
+    if (stored.subarray(0, SEALED.length).equals(SEALED)) {
+      try { buffer = open(await this.#key(), record.sha256.slice(2), stored); }
+      catch { throw new IngestError('document_unreadable', `${record.document_id} cannot be opened with the configured intake key`, 503); }
+    }
+    // Plain files written before sealing are still read, but only when their bytes are the ones recorded.
+    if (`0x${sha256(buffer)}` !== record.sha256) throw new IngestError('document_corrupt', `The stored bytes of ${record.document_id} do not match their hash`, 410);
+    return buffer;
+  }
+
+  #cache(id, buffer) {
+    if (this.blobs.has(id)) { this.cachedBytes -= this.blobs.get(id).length; this.blobs.delete(id); }
+    this.blobs.set(id, buffer);
+    this.cachedBytes += buffer.length;
+    // With a directory the bytes live on disk, so memory only keeps the most recently used ones.
+    while (this.dir && this.cachedBytes > this.blobCacheBytes && this.blobs.size > 1) {
+      const [oldest, value] = this.blobs.entries().next().value;
+      this.blobs.delete(oldest);
+      this.cachedBytes -= value.length;
+    }
+  }
+
+  #uncache(id) {
+    const value = this.blobs.get(id);
+    if (value) { this.cachedBytes -= value.length; this.blobs.delete(id); }
+  }
+
+  /** Drop documents no retained job references, and their files when no other document shares the content. */
+  async #collect() {
+    const referenced = new Set([...this.jobs.values()].flatMap((job) => job.document_ids));
+    const removed = [];
+    for (const [id, record] of this.documents) {
+      if (referenced.has(id)) continue;
+      this.documents.delete(id);
+      this.#uncache(id);
+      removed.push(record);
+    }
+    if (!removed.length) return 0;
+    const kept = new Set([...this.documents.values()].map((record) => record.stored_as));
+    for (const record of removed) {
+      if (this.dir && record.stored_as && !kept.has(record.stored_as)) await fs.rm(path.join(this.dir, record.stored_as), { force: true });
+    }
+    await this.#persist();
+    return removed.length;
+  }
+
+  /** Files left by older versions or by a crash between writing bytes and recording them. */
+  async #sweepUploads() {
+    const folder = path.join(this.dir, 'uploads');
+    const kept = new Set([...this.documents.values()].map((record) => record.stored_as));
+    for (const name of await fs.readdir(folder).catch(() => [])) {
+      if (STORED_FILE.test(name) && !kept.has(`uploads/${name}`)) await fs.rm(path.join(folder, name), { force: true });
+    }
   }
 
   getJob(id) {
@@ -259,15 +524,9 @@ export class IngestService {
     return job ? structuredClone(job) : null;
   }
 
-  isPrivateCase(caseId) {
-    const jobs = [...this.jobs.values()].filter((job) => job.case_id === caseId);
-    return jobs.some((job) => job.visibility !== 'public-demo') || this.cases.has(caseId) && this.cases.get(caseId).visibility !== 'public-demo';
-  }
-  caseOwner(caseId) { return [...this.jobs.values()].find((job) => job.case_id === caseId)?.owner_id ?? this.cases.get(caseId)?.workspace_owner_id ?? null; }
-
-  listJobs({ case_id: caseId, limit = 50 } = {}) {
+  listJobs({ case_id: caseId, limit = 50, filter } = {}) {
     return [...this.jobs.values()]
-      .filter((job) => !caseId || job.case_id === caseId)
+      .filter((job) => (!caseId || job.case_id === caseId) && (!filter || filter(job)))
       .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
       .slice(0, limit)
       .map((job) => structuredClone(job));
@@ -298,9 +557,10 @@ export class IngestService {
       const record = this.documents.get(id);
       if (!record) throw new IngestError('document_missing', `Document ${id} is not stored`, 404);
       let blob = this.blobs.get(id);
-      if (!blob && this.dir && record.stored_as) {
-        blob = await fs.readFile(path.join(this.dir, record.stored_as)).catch(() => null);
-        if (blob) this.blobs.set(id, blob);
+      if (blob) this.#cache(id, blob);
+      else if (this.dir && record.stored_as) {
+        blob = await this.#readBlob(record);
+        if (blob) this.#cache(id, blob);
       }
       if (!blob) throw new IngestError('document_missing', `The bytes of ${id} are no longer stored`, 410);
       // Binary bytes stay internal to the pipeline; HTTP job/document records never expose them.
@@ -313,6 +573,13 @@ export class IngestService {
   getDocument(id) {
     const record = this.documents.get(id);
     return record ? structuredClone(record) : null;
+  }
+
+  /** What the store holds, for operations and the retention tests. */
+  usage() {
+    const records = [...this.documents.values()];
+    return { documents: records.length, jobs: this.jobs.size, stored_bytes: records.reduce((sum, record) => sum + record.size, 0),
+      cached_bytes: this.cachedBytes, cases_with_access_records: this.access.size };
   }
 
   // ---------------------------------------------------------------- cases built from documents
@@ -330,37 +597,49 @@ export class IngestService {
         if (otherHash === titleHash) throw new IngestError('duplicate_asset_identity', 'This bill already belongs to another case; amendments must be reviewed under its original asset identity', 409);
       }
     }
-    const caseJobs = [...this.jobs.values()].filter((job) => job.case_id === caseData.case_id);
-    const visibility = caseJobs.length > 0 && caseJobs.every((job) => job.visibility === 'public-demo') ? 'public-demo' : 'private';
-    const privateCase = { ...caseData, visibility, title_identity_hash: titleHash ?? null, workspace_owner_id: this.caseOwner(caseData.case_id) };
+    const access = this.access.get(caseData.case_id);
+    const visibility = access?.visibility === 'public-demo' ? 'public-demo' : 'private';
+    const privateCase = { ...caseData, visibility, title_identity_hash: titleHash ?? null, workspace_owner_id: this.caseOwner(caseData.case_id),
+      ...(access?.source_case_id ? { source_case_id: access.source_case_id } : {}), mode: this.getMode() };
     this.cases.set(caseData.case_id, structuredClone(privateCase));
     if (this.dir) await writeJsonAtomic(path.join(this.dir, 'cases', `${caseData.case_id}.case.json`), privateCase);
     return caseData.case_id;
   }
 
+  async #loadCases() {
+    if (!this.dir || this.casesLoaded) return;
+    this.casesLoaded = true;
+    const folder = path.join(this.dir, 'cases');
+    const names = await fs.readdir(folder).catch(() => []);
+    for (const name of names.filter((file) => file.endsWith('.case.json'))) {
+      const data = await readJson(path.join(folder, name), null).catch(() => null);
+      if (data?.case_id && !this.cases.has(data.case_id)) this.cases.set(data.case_id, data);
+    }
+  }
+
   /** Cases produced from uploads: those held in memory plus any saved by an earlier run. */
   async listCases() {
     await this.init();
-    if (this.dir && !this.casesLoaded) {
-      this.casesLoaded = true;
-      const folder = path.join(this.dir, 'cases');
-      const names = await fs.readdir(folder).catch(() => []);
-      for (const name of names.filter((file) => file.endsWith('.case.json'))) {
-        const data = await readJson(path.join(folder, name), null).catch(() => null);
-        if (data?.case_id && !this.cases.has(data.case_id)) this.cases.set(data.case_id, data);
-      }
-    }
+    await this.#loadCases();
     return [...this.cases.values()].map((data) => structuredClone(data));
   }
 
+  /**
+   * The Demo reset: Demo jobs, the cases only they produced, and every stored byte no remaining job needs are
+   * deleted from memory and disk. Live records stay, and so do access records: a reset never makes a case public.
+   */
   async clear() {
-    this.documents.clear();
-    this.blobs.clear();
-    this.jobs.clear();
-    if (this.dir) {
-      for (const caseId of this.cases.keys()) await fs.rm(path.join(this.dir, 'cases', `${caseId}.case.json`), { force: true });
-    }
-    this.cases.clear();
-    await this.#persist();
+    await this.init();
+    return this.commits(async () => {
+      await this.#loadCases();
+      for (const [id, job] of this.jobs) if ((job.mode ?? 'demo') !== 'live') this.jobs.delete(id);
+      for (const [caseId, data] of this.cases) {
+        if ((data.mode ?? 'demo') === 'live') continue;
+        if (this.dir) await fs.rm(path.join(this.dir, 'cases', `${caseId}.case.json`), { force: true });
+        this.cases.delete(caseId);
+      }
+      await this.#persist();
+      await this.#collect();
+    });
   }
 }

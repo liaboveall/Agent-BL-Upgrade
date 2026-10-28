@@ -66,6 +66,11 @@ export function loadAgentConfig(env = process.env) {
     insuranceWarnDays: int(env.AGENT_INSURANCE_WARN_DAYS, 7, { min: 1, max: 365 }),
     scenarioSpeed: int(env.AGENT_SCENARIO_SPEED, 1, { min: 1, max: 1000 }),
     uploadMaxBytes: int(env.AGENT_UPLOAD_MAX_BYTES, 8_388_608, { min: 1024, max: 25_000_000 }),
+    // One request's documents together (three maximum-size documents unless set), what one browser workspace may
+    // keep stored, and the whole intake store.
+    uploadBatchMaxBytes: int(env.AGENT_UPLOAD_BATCH_MAX_BYTES, 3 * int(env.AGENT_UPLOAD_MAX_BYTES, 8_388_608, { min: 1024, max: 25_000_000 }), { min: 1024, max: 100_000_000 }),
+    uploadWorkspaceQuotaBytes: int(env.AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES, 100_663_296, { min: 1024 }),
+    uploadTotalQuotaBytes: int(env.AGENT_UPLOAD_TOTAL_QUOTA_BYTES, 1_073_741_824, { min: 1024 }),
     // Use the configured LLM for the valuation step of the ingest pipeline (it falls back to the
     // deterministic path when no LLM is configured or the call fails).
     valuationLlm: bool(env.AGENT_VALUATION_LLM, true),

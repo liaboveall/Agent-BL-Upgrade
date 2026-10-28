@@ -9,6 +9,7 @@ import { delegatePricingSchema, delegatePricingJsonSchema } from '../interop/del
 import { checkedInterop } from '../interop/validation.js';
 import { assertHumanApproval, McpWritePolicyError } from './security.js';
 import { callAgentBackend } from './agentClient.js';
+import { publicCaseFilter } from '../app/workspaceAccess.js';
 
 const id = z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/u);
 const schemas = {
@@ -60,12 +61,12 @@ async function execute(name, body, context) {
   const service = context.getService();
   if (name === 'get_agent_status') return sanitizeAudit(await service.status());
   if (name === 'list_agent_decisions') {
-    const result = await service.listDecisions({ ...body, caseFilter: (caseId) => !service.ingest?.isPrivateCase(caseId) });
+    const result = await service.listDecisions({ ...body, caseFilter: publicCaseFilter(service) });
     return { ...result, decisions: result.decisions.map(externalDecision) };
   }
   if (name === 'explain_decision') {
     const decision = await service.getDecision(body.decision_id);
-    if (!decision || service.ingest?.isPrivateCase(decision.case_id)) throw new HttpError(404, 'decision_not_found', 'Unknown agent decision');
+    if (!decision || !publicCaseFilter(service)(decision.case_id, decision)) throw new HttpError(404, 'decision_not_found', 'Unknown agent decision');
     return { decision: externalDecision(decision), trace: sanitizeAudit(await service.getTrace(body.decision_id) ?? null),
       explanation_source: 'recorded-decision', recomputed: false };
   }

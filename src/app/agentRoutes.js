@@ -13,7 +13,7 @@ import { isRecord } from './shapes.js';
 import { withReferences } from '../agent/runtime/references.js';
 import { publicAgentPolicy } from '../mcp/agentTools.js';
 import { subscriptionAvailability } from '../core/subscription.js';
-import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase } from './workspaceAccess.js';
+import { workspaceOwner, canReadWorkspaceCase, canReadJob, requireWorkspaceCase } from './workspaceAccess.js';
 
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
 
@@ -59,6 +59,9 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
   }
 
   const CASE_PATH = /^\/api\/agent\/cases\/([^/]+)\/preferences$/u;
+  const COPY_PATH = /^\/api\/agent\/workspace\/copies\/([^/]+)$/u;
+  // One request carries at most the configured batch of documents; base64 inflates them by a third.
+  const uploadLimit = (service) => Math.ceil((service.ingest?.maxBatchBytes ?? service.config.uploadMaxBytes * 3) * (4 / 3)) + 65_536;
   const SCENARIO_PATH = /^\/api\/agent\/scenarios\/([^/]+)\/(start|step|run|stop)$/u;
 
   return async function handleAgentRoute(request, response, url) {
@@ -66,12 +69,26 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     const method = request.method;
     if (!pathname.startsWith('/api/agent/')) return false;
     const service = getService();
-    const caseFilter = (caseId) => canReadWorkspaceCase(service, request, caseId);
+    const caseFilter = (caseId, record) => canReadWorkspaceCase(service, request, caseId, record);
 
     if (method === 'GET' && pathname === '/api/agent/workspace/cases') {
       await service.ingest?.init?.();
       const cases = (await service.ingest?.listCases() ?? []).filter((data) => caseFilter(data.case_id));
       sendJson(response, 200, { ok: true, visibility: 'private', cases });
+      return true;
+    }
+
+    // The working copy this browser uses for a public sample (uploads and preferences never write the sample itself).
+    const copyMatch = COPY_PATH.exec(pathname);
+    if (method === 'GET' && copyMatch) {
+      const sourceId = pathId(copyMatch[1]);
+      await service.ingest?.init?.();
+      if (!service.ingest) throw new HttpError(503, 'ingest_unavailable', 'This runtime has no document intake');
+      requireWorkspaceCase(service, request, sourceId);
+      const ownerId = workspaceOwner(request, response);
+      const target = service.ingest.resolveUploadCase(sourceId, ownerId);
+      sendJson(response, 200, { ok: true, case_id: target.case_id, source_case_id: target.source_case_id,
+        workspace_copy: Boolean(target.source_case_id), exists: Boolean(service.ingest.getAccess(target.case_id)) });
       return true;
     }
 
@@ -149,7 +166,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     if (method === 'GET' && decisionMatch) {
       const id = pathId(decisionMatch[1]);
       const privateDecision = await service.getDecision(id);
-      if (privateDecision) requireWorkspaceCase(service, request, privateDecision.case_id);
+      if (privateDecision) requireWorkspaceCase(service, request, privateDecision.case_id, privateDecision);
       if (decisionMatch[2] === 'evidence') {
         if (!service.evidenceArchive) throw new HttpError(503, 'evidence_archive_not_configured', 'Evidence archive is unavailable');
         const pack = await service.evidenceArchive.get(id, { owner: workspaceOwner(request), admin: checkAdminToken(request).authorized });
@@ -231,9 +248,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
 
     if (method === 'POST' && pathname === '/api/agent/ingest') {
       authorizeIntake(request);
-      // A request may carry a few maximum-size documents; base64 inflates them by a third.
-      const limit = Math.ceil(service.config.uploadMaxBytes * (4 / 3) * 3) + 65_536;
-      const body = await readJsonBody(request, { limit });
+      const body = await readJsonBody(request, { limit: uploadLimit(service) });
       if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object with a documents array');
       if (body.case_id) requireWorkspaceCase(service, request, body.case_id);
       const result = await service.submitDocuments(body, { ownerId: workspaceOwner(request, response) });
@@ -243,6 +258,9 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       sendJson(response, result.created ? 202 : 200, {
         ok: true,
         created: result.created,
+        // A public sample is never written: the upload landed on this workspace's own copy.
+        case_id: job.case_id,
+        ...(job.source_case_id ? { source_case_id: job.source_case_id } : {}),
         job,
         documents: result.documents.map((document) => ({
           document_id: document.document_id, name: document.name, mime_type: document.mime_type, kind: document.kind,
@@ -256,21 +274,21 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     if (method === 'POST' && reviewMatch) {
       authorizeIntake(request);
       const previous = service.ingest?.getJob(pathId(reviewMatch[1]));
-      if (previous) requireWorkspaceCase(service, request, previous.case_id);
-      const body = await readJsonBody(request, { limit: Math.ceil(service.config.uploadMaxBytes * 4) + 65_536 });
+      if (previous && !canReadJob(service, request, previous)) throw new HttpError(404, 'job_not_found', 'Unknown ingest job');
+      const body = await readJsonBody(request, { limit: uploadLimit(service) });
       sendJson(response, 202, { ok: true, ...(await service.reviewDocuments(pathId(reviewMatch[1]), body)) });
       return true;
     }
     const jobMatch = /^\/api\/agent\/jobs\/([^/]+)$/u.exec(pathname);
     if (method === 'GET' && jobMatch) {
       const job = service.ingest?.getJob(pathId(jobMatch[1]));
-      if (!job) throw new HttpError(404, 'job_not_found', 'Unknown ingest job');
-      requireWorkspaceCase(service, request, job.case_id);
+      if (!job || !canReadJob(service, request, job)) throw new HttpError(404, 'job_not_found', 'Unknown ingest job');
       sendJson(response, 200, { ok: true, job });
       return true;
     }
     if (method === 'GET' && pathname === '/api/agent/jobs') {
-      sendJson(response, 200, { ok: true, jobs: (service.ingest?.listJobs({ case_id: url.searchParams.get('case_id') ?? undefined, limit: intParam(url, 'limit', { fallback: 50 }) }) ?? []).filter((job) => caseFilter(job.case_id)) });
+      sendJson(response, 200, { ok: true, jobs: service.ingest?.listJobs({ case_id: url.searchParams.get('case_id') ?? undefined, limit: intParam(url, 'limit', { fallback: 50 }),
+        filter: (job) => canReadJob(service, request, job) }) ?? [] });
       return true;
     }
 
@@ -286,6 +304,16 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         authorizeIntake(request);
         const body = await readJsonBody(request);
         if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object of exporter preferences');
+        // The agent enforces these, so a public sample's preferences are an operator decision. A workspace sets them
+        // on its own copy; a case nobody owns yet becomes this workspace's when it first stores something for it.
+        if (!checkAdminToken(request).authorized && service.ingest) {
+          await service.ingest.init?.();
+          if (service.ingest.isPublicCase(caseId)) {
+            const target = service.ingest.resolveUploadCase(caseId, workspaceOwner(request, response));
+            throw new HttpError(409, 'public_case_read_only', 'Public sample cases are read-only; save preferences on your working copy', { workspace_case_id: target.case_id });
+          }
+          if (!service.ingest.getAccess(caseId)) await service.ingest.claimCase(caseId, { ownerId: workspaceOwner(request, response) });
+        }
         sendJson(response, 200, { ok: true, case_id: caseId, ...(await service.setPreferences(caseId, body)) });
         return true;
       }

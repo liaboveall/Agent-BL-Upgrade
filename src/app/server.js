@@ -527,6 +527,9 @@ activityLog.onAppend(broadcastAgentActivity);
 // does, with persistence, unless AGENT_ENABLED=false. Until then this is a memory-only instance whose
 // routes can still be read and driven by tests.
 let agentService = null;
+// The readiness of the server that is serving requests (createServer sets it). The agent service asks it before it
+// accepts new material, so every intake path -- current, legacy and retry routes alike -- honours a degraded state.
+let intakeReadiness = () => ({ ok: true });
 
 export function getAgentService() {
   if (!agentService) {
@@ -534,7 +537,8 @@ export function getAgentService() {
       demoModeController,
       ensurePools: () => ensureMockPools(),
       activity: activityLog,
-      store: storeState
+      store: storeState,
+      intakeGate: () => intakeReadiness()
     });
   }
   return agentService;
@@ -1633,7 +1637,7 @@ async function routeRequest(request, response, url) {
             ...(textual ? { text: body.file.content } : { content_base64: body.file.content })
           }]
         }, { ownerId: workspaceOwner(request, response) });
-        ingest = { accepted: true, job_id: submitted.job.job_id, status: submitted.job.status, created: submitted.created };
+        ingest = { accepted: true, job_id: submitted.job.job_id, case_id: submitted.job.case_id, status: submitted.job.status, created: submitted.created };
       } catch (error) {
         ingest = { accepted: false, error: String(error?.message ?? error).slice(0, 200), code: error?.code ?? null };
       }
@@ -1750,6 +1754,7 @@ export function createServer({ x402Options = {}, operations = null } = {}) {
   server.keepAliveTimeout = 65_000;
   serverGatewayOptions.set(server, x402Options);
   server.operations = operations;
+  intakeReadiness = () => operations ? operations.readiness() : { ok: true };
   return server;
 }
 
@@ -1807,6 +1812,7 @@ async function startAgentRuntime() {
     ensurePools: () => ensureMockPools(),
     activity: activityLog,
     store: storeState,
+    intakeGate: () => intakeReadiness(),
     persist: true
   });
   const status = await agentService.start();

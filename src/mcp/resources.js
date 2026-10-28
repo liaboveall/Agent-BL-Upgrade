@@ -4,6 +4,7 @@ import {loadApplicationConfig} from '../chain/loadApplicationConfig.js';
 import { publicAgentPolicy, externalDecision } from './agentTools.js';
 import { callAgentBackend } from './agentClient.js';
 import { HttpError } from '../app/http.js';
+import { publicCaseFilter } from '../app/workspaceAccess.js';
 
 
 export const MCP_RESOURCES = Object.freeze([
@@ -104,7 +105,7 @@ export async function readMcpResource(uri, context) {
           : (await callAgentBackend('get_agent_policy')).result;
         return content(uri, policy);
       }
-      const result = context ? await context.getService().listDecisions({ limit: 20, caseFilter: (caseId) => !context.getService().ingest?.isPrivateCase(caseId) })
+      const result = context ? await context.getService().listDecisions({ limit: 20, caseFilter: publicCaseFilter(context.getService()) })
         : (await callAgentBackend('list_agent_decisions', { limit: 20 })).result;
       return content(uri, { ...result, decisions: result.decisions.map(externalDecision) });
     } catch (error) {

@@ -46,19 +46,20 @@ async function renameWithRetry(from, to, { retries, backoffMs, rename }) {
 /**
  * Atomically replace `file` with `contents`. `contents` is written as-is when it is a string or
  * Buffer, otherwise serialised as pretty-printed JSON with a trailing newline.
- * `options.rename` is an injection point for tests.
+ * `options.rename` is an injection point for tests; `options.mode` sets the permissions of the new file.
  */
 export async function writeFileAtomic(file, contents, options = {}) {
   const {
     retries = DEFAULT_RETRIES,
     backoffMs = DEFAULT_BACKOFF_MS,
     rename = fs.rename,
-    durable = false
+    durable = false,
+    mode
   } = options;
   await fs.mkdir(path.dirname(file), { recursive: true });
   const temporary = tempPathFor(file);
   try {
-    await fs.writeFile(temporary, contents, typeof contents === 'string' ? 'utf8' : undefined);
+    await fs.writeFile(temporary, contents, { encoding: typeof contents === 'string' ? 'utf8' : undefined, ...(mode === undefined ? {} : { mode }) });
     if (durable) {
       const handle = await fs.open(temporary, 'r+');
       try { await handle.sync(); } finally { await handle.close(); }

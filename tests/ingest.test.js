@@ -123,10 +123,11 @@ test('ingest: uploads, jobs and built cases survive a restart; an unfinished job
     const [document] = await second.loadDocuments(restored.document_ids);
     assert.equal(document.text, 'persist me');
     assert.deepEqual((await second.listCases()).map((c) => c.case_id), ['CASE-UP-0005']);
-    // the bytes live outside public/, named by their hash
+    // the bytes live outside public/, named by their hash and sealed: the file holds no plaintext
     const stored = await fs.readdir(path.join(dir, 'uploads'));
     assert.equal(stored.length, 1);
-    assert.match(stored[0], /^[0-9a-f]{64}\.md$/u);
+    assert.match(stored[0], /^[0-9a-f]{64}\.md\.sealed$/u);
+    assert.equal((await fs.readFile(path.join(dir, 'uploads', stored[0]))).includes(Buffer.from('persist me')), false);
     // an interrupted job can be retried by uploading again
     const retry = await second.accept({ case_id: 'CASE-UP-0005', documents: [md('a.md', 'persist me')] });
     assert.equal(retry.created, true);
@@ -141,6 +142,9 @@ test('ingest: uploads, jobs and built cases survive a restart; an unfinished job
     await second.clear();
     assert.deepEqual(await second.listCases(), []);
     await assert.rejects(fs.access(path.join(dir, 'cases', 'CASE-UP-0005.case.json')));
+    // the reset deletes the raw bytes too, and keeps who owns the case
+    assert.deepEqual(await fs.readdir(path.join(dir, 'uploads')), []);
+    assert.equal(second.caseOwner('CASE-UP-0005'), 'local-operator');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
