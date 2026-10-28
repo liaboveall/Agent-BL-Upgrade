@@ -52,7 +52,7 @@ A bilingual interface for borrowers, reviewers, and investors, with financing po
 
 [![AgentBL English financing workspace](docs/assets/financing-en.png)](docs/assets/financing-en.png)
 
-<sub>Actual interface of the local v2 instance. The screenshot shows public testnet pool data in Demo viewing mode, with no wallet connected.</sub>
+<sub>Actual interface (Liquid Glass design), run locally against the control version 3 instance. The screenshot shows public testnet pool data in Demo viewing mode, with no wallet connected.</sub>
 
 ## One workflow, three cash outcomes
 

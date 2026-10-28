@@ -52,7 +52,7 @@
 
 [![AgentBL 中文融资工作台](docs/assets/financing-zh.png)](docs/assets/financing-zh.png)
 
-<sub>v2 本机实例的真实界面。截图在 Demo 查看模式下展示公开测试网资金池数据，未连接钱包。</sub>
+<sub>本机运行、连接 control version 3 实例的真实界面（液态玻璃设计）。截图在 Demo 查看模式下展示公开测试网资金池数据，未连接钱包。</sub>
 
 ## 一条流程，三种资金结果
 
