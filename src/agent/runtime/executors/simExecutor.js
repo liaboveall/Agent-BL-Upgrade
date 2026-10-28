@@ -133,6 +133,8 @@ export class SimExecutor {
         break;
     }
     if (plan.changesState) pool.status = plan.to;
+    // From here the agent's decision, not a later market re-quote, owns this pool's state and price.
+    if (plan.changesState || ['OPEN', 'OPEN_WITH_WARNING', 'REPRICE'].includes(cmd.action)) pool.statusSource = 'agent';
 
     const result = {
       success: true,

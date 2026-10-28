@@ -16,7 +16,8 @@ import { simulatePricingWorkflow } from '../core/pricingWorkflow.js';
 import {
   assertPricingQuote,
   normalizePricingQuoteHashes,
-  PAYOUT_SPEEDS
+  PAYOUT_SPEEDS,
+  STATE_BY_PRICING_ACTION
 } from '../core/pricingSchema.js';
 import { X402_SERVICES } from '../x402/config.js';
 import { subscriptionAvailability } from '../core/subscription.js';
@@ -135,8 +136,9 @@ function enforceRateLimits(request, response, url) {
   const key = clientIp(request);
   enforceLimit(limiters.api, key, response);
   if (request.method === 'POST') enforceLimit(limiters.write, key, response);
+  // Model calls and the world-risk sweep (which fans out to external, possibly paid, sources) share the tight limit.
   if (url.pathname === '/api/llm/chat' || request.method === 'POST' &&
-      (url.pathname === '/api/copilot/query' || /^\/api\/copilot\/sessions\/[^/]+\/messages$/u.test(url.pathname))) enforceLimit(limiters.llm, key, response);
+      (url.pathname === '/api/copilot/query' || url.pathname === '/api/intel/world-risk' || /^\/api\/copilot\/sessions\/[^/]+\/messages$/u.test(url.pathname))) enforceLimit(limiters.llm, key, response);
 }
 
 // ---------------------------------------------------------------------------
@@ -170,8 +172,28 @@ async function loadDemoCase() {
  * Returns full case objects, each annotated with a label / route / risk_hint and
  * ordered as a risk ladder, so the frontend can drive the pricing endpoints
  * directly. Read-only; never throws on a single bad file.
+ *
+ * Building it attaches today's market and route data, which can take several seconds when a public source
+ * is cold. The last catalog is therefore served while a newer one is built (at most one build at a time), and
+ * callers that must see current data pass { fresh: true }. Each caller gets its own copy.
  */
-async function loadCaseCatalog() {
+const CATALOG_TTL_MS = envInt(process.env, 'AGENTBL_CATALOG_TTL_MS', 60_000);
+const catalogCache = { value: null, at: 0, pending: null };
+function rebuildCaseCatalog() {
+  catalogCache.pending ??= buildCaseCatalog()
+    .then((value) => { catalogCache.value = value; catalogCache.at = Date.now(); return value; })
+    .finally(() => { catalogCache.pending = null; });
+  return catalogCache.pending;
+}
+async function loadCaseCatalog({ fresh = false } = {}) {
+  if (!fresh && catalogCache.value) {
+    if (Date.now() - catalogCache.at >= CATALOG_TTL_MS) rebuildCaseCatalog().catch(() => {});
+    return structuredClone(catalogCache.value);
+  }
+  return structuredClone(await rebuildCaseCatalog());
+}
+
+async function buildCaseCatalog() {
   const files = new Map(); // case_id -> case object (demo first, then data/cases)
   const add = (data) => { if (data?.case_id && !files.has(data.case_id)) files.set(data.case_id, data); };
 
@@ -540,6 +562,8 @@ export const copilotService = new CopilotService({
       details: { amountUsd: result.investment.amountUsd, price: result.investment.price, source: 'COPILOT' } });
     return result;
   },
+  // Research cases have no on-chain pool of their own: in Live the Copilot explains, ranks and points to the
+  // controlled financing panel, where a wallet subscribes to a numbered pool after reading its full terms.
   getLiveOffering: async () => null,
   file: process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href ? runtimePath('copilot-sessions.json') : null
 });
@@ -578,6 +602,45 @@ const quotePoolCase = (caseData) => {
   return quote;
 };
 
+// Demo pools are built once from the catalog. A source that was slow or offline at that moment must not keep a case
+// paused for the life of the process, and a live quote must not quietly run past its data expiry. Pools whose state
+// still comes from their quote are therefore re-quoted from current data; a pool an agent action changed keeps its state.
+const POOL_REQUOTE_MS = envInt(process.env, 'AGENTBL_POOL_REQUOTE_MS', 60_000);
+const POOL_REQUOTE_MAX_AGE_MS = 15 * 60_000;
+const poolRequote = { at: Date.now(), pending: null };
+
+function poolRequoteDue(now = Date.now()) {
+  if (now - poolRequote.at < POOL_REQUOTE_MS) return false;
+  return [...storeState.pools.values()].some((pool) => {
+    if (pool.statusSource !== 'quote' || pool.caseData?.historical) return false;
+    const expires = Date.parse(pool.quote?.data_quality?.expires_at ?? '');
+    return pool.quote?.data_review_required === true || (Number.isFinite(expires) && expires - now < 5 * 60_000)
+      || now - Date.parse(pool.quoteUpdatedAt ?? pool.createdAt) >= POOL_REQUOTE_MAX_AGE_MS;
+  });
+}
+
+/** Re-quote quote-driven pools from the current catalog. Exported for tests; returns the ids it changed. */
+export async function requoteDemoPools() {
+  poolRequote.at = Date.now();
+  const changed = [];
+  for (const entry of await loadCaseCatalog({ fresh: true })) {
+    const pool = storeState.pools.get(entry.case_id), caseData = entry.case;
+    if (!pool || pool.statusSource !== 'quote' || !caseData?.financing || caseData.historical) continue;
+    let quote;
+    try { quote = quotePoolCase(caseData); } catch { continue; }
+    const subscribed = (pool.subscribedShares ?? 0) > 0;
+    // Shares already sold were sized by the earlier quote; a re-quote that resizes the issue waits for an agent decision.
+    if (subscribed && quote.recommended_token_supply !== pool.tokenSupply) continue;
+    if (quote.quote_hash === pool.quote?.quote_hash) { pool.quoteUpdatedAt = new Date().toISOString(); continue; }
+    if (quote.final_issue_price_usd !== pool.quote?.final_issue_price_usd) pool.quoteVersion = (pool.quoteVersion ?? 1) + 1;
+    pool.caseData = caseData; pool.quote = quote; pool.quoteUpdatedAt = new Date().toISOString();
+    if (!subscribed) { pool.tokenSupply = quote.recommended_token_supply; pool.targetUsd = quote.expected_cash_to_exporter_usd ?? quote.requested_cash_usd; }
+    if (['Open', 'Paused'].includes(pool.status)) pool.status = STATE_BY_PRICING_ACTION[quote.pricing_action] ?? 'Open';
+    changed.push(entry.case_id);
+  }
+  return changed;
+}
+
 const ensureMockPools = async (options = {}) => {
   if (storeState.pools.size === 0) {
     const cases = await loadCaseCatalog();
@@ -587,6 +650,10 @@ const ensureMockPools = async (options = {}) => {
       // A historical case (kept for a deployed testnet pool) is listed but never offered to investors.
       createPool(c.case_id, caseData, quotePoolCase(caseData), caseData.historical ? { investorEligible: false } : {});
     }
+    poolRequote.at = Date.now();
+  } else if (!poolRequote.pending && poolRequoteDue()) {
+    // In the background: a request never waits for a cold public source.
+    poolRequote.pending = requoteDemoPools().catch(() => []).finally(() => { poolRequote.pending = null; });
   }
 
   if (options.refreshStaleDemoQuotes && demoModeController.snapshot().demoMode) {

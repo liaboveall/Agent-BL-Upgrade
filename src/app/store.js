@@ -34,6 +34,9 @@ export function createPool(poolId, caseData, quote, options = {}) {
     caseData,
     quote,
     status,
+    // 'quote': the state still follows the pricing quote, so a fresh quote may update it; an agent action or an
+    // explicit state takes it over (see requoteDemoPools in server.js).
+    statusSource: options.status ? 'explicit' : 'quote',
     subscribedUsd: 0,
     subscribedShares: 0,
     tokenSupply: quote.recommended_token_supply,
