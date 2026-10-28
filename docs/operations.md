@@ -86,7 +86,9 @@ npm run runtime:backup -- restore --directory <新目标目录> --key-file <独�
 
 日常检查使用 README 的命令表。`test:capital`、`test:rights`、`test:evidence`、`test:operations` 和 `test:finance` 共享一个集成入口，在隔离的本地 EVM 执行，不读取公共测试网资金。
 
-`npm run verify:release` 在临时新 checkout 安装锁定依赖，执行应用/合约/集成/浏览器检查、审计、两次构建和隔离容器验证。只继承必要运行环境，不复制 `.env`、材料或原签名密钥。普通 Node 套件中跳过的 EVM 场景由对应集成入口实际运行；跳过不计通过。
+`npm run install:release` 是全新安装入口：按锁文件安装应用与合约依赖并禁用第三方安装脚本，再显式执行项目内已审查的 Hardhat Zod 兼容补丁（`hardhat/scripts/patch-zod-compat.mjs`，普通安装时是它的 postinstall）并用一个非法配置核对诊断。`verify:release`、`build:clean` 和 CI 的 “Fresh release install” job 都走这个入口，从空依赖目录开始。
+
+`npm run verify:release` 在临时新 checkout 用上述入口安装锁定依赖，执行应用/合约/集成/浏览器检查、审计、两次构建和隔离容器验证。只继承必要运行环境，不复制 `.env`、材料或原签名密钥。普通 Node 套件中跳过的 EVM 场景由对应集成入口实际运行；跳过不计通过。
 
 `npm run build:clean` 比较两次干净构建；`npm run test:load -- --soak-seconds 600 --output test-results/load.json` 测量现有离线服务，不代表公共 RPC 或并发商业容量。
 
@@ -103,6 +105,6 @@ npm run runtime:backup -- restore --directory <新目标目录> --key-file <独�
 
 x402 付款取回只在 Live 生效。用户在报告页“付款记录与找回”中用付款钱包签署取回请求，或导出不含签名的付款记录供人工核对；运营方核对时以服务端 `x402` 回执历史和链上交易为准，不要求用户提供签名。
 
-运行告警写入对应 runtime 的 `ops-alerts.jsonl`。可选 webhook 由操作者配置；自动 HTTP 接收测试不表示真实值班人员已经确认。日常维护保留上述能力，但不新增交付门槛。
+运行告警写入对应 runtime 的 `ops-alerts.jsonl`。来源审查是全实例窗口（最长 24 小时），剩余不足 `AGENTBL_SCREENING_WARN_SECONDS`（默认 4 小时）或已过期时发出 `warning` 告警，写明由 `compliance` 角色执行 `refresh_screening`；它不改变服务就绪状态（过期时链上自会拒绝新认购和放款）。估值最长 30 天且不能续期，由各池的 `valuation_expired` 认购阻断原因显示，属于合约约束。可选 webhook 由操作者配置；自动 HTTP 接收测试不表示真实值班人员已经确认。日常维护保留上述能力，但不新增交付门槛。
 
 执行产物使用忽略的 `artifacts/` 或 `test-results/`，不再建立阶段计划、日报、评审报告树。当前文档只维护 README、架构、合约、数据来源、运行说明与人工验收。
