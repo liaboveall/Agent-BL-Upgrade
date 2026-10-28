@@ -98,6 +98,7 @@ For custom settings, copy [.env.example](.env.example) to `.env` without overwri
 | `npm run test:finance` | Role workflows and pagination across 25 pools |
 | `npm run test:browser` | Bilingual browser, keyboard, and wallet-context regressions |
 | `npm run build:clean` / `npm run verify:release` | Reproducible builds and complete local delivery checks |
+| `npm run install:release` | Fresh install from the lockfiles without third-party install scripts, then the reviewed Hardhat patch and its check |
 | `npm run terms:verify -- <terms.json>` | Verify public financing terms offline |
 | `npm run disclosures:import -- <record.json>` | Ship approved terms that match the instance's on-chain commitments |
 | `npm run mcp:stdio` | MCP interface over standard input/output |

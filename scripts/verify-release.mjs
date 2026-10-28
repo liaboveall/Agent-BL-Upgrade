@@ -54,7 +54,8 @@ try {
   cloneSource = await cloned.releaseSourceSnapshot();
   if (cloneSource.source_sha256 !== source.source_sha256) throw new Error('Fresh clone overlay differs from candidate manifest');
   await fs.writeFile(path.join(directory, 'source-manifest.json'), JSON.stringify(source, null, 2) + '\n');
-  if (!await npm('install-app', ['ci', '--ignore-scripts']) || !await npm('install-contracts', ['--prefix', 'hardhat', 'ci', '--ignore-scripts'])) throw new Error('Fresh dependency install failed');
+  // The same entry CI runs: exact lockfiles, no third-party install scripts, the reviewed Hardhat patch applied and checked.
+  if (!await npm('install', ['run', 'install:release'])) throw new Error('Fresh dependency install failed');
   for (const [name, command] of [['lint', 'lint'], ['check', 'check'], ['build', 'build'], ['contracts', 'test:contracts'], ['coverage', 'test:coverage'],
     ['w2', 'test:capital'], ['w3', 'test:rights'], ['w4', 'test:evidence'], ['w5', 'test:operations'], ['n3-evm', 'test:finance'], ['browser', 'test:browser']]) {
     await npm(name, ['run', command]);
@@ -75,7 +76,7 @@ finally {
     generated_at: new Date().toISOString(), environment: { node: process.version, platform: process.platform, architecture: process.arch, browser: env.AGENTBL_CHROMIUM_PATH ?? 'Playwright default' },
     fresh_clone_matches: cloneSource?.source_sha256 === source.source_sha256, source_unchanged: after?.source_sha256 === source.source_sha256 && current.source_sha256 === source.source_sha256,
     receipts, ...(error ? { error } : {}), ci_verified: false, public_testnet_deployed: false, human_verified: false, public_broadcasts: 0 };
-  result.passed = !error && result.source_unchanged && result.fresh_clone_matches && receipts.length === 21 && receipts.every((r) => r.exit_code === 0 && r.substantive_execution);
+  result.passed = !error && result.source_unchanged && result.fresh_clone_matches && receipts.length === 20 && receipts.every((r) => r.exit_code === 0 && r.substantive_execution);
   await fs.writeFile(path.join(directory, 'result.json'), JSON.stringify(result, null, 2) + '\n');
   console.log(JSON.stringify({ directory, passed: result.passed, source_sha256: source.source_sha256, ...(error ? { error } : {}) }));
   // Only this invocation's checked, freshly-created temporary root is removed.

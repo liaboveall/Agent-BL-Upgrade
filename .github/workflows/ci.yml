@@ -159,6 +159,18 @@ jobs:
           name: operations-evidence
           path: test-results/
 
+  fresh-install:
+    name: Fresh release install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # The verify:release / build:clean entry from empty dependency directories: no install scripts, then the
+      # reviewed Hardhat patch applied explicitly and its configuration diagnostic checked.
+      - run: npm run install:release
+
   reproducible:
     name: Clean reproducible web and contract build
     runs-on: ubuntu-latest

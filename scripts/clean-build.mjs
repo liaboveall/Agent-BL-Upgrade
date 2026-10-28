@@ -43,7 +43,7 @@ try {
       console.log(`Clean build ${attempt}: ${name} ${code === 0 ? 'PASS' : 'FAIL'}`);
       if (code !== 0) throw new Error(`Clean build ${attempt} failed at ${name}`);
     };
-    await run('install-app', ['ci', '--ignore-scripts']); await run('install-contracts', ['ci', '--ignore-scripts'], path.join(dir, 'hardhat'));
+    await run('install', ['run', 'install:release']);
     await run('web', ['run', 'build']); await run('contracts', ['run', 'compile'], path.join(dir, 'hardhat'));
     const web = await collect(path.join(dir, 'dist'));
     const contracts = [];
