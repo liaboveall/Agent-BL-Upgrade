@@ -107,6 +107,13 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     await c.send(c.controller.connect(c.guardian).setIntakeStopped(true, c.fresh()));
     await c.send(c.pool.connect(c.investor).claim(poolId));
     assert.equal(await c.usdc.balanceOf(c.investor.address), 10000000n);
+    // Revoking a signing role keeps the signed terms readable as history; new operations on them are refused.
+    await c.govern(c.controller, 'setRole', [await c.controller.VALUER(), c.valuer.address, false]);
+    const history = await requestJson(app.app.base, 'GET', `/api/controlled/offerings/${poolId}/terms`);
+    assert.equal(history.status, 200); assert.equal(history.data.terms_hash, offer.hash);
+    assert.equal(history.data.current.ok, false); assert.ok(history.data.current.reasons.includes('valuer_revoked'));
+    const refused = await requestJson(app.app.base, 'POST', '/api/controlled/subscription-intents', { ...subscriptionBody, reviewed_disclosure_hash: offer.terms.disclosureHash }, { 'x-rights-session': investor.token });
+    assert.equal(refused.status, 409); assert.equal(refused.data.code, 'financing_terms_changed');
     const chainTx = await c.provider.getTransaction(receipt.tx_hash);
     for (const secret of ['W3 confidential bill', 'private simulated exporter']) assert.equal(chainTx.data.includes(Buffer.from(secret).toString('hex')), false);
   });

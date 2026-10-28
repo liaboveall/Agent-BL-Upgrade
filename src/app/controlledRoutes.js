@@ -11,7 +11,6 @@ import { readOfferings } from '../rights/offerings.js';
 import { HttpError, readJsonBody, sendJson } from './http.js';
 import { RightsService } from '../rights/service.js';
 import { financingReview } from '../rights/financingReview.js';
-import { CONTROL_VERSION } from '../rights/typedData.js';
 
 export function controlledCapitalConfig(configuration) {
   return { protocolVersion: 5, controlVersion: configuration.control_version, chainIdDecimal: Number(configuration.chain_id), confirmations: Number(configuration.chain_id) === 31337 ? 1 : 3, explorerBase: 'https://testnet.blockscout.injective.network',
@@ -65,8 +64,9 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
       if (route !== 'offerings') { query.pool_id = Number(route.split('/')[1]); if (!Number.isSafeInteger(query.pool_id)) throw new HttpError(400, 'invalid_pool_id', 'A safe positive pool ID is required'); }
       result = await readOfferings(chain, config, readPool, query);
     } else if (/^offerings\/[1-9]\d*\/terms$/u.test(route) && method === 'GET') {
-      if (config.controlVersion !== CONTROL_VERSION) throw new HttpError(409, 'legacy_exit_only', 'Legacy instance remains exit only');
-      result = await financingReview(chain, disclosures, route.split('/')[1]);
+      // Reading terms is history: they stay readable after a role change or on a superseded instance, with `current`
+      // saying why nothing new may be signed on them. Accepting and subscribing below still require current terms.
+      result = await financingReview(chain, disclosures, route.split('/')[1], { requireCurrent: false });
       if (url.searchParams.get('download') === '1') response.setHeader('Content-Disposition', `attachment; filename="financing-terms-${result.pool_id}.json"`);
     } else if (route === 'positions' && method === 'GET') {
       const wallet = url.searchParams.get('wallet'); if (!isAddress(wallet)) throw new HttpError(400, 'invalid_wallet', 'A valid EVM wallet is required');

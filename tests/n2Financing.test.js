@@ -79,9 +79,19 @@ test('N2 public disclosure requires issuing authority and two approved bindings;
   await assert.rejects(keyless.financingDisclosure(second.disclosure_hash), { code: 'rights_not_configured' });
   const copy = path.join(directory, 'public-disclosures', `${pack.disclosure_hash.toLowerCase()}.json`);
   assert.equal(JSON.stringify(JSON.parse(await fs.readFile(copy, 'utf8'))).includes('DO-NOT-PUBLISH-N2'), false);
+  // A wrongly keyed or damaged vault never hides published terms, and still refuses everything private.
+  const wrongKey = new RightsService({ directory, env: { AGENTBL_RIGHTS_KEY: 'cd'.repeat(32) } });
+  assert.deepEqual(await wrongKey.financingDisclosure(pack.disclosure_hash), pack);
+  await assert.rejects(wrongKey.financingDisclosure(second.disclosure_hash), { code: 'rights_vault_unavailable' });
+  const vaultFile = path.join(directory, 'vault.json'), sealed = await fs.readFile(vaultFile, 'utf8');
+  await fs.writeFile(vaultFile, JSON.stringify({ ...JSON.parse(sealed), tag: '00'.repeat(16) }));
+  assert.deepEqual(await service.financingDisclosure(pack.disclosure_hash), pack);
+  await assert.rejects(service.principal(issuer.token), { code: 'rights_vault_unavailable' });
+  await fs.writeFile(vaultFile, sealed);
   const altered = JSON.parse(await fs.readFile(copy, 'utf8')); altered.terms.issuePrice = '1';
   await fs.writeFile(copy, JSON.stringify(altered));
   await assert.rejects(keyless.financingDisclosure(pack.disclosure_hash), { code: 'rights_not_configured' });
+  await assert.rejects(wrongKey.financingDisclosure(pack.disclosure_hash), { code: 'rights_vault_unavailable' }, 'an altered public copy is never served');
   await assert.rejects(keyless.financingDisclosure('../vault'), { code: 'rights_not_configured' });
 });
 test('N2 canonical review refuses missing or corrupt terms, altered pool terms, cross-instance bindings, revoked roles and reorgs', async () => {
@@ -94,11 +104,24 @@ test('N2 canonical review refuses missing or corrupt terms, altered pool terms, 
   const store = { financingDisclosure: async () => pack };
   assert.equal((await financingReview(chain, store, 1)).quote_version, '3');
   price = '1'; await assert.rejects(financingReview(chain, store, 1), { code: 'financing_terms_changed' }); price = t.issuePrice;
-  revoked = true; await assert.rejects(financingReview(chain, store, 1), { code: 'financing_terms_changed' }); revoked = false;
+  revoked = true; await assert.rejects(financingReview(chain, store, 1), { code: 'financing_terms_changed' });
+  // History stays readable after a role revocation or a repricing; only new operations are refused, with the reasons.
+  price = '1';
+  const history = await financingReview(chain, store, 1, { requireCurrent: false });
+  assert.equal(history.terms_hash, pack.terms_hash); assert.equal(history.verification, 'canonical_chain_and_public_document');
+  assert.deepEqual(history.current, { ok: false, reasons: ['offering_changed', ...['issuer', 'operator', 'valuer', 'compliance', 'disposer', 'reviewer'].map((role) => `${role}_revoked`)] });
+  price = t.issuePrice; revoked = false;
+  assert.deepEqual((await financingReview(chain, store, 1, { requireCurrent: false })).current, { ok: true, reasons: [] });
+  const legacy = disclosureFixture(2), legacyChain = { ...chain, controller: { ...chain.controller, terms: async () => legacy.terms, termsHash: async () => legacy.terms_hash } };
+  assert.deepEqual((await financingReview(legacyChain, { financingDisclosure: async () => legacy }, 1, { requireCurrent: false })).current, { ok: false, reasons: ['legacy_exit_only'] });
+  await assert.rejects(financingReview(legacyChain, { financingDisclosure: async () => legacy }, 1), { code: 'financing_terms_changed' });
   reorg = true; await assert.rejects(financingReview(chain, store, 1), { code: 'chain_reconciliation_required' }); reorg = false;
   chain.chainId = 31337; await assert.rejects(financingReview(chain, store, 1)); chain.chainId = 1439;
   const corrupt = structuredClone(pack); corrupt.document.terms.issuePrice = '1';
   await assert.rejects(financingReview(chain, { financingDisclosure: async () => corrupt }, 1), { code: 'financing_disclosure_unverified' });
+  await assert.rejects(financingReview(chain, { financingDisclosure: async () => corrupt }, 1, { requireCurrent: false }), { code: 'financing_disclosure_unverified' });
+  const swapped = { ...chain, controller: { ...chain.controller, termsHash: async () => disclosureFixture(2).terms_hash } };
+  await assert.rejects(financingReview(swapped, store, 1, { requireCurrent: false }), { code: 'financing_terms_changed' }, 'a pack the pool never committed to is not history');
   await assert.rejects(financingReview(chain, { financingDisclosure: async () => { throw new Error('material unavailable'); } }, 1));
 });
 const base = { case_id: 'n2', bl_id: 'n2', payout_speed: 'BALANCED', requested_cash_usd: 100000, gross_profit_usd: 20000,

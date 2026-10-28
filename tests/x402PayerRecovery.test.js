@@ -14,10 +14,11 @@ test('F01 payer recovery sessions: one-time challenge, payer-only signature, exp
   assert.throws(() => sessions.challenge('0x123'), { code: 'x402_recovery_payer_invalid' });
 
   const challenge = sessions.challenge(payer.address);
+  for (let i = 0; i < 5; i++) assert.equal(sessions.challenge(payer.address).challenge_id, challenge.challenge_id, 'unsigned requests share the open challenge');
   await assert.rejects(async () => sessions.open({ challenge_id: challenge.challenge_id, signature: await sign(other, challenge) }), { code: 'x402_recovery_signature_invalid' });
-  await assert.rejects(async () => sessions.open({ challenge_id: challenge.challenge_id, signature: await sign(payer, challenge) }), { code: 'x402_recovery_challenge_invalid' }, 'a challenge is spent by any attempt');
-
-  const fresh = sessions.challenge(payer.address), opened = sessions.open({ challenge_id: fresh.challenge_id, signature: await sign(payer, fresh) });
+  const opened = sessions.open({ challenge_id: challenge.challenge_id, signature: await sign(payer, challenge) });
+  await assert.rejects(async () => sessions.open({ challenge_id: challenge.challenge_id, signature: await sign(payer, challenge) }), { code: 'x402_recovery_challenge_invalid' }, 'only the payer\'s valid signature spends it');
+  assert.notEqual(sessions.challenge(payer.address).challenge_id, challenge.challenge_id);
   assert.equal(sessions.payer(opened.token), payer.address.toLowerCase());
   assert.throws(() => sessions.payer('ab'.repeat(32)), { code: 'x402_recovery_session_required' });
   generation++;
@@ -25,8 +26,15 @@ test('F01 payer recovery sessions: one-time challenge, payer-only signature, exp
 
   const late = sessions.challenge(payer.address); now += 6 * 60 * 1000;
   await assert.rejects(async () => sessions.open({ challenge_id: late.challenge_id, signature: await sign(payer, late) }), { code: 'x402_recovery_challenge_invalid' });
-  for (let i = 0; i < 3; i++) sessions.challenge(other.address);
-  assert.throws(() => sessions.challenge(other.address), { code: 'x402_recovery_rate_limited' });
+  const lapsing = sessions.challenge(other.address); now += 3.5 * 60 * 1000;
+  assert.notEqual(sessions.challenge(other.address).challenge_id, lapsing.challenge_id, 'a challenge with under two minutes left is replaced');
+
+  // At capacity the oldest open request gives way: a flood of other addresses delays a payer but never locks them out.
+  const full = new PayerRecoverySessions({ clock: () => now, maxChallenges: 2 }), first = full.challenge(payer.address);
+  full.challenge(Wallet.createRandom().address); full.challenge(Wallet.createRandom().address);
+  const again = full.challenge(payer.address);
+  assert.notEqual(again.challenge_id, first.challenge_id);
+  assert.ok(full.open({ challenge_id: again.challenge_id, signature: await sign(payer, again) }).token);
 });
 
 function signedPayload(from, nowSeconds) {

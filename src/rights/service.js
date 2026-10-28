@@ -21,6 +21,7 @@ import { materialWorkflow } from './workflow.js';
 import { RpcReadPool } from './reads.js';
 import { verifyChain } from './chain.js';
 import { SHIPPED_DISCLOSURES, readPublicDisclosure, savePublicDisclosure } from './public-disclosures.js';
+import { MATERIAL_ARCHIVE_MS, initialRetention, materialPhase, materialRetention } from './retention.js';
 
 const VAULT_AAD = 'agentbl-rights-vault-v1';
 // The research case whose cargo and route match the disclosure scenario (copper, Singapore -> Shanghai).
@@ -46,22 +47,25 @@ function emptyState() { return { schema: VAULT_AAD, revision: 0, subjects: {}, c
 // Expired challenges and sessions grant nothing, but every write re-encrypts the whole vault. A day of
 // grace keeps recent ones revocable and inspectable; older ones are dropped on the next write.
 export const EXPIRED_ACCESS_RETENTION_MS = 24 * 60 * 60 * 1000;
+// A reused sign-in challenge keeps at least this long to sign, so nobody can keep handing a wallet one about to lapse.
+export const CHALLENGE_REUSE_MIN_MS = 2 * 60 * 1000;
 export function pruneExpiredAccess(state, now) {
   const cutoff = now - EXPIRED_ACCESS_RETENTION_MS;
   for (const [key, challenge] of Object.entries(state.challenges)) if (challenge?.message?.validUntil * 1000 <= cutoff) delete state.challenges[key];
   for (const [key, session] of Object.entries(state.sessions)) if (session?.expires_at <= cutoff) delete state.sessions[key];
 }
 
-// The vault is re-encrypted whole on every write, so records past their purpose leave it. Material past its
-// retention period (already unreadable, 410) and the evidence built on it go after a month's grace; wallet plans that
-// can no longer send anything (unsent drafts, confirmed or reverted receipts) go after half a year. Plans still
-// waiting for reconciliation, publications, approved disclosures and identities are always kept.
-export const EXPIRED_MATERIAL_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
+// The vault is re-encrypted whole on every write, so records past their purpose leave it. Material leaves at the end of
+// its archive window (retention.js: never while its financing or an unreconciled operation needs it) together with the
+// evidence built on it; other evidence goes a month after its own expiry. Wallet plans that can no longer send anything
+// (unsent drafts, confirmed or reverted receipts) go after half a year. Plans still waiting for reconciliation,
+// publications, approved disclosures and identities are always kept.
+export const EXPIRED_MATERIAL_GRACE_MS = MATERIAL_ARCHIVE_MS;
 export const SETTLED_PLAN_RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
 export function pruneExpiredRecords(state, now) {
   const removed = new Set();
   for (const [key, material] of Object.entries(state.materials ?? {})) {
-    if (material?.retention_until + EXPIRED_MATERIAL_GRACE_MS <= now) { removed.add(key); delete state.materials[key]; }
+    if (materialPhase(state, key, now, material) === 'expired') { removed.add(key); delete state.materials[key]; }
   }
   for (const [key, entry] of Object.entries(state.evidence ?? {})) {
     if (removed.has(entry?.material_id) || Date.parse(entry?.bundle?.expires_at) + EXPIRED_MATERIAL_GRACE_MS <= now) delete state.evidence[key];
@@ -77,11 +81,20 @@ export function pruneExpiredRecords(state, now) {
 export const VAULT_QUEUE_LIMIT = 64;
 export const VAULT_WAIT_MS = 15_000;
 const STALE = Symbol('stale plan');
+// A wallet finds the identities enrolled for it by signing a lookup challenge, so nobody else learns which organizations
+// enrolled a public address. Lookups live in memory (a restart only means asking again), are shared per wallet while they
+// leave time to sign, and are spent only by the wallet's valid signature, like sign-in challenges.
+export const IDENTITY_LOOKUP_DOMAIN = Object.freeze({ name: 'AgentBL Identity Lookup', version: '1' });
+export const IDENTITY_LOOKUP_TYPES = Object.freeze({ IdentityLookup: Object.freeze([{ name: 'wallet', type: 'address' }, { name: 'purpose', type: 'string' },
+  { name: 'nonce', type: 'bytes32' }, { name: 'validUntil', type: 'uint64' }].map(Object.freeze)) });
+const LOOKUP_PURPOSE = 'Find my enrolled AgentBL research identities. This signature moves no funds and opens no session.';
+const LOOKUP_TTL_MS = 5 * 60 * 1000, LOOKUP_LIMIT = 1000;
 
 /** Durable, encrypted research identity and disclosure service. Every operation re-resolves
  * the current subject/session; no caller-supplied organization or role is trusted. */
 export class RightsService {
   #queue = { queued: 0, completed: 0, last_wait_ms: 0, max_wait_ms: 0, rejected: 0 };
+  #lookups = new Map();
   constructor({ env = process.env, directory = runtimePath('rights', env), clock = () => Date.now(), chain = null, getVersion = null, getMode = null, getGeneration = () => 0, readPool = chain?.readPool ?? new RpcReadPool(),
     queueLimit = VAULT_QUEUE_LIMIT, waitMs = VAULT_WAIT_MS, quoteCase = quoteScenarioCase } = {}) {
     this.directory = directory; this.env = env; this.clock = clock; this.chain = chain; this.quoteCase = quoteCase;
@@ -176,12 +189,15 @@ export class RightsService {
     if (!session || session.revoked || session.expires_at <= now || !subject || (subject.revoked || session.exit_only) && !allowExitOnly) throw new HttpError(401, 'rights_session_required', 'A valid business session is required');
     return { ...subject, roles: subject.revoked || session.exit_only ? [] : subject.roles, exit_only: Boolean(subject.revoked || session.exit_only), session_id: session.session_id, expires_at: session.expires_at };
   }
-  #material(state, principal, materialId, now) {
+  /** The caller's organization's record; past its retention date only reads (`archived: true`) still reach it. */
+  #material(state, principal, materialId, now, { archived = false } = {}) {
     const record = state.materials[materialId];
     if (!record || record.organization !== principal.organization || !principal.roles.some((role) => ['issuer', 'holder', 'reviewer', 'custodian', 'compliance', 'valuer', 'operator', 'attestor', 'disposer'].includes(role))) {
       throw new HttpError(404, 'rights_material_not_found', 'Material not found');
     }
-    if (record.retention_until <= now) throw new HttpError(410, 'rights_material_expired', 'Material retention period has ended');
+    const phase = materialPhase(state, materialId, now, record);
+    if (phase === 'expired') throw new HttpError(410, 'rights_material_expired', 'Material retention period has ended');
+    if (phase === 'archived' && !archived) throw new HttpError(410, 'rights_material_archived', 'Material is archived after its retention period and can only be read');
     return record;
   }
   createSubject(input) {
@@ -206,11 +222,15 @@ export class RightsService {
     return this.#transaction((state, ctx) => {
       const subject = state.subjects[subjectId];
       if (!subject || subject.revoked && !exitOnly) throw new HttpError(404, 'rights_subject_not_found', 'Subject not found');
-      if (selfService && exitOnly) {
-        const existing = Object.values(state.challenges).find((c) => c.subject_id === subjectId && c.exit_only && !c.used && c.message.validUntil * 1000 > ctx.now);
-        if (existing) return { challenge_id: existing.challenge_id, domain: existing.domain, types: SESSION_TYPES, message: existing.message, exit_only: true };
+      // Anyone who knows a subject ID can ask for its challenge, so asking must not use up the wallet's sign-in. An open
+      // challenge with time left to sign is handed out again; a new one is issued only when none is left, which keeps at
+      // most two open per subject and purpose. A challenge grants nothing until the wallet signs it, a wrong signature does
+      // not spend it, and the first valid signature spends it for everyone.
+      if (selfService) {
+        const open = Object.values(state.challenges).find((c) => c.subject_id === subjectId && Boolean(c.exit_only) === exitOnly && !c.used
+          && c.message.validUntil * 1000 - ctx.now >= CHALLENGE_REUSE_MIN_MS);
+        if (open) return { challenge_id: open.challenge_id, domain: open.domain, types: SESSION_TYPES, message: open.message, exit_only: exitOnly };
       }
-      if (selfService && Object.values(state.challenges).filter((c) => c.subject_id === subjectId && Boolean(c.exit_only) === exitOnly && !c.used && c.message.validUntil * 1000 > ctx.now).length >= 3) throw new HttpError(429, 'rights_challenge_rate_limited', 'Use an existing challenge or retry after five minutes');
       const challenge_id = randomUUID(), nonce = `0x${randomBytes(32).toString('hex')}`;
       const domain = { name: 'AgentBL Business Session', version: '1', salt: `0x${createHmac('sha256', ctx.key).update('business-session-domain-v1').digest('hex')}` };
       const message = { subject: id(subjectId), organization: id(subject.organization), wallet: subject.wallet, nonce, validUntil: Math.floor(ctx.now / 1000) + 300 };
@@ -232,6 +252,31 @@ export class RightsService {
       challenge.used = true; ctx.dirty = true;
       return { token, session_id, expires_at, subject_id: subject.subject_id, organization: subject.organization, exit_only: Boolean(challenge.exit_only), scope: 'research_test_assets_only' };
     });
+  }
+  identityChallenge(wallet) {
+    if (!/^0x[a-fA-F0-9]{40}$/u.test(String(wallet ?? '')) || /^0x0{40}$/iu.test(wallet)) throw new HttpError(400, 'rights_invalid_input', 'A wallet address is required');
+    const now = this.clock(), address = wallet.toLowerCase();
+    for (const [key, entry] of this.#lookups) if (entry.expires_at <= now) this.#lookups.delete(key);
+    const view = (challenge_id, { message }) => ({ challenge_id, domain: { ...IDENTITY_LOOKUP_DOMAIN }, types: { IdentityLookup: IDENTITY_LOOKUP_TYPES.IdentityLookup.map((field) => ({ ...field })) }, message });
+    const open = [...this.#lookups].find(([, entry]) => entry.wallet === address && entry.expires_at - now >= CHALLENGE_REUSE_MIN_MS);
+    if (open) return view(...open);
+    if (this.#lookups.size >= LOOKUP_LIMIT) this.#lookups.delete(this.#lookups.keys().next().value);
+    const challenge_id = randomUUID(), message = { wallet, purpose: LOOKUP_PURPOSE, nonce: `0x${randomBytes(32).toString('hex')}`, validUntil: Math.floor((now + LOOKUP_TTL_MS) / 1000) };
+    const entry = { wallet: address, message, expires_at: now + LOOKUP_TTL_MS };
+    this.#lookups.set(challenge_id, entry);
+    return view(challenge_id, entry);
+  }
+  /** The identities enrolled for the wallet that signed the lookup: IDs to sign in with, never a session. */
+  async findIdentities(input) {
+    const { challenge_id, signature } = checked(z.object({ challenge_id: z.string().uuid(), signature: z.string().regex(/^0x[a-fA-F0-9]{130}$/u) }).strict(), input);
+    const entry = this.#lookups.get(challenge_id);
+    if (!entry || entry.expires_at <= this.clock()) throw new HttpError(401, 'identity_lookup_invalid', 'The identity lookup expired; start it again');
+    let signer;
+    try { signer = verifyTypedData(IDENTITY_LOOKUP_DOMAIN, IDENTITY_LOOKUP_TYPES, entry.message, signature); } catch {}
+    if (signer?.toLowerCase() !== entry.wallet) throw new HttpError(401, 'identity_lookup_invalid', 'The signature does not come from this wallet');
+    this.#lookups.delete(challenge_id);
+    return this.#transaction((state) => ({ identities: Object.values(state.subjects).filter((subject) => subject.wallet === entry.wallet)
+      .map(({ subject_id, organization, roles, revoked }) => ({ subject_id, organization, roles, revoked: Boolean(revoked) })) }));
   }
   revokeSession(sessionId) {
     return this.#transaction((state, ctx) => {
@@ -288,29 +333,26 @@ export class RightsService {
     return sourceQuote ? { ...saved, source_quote: sourceQuote } : saved;
   }
   /**
-   * Approved, readable terms by their disclosure hash. Approved packs are public and are also kept outside the
-   * encrypted vault (see public-disclosures.js), so an instance without this vault or its key still serves them;
-   * an unapproved pack never leaves the vault. Callers bind the pack to the chain before anyone signs.
+   * Approved, readable terms by their disclosure hash. Approved packs are public and are kept outside the encrypted
+   * vault (see public-disclosures.js), and a copy is trusted only when it recomputes to the requested hash, so it is read
+   * first: a missing, wrongly keyed or damaged vault never hides terms already published. Only a pack without a public
+   * copy is looked up in the vault, which still refuses damaged data; an unapproved pack never leaves it.
+   * Callers bind the pack to the chain before anyone signs.
    */
   async financingDisclosure(disclosureHash) {
-    try {
-      const pack = await this.#transaction((state) => {
-        const entry = state.financing_disclosures?.[disclosureHash];
-        if (!entry) throw new HttpError(409, 'financing_disclosure_missing', 'Readable financing terms are unavailable; do not sign');
-        const approved = [...Object.values(state.publications), ...(state.publication_history ?? [])].some((publication) =>
-          publication.publication_id === entry.material_id && publication.summary.terms_hash === entry.pack.terms_hash
-          && publication.document_hash === entry.pack.terms.documentHash);
-        if (!approved || !verifyDisclosure(entry.pack)) throw new HttpError(409, 'financing_disclosure_unverified', 'Terms must match an approved publication and intact commitments');
-        return entry.pack;
-      });
-      await savePublicDisclosure(this.publicDisclosureDirectory, pack).catch(() => {});
-      return pack;
-    } catch (error) {
-      if (!['financing_disclosure_missing', 'rights_not_configured', 'rights_vault_missing'].includes(error?.code)) throw error;
-      const published = await readPublicDisclosure(disclosureHash, [this.publicDisclosureDirectory, SHIPPED_DISCLOSURES]);
-      if (published) return published;
-      throw error;
-    }
+    const published = await readPublicDisclosure(disclosureHash, [this.publicDisclosureDirectory, SHIPPED_DISCLOSURES]);
+    if (published) return published;
+    const pack = await this.#transaction((state) => {
+      const entry = state.financing_disclosures?.[disclosureHash];
+      if (!entry) throw new HttpError(409, 'financing_disclosure_missing', 'Readable financing terms are unavailable; do not sign');
+      const approved = [...Object.values(state.publications), ...(state.publication_history ?? [])].some((publication) =>
+        publication.publication_id === entry.material_id && publication.summary.terms_hash === entry.pack.terms_hash
+        && publication.document_hash === entry.pack.terms.documentHash);
+      if (!approved || !verifyDisclosure(entry.pack)) throw new HttpError(409, 'financing_disclosure_unverified', 'Terms must match an approved publication and intact commitments');
+      return entry.pack;
+    });
+    await savePublicDisclosure(this.publicDisclosureDirectory, pack).catch(() => {});
+    return pack;
   }
   createEvidence(token, input) {
     const body = checked(z.object({ material_id: z.string().uuid(), kind: z.string(), source: z.unknown(),
@@ -327,9 +369,11 @@ export class RightsService {
       });
       const raw = body.kind === 'raw_material' ? unseal(ctx.key, material.encrypted_material, `${material.organization}:${material.material_id}:${material.revision}`) : null;
       let entry;
+      // Evidence lasts as long as its material; a record held open past its date still gives new evidence a window.
+      const expiresAt = Math.max(materialRetention(state, body.material_id, material), ctx.now + MATERIAL_ARCHIVE_MS);
       try { entry = createEvidence({ kind: body.kind, source: body.source, references,
         data: raw ? { material_json: JSON.stringify(raw.material), document_hash: material.document_hash, document_salt: raw.salt } : body.data },
-      { now: ctx.now, expiresAt: material.retention_until }); }
+      { now: ctx.now, expiresAt }); }
       catch { throw new HttpError(400, 'evidence_invalid', 'Evidence schema or canonical values are invalid'); }
       state.evidence[entry.bundle.evidence_id] = { ...entry, material_id: body.material_id, organization: principal.organization };
       ctx.dirty = true;
@@ -343,7 +387,7 @@ export class RightsService {
         if (entries.has(id)) return;
         const entry = state.evidence?.[id];
         if (!entry || entry.organization !== principal.organization) throw new HttpError(404, 'evidence_not_found', 'Evidence not found');
-        this.#material(state, principal, entry.material_id, ctx.now);
+        this.#material(state, principal, entry.material_id, ctx.now, { archived: true });
         if (entries.size >= 100) throw new HttpError(409, 'evidence_package_limit', 'Evidence dependency limit exceeded');
         entries.set(id, { bundle: entry.bundle, commitment: entry.commitment });
         for (const ref of entry.bundle.references) visit(ref.evidence_id);
@@ -397,7 +441,7 @@ export class RightsService {
       if (!subject.roles.some((role) => ['issuer', 'holder'].includes(role))) throw new HttpError(403, 'rights_role_required', 'Issuer or holder permission required');
       const material_id = randomUUID(), commitment = privateCommitment(body.material);
       const record = { material_id, organization: subject.organization, owner_id: subject.subject_id, owner_wallet: subject.wallet,
-        revision: 1, document_hash: commitment.hash, public_summary: summary, reviews: [], created_at: ctx.now, retention_until: ctx.now + 90 * 86400000 };
+        revision: 1, document_hash: commitment.hash, public_summary: summary, reviews: [], created_at: ctx.now, retention_until: initialRetention(ctx.now, summary) };
       record.encrypted_material = seal(ctx.key, { material: body.material, salt: commitment.salt }, `${record.organization}:${material_id}:1`);
       state.materials[material_id] = record; ctx.dirty = true;
       return { material_id, document_hash: record.document_hash, revision: 1, retention_until: record.retention_until };
@@ -405,10 +449,11 @@ export class RightsService {
   }
   readMaterial(token, materialId) {
     return this.#transaction((state, ctx) => {
-      const subject = this.#principal(state, token, ctx.now), record = this.#material(state, subject, materialId, ctx.now);
+      const subject = this.#principal(state, token, ctx.now), record = this.#material(state, subject, materialId, ctx.now, { archived: true });
       return { material_id: materialId, organization: record.organization, revision: record.revision, document_hash: record.document_hash,
         ...unseal(ctx.key, record.encrypted_material, `${record.organization}:${materialId}:${record.revision}`), public_summary: record.public_summary,
-        reviews: record.reviews.map(({ subject_id, revision }) => ({ subject_id, revision })), retention_until: record.retention_until };
+        reviews: record.reviews.map(({ subject_id, revision }) => ({ subject_id, revision })), retention_until: materialRetention(state, materialId, record),
+        archived: materialPhase(state, materialId, ctx.now, record) === 'archived' };
     });
   }
   reviewMaterial(token, materialId, { document_hash, terms_hash } = {}) {
@@ -495,9 +540,11 @@ export class RightsService {
   listMaterials(token) {
     return this.#transaction((state, ctx) => {
       const principal = this.#principal(state, token, ctx.now);
-      return { materials: Object.values(state.materials).filter((record) => record.organization === principal.organization && record.retention_until > ctx.now
+      const phase = (record) => materialPhase(state, record.material_id, ctx.now, record);
+      return { materials: Object.values(state.materials).filter((record) => record.organization === principal.organization && phase(record) !== 'expired'
         && principal.roles.some((role) => ['issuer', 'holder', 'reviewer', 'custodian', 'compliance', 'valuer', 'operator', 'attestor', 'disposer'].includes(role)))
-        .map((record) => ({ material_id: record.material_id, revision: record.revision, document_hash: record.document_hash, public_summary: record.public_summary })) };
+        .map((record) => ({ material_id: record.material_id, revision: record.revision, document_hash: record.document_hash, public_summary: record.public_summary,
+          retention_until: materialRetention(state, record.material_id, record), archived: phase(record) === 'archived' })) };
     });
   }
   async workflow(token, materialId) {

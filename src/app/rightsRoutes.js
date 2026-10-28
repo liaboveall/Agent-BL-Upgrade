@@ -30,6 +30,8 @@ export function createRightsRoutes({ env = process.env, getVersion = null, getMo
     else if (path === 'session-challenges' && method === 'POST') { requireAdmin(request, env); result = await service.createChallenge((await body())?.subject_id); }
     else if (path === 'wallet-challenges' && method === 'POST') { const input = await body(); result = await service.createChallenge(input?.subject_id, { selfService: true, exitOnly: input?.exit_only === true }); }
     else if (path === 'sessions' && method === 'POST') result = await service.openSession(await body());
+    else if (path === 'identity-challenges' && method === 'POST') result = service.identityChallenge((await body())?.wallet);
+    else if (path === 'identities' && method === 'POST') result = await service.findIdentities(await body());
     else if (/^sessions\/[a-f0-9-]{36}$/u.test(path) && method === 'DELETE') { requireAdmin(request, env); result = await service.revokeSession(path.split('/')[1]); }
     else if (path === 'me' && method === 'GET') result = await service.principal(token, { allowExitOnly: url.searchParams.get('exit_only') === '1' });
     else if (path === 'materials' && method === 'GET') result = await service.listMaterials(token);

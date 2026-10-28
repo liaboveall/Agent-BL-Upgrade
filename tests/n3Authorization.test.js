@@ -33,9 +33,17 @@ test('N3 wallet sessions retain tenant boundaries, bounded challenges and immedi
   assert.equal((await h.service.listMaterials(h.owner.session.token)).materials.length, 1);
   assert.equal((await h.service.listMaterials(h.outsider.session.token)).materials.length, 0);
   await assert.rejects(h.service.workflow(h.outsider.session.token, h.material.material_id), { code: 'rights_material_not_found' });
-  for (let i = 0; i < 3; i++) await h.service.createChallenge(h.owner.subject.subject_id, { selfService: true });
-  await assert.rejects(h.service.createChallenge(h.owner.subject.subject_id, { selfService: true }), { code: 'rights_challenge_rate_limited' });
-  h.advance(301000); await h.service.createChallenge(h.owner.subject.subject_id, { selfService: true });
+  // Unsigned requests share the open challenge instead of using up the wallet's sign-in: a wrong signature does not
+  // spend it, one with under two minutes left is replaced, and the wallet's own signature spends it once.
+  const asked = [];
+  for (let i = 0; i < 5; i++) asked.push(await h.service.createChallenge(h.owner.subject.subject_id, { selfService: true }));
+  assert.equal(new Set(asked.map((c) => c.challenge_id)).size, 1, 'repeated unsigned requests never block the wallet');
+  const [shared] = asked, sign = (signer, c) => signer.signTypedData(c.domain, c.types, c.message);
+  await assert.rejects(h.service.openSession({ challenge_id: shared.challenge_id, signature: await sign(h.outsider.signer, shared) }), { code: 'rights_signature_invalid' });
+  h.advance(181000);
+  assert.notEqual((await h.service.createChallenge(h.owner.subject.subject_id, { selfService: true })).challenge_id, shared.challenge_id);
+  assert.ok((await h.service.openSession({ challenge_id: shared.challenge_id, signature: await sign(h.owner.signer, shared) })).token);
+  await assert.rejects(h.service.openSession({ challenge_id: shared.challenge_id, signature: await sign(h.owner.signer, shared) }), { code: 'rights_challenge_invalid' });
   await h.service.revokeSubject(h.owner.subject.subject_id);
   await assert.rejects(h.service.listMaterials(h.owner.session.token), { code: 'rights_session_required' });
   const challenge = await h.service.createChallenge(h.owner.subject.subject_id, { selfService: true, exitOnly: true });
@@ -45,6 +53,21 @@ test('N3 wallet sessions retain tenant boundaries, bounded challenges and immedi
   const principal = await h.service.principal(exit.token, { allowExitOnly: true }); assert.equal(principal.wallet, h.owner.subject.wallet); assert.deepEqual(principal.roles, []);
   await assert.rejects(h.service.listMaterials(exit.token), { code: 'rights_session_required' });
   await assert.rejects(h.service.prepareTransaction(exit.token, h.input), { code: 'rights_session_required' });
+});
+
+test('N3 a wallet finds only its own enrolled identities by signing a lookup, which opens no session', async (t) => {
+  const h = await fixture(t), sign = (signer, c) => signer.signTypedData(c.domain, c.types, c.message);
+  const lookup = h.service.identityChallenge(h.owner.signer.address);
+  assert.equal(h.service.identityChallenge(h.owner.signer.address.toLowerCase()).challenge_id, lookup.challenge_id, 'asking again shares the open lookup');
+  await assert.rejects(h.service.findIdentities({ challenge_id: lookup.challenge_id, signature: await sign(h.outsider.signer, lookup) }), { code: 'identity_lookup_invalid' });
+  const found = await h.service.findIdentities({ challenge_id: lookup.challenge_id, signature: await sign(h.owner.signer, lookup) });
+  assert.deepEqual(found, { identities: [{ subject_id: h.owner.subject.subject_id, organization: 'tenant-a', roles: ['issuer'], revoked: false }] });
+  assert.equal(JSON.stringify(found).includes('token'), false);
+  await assert.rejects(h.service.findIdentities({ challenge_id: lookup.challenge_id, signature: await sign(h.owner.signer, lookup) }), { code: 'identity_lookup_invalid' }, 'a lookup is spent once');
+  await h.service.revokeSubject(h.owner.subject.subject_id);
+  const again = h.service.identityChallenge(h.owner.signer.address);
+  assert.equal((await h.service.findIdentities({ challenge_id: again.challenge_id, signature: await sign(h.owner.signer, again) })).identities[0].revoked, true);
+  assert.throws(() => h.service.identityChallenge('0x123'), { code: 'rights_invalid_input' });
 });
 
 test('N3 vault drops challenges and sessions a day after they expire, keeping live ones', async (t) => {

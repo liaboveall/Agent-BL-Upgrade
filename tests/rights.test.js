@@ -130,15 +130,27 @@ test('W3 HTTP admin bootstrap, RPC adapters, private download and session-revoke
   assert.equal((await request('GET', `materials/${recordId}`)).status, 401);
   assert.equal((await request('POST', 'transaction-plans', { operation: 'acknowledge_terms' }, other.token)).status, 409);
 });
-test('W3 expired sessions and retention cannot read private materials after policy expiry', async (t) => {
+test('W3 expired sessions cannot read; retention archives material read-only, then removes it', async (t) => {
   const h = await harness(t), owner = await h.login(['issuer']);
   const record = await h.service.createMaterial(owner.token, { material: { private: true }, public_summary: summary });
   h.advance(3600001);
   await assert.rejects(h.service.readMaterial(owner.token, record.material_id), errorCode('rights_session_required'));
-  h.advance(91 * 86400000);
-  const challenge = await h.service.createChallenge(owner.subject.subject_id), session = await h.service.openSession({ challenge_id: challenge.challenge_id,
-    signature: await owner.wallet.signTypedData(challenge.domain, challenge.types, challenge.message) });
-  await assert.rejects(h.service.readMaterial(session.token, record.material_id), errorCode('rights_material_expired'));
+  const fresh = async () => {
+    const challenge = await h.service.createChallenge(owner.subject.subject_id);
+    return (await h.service.openSession({ challenge_id: challenge.challenge_id, signature: await owner.wallet.signTypedData(challenge.domain, challenge.types, challenge.message) })).token;
+  };
+  // Retention covers the declared 30-day tenor plus 90 days, then the record is archived read-only for 30 days.
+  h.advance(119 * 86400000);
+  assert.equal((await h.service.readMaterial(await fresh(), record.material_id)).archived, false);
+  h.advance(2 * 86400000);
+  let token = await fresh();
+  assert.equal((await h.service.readMaterial(token, record.material_id)).archived, true);
+  assert.equal((await h.service.listMaterials(token)).materials[0].archived, true);
+  await assert.rejects(h.service.createEvidence(token, { material_id: record.material_id, kind: 'raw_material', source: null }), errorCode('rights_material_archived'));
+  await assert.rejects(h.service.publishMaterial(token, record.material_id), errorCode('rights_material_archived'));
+  h.advance(30 * 86400000); token = await fresh(); // signing in writes the vault, which removes the expired record
+  await assert.rejects(h.service.readMaterial(token, record.material_id), errorCode('rights_material_not_found'));
+  assert.equal((await h.service.listMaterials(token)).materials.length, 0);
 });
 test('W3 missing initialized vault refuses reinitialization and status reports unavailable chain controls', async (t) => {
   const h = await harness(t), owner = await h.login(['issuer']);
