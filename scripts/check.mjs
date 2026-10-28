@@ -9,6 +9,8 @@ import { verifyVendor } from './vendor-frontend.mjs';
 import { validateKnowledgeBase } from '../src/rag/knowledgeBase.js';
 import { MCP_TOOLS_MANIFEST, MCP_TOOL_HANDLERS } from '../src/mcp/mcpServer.js';
 import { releaseSourceSnapshot, releaseSourceByteIssues } from './lib/release-source.mjs';
+import { FROZEN_ARTIFACTS } from '../src/rights/chain.js';
+import { verifyDisclosure } from '../src/rights/disclosure.js';
 
 const config = loadApplicationConfig();
 assert.equal(config.protocolVersion, 5);
@@ -29,9 +31,20 @@ for (const file of files) {
   assertPricingQuote(quoteFromCase(data), data);
 }
 assert.ok((await runHarnessScenarios()).length >= 5);
+// The image must carry every frozen inventory the server verifies superseded instances against.
+const dockerfile = await fs.readFile('Dockerfile', 'utf8');
+for (const file of Object.values(FROZEN_ARTIFACTS)) {
+  assert.ok(dockerfile.includes(`scripts/config/${file}`), `Dockerfile does not copy scripts/config/${file}`);
+  await fs.access(`scripts/config/${file}`);
+}
+// Shipped public terms are served when no vault is present, so each one must recompute to its file name.
+for (const name of (await fs.readdir('data/disclosures')).filter((entry) => entry.endsWith('.json'))) {
+  const pack = JSON.parse(await fs.readFile(`data/disclosures/${name}`, 'utf8'));
+  assert.ok(verifyDisclosure(pack) && `${pack.disclosure_hash.toLowerCase()}.json` === name, `Shipped disclosure ${name} does not verify`);
+}
 const retired = JSON.parse(await fs.readFile('scripts/config/retired-runtime-paths.json', 'utf8'));
 for (const file of retired.paths) assert.equal(await fs.access(file).then(() => true, () => false), false, 'Retired file reappeared: ' + file);
 const snapshot = await releaseSourceSnapshot();
 assert.ok(snapshot.file_count > 0);
 assert.deepEqual(await releaseSourceByteIssues(snapshot), [], 'Source bytes differ from the LF checkout required by .gitattributes; normalize the listed files before recording release evidence');
-console.log('check passed: controlled v5 configuration, current pricing, MCP tools, retired entry isolation and source inventory');
+console.log('check passed: controlled v5 configuration, current pricing, MCP tools, container inventories, shipped terms, retired entry isolation and source inventory');
