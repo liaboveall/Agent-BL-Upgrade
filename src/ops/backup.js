@@ -4,10 +4,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { seal, unseal } from '../rights/vault.js';
 import { writeJsonAtomic } from '../lib/jsonStore.js';
 import { acquireRuntimeLease, runtimeRestoreLock } from './lease.js';
+import { RUNTIME_BACKUP_LIMIT_BYTES } from './budget.js';
 
 const AAD = 'agentbl-runtime-backup-v1';
 const hash = (value) => createHash('sha256').update(value).digest('hex');
-const limit = 256 * 1024 * 1024;
+const limit = RUNTIME_BACKUP_LIMIT_BYTES;
 const ensure = (condition, message) => { if (!condition) throw new Error(message); };
 const skip = (name) => /^\.(?:runtime-lease|abandoned-runtime-|restore-incomplete)/u.test(name);
 function relativePath(name) {

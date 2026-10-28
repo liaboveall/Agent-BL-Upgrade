@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { appendJsonl, writeFileAtomic } from '../lib/jsonStore.js';
+import { RUNTIME_BACKUP_LIMIT_BYTES, runtimeBytes } from './budget.js';
 
 export async function storageProbe(directory, minFreeBytes = 64 * 1024 * 1024, io = fs) {
   await io.mkdir(directory, { recursive: true });
@@ -16,9 +17,14 @@ export async function storageProbe(directory, minFreeBytes = 64 * 1024 * 1024, i
 const positive = (v, fallback) => Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : fallback;
 export class OperationsMonitor {
   constructor({ directory, env = {}, getAgentStatus = async () => ({}), probeStorage, probeControls = async () => ({ enabled: false }),
-    probeMaterials = async () => ({ enabled: false }), alertSink = null, now = () => Date.now() }) {
+    probeMaterials = async () => ({ enabled: false }), probeRuntimeBytes, alertSink = null, now = () => Date.now() }) {
     Object.assign(this, { directory, env, getAgentStatus, probeControls, probeMaterials, alertSink, now });
     this.probeStorage = probeStorage ?? (() => storageProbe(directory, positive(env.AGENTBL_MIN_FREE_BYTES, 64 * 1024 * 1024)));
+    // Walking the runtime directory is not free: its size is measured at most once a minute.
+    this.probeRuntimeBytes = probeRuntimeBytes ?? (directory ? () => runtimeBytes(directory) : null);
+    this.backupBudgetMs = positive(env.AGENTBL_BACKUP_BUDGET_INTERVAL_MS, 60000);
+    this.backupWarnRatio = Math.min(1, positive(env.AGENTBL_BACKUP_WARN_RATIO, 0.8));
+    this.runtimeSize = null;
     this.intervalMs = positive(env.AGENTBL_OPS_INTERVAL_MS, 10000);
     this.maxSampleAgeMs = this.intervalMs * 3;
     this.snapshot = { schema: 'agentbl-operations-v1', ready: false, status: 'starting', checks: [], observed_at: null };
@@ -65,6 +71,16 @@ export class OperationsMonitor {
             { observation: { valid_until: String(value.screening_valid_until), remaining_seconds: remaining, owner: 'compliance', action: 'refresh_screening' } });
         }
       } catch (error) { check(name, false, name === 'storage' && error.code === 'storage_low' ? 'storage_low' : `${name}_unavailable`); }
+    }
+    // A stopped-service backup reads the whole runtime directory into one envelope (src/ops/backup.js): warn the operator
+    // before the data stops fitting, and stop new intake once it does, so what is stored can always be restored.
+    if (this.probeRuntimeBytes) {
+      try {
+        if (!this.runtimeSize || this.now() - this.runtimeSize.at >= this.backupBudgetMs) this.runtimeSize = { bytes: await this.probeRuntimeBytes(), at: this.now() };
+        const used = this.runtimeSize.bytes, observation = { runtime_bytes: used, limit_bytes: RUNTIME_BACKUP_LIMIT_BYTES, owner: 'operator', action: 'archive_runtime_before_backup_limit' };
+        if (used > RUNTIME_BACKUP_LIMIT_BYTES) check('backup_budget', false, 'backup_budget_exceeded', { observation });
+        else warn('backup_budget', used <= RUNTIME_BACKUP_LIMIT_BYTES * this.backupWarnRatio, 'backup_budget_near', { observation });
+      } catch { check('backup_budget', false, 'backup_budget_unavailable'); }
     }
     try {
       const agent = await this.getAgentStatus(), live = agent.mode === 'live';
