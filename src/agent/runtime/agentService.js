@@ -26,7 +26,7 @@ import { APPROVAL_STATUS } from './approvals.js';
 import { effectiveAutonomy } from './config.js';
 import { normalizeEvent } from './events.js';
 import { INFORMATIONAL_ACTIONS, evaluatePolicy } from './policy.js';
-import { PreferenceStore } from './preferences.js';
+import { PreferenceStore, parsePreferences } from './preferences.js';
 import { Scheduler } from './scheduler.js';
 import { hashSnapshot } from '../decisionLogger.js';
 import { createAgentVersion } from './agentVersion.js';
@@ -356,6 +356,8 @@ export class AgentService {
     if (!this.ingest) throw new AgentServiceError('ingest_unavailable', 'This runtime has no document intake', 503);
     // Demo scenarios replay curated fixtures; anything else is new material and waits while operations are not ready.
     if (source !== 'scenario') this.#assertIntakeOpen();
+    // Everything that can be refused is checked before the job exists, so a refused request leaves nothing behind.
+    if (body?.exporter_preferences !== undefined) parsePreferences(body.exporter_preferences);
     const {
       job,
       documents,
@@ -368,9 +370,11 @@ export class AgentService {
       mode,
       generation
     });
-    if (body.exporter_preferences !== undefined) await this.preferences.put(job.case_id, body.exporter_preferences);
+    if (body.exporter_preferences !== undefined) await this.preferences.put(job.case_id, body.exporter_preferences, { mode });
     let accepted = null;
-    if (created) {
+    // A job still QUEUED may never have reached the bus (a failed preference write or event submission after the job
+    // was stored): submitting its event again is safe, the bus drops it when it already holds it.
+    if (created || job.status === 'QUEUED') {
       accepted = await this.submitEvent({
         event_id: job.event_id,
         type: 'DOCUMENTS_INGESTED',
@@ -401,7 +405,7 @@ export class AgentService {
   }
   async setPreferences(caseId, input) {
     await this.init();
-    const stored = await this.preferences.put(caseId, input);
+    const stored = await this.preferences.put(caseId, input, { mode: this.getMode() });
     this.#activity('SYSTEM', 'EXPORTER_PREFERENCES_SET', null, {
       preferences: stored.preferences
     }, {
@@ -1332,10 +1336,13 @@ export class AgentService {
     await this.activity.clearMode('demo');
     await this.registry.clearOffchain();
     this.sim.done.clear();
+    // Live material and the research constraints that go with it stay together: neither is Demo state.
+    const liveCases = await this.ingest?.liveCaseIds?.() ?? new Set();
     await this.ingest?.clear();
     await this.riskTracker?.clear();
     await this.scenarios?.stop();
-    await this.preferences.clear?.();
+    if (this.preferences.clearDemo) await this.preferences.clearDemo({ keep: liveCases });
+    else await this.preferences.clear?.();
     this.emergencyStopped = false;
     await this.syncPools();
     return {

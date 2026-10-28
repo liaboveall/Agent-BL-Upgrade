@@ -96,6 +96,9 @@ export function createAgentService(options = {}) {
     maxBatchBytes: config.uploadBatchMaxBytes,
     maxOwnerBytes: config.uploadWorkspaceQuotaBytes,
     maxStoredBytes: config.uploadTotalQuotaBytes,
+    maxJobs: config.ingestMaxJobs,
+    maxOwnerJobs: config.ingestWorkspaceMaxJobs,
+    jobRetentionMs: config.ingestJobRetentionDays * 86_400_000,
     env,
     now: options.now,
     getMode

@@ -6,6 +6,8 @@
 // safety-relevant defaults (Live only ever proposes; irreversible actions never run unattended) live
 // next to each other.
 
+import { INTAKE_BACKUP_SHARE, RUNTIME_BACKUP_LIMIT_BYTES } from '../../ops/budget.js';
+
 export const AUTONOMY_LEVELS = Object.freeze(['off', 'observe', 'propose', 'auto']);
 
 function int(value, fallback, { min = -Infinity, max = Infinity } = {}) {
@@ -67,10 +69,17 @@ export function loadAgentConfig(env = process.env) {
     scenarioSpeed: int(env.AGENT_SCENARIO_SPEED, 1, { min: 1, max: 1000 }),
     uploadMaxBytes: int(env.AGENT_UPLOAD_MAX_BYTES, 8_388_608, { min: 1024, max: 25_000_000 }),
     // One request's documents together (three maximum-size documents unless set), what one browser workspace may
-    // keep stored, and the whole intake store.
+    // keep stored, and the whole intake store. The store is capped at half of what one runtime backup can carry
+    // (src/ops/budget.js), so everything the intake accepts can be backed up and restored.
     uploadBatchMaxBytes: int(env.AGENT_UPLOAD_BATCH_MAX_BYTES, 3 * int(env.AGENT_UPLOAD_MAX_BYTES, 8_388_608, { min: 1024, max: 25_000_000 }), { min: 1024, max: 100_000_000 }),
-    uploadWorkspaceQuotaBytes: int(env.AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES, 100_663_296, { min: 1024 }),
-    uploadTotalQuotaBytes: int(env.AGENT_UPLOAD_TOTAL_QUOTA_BYTES, 1_073_741_824, { min: 1024 }),
+    uploadWorkspaceQuotaBytes: int(env.AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES, 50_331_648, { min: 1024 }),
+    uploadTotalQuotaBytes: int(env.AGENT_UPLOAD_TOTAL_QUOTA_BYTES, RUNTIME_BACKUP_LIMIT_BYTES * INTAKE_BACKUP_SHARE,
+      { min: 1024, max: RUNTIME_BACKUP_LIMIT_BYTES * INTAKE_BACKUP_SHARE }),
+    // Upload jobs kept in total and per workspace, and how long a finished job that needs no review stays. Queued,
+    // running and held jobs are never dropped to make room: a full table refuses the next upload instead.
+    ingestMaxJobs: int(env.AGENT_INGEST_MAX_JOBS, 500, { min: 10, max: 5000 }),
+    ingestWorkspaceMaxJobs: int(env.AGENT_INGEST_WORKSPACE_MAX_JOBS, 100, { min: 1, max: 5000 }),
+    ingestJobRetentionDays: int(env.AGENT_INGEST_JOB_RETENTION_DAYS, 30, { min: 1, max: 3650 }),
     // Use the configured LLM for the valuation step of the ingest pipeline (it falls back to the
     // deterministic path when no LLM is configured or the call fails).
     valuationLlm: bool(env.AGENT_VALUATION_LLM, true),

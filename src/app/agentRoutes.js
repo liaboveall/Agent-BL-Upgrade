@@ -14,6 +14,7 @@ import { withReferences } from '../agent/runtime/references.js';
 import { publicAgentPolicy } from '../mcp/agentTools.js';
 import { subscriptionAvailability } from '../core/subscription.js';
 import { workspaceOwner, canReadWorkspaceCase, canReadJob, requireWorkspaceCase } from './workspaceAccess.js';
+import { parsePreferences } from '../agent/runtime/preferences.js';
 
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
 
@@ -304,15 +305,18 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         authorizeIntake(request);
         const body = await readJsonBody(request);
         if (!isRecord(body)) throw new HttpError(400, 'invalid_request', 'Body must be an object of exporter preferences');
-        // The agent enforces these, so a public sample's preferences are an operator decision. A workspace sets them
-        // on its own copy; a case nobody owns yet becomes this workspace's when it first stores something for it.
-        if (!checkAdminToken(request).authorized && service.ingest) {
+        parsePreferences(body);
+        // The agent enforces these, so a public sample's preferences are an operator decision. Every other case is
+        // private: whoever first stores something for it -- a workspace or the operator -- owns it before it is stored.
+        if (service.ingest?.claimCase) {
           await service.ingest.init?.();
+          const ownerId = workspaceOwner(request, response);
           if (service.ingest.isPublicCase(caseId)) {
-            const target = service.ingest.resolveUploadCase(caseId, workspaceOwner(request, response));
-            throw new HttpError(409, 'public_case_read_only', 'Public sample cases are read-only; save preferences on your working copy', { workspace_case_id: target.case_id });
-          }
-          if (!service.ingest.getAccess(caseId)) await service.ingest.claimCase(caseId, { ownerId: workspaceOwner(request, response) });
+            if (!checkAdminToken(request).authorized) {
+              const target = service.ingest.resolveUploadCase(caseId, ownerId);
+              throw new HttpError(409, 'public_case_read_only', 'Public sample cases are read-only; save preferences on your working copy', { workspace_case_id: target.case_id });
+            }
+          } else if (!service.ingest.getAccess(caseId)) await service.ingest.claimCase(caseId, { ownerId });
         }
         sendJson(response, 200, { ok: true, case_id: caseId, ...(await service.setPreferences(caseId, body)) });
         return true;

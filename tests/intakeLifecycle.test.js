@@ -1,5 +1,7 @@
 // Who may read an uploaded case, and what happens to the raw bytes, across the whole intake lifecycle:
-// job retention, failed batches, restarts, the Demo reset and degraded operations (application review F1, F4, F5, F7).
+// job retention, failed batches, restarts, the Demo reset and degraded operations (application review F1, F4, F5, F7),
+// and the follow-up audit: first-write ownership of working copies (A01), retention that never depends on other
+// workspaces' volume (A02) and retries of a job stranded before its event (A05).
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -50,10 +52,10 @@ const temporary = [];
 const tempDir = async () => { const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-intake-')); temporary.push(dir); return dir; };
 after(() => Promise.all(temporary.map((dir) => fs.rm(dir, { recursive: true, force: true }))));
 
-test('a held private case stays private after job retention evicts its job (F1)', async (t) => {
+test('a held private case keeps its job and bytes however much other workspaces upload, and stays private (F1, A02)', async (t) => {
   const app = await listen(createServer());
   t.after(async () => { closeActivityStreams(); await app.close(); });
-  const service = await freshService();
+  const service = await freshService({ config: loadAgentConfig({ AGENT_VALUATION_LLM: 'false', AGENT_COOLDOWN_SEC: '0', AGENT_INGEST_MAX_JOBS: '20', AGENT_INGEST_WORKSPACE_MAX_JOBS: '10' }) });
   t.after(() => service.stop());
   const owner = browser(app.base), stranger = browser(app.base);
 
@@ -65,8 +67,18 @@ test('a held private case stays private after job retention evicts its job (F1)'
   assert.ok(decisionId);
   assert.equal((await stranger('GET', `/api/agent/decisions/${decisionId}`)).status, 404);
 
-  for (let i = 0; i < 500; i += 1) await service.ingest.accept({ case_id: `OTHER-${i}`, documents: [note(`Synthetic other upload ${i}`)] }, { ownerId: 'another-workspace' });
-  assert.equal(service.ingest.getJob(uploaded.data.job.job_id), null, 'the original job was evicted');
+  // Other workspaces fill the shared job table. Nothing they do removes the held job: the next upload is refused instead.
+  for (let i = 0; i < 19; i += 1) await service.ingest.accept({ case_id: `OTHER-${i}`, documents: [note(`Synthetic other upload ${i}`)] }, { ownerId: `another-workspace-${i % 2}` });
+  await assert.rejects(service.ingest.accept({ case_id: 'OTHER-ONE-TOO-MANY', documents: [note('Synthetic upload over the cap')] }, { ownerId: 'another-workspace-0' }),
+    { code: 'upload_job_quota_exceeded', status: 413 });
+  await assert.rejects(service.ingest.accept({ case_id: 'OTHER-FULL', documents: [note('Synthetic upload into a full table')] }, { ownerId: 'third-workspace' }),
+    { code: 'intake_jobs_full', status: 507 });
+  const held = service.ingest.getJob(uploaded.data.job.job_id);
+  assert.equal(held.review_required, true, 'the held job is still there to review');
+  assert.match((await service.ingest.loadDocuments(held.document_ids))[0].text, /ABC-ONLY-REVIEW/u, 'and so are its bytes');
+  const refused = await stranger('POST', '/api/agent/ingest', { case_id: 'STRANGER-FULL', documents: [note('Synthetic upload refused over HTTP')] });
+  assert.equal(refused.status, 507);
+  assert.equal(refused.data.code, 'intake_jobs_full');
 
   assert.equal((await stranger('GET', `/api/agent/decisions/${decisionId}`)).status, 404);
   assert.equal((await stranger('GET', '/api/agent/decisions?case_id=PRIVATE-HELD-REVIEW')).data.count, 0);
@@ -75,6 +87,129 @@ test('a held private case stays private after job retention evicts its job (F1)'
   assert.equal(own.status, 200);
   assert.equal(own.data.preferences.min_acceptable_issue_price, 0.73);
   assert.equal((await owner('GET', `/api/agent/decisions/${decisionId}`)).status, 200);
+});
+
+test('only finished jobs past their retention leave; queued, running and held jobs keep their sealed bytes across a restart (A02)', async () => {
+  const dir = await tempDir();
+  let now = Date.parse('2026-10-01T00:00:00.000Z');
+  const options = { dir, env: {}, maxJobs: 6, maxOwnerJobs: 6, jobRetentionMs: 86_400_000, now: () => new Date(now) };
+  const intake = new IngestService(options);
+  const running = await intake.accept({ case_id: 'KEEP-RUNNING', documents: [note('Synthetic running upload')] }, { ownerId: 'owner-a' });
+  await intake.updateJob(running.job.job_id, { status: 'RUNNING' });
+  const held = await intake.accept({ case_id: 'KEEP-HELD', documents: [note('Synthetic held upload')] }, { ownerId: 'owner-a' });
+  await intake.updateJob(held.job.job_id, { status: 'DONE', review_required: true, result_action: 'HOLD_FOR_REVIEW' });
+  const finished = await intake.accept({ case_id: 'DONE-OPEN', documents: [note('Synthetic finished upload')] }, { ownerId: 'owner-b' });
+  await intake.updateJob(finished.job.job_id, { status: 'DONE', review_required: false, result_action: 'OPEN' });
+  for (let i = 0; i < 3; i += 1) await intake.accept({ case_id: `FILL-${i}`, documents: [note(`Synthetic queued upload ${i}`)] }, { ownerId: 'owner-c' });
+  const stored = (result) => path.join(dir, result.documents[0].stored_as);
+
+  // Within the retention period nothing makes room, whoever asks.
+  now += 3_600_000;
+  await assert.rejects(intake.accept({ case_id: 'ONE-MORE', documents: [note('Synthetic upload over the cap')] }, { ownerId: 'owner-d' }), { code: 'intake_jobs_full' });
+  assert.equal(intake.jobs.size, 6);
+
+  // Two days later, after a restart: the interrupted job starts its retention now; the finished, unheld one has expired.
+  now += 2 * 86_400_000;
+  const restarted = new IngestService(options);
+  await restarted.init();
+  assert.equal(restarted.getJob(running.job.job_id).status, 'INTERRUPTED');
+  await restarted.accept({ case_id: 'ONE-MORE', documents: [note('Synthetic upload after retention')] }, { ownerId: 'owner-d' });
+  assert.equal(restarted.getJob(finished.job.job_id), null, 'the finished job reached its retention period');
+  await assert.rejects(fs.stat(stored(finished)), { code: 'ENOENT' });
+  for (const kept of [running, held]) {
+    assert.ok(restarted.getJob(kept.job.job_id), kept.job.case_id);
+    assert.ok(await fs.stat(stored(kept)), `${kept.job.case_id} keeps its sealed bytes`);
+    assert.ok((await restarted.loadDocuments(kept.job.document_ids))[0].text.startsWith('Synthetic'));
+  }
+  assert.equal(restarted.getJob(held.job.job_id).review_required, true);
+  // The access record outlives the job it came with.
+  assert.equal(restarted.canReadCase('DONE-OPEN', { ownerId: 'owner-b' }), true);
+  assert.equal(restarted.canReadCase('DONE-OPEN', { ownerId: 'owner-a' }), false);
+});
+
+test('a working copy is private before anything is stored, and an operator who saves for it first claims it (A01)', async (t) => {
+  const original = process.env.AGENTBL_ADMIN_TOKEN;
+  const token = 'fictional-intake-operator-token-0001';
+  process.env.AGENTBL_ADMIN_TOKEN = token;
+  t.after(() => { if (original === undefined) delete process.env.AGENTBL_ADMIN_TOKEN; else process.env.AGENTBL_ADMIN_TOKEN = original; });
+  const app = await listen(createServer());
+  t.after(async () => { closeActivityStreams(); await app.close(); });
+  const service = await freshService();
+  t.after(() => service.stop());
+  const operator = browser(app.base), stranger = browser(app.base);
+  const admin = { Authorization: `Bearer ${token}` };
+
+  const copy = (await operator('GET', `/api/agent/workspace/copies/${SAMPLE}`)).data;
+  assert.equal(copy.exists, false);
+  assert.equal((await operator('GET', `/api/agent/cases/${copy.case_id}/preferences`)).status, 200, 'its own workspace may read the empty copy');
+  assert.equal((await stranger('GET', `/api/agent/cases/${copy.case_id}/preferences`)).status, 404, 'nobody else may, even before it exists');
+
+  // An anonymous reader listens to the copy's live activity before anything is saved for it.
+  const listening = new AbortController();
+  const stream = await fetch(`${app.base}/api/agent/activity/stream?case_id=${encodeURIComponent(copy.case_id)}`, { signal: listening.signal });
+  const heard = [];
+  const reading = (async () => {
+    const decoder = new TextDecoder();
+    try { for await (const chunk of stream.body) heard.push(decoder.decode(chunk)); } catch { /* aborted */ }
+  })();
+
+  // The operator's first save claims the copy for the operator's own workspace before storing anything.
+  const saved = await operator('PUT', `/api/agent/cases/${copy.case_id}/preferences`, { min_acceptable_issue_price: 0.88 }, admin);
+  assert.equal(saved.status, 200);
+  const record = service.ingest.getAccess(copy.case_id);
+  assert.equal(record.visibility, 'private');
+  assert.equal(record.source_case_id, SAMPLE);
+  assert.equal((await stranger('GET', `/api/agent/cases/${copy.case_id}/preferences`)).status, 404);
+  const strangerActivity = (await stranger('GET', '/api/agent/activity?limit=200')).data.activities;
+  assert.equal(strangerActivity.some((activity) => activity.caseId === copy.case_id), false);
+  assert.ok((await operator('GET', '/api/agent/activity?limit=200')).data.activities
+    .some((activity) => activity.caseId === copy.case_id && activity.action === 'EXPORTER_PREFERENCES_SET'));
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  listening.abort();
+  await reading;
+  assert.doesNotMatch(heard.join(''), /EXPORTER_PREFERENCES_SET/u, 'the live stream carries nothing of the private copy');
+
+  // An upload against the copy afterwards keeps the copy's sample.
+  const upload = await operator('POST', '/api/agent/ingest?wait=1', { case_id: copy.case_id, documents: [note('A fictional document for the operator copy.')] }, admin);
+  assert.equal(upload.data.case_id, copy.case_id);
+  assert.equal(upload.data.source_case_id, SAMPLE);
+  // Nobody, operator token included, claims a copy that another workspace's ID names.
+  const foreign = `WS-0123456789-${SAMPLE}`;
+  const squat = await stranger('PUT', `/api/agent/cases/${foreign}/preferences`, { min_acceptable_issue_price: 0.5 }, admin);
+  assert.equal(squat.status, 409);
+  assert.equal(squat.data.code, 'case_owner_conflict');
+  assert.equal(service.ingest.getAccess(foreign), null);
+});
+
+test('a refused preference leaves no job behind, and a job stranded before its event is queued again on retry (A05)', async (t) => {
+  const service = await freshService();
+  t.after(() => service.stop());
+  const body = (price) => ({ case_id: 'RETRY-PREFERENCES', exporter_preferences: { min_acceptable_issue_price: price },
+    documents: [note('Synthetic bill of lading draft for a fictional retry check.')] });
+  await assert.rejects(service.submitDocuments(body(2), { ownerId: 'retry-owner' }), { code: 'invalid_preferences' });
+  assert.equal(service.ingest.jobs.size, 0, 'nothing was stored for the refused request');
+  assert.equal(service.ingest.getAccess('RETRY-PREFERENCES'), null);
+
+  // The job is stored, then the preference write fails: the job never reached the bus.
+  const put = service.preferences.put.bind(service.preferences);
+  let failing = true;
+  service.preferences.put = async (...args) => {
+    if (failing) { failing = false; throw Object.assign(new Error('Synthetic preference write failure'), { code: 'EIO' }); }
+    return put(...args);
+  };
+  await assert.rejects(service.submitDocuments(body(0.8), { ownerId: 'retry-owner' }), /Synthetic preference write failure/u);
+  assert.equal(service.ingest.listJobs()[0].status, 'QUEUED');
+  const retry = await service.submitDocuments(body(0.8), { ownerId: 'retry-owner' });
+  assert.equal(retry.created, false);
+  await service.waitFor(retry.idempotency_key, 30_000);
+  const job = service.ingest.getJob(retry.job.job_id);
+  assert.notEqual(job.status, 'QUEUED', 'the retry was processed');
+  assert.ok(job.steps.length > 0);
+  assert.equal(service.preferences.get('RETRY-PREFERENCES').min_acceptable_issue_price, 0.8);
+  // Retrying once more is still one job and one decision.
+  const again = await service.submitDocuments(body(0.8), { ownerId: 'retry-owner' });
+  await service.waitFor(again.idempotency_key, 30_000);
+  assert.deepEqual(service.ingest.getJob(job.job_id).decision_ids, job.decision_ids);
 });
 
 test('an upload against a public sample works on the uploader’s own copy; the sample stays public (F4)', async (t) => {

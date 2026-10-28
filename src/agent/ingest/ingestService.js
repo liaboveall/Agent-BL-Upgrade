@@ -6,14 +6,19 @@
 //                                         DOCUMENTS_INGESTED event ◄─────────────────────┘  (the AgentService submits it)
 //
 // Who may read a case is a business record of its own (`ingest-case-access.json`). It is written before the
-// job and survives job retention, failed runs, restarts and a Demo reset; a job is only a run record and can
-// be dropped. Curated sample IDs are a read-only public namespace: a private upload against one works on the
-// uploader's own copy (`WS-<hash>-<sample id>`), so nobody's upload changes what anybody else can read.
+// job (or the first preference) and survives job retention, failed runs, restarts and a Demo reset; a job is
+// only a run record. Curated sample IDs are a read-only public namespace: a private upload against one works on
+// the uploader's own copy (`WS-<hash>-<sample id>`), so nobody's upload changes what anybody else can read.
+// Working-copy IDs are private before anything is stored for them: only the workspace they derive from reads them.
 //
 // Raw bytes: the whole batch is validated before anything is written. Each content hash is stored once,
 // sealed with AES-256-GCM (AGENTBL_INTAKE_KEY, or a local key file created with owner-only permissions), and
 // removed when no retained job references it. Per-workspace and total quotas bound what the store can hold,
 // and the in-memory copy of the bytes is a bounded cache.
+//
+// Job retention never depends on other workspaces' volume: a job leaves only when it is finished, needs no review
+// and is older than the retention period. Queued, running and held jobs stay with their bytes; when the job table
+// or a workspace's share of it is full of those, a new upload is refused instead.
 //
 // What this module does NOT do: it never reads document content as instructions, and it never claims
 // an upload was verified. The ENI record is a MOCK acknowledgement and says so (`mode: 'mock'`).
@@ -36,9 +41,12 @@ export const ALLOWED_MIME_TYPES = Object.freeze({
 
 export const MAX_DOCUMENTS_PER_UPLOAD = 12;
 export const DEFAULT_BATCH_MAX_BYTES = 25_165_824; // 24 MiB of documents in one request
-const MAX_JOBS = 500;
+export const DEFAULT_MAX_JOBS = 500;
+export const DEFAULT_JOB_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_NAME_LENGTH = 255;
 const CASE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,127}$/u;
+const WORKSPACE_COPY = /^WS-[0-9A-F]{10}-(.+)$/u;
+const FINISHED = new Set(['DONE', 'FAILED', 'INTERRUPTED']);
 const ACCESS_SCHEMA = 'agentbl-case-access-v1';
 const SEALED = Buffer.from('AGBLUP01');
 const STORED_FILE = /^[0-9a-f]{64}\.(?:md|txt|pdf|png|jpg)(?:\.sealed)?$/u;
@@ -163,16 +171,23 @@ export class IngestService {
    * @param {number} [options.maxStoredBytes]  stored bytes in total
    * @param {number} [options.blobCacheBytes]  bytes kept in memory when a directory holds the store
    * @param {Iterable<string>} [options.publicCaseIds]  the read-only public sample IDs
+   * @param {number} [options.maxJobs]          retained jobs in total
+   * @param {number} [options.maxOwnerJobs]     retained jobs of one workspace
+   * @param {number} [options.jobRetentionMs]   how long a finished job that needs no review is kept
    * @param {() => Date} [options.now]
    */
-  constructor({ dir = null, maxBytes = 8_388_608, maxBatchBytes = DEFAULT_BATCH_MAX_BYTES, maxOwnerBytes = 100_663_296,
-    maxStoredBytes = 1_073_741_824, blobCacheBytes = 67_108_864, publicCaseIds = curatedCaseIds(), env = process.env,
+  constructor({ dir = null, maxBytes = 8_388_608, maxBatchBytes = DEFAULT_BATCH_MAX_BYTES, maxOwnerBytes = 50_331_648,
+    maxStoredBytes = 134_217_728, blobCacheBytes = 67_108_864, publicCaseIds = curatedCaseIds(), env = process.env,
+    maxJobs = DEFAULT_MAX_JOBS, maxOwnerJobs = Math.max(1, Math.floor(maxJobs / 5)), jobRetentionMs = DEFAULT_JOB_RETENTION_MS,
     now = () => new Date(), getMode = () => 'demo' } = {}) {
     this.dir = dir;
     this.maxBytes = maxBytes;
     this.maxBatchBytes = Math.max(maxBatchBytes, maxBytes);
     this.maxOwnerBytes = maxOwnerBytes;
     this.maxStoredBytes = maxStoredBytes;
+    this.maxJobs = maxJobs;
+    this.maxOwnerJobs = Math.min(maxOwnerJobs, maxJobs);
+    this.jobRetentionMs = jobRetentionMs;
     this.blobCacheBytes = blobCacheBytes;
     this.publicCaseIds = new Set(publicCaseIds);
     this.env = env;
@@ -210,6 +225,8 @@ export class IngestService {
       if (job.status === 'RUNNING' || job.status === 'QUEUED') {
         job.status = 'INTERRUPTED';
         job.error = { code: 'interrupted', message: 'The server restarted before this job finished; upload again to retry.' };
+        // Its retention period starts now, so the uploader has the whole of it to retry.
+        job.updated_at = this.now().toISOString();
       }
       this.jobs.set(job.job_id, job);
     }
@@ -256,7 +273,9 @@ export class IngestService {
   isPrivateCase(caseId) {
     if (this.publicCaseIds.has(caseId)) return false;
     const record = this.access.get(caseId);
-    return Boolean(record) && record.visibility !== 'public-demo';
+    if (record) return record.visibility !== 'public-demo';
+    // A working-copy ID is private before anything is stored for it: its owner is the workspace it derives from.
+    return WORKSPACE_COPY.test(String(caseId ?? ''));
   }
 
   caseOwner(caseId) { return this.access.get(caseId)?.owner_id ?? null; }
@@ -264,6 +283,12 @@ export class IngestService {
   /** The private working copy a workspace uses for a public sample: stable for that workspace, unguessable for others. */
   workspaceCaseId(ownerId, sourceCaseId) {
     return `WS-${sha256(`${ownerId}:${sourceCaseId}`).slice(0, 10).toUpperCase()}-${sourceCaseId}`.slice(0, 128);
+  }
+
+  /** The public sample `caseId` is this workspace's own copy of, or null (another workspace's copy, or no copy at all). */
+  workspaceSource(caseId, ownerId) {
+    const source = WORKSPACE_COPY.exec(String(caseId ?? ''))?.[1];
+    return source && ownerId && this.isPublicCase(source) && this.workspaceCaseId(ownerId, source) === caseId ? source : null;
   }
 
   /** The case an upload (or a preference) of this workspace lands on. Public samples are never written directly. */
@@ -274,7 +299,9 @@ export class IngestService {
     if (visibility !== 'public-demo' && caseId && this.isPublicCase(String(caseId))) {
       return { case_id: this.workspaceCaseId(ownerId, String(caseId)), source_case_id: String(caseId) };
     }
-    return { case_id: caseId ? String(caseId) : null, source_case_id: null };
+    // The browser may name its copy directly: it still keeps the sample it was made from.
+    const source = visibility !== 'public-demo' && caseId ? this.workspaceSource(String(caseId), ownerId) : null;
+    return { case_id: caseId ? String(caseId) : null, source_case_id: source };
   }
 
   /** Record who may read a case before anything is stored for it. Ownership is never taken over. */
@@ -290,8 +317,11 @@ export class IngestService {
       if (existing.visibility !== visibility) throw new IngestError('case_visibility_conflict', 'This case is already published with another visibility', 409);
       return structuredClone(existing);
     }
+    // Nobody, operator included, takes another workspace's copy of a sample.
+    const source = sourceCaseId ?? this.workspaceSource(caseId, ownerId);
+    if (WORKSPACE_COPY.test(caseId) && !source) throw new IngestError('case_owner_conflict', 'This working copy belongs to another workspace', 409);
     const record = { case_id: caseId, owner_id: ownerId, visibility: visibility === 'public-demo' ? 'public-demo' : 'private',
-      ...(sourceCaseId ? { source_case_id: sourceCaseId } : {}), created_at: this.now().toISOString() };
+      ...(source ? { source_case_id: source } : {}), created_at: this.now().toISOString() };
     this.access.set(caseId, record);
     try { await this.#persistAccess(); }
     catch (error) { this.access.delete(caseId); throw error; }
@@ -305,7 +335,9 @@ export class IngestService {
 
   canReadCase(caseId, { ownerId = null, admin = false } = {}) {
     if (admin || !this.isPrivateCase(caseId)) return true;
-    return Boolean(ownerId) && this.caseOwner(caseId) === ownerId;
+    if (!ownerId) return false;
+    const owner = this.caseOwner(caseId);
+    return owner ? owner === ownerId : this.workspaceSource(caseId, ownerId) !== null;
   }
 
   canReadJob(job, { ownerId = null, admin = false } = {}) {
@@ -375,6 +407,15 @@ export class IngestService {
       if (existing && !['FAILED', 'INTERRUPTED'].includes(existing.status) && unique.every((item) => this.documents.has(item.document_id))) {
         return { job: structuredClone(existing), documents: unique.map((item) => structuredClone(this.documents.get(item.document_id))), created: false };
       }
+      // Only finished jobs past their retention make room; a held or running job of anybody never does.
+      const expired = new Set(this.#expiredJobs());
+      if (!existing) {
+        const kept = [...this.jobs.values()].filter((job) => !expired.has(job.job_id));
+        if (kept.filter((job) => job.owner_id === ownerId).length >= this.maxOwnerJobs) {
+          throw new IngestError('upload_job_quota_exceeded', 'This workspace keeps the most jobs it may; review held jobs or wait until finished ones expire', 413);
+        }
+        if (kept.length >= this.maxJobs) throw new IngestError('intake_jobs_full', 'The intake keeps no more jobs until finished ones reach their retention period; try again later', 507);
+      }
       const fresh = unique.filter((item) => !this.documents.has(item.document_id));
       const freshBytes = fresh.reduce((sum, item) => sum + item.buffer.length, 0);
       const stored = [...this.documents.values()];
@@ -422,7 +463,7 @@ export class IngestService {
         updated_at: at
       };
       this.jobs.set(jobId, job);
-      while (this.jobs.size > MAX_JOBS) this.jobs.delete(this.jobs.keys().next().value);
+      for (const id of expired) if (id !== jobId) this.jobs.delete(id);
       await this.#persist();
       await this.#collect();
       return { job: structuredClone(job), documents: unique.map((item) => structuredClone(this.documents.get(item.document_id))), created: true };
@@ -489,6 +530,18 @@ export class IngestService {
   #uncache(id) {
     const value = this.blobs.get(id);
     if (value) { this.cachedBytes -= value.length; this.blobs.delete(id); }
+  }
+
+  /**
+   * Jobs whose retention has ended: finished, needing no review (or resolved by a later review that needs none), and
+   * unchanged for the retention period. Their decisions keep their own evidence; only the raw bytes go with them.
+   */
+  #expiredJobs() {
+    const cutoff = this.now().getTime() - this.jobRetentionMs;
+    const jobs = [...this.jobs.values()];
+    const resolved = new Set(jobs.filter((job) => job.reviewed_job_id && job.status === 'DONE' && !job.review_required).map((job) => job.reviewed_job_id));
+    return jobs.filter((job) => FINISHED.has(job.status) && (!job.review_required || resolved.has(job.job_id))
+      && Date.parse(job.updated_at ?? job.created_at) <= cutoff).map((job) => job.job_id);
   }
 
   /** Drop documents no retained job references, and their files when no other document shares the content. */
@@ -578,8 +631,16 @@ export class IngestService {
   /** What the store holds, for operations and the retention tests. */
   usage() {
     const records = [...this.documents.values()];
-    return { documents: records.length, jobs: this.jobs.size, stored_bytes: records.reduce((sum, record) => sum + record.size, 0),
-      cached_bytes: this.cachedBytes, cases_with_access_records: this.access.size };
+    return { documents: records.length, jobs: this.jobs.size, max_jobs: this.maxJobs, stored_bytes: records.reduce((sum, record) => sum + record.size, 0),
+      max_stored_bytes: this.maxStoredBytes, cached_bytes: this.cachedBytes, cases_with_access_records: this.access.size };
+  }
+
+  /** Case IDs that hold Live material (a Live job or a case a Live upload produced): a Demo reset leaves them alone. */
+  async liveCaseIds() {
+    await this.init();
+    await this.#loadCases();
+    return new Set([...[...this.jobs.values()].filter((job) => job.mode === 'live').map((job) => job.case_id),
+      ...[...this.cases.values()].filter((data) => data.mode === 'live').map((data) => data.case_id)]);
   }
 
   // ---------------------------------------------------------------- cases built from documents
