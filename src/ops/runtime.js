@@ -53,8 +53,12 @@ export function createRuntimeMonitor({ directory, env, getAgentStatus, getCapita
     probeControls: async () => {
       if (!env.AGENTBL_RIGHTS_CONFIG) return { enabled: false };
       chain ??= await loadRightsChain(env.AGENTBL_RIGHTS_CONFIG);
-      try { return { enabled: true, ...await verifyChain(chain), intake_stopped: await chain.controller.intakeStopped(),
-        ...(getCapitalHealth ? await getCapitalHealth() : {}) }; }
+      try {
+        const [binding, intake, screening, block] = await Promise.all([verifyChain(chain), chain.controller.intakeStopped(),
+          typeof chain.controller.screeningValidUntil === 'function' ? chain.controller.screeningValidUntil().catch(() => null) : null, chain.provider.getBlock('latest')]);
+        return { enabled: true, ...binding, intake_stopped: intake, ...(screening == null ? {} : { screening_valid_until: String(screening), block_timestamp: block.timestamp }),
+          ...(getCapitalHealth ? await getCapitalHealth() : {}) };
+      }
       catch (error) { await chain.provider.destroy(); chain = null; throw error; }
     },
     alertSink: env.AGENTBL_ALERT_WEBHOOK ? async (alert) => {

@@ -51,10 +51,20 @@ export class OperationsMonitor {
   async #sample() {
     const checks = [];
     const check = (name, ok, code, details = {}) => checks.push({ name, ok: Boolean(ok), code: ok ? 'ok' : code, ...details });
+    // A warning is alerted with the role that clears it but leaves the service ready: the chain refuses what it blocks.
+    const warn = (name, ok, code, details) => checks.push({ name, ok: Boolean(ok), code: ok ? 'ok' : code, ...(ok ? {} : { warning: true }), ...details });
     check('startup', !this.startupError, 'startup_failed');
     for (const [name, probe] of [['storage', this.probeStorage], ['control_plane', this.probeControls], ['materials', this.probeMaterials]]) {
-      try { const value = await probe(); check(name, !value?.intake_stopped, 'controlled_intake_stopped', { observation: value }); }
-      catch (error) { check(name, false, name === 'storage' && error.code === 'storage_low' ? 'storage_low' : `${name}_unavailable`); }
+      try {
+        const value = await probe(); check(name, !value?.intake_stopped, 'controlled_intake_stopped', { observation: value });
+        // Source screening is one instance-wide window (at most 24 hours): when it lapses every new subscription and draw
+        // stops, so the compliance role is told before that rather than when an investor meets the revert.
+        if (name === 'control_plane' && value?.screening_valid_until != null && value?.block_timestamp != null) {
+          const remaining = Number(value.screening_valid_until) - Number(value.block_timestamp);
+          warn('screening_window', remaining > positive(this.env.AGENTBL_SCREENING_WARN_SECONDS, 4 * 3600), remaining <= 0 ? 'screening_expired' : 'screening_expiring',
+            { observation: { valid_until: String(value.screening_valid_until), remaining_seconds: remaining, owner: 'compliance', action: 'refresh_screening' } });
+        }
+      } catch (error) { check(name, false, name === 'storage' && error.code === 'storage_low' ? 'storage_low' : `${name}_unavailable`); }
     }
     try {
       const agent = await this.getAgentStatus(), live = agent.mode === 'live';
@@ -70,11 +80,13 @@ export class OperationsMonitor {
       if (live) check('live_configuration', /^[a-fA-F0-9]{64}$/u.test(this.env.AGENTBL_RIGHTS_KEY ?? '') && Boolean(this.env.AGENTBL_RIGHTS_CONFIG), 'live_controls_required');
       if (agent.chain_watcher?.enabled) check('chain_lag', !live || agent.chain_watcher.state === 'healthy', 'chain_watcher_not_caught_up');
     } catch { check('agent', false, 'agent_status_unavailable'); }
-    const ready = checks.every((item) => item.ok), signature = checks.filter((item) => !item.ok).map((item) => item.code).sort().join('|') || 'recovered';
+    const ready = checks.every((item) => item.ok || item.warning), signature = checks.filter((item) => !item.ok).map((item) => item.code).sort().join('|') || 'recovered';
     this.snapshot = { schema: 'agentbl-operations-v1', ready, status: ready ? 'ready' : 'degraded', observed_at: new Date(this.now()).toISOString(), checks };
     if (signature !== this.alertSignature) {
-      const alert = { schema: 'agentbl-operations-alert-v1', at: this.snapshot.observed_at, severity: ready ? 'recovery' : 'critical', codes: checks.filter((item) => !item.ok).map((item) => item.code),
-        action: ready ? 'resume_after_reconciliation' : 'stop_new_intake_and_reconcile', revision: this.env.AGENTBL_RELEASE_REVISION ?? 'UNRECORDED' };
+      const warned = checks.filter((item) => item.warning);
+      const alert = { schema: 'agentbl-operations-alert-v1', at: this.snapshot.observed_at, severity: !ready ? 'critical' : warned.length ? 'warning' : 'recovery', codes: checks.filter((item) => !item.ok).map((item) => item.code),
+        action: !ready ? 'stop_new_intake_and_reconcile' : warned.length ? warned.map((item) => item.observation?.action ?? item.code).join(',') : 'resume_after_reconciliation',
+        ...(warned.length ? { owners: [...new Set(warned.map((item) => item.observation?.owner).filter(Boolean))] } : {}), revision: this.env.AGENTBL_RELEASE_REVISION ?? 'UNRECORDED' };
       try {
         if (this.directory) await appendJsonl(path.join(this.directory, 'ops-alerts.jsonl'), alert, { durable: true, maxBytes: Infinity });
         if (this.alertSink) await this.alertSink(alert);

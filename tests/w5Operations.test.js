@@ -106,6 +106,20 @@ test('W5 readiness separates storage, RPC/reorg uncertainty, queues and startup;
   assert.match(monitor.metrics(), /agentbl_ready 0/u);
 });
 
+test('W5 an expiring source screening alerts its owner while the service stays ready, and recovers once refreshed', async (t) => {
+  const directory = await temporary(t), alerts = [];
+  let validUntil = 1_000_000 + 3600;
+  const monitor = new OperationsMonitor({ directory, getAgentStatus: healthyAgent, probeStorage: async () => ({}),
+    probeControls: async () => ({ enabled: true, intake_stopped: false, screening_valid_until: String(validUntil), block_timestamp: 1_000_000 }), alertSink: async (alert) => { alerts.push(alert); } });
+  await monitor.sample();
+  assert.equal(monitor.readiness().ok, true, 'a screening window about to lapse does not stop other operations');
+  assert.deepEqual(alerts.at(-1), { ...alerts.at(-1), severity: 'warning', codes: ['screening_expiring'], action: 'refresh_screening', owners: ['compliance'] });
+  validUntil = 999_000; await monitor.sample();
+  assert.equal(monitor.readiness().ok, true); assert.deepEqual(alerts.at(-1).codes, ['screening_expired']);
+  validUntil = 1_000_000 + 86_400; await monitor.sample();
+  assert.equal(alerts.at(-1).severity, 'recovery'); assert.equal(alerts.length, 3);
+});
+
 test('W5 low disk and failed atomic rename are observable without modifying existing runtime data', async (t) => {
   const dir = await temporary(t); await fs.writeFile(path.join(dir, 'preserved.json'), 'history');
   await assert.rejects(storageProbe(dir, 10, { ...fs, statfs: async () => ({ bavail: 0n, bsize: 4096n }) }), { code: 'storage_low' });
