@@ -23,6 +23,8 @@ npm run dev
 | `AGENTBL_REQUIRE_EXISTING_RUNTIME` | 已初始化部署拒绝缺卷后空启动 |
 | `AGENTBL_RELEASE_REVISION` | 运行版本标识 |
 | `LLM_HTTP_RELAY` | 设为 `true` 才开放浏览器 LLM 中继 `POST /api/llm/chat`；默认关闭，Copilot 等服务端模型功能不受影响 |
+| `AGENTBL_INTAKE_KEY` | 研究上传的独立封存密钥（32 字节十六进制）；未设置时在 `research-agent/ingest-uploads.key` 生成，只保护上传目录的单独副本 |
+| `AGENT_UPLOAD_BATCH_MAX_BYTES` / `AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES` / `AGENT_UPLOAD_TOTAL_QUOTA_BYTES` | 单次上传合计、每个浏览器工作区与整个上传存储的容量；默认 24 MiB、96 MiB、1 GiB |
 | `AGENTBL_ALLOWED_HOSTS` | 除 localhost/127.0.0.1 外允许的主机名；经回环到达但 Host 不在名单内的请求返回 421（防 DNS 重绑定）。Compose 默认 `localhost,127.0.0.1`，反向代理提供公网域名时加入该域名 |
 
 合资格钱包连接 Live 后按角色工作台操作。管理员登记身份，链上角色另行核对；参与者逐次确认钱包请求。材料创建、完整条款绑定、双审、发布和交易准备均检查当前版本与权限。测试代币与 gas 由实际研究账户准备，不要把私钥放入公开 JSON。
@@ -36,7 +38,9 @@ npm run dev
 
 以上地址指已经初始化的本机容器；新 checkout 不会自动具有其私有材料和运行状态。各实例分别保留配置、vault 和账本，不能互相覆盖。当前 v3 实例的运行目录是 `data/runtime/n5-deployment/n5-v3-20261027/application/`，`AGENTBL_RIGHTS_CONFIG` 指向同目录上一级的 `rights-instance.json`；启动它时使用新端口，不能复用 v2 的运行目录。旧 v1、v2 不在应用内开放新增风险；用当前代码服务 v2 时，它按冻结产物核验并自动进入只退出状态。
 
-`GET /api/health` 检查进程存活，`GET /api/ready` 检查就绪，`GET /api/ops/status` 提供运行状态。就绪并不表示真实业务启用。
+`GET /api/health` 检查进程存活，`GET /api/ready` 检查就绪，`GET /api/ops/status` 提供运行状态。就绪并不表示真实业务启用。容器 healthcheck 只调用 `/api/health`，`healthy` 标签不代表 `/api/ready` 已就绪，更不代表融资条件满足。
+
+未就绪时暂停所有带入新材料或新资金的入口（`src/app/operationsRoutes.js` 的 `NEW_INTAKE_ROUTES`）：`POST /api/agent/ingest`、旧接口 `POST /api/ebl/upload`、复核重传 `POST /api/agent/jobs/:id/review`、认购 intent 与 Demo 认购，均返回 503 `operations_not_ready`。Agent 服务自身也检查同一就绪状态，后续新增的别名或 MCP 调用同样被拦下（Demo 场景回放只重放仓库内样例，不受影响）。读取、领取、退款、原交易附加与核对、钱包操作释放保持可用。
 
 研究案例目录在内存中缓存，超过 `AGENTBL_CATALOG_TTL_MS`（默认 60 秒）后在后台重建，请求不等待冷启动的公开数据源。Demo 资金池只在首次请求时建立；状态仍跟随报价的池（未被 Agent 动作接管）至多每 `AGENTBL_POOL_REQUOTE_MS`（默认 60 秒）按当前数据重新定价，所以启动时因数据源慢而暂停的案例会在数据恢复后自动重新开放，实时数据也不会悄悄过期。
 
@@ -71,7 +75,7 @@ docker stop -t 210 <容器>
 
 ## 备份与恢复
 
-`data/runtime/` 保存材料、资金历史、原交易和恢复检查点，不属于开发垃圾。其中 `rights/public-disclosures/` 是已批准条款的公开副本，不含私有材料；要让其他实例或新 checkout 显示这些条款，可复制到 `data/disclosures/` 并提交。备份前停止所有相关写入者；备份实例父目录时，还要检查应用子目录租约及 `owner-cli` 锁。
+`data/runtime/` 保存材料、资金历史、原交易和恢复检查点，不属于开发垃圾。研究上传的访问记录 `research-agent/ingest-case-access.json` 与封存密钥（`AGENTBL_INTAKE_KEY` 或 `research-agent/ingest-uploads.key`）须与上传目录一起备份：访问记录缺失或损坏时 intake 拒绝启动（只有升级前写下的旧运行目录会按其任务和案例补建一次），缺少密钥则无法读回已封存的原始文件。其中 `rights/public-disclosures/` 是已批准条款的公开副本，不含私有材料；要让其他实例或新 checkout 显示这些条款，可复制到 `data/disclosures/` 并提交。备份前停止所有相关写入者；备份实例父目录时，还要检查应用子目录租约及 `owner-cli` 锁。
 
 ```sh
 npm run runtime:backup -- create --directory <已停止目录> --key-file <独立密钥文件> --output <新加密包> --configuration <实例JSON> --revision <源码版本>
