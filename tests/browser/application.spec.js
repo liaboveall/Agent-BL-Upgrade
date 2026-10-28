@@ -178,6 +178,8 @@ for (const language of ['zh', 'en']) {
     await expect(positions.locator('button')).toHaveCount(1);
     await expect(positions.locator('button')).toBeDisabled();
     expect(await positions.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    // The side sheet slides in from 28px to the right; measure where it settles, not a frame of the animation.
+    await page.locator('#portfolio-dialog').evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished)));
     const bounds = await page.locator('#portfolio-dialog').boundingBox();
     expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
     await page.locator('#portfolio-dialog').screenshot({ path: testInfo.outputPath(`positions-${language}-390.png`) });

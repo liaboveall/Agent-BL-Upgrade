@@ -92,6 +92,12 @@
 .finance-detail-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--accent-line); }
 .controlled-panel .controlled-shares { display: grid; align-items: start; gap: 6px; margin: 0; font-size: var(--fs-12); color: var(--muted); }
 .controlled-shares input { width: 120px; }
+/* A pool that is not taking subscriptions shows where it stands and who acts next, instead of disabled buttons. */
+.finance-resolution { margin: 0 0 14px; padding: 14px 16px; border: 1px solid var(--warn-line); border-radius: var(--r); background: var(--warn-soft); color: var(--warn-ink); }
+.finance-resolution dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; margin: 10px 0; }
+.finance-resolution dt { font-size: var(--fs-12); opacity: 0.8; }
+.finance-resolution p { margin: 6px 0 0; }
+.finance-next-step { margin: 0 0 14px; padding: 12px 16px; border-top: 1px solid var(--accent-line); color: var(--text-2); }
 .controlled-panel .positions-heading { margin-top: 20px; padding: 24px 28px 0; border-top: 1px solid var(--line); font-size: var(--fs-18); }
 .positions-heading + p { margin: 16px 28px 28px; padding: 20px; border: 1px dashed var(--line-strong); border-radius: var(--r); color: var(--muted); background: var(--surface-2); }
 .controlled-panel .controlled-position, .controlled-panel .controlled-confirm { margin: 16px 28px; padding: 20px; border-color: var(--line); border-radius: var(--r-lg); }

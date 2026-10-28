@@ -31,15 +31,22 @@ const labels = {
   disburse: ['放款', 'Disburse'], repay_action: ['回款', 'Repay'], approve_repayment: ['批准精确回款额度', 'Approve exact repayment allowance'], set_eligibility: ['核准出资钱包', 'Approve investor eligibility'], refresh_screening: ['更新来源审查', 'Refresh screening'],
   mark_in_transit: ['记录发运', 'Record departure'], record_payment: ['记录回款证明', 'Record payment evidence'], record_arrival: ['记录到货证明', 'Record arrival evidence'], settle: ['正常结清', 'Settle repayment'],
   notify_resolution: ['公告处置', 'Notify resolution'], review_resolution: ['独立审核处置', 'Review resolution'], finalize_resolution: ['终局现金分配', 'Finalize cash distribution'], start_exit: ['到期发起现金退出', 'Start cash exit'], dispute_resolution: ['提交一次异议', 'Submit one dispute'],
-  sign_issuance: ['钱包签发单证', 'Sign title issuance'], sign_valuation: ['钱包签署估值', 'Sign valuation']
+  sign_issuance: ['钱包签发单证', 'Sign title issuance'], sign_valuation: ['钱包签署估值', 'Sign valuation'],
+  finalize_funding: ['关闭已达最低额的募集', 'Finalize a raise that met its minimum'], cancel_offering: ['取消无人认购的发行', 'Cancel an offering nobody subscribed'],
+  retry_collateral_release: ['重试释放质押单证', 'Retry title release'], finalize_required: ['已达最低额，待关闭募集', 'Minimum reached; finalize the raise'],
+  price_source: ['价格来源', 'Price source'], terms_from_file: ['导入文件中的价格与份额', 'Price and supply in the imported file'], terms_from_quote: ['研究定价引擎报价', 'Research pricing quote'],
+  speed_FAST: ['快速', 'Fast'], speed_BALANCED: ['均衡', 'Balanced'], speed_LOW_COST: ['低成本', 'Low cost'], quote_hash: ['报价承诺', 'Quote commitment']
 };
+const TERMS_QUOTE_CASE = 'CASE-EBL-CU-SIN-SHA';
 const actions = [
   ['create_material', ['issuer']], ['disclosure', ['issuer']], ['review_material', ['reviewer']], ['publish', ['issuer']],
   ['sign_issuance', ['issuer']], ['register_title', ['issuer']], ['pledge', ['holder']], ['sign_valuation', ['valuer']], ['create_offering', ['issuer']],
   ['set_eligibility', ['compliance']], ['refresh_screening', ['compliance']], ['disburse', ['operator', 'custodian']], ['approve_repayment', ['holder']], ['repay_action', ['holder']],
   ['mark_in_transit', ['operator', 'custodian']], ['record_payment', ['attestor']], ['record_arrival', ['attestor']], ['settle', ['operator', 'custodian']],
   ['notify_resolution', ['disposer', 'custodian']], ['review_resolution', ['reviewer']], ['start_exit', ['holder', 'investor', 'reviewer', 'custodian']],
-  ['dispute_resolution', ['holder', 'investor', 'reviewer']], ['finalize_resolution', ['holder', 'investor', 'reviewer', 'custodian']]
+  ['dispute_resolution', ['holder', 'investor', 'reviewer']], ['finalize_resolution', ['holder', 'investor', 'reviewer', 'custodian']],
+  ['finalize_funding', ['operator', 'custodian', 'issuer', 'holder', 'investor']], ['cancel_offering', ['operator', 'custodian']],
+  ['retry_collateral_release', ['holder', 'issuer', 'investor', 'custodian', 'operator', 'reviewer']]
 ];
 const atomic = (value) => `${BigInt(value ?? 0) / 1000000n}.${(BigInt(value ?? 0) % 1000000n).toString().padStart(6, '0')}`;
 const subjectKey = (wallet) => `agentbl.rights-subject:${wallet.toLowerCase()}`;
@@ -57,7 +64,9 @@ export function RoleWorkspace({ zh, status, wallet }) {
   // People enter TEST_USDC and a local date-time; the exact atomic amount and Unix seconds are derived and shown.
   const amount = toAtomic(amountText), validUntil = toUnixSeconds(validUntilLocal);
   const [approved, setApproved] = useState(false), [originalHash, setOriginalHash] = useState('');
-  viewContext.current = { wallet, generation, materialId, operation, file, amount, evidence, distribution, investorWallet, validUntil, documentText };
+  // Terms can take their price, supply and minimum raise from the research pricing engine instead of the file.
+  const [termsSource, setTermsSource] = useState('file'), [researchCash, setResearchCash] = useState('1000');
+  viewContext.current = { wallet, generation, materialId, operation, file, amount, evidence, distribution, investorWallet, validUntil, documentText, termsSource, researchCash };
   const capture = () => { const saved = { ...viewContext.current }; return () => { if (!Object.entries(saved).every(([name, value]) => viewContext.current[name] === value)) throw new Error('Wallet, mode, material or action changed. Review again.'); }; };
   const key = status?.active && wallet ? `agentbl.role-plan:${status.config.chainIdDecimal}:${status.config.contracts.RWAOfferingPool.toLowerCase()}:${wallet.toLowerCase()}` : null;
   // A new wallet, mode generation or protocol instance ends the business session and every preview built on it.
@@ -103,11 +112,16 @@ export function RoleWorkspace({ zh, status, wallet }) {
     }
     if (['disclosure', 'review_material', 'publish'].includes(operation)) {
       if (operation === 'disclosure' && !file) throw new Error(zh ? '请导入完整公开条款文件。' : 'Import the complete public terms file.');
-      const input = operation === 'disclosure' ? (() => { const { schema: _schema, policy: _policy, ...value } = file.document ?? file; return value; })() : file;
+      const fromQuote = operation === 'disclosure' && termsSource !== 'file' ? { case_id: TERMS_QUOTE_CASE, payout_speed: termsSource, requested_cash_usd: Number(researchCash) } : null;
+      if (fromQuote && !(fromQuote.requested_cash_usd > 0 && fromQuote.requested_cash_usd <= 900000)) throw new Error(zh ? '研究募集金额须大于 0 且不超过 900,000。' : 'The research amount must be above 0 and at most 900,000.');
+      const input = operation === 'disclosure' ? (() => { const { schema: _schema, policy: _policy, ...value } = file.document ?? file; return fromQuote ? { ...value, from_quote: fromQuote } : value; })() : file;
       const disclosurePreview = operation === 'disclosure' ? await rightsRequest(`materials/${materialId}/financing-disclosure-preview`, input) : pack;
       assertContext();
+      const quoted = disclosurePreview?.source_quote;
       setPlan({ local: operation, preview: { material_id: materialId, revision: workflow?.revision, documentHash: workflow?.document_hash,
-        terms_hash: disclosurePreview?.terms_hash ?? workflow?.terms_hash }, disclosurePreview, input }); return;
+        terms_hash: disclosurePreview?.terms_hash ?? workflow?.terms_hash,
+        ...(quoted ? { price_source: `${quoted.case_id} · ${text(`speed_${quoted.payout_speed}`)} · ${quoted.final_issue_price_usd} · ${quoted.tenor_days} ${zh ? '天' : 'days'}`, quote_hash: quoted.quote_hash } : {}) },
+        disclosurePreview, input: quoted ? { ...input, expected_terms_hash: disclosurePreview.terms_hash } : input }); return;
     }
     if (operation.startsWith('sign_')) {
       if (!file) throw new Error(zh ? '请导入待签研究材料。' : 'Import the research signing package.');
@@ -161,7 +175,7 @@ export function RoleWorkspace({ zh, status, wallet }) {
   });
   return <section className="role-workspace" aria-label={zh ? '融资角色工作台' : 'Financing role workspace'}>
     <h3>{zh ? '融资角色工作台' : 'Financing role workspace'}</h3>
-    <p>{zh ? '虚构铜货物 · Singapore → Shanghai · 六位小数测试代币。先验证已登记业务角色，再逐项审阅与钱包授权。' : 'Fictional copper · Singapore → Shanghai · six-decimal test assets. Verify an enrolled role, then review each action and authorize it in your wallet.'}</p>
+    <p>{zh ? '虚构铜货物 · 新加坡 → 上海 · 六位小数测试代币。先验证已登记业务角色，再逐项审阅与钱包授权。' : 'Fictional copper · Singapore → Shanghai · six-decimal test assets. Verify an enrolled role, then review each action and authorize it in your wallet.'}</p>
     {!principal ? <><label>{zh ? '管理员发放的业务身份编号' : 'Enrolled business identity ID'} <input value={subjectId} onChange={(e) => setSubjectId(e.target.value)} /></label><button type="button" disabled={busy || !wallet || !/^[a-f0-9-]{36}$/u.test(subjectId)} onClick={() => login()}>{zh ? '用当前钱包验证角色' : 'Verify role with this wallet'}</button><button type="button" disabled={busy || !wallet || !/^[a-f0-9-]{36}$/u.test(subjectId)} onClick={() => login(true)}>{zh ? '仅验证既有退款与领取' : 'Verify existing refunds and claims only'}</button></> : <>
       {principal.exit_only && <p role="status">{zh ? '仅退出会话：业务身份撤销不会取消已有退款与领取。请在下方持仓操作；本会话不能读取私有材料或增加风险。' : 'Exit-only session: revoked enrollment does not cancel existing refunds or claims. Use positions below; this session cannot read private material or add risk.'}</p>}
       <p>{principal.organization} · {principal.roles.map(text).join(' / ')} · <code>{principal.wallet}</code></p><button type="button" onClick={() => { clearRightsSession(); setPrincipal(null); setWorkflow(null); setMaterials([]); setPlan(null); }}>{zh ? '退出业务会话' : 'Sign out of business session'}</button>
@@ -174,10 +188,14 @@ export function RoleWorkspace({ zh, status, wallet }) {
       {pending && <div role="status"><p>{zh ? '已保存操作，先核对原交易。' : 'Saved operation: reconcile the original transaction first.'} {pending.plan_id}</p><label>{zh ? '原钱包交易哈希（可选）' : 'Original wallet hash (optional)'} <input value={originalHash} onChange={(e) => setOriginalHash(e.target.value)} /></label><button type="button" disabled={busy || pending.invalid} onClick={recover}>{zh ? '核对原操作' : 'Reconcile original operation'}</button>{pending.status === 'draft' && <button type="button" disabled={busy} onClick={() => { localStorage.removeItem(key); setPending(null); setPlan(null); }}>{zh ? '取消未广播预览' : 'Dismiss unbroadcast preview'}</button>}</div>}
       <label>{zh ? '本次操作' : 'Next action'} <select value={operation} onChange={(e) => { setOperation(e.target.value); setPlan(null); setApproved(false); setFile(null); }}><option value="">{zh ? '选择操作' : 'Choose action'}</option>{actions.filter(([, roles]) => roles.some((role) => principal.roles.includes(role))).map(([name]) => <option key={name} value={name}>{text(name)}</option>)}</select></label>
       {operation === 'create_material' ? <label>{zh ? '虚构研究单证内容' : 'Fictional research title contents'} <textarea value={documentText} onChange={(e) => { setDocumentText(e.target.value); setPlan(null); }} /></label> : <>
+        {operation === 'disclosure' && <><label>{text('price_source')} <select value={termsSource} onChange={(e) => { setTermsSource(e.target.value); setPlan(null); setApproved(false); }}>
+          <option value="file">{text('terms_from_file')}</option>{['FAST', 'BALANCED', 'LOW_COST'].map((speed) => <option key={speed} value={speed}>{text('terms_from_quote')} · {text(`speed_${speed}`)}</option>)}</select></label>
+          {termsSource !== 'file' && <><label>{zh ? '研究募集金额（TEST_USDC）' : 'Research raise (TEST_USDC)'} <input inputMode="decimal" value={researchCash} onChange={(e) => { setResearchCash(e.target.value); setPlan(null); }} /></label>
+            <small className="role-exact">{zh ? '价格、份额和最低募集额取自铜 · 新加坡 → 上海研究案例按条款实际期限算出的确定性报价；当事方、日期和来源仍取自导入文件。报价暂停或不可行时不会生成条款。' : 'Price, supply and minimum raise come from the deterministic quote of the copper Singapore → Shanghai research case for the terms’ own tenor; parties, dates and sources still come from the file. A paused or infeasible quote produces no terms.'}</small></>}</>}
         {['register_title', 'create_offering', 'disclosure', 'sign_issuance', 'sign_valuation', 'set_eligibility'].includes(operation) && <label>{zh ? '研究材料文件（JSON）' : 'Research package file (JSON)'} <input type="file" accept="application/json,.json" onChange={(e) => { const selected = e.target.files[0]; setPlan(null); setApproved(false); run(async () => { if (!selected) return; if (selected.size > 1048576) throw new Error('File exceeds 1 MiB'); setFile(JSON.parse(await selected.text())); }); }} /></label>}
         {['disburse', 'repay_action', 'approve_repayment', 'settle', 'record_payment', 'notify_resolution'].includes(operation) && <><label>{zh ? '金额（TEST_USDC，最多 6 位小数）' : 'Amount (TEST_USDC, up to 6 decimals)'} <input inputMode="decimal" aria-describedby="role-amount-exact" value={amountText} onChange={(e) => { setAmountText(e.target.value); setPlan(null); }} /></label>
           <small id="role-amount-exact" className="role-exact">{amount ? `= ${amount} ${zh ? '原子单位（链上精确值）' : 'atomic units (exact on-chain value)'}` : amountText ? (zh ? '请输入大于 0、最多 6 位小数的金额' : 'Enter an amount above 0 with at most six decimals') : (zh ? '1 TEST_USDC = 1,000,000 原子单位' : '1 TEST_USDC = 1,000,000 atomic units')}</small></>}
-        {['disburse', 'mark_in_transit', 'record_payment', 'record_arrival', 'notify_resolution', 'review_resolution', 'dispute_resolution', 'set_eligibility', 'refresh_screening'].includes(operation) && <label>{zh ? '审查材料承诺' : 'Evidence commitment'} <input value={evidence} onChange={(e) => { setEvidence(e.target.value); setPlan(null); }} /></label>}
+        {['disburse', 'mark_in_transit', 'record_payment', 'record_arrival', 'notify_resolution', 'review_resolution', 'dispute_resolution', 'set_eligibility', 'refresh_screening', 'cancel_offering'].includes(operation) && <label>{zh ? '审查材料承诺' : 'Evidence commitment'} <input value={evidence} onChange={(e) => { setEvidence(e.target.value); setPlan(null); }} /></label>}
         {operation === 'notify_resolution' && <label>{zh ? '分配方案承诺' : 'Distribution commitment'} <input value={distribution} onChange={(e) => { setDistribution(e.target.value); setPlan(null); }} /></label>}
         {operation === 'set_eligibility' && <label>{zh ? '待审查出资钱包' : 'Investor wallet to approve'} <input value={investorWallet} onChange={(e) => { setInvestorWallet(e.target.value); setPlan(null); }} /></label>}
         {['set_eligibility', 'refresh_screening'].includes(operation) && <><label>{zh ? '有效截止（本地时间）' : 'Valid until (local time)'} <input type="datetime-local" aria-describedby="role-valid-exact" value={validUntilLocal} onChange={(e) => { setValidUntilLocal(e.target.value); setPlan(null); }} /></label>

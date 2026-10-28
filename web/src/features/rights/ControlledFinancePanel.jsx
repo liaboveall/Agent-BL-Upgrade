@@ -23,6 +23,46 @@ function ChainTime({ value, zh, dateOnly = false }) {
   return <time dateTime={date.toISOString()}>{zone ? `${text} (${zone})` : text}</time>;
 }
 const amount = (v) => v == null ? '—' : `${BigInt(v) / 1000000n}.${(BigInt(v) % 1000000n).toString().padStart(6, '0')}`;
+const SUBSCRIBABLE = ['Open', 'Subscribed', 'Repriced'];
+// Why nobody can subscribe right now, in the order a reader should fix or understand it (src/rights/offerings.js).
+const BLOCKERS = {
+  legacy_instance: ['旧实例只退出', 'Legacy instance, exits only'], state_closed: ['当前状态不接受认购', 'State does not accept subscriptions'],
+  deadline_passed: ['募集已截止', 'Subscription ended'], fully_subscribed: ['已募满', 'Fully subscribed'],
+  intake_stopped: ['发行进件已暂停', 'Intake is stopped'], screening_expired: ['来源审查已过期', 'Screening has expired'],
+  valuation_expired: ['估值已过期', 'Valuation has expired'], valuer_inactive: ['估值人权限已撤销', 'Valuer permission revoked'],
+  title_inactive: ['单证已失效', 'Title is inactive'], asset_not_allowed: ['结算资产未获准', 'Settlement asset not allowed'],
+  eligibility_unverified: ['认购条件未能核实', 'Subscription conditions could not be verified']
+};
+const blockerTexts = (offer, zh) => (offer.subscription_blockers ?? []).filter((code) => code !== 'state_closed').map((code) => BLOCKERS[code]?.[zh ? 0 : 1] ?? code);
+// Refunds burn shares but the pool keeps its historical subscribed count; a refunded raise must not read as held shares.
+function progressText(offer, zh) {
+  if (offer.state === 'Cancelled' && BigInt(offer.raised_atomic ?? 0) === 0n && BigInt(offer.subscribed) > 0n) return zh ? `0/${offer.shares}（${offer.subscribed} 份已全部退款）` : `0/${offer.shares} (${offer.subscribed} refunded)`;
+  return `${offer.subscribed}/${offer.shares}`;
+}
+/** Where a default or liquidation stands and who may move it next. */
+function ResolutionStatus({ offer, zh }) {
+  const r = offer.resolution;
+  if (!['Defaulted', 'Liquidation', 'LossSettled'].includes(offer.state)) return null;
+  if (!r) return <div className="finance-resolution" role="note"><strong>{zh ? '处置进度' : 'Resolution'}</strong>
+    <p>{zh ? '尚未公告处置方案。到期后，持有份额的出资人或融资方可在角色工作台“到期发起现金退出”，按已签条款进入有硬截止的现金处置。' : 'No resolution has been notified. After maturity, an investor holding shares or the borrower can start a cash exit in the role workspace, which follows the signed terms to a hard deadline.'}</p></div>;
+  return <div className="finance-resolution" role="note"><strong>{zh ? '处置进度' : 'Resolution'}</strong>
+    <dl><div><dt>{zh ? '通知期截止' : 'Notice ends'}</dt><dd><ChainTime value={r.notice_until} zh={zh} /></dd></div>
+      <div><dt>{zh ? '硬截止' : 'Hard deadline'}</dt><dd><ChainTime value={r.hard_deadline} zh={zh} /></dd></div>
+      <div><dt>{zh ? '状态' : 'Status'}</dt><dd>{r.finalized ? (zh ? '已终局' : 'Finalized') : [r.reviewed ? (zh ? '已独立复核' : 'Independently reviewed') : (zh ? '待独立复核' : 'Awaiting independent review'),
+        r.disputed ? (zh ? '有未决异议' : 'Dispute pending') : r.dispute_used ? (zh ? '异议已处理' : 'Dispute resolved') : (zh ? '无异议' : 'No dispute')].join(' · ')}</dd></div></dl>
+    {!r.finalized && <p>{r.cash_only_exit
+      ? (zh ? '这是到期现金退出：硬截止后任何人可终局，按实际回收金额分配。' : 'This is a cash-only exit at maturity: anyone can finalize it after the hard deadline, distributing what was actually recovered.')
+      : (zh ? '处置负责人提出、独立审查人复核且无异议时，通知期结束后可终局；否则硬截止后任何人可终局。通知期内持有份额者可在角色工作台提出一次异议。' : 'With the disposer’s notice reviewed and undisputed, it can be finalized when the notice ends; otherwise anyone can finalize it after the hard deadline. Shareholders can raise one dispute in the role workspace during the notice.')}</p>}
+    {r.finalized && <p>{zh ? '已按实际回收结算，出资人在下方持仓中领取；迟到回款仍可再次领取。' : 'Settled on actual recovery. Investors claim below; later recoveries remain claimable.'}</p>}</div>;
+}
+/** What the pool needs next when it is not taking subscriptions. */
+function stateGuidance(offer, zh) {
+  if (offer.finalize_funding_available) return zh ? '募集期已结束且达到最低募集额：需先“关闭已达最低额的募集”（任一业务角色可在工作台操作，链上任何人可调用），之后才能放款。' : 'The raise ended above its minimum: it must be finalized first (any business role can do this in the workspace; anyone can on chain) before a draw.';
+  if (offer.empty_expired) return zh ? '募集截止时无人认购。单证仍质押在资金池，需运营方在工作台“取消无人认购的发行”后释放。' : 'Nobody subscribed before the deadline. The title stays pledged until the operator cancels the offering in the workspace.';
+  return ({ Funded: ['募集已完成，等待放款或回款。', 'Fully raised; awaiting the draw or repayment.'], InTransit: ['货物在途，等待回款与到货证明。', 'Cargo in transit; awaiting repayment and arrival evidence.'],
+    Paused: ['发行已暂停。已有持仓可按条件退款或等待恢复。', 'Paused. Existing positions may refund under the conditions or wait for resumption.'], Frozen: ['资金池已冻结，等待治理处理。', 'Frozen pending governance.'],
+    Repaid: ['已结清，出资人在下方持仓中领取。', 'Repaid. Investors claim in their positions below.'], Cancelled: ['已取消。仍有实付成本的出资人可在下方持仓中退款。', 'Cancelled. Investors with a remaining paid cost can refund in their positions below.'] })[offer.state]?.[zh ? 0 : 1] ?? null;
+}
 // Each wallet action says what it moves; a refund or claim must never read like a subscription.
 function confirmationCopy(review, zh) {
   switch (review.kind) {
@@ -135,12 +175,15 @@ export function ControlledFinancePanel({ primary = false }) {
   const blockedReason = (offer) => demo ? (zh ? 'Demo 只读；Live 测试网操作需钱包逐次授权。' : 'Demo is read only; Live testnet actions require wallet approval.')
     : !wallet ? (zh ? '先连接钱包，再核对资格与条款。' : 'Connect a wallet, then verify eligibility and terms.')
     : pending ? (zh ? '先核对原交易，避免重复发送。' : 'Reconcile the original transaction before another send.')
-    : !offer.subscription_open ? (zh ? '当前不接受新认购；核对募集截止、状态和实例版本。已有持仓仍可按条件退出。' : 'New subscriptions are closed. Check the deadline, state and instance version. Existing positions retain their exits.')
+    : !offer.subscription_open ? `${zh ? '当前不接受新认购' : 'New subscriptions are closed'}${blockerTexts(offer, zh).length ? `${zh ? '：' : ': '}${blockerTexts(offer, zh).join(zh ? '、' : ', ')}` : ''}${zh ? '。已有持仓仍可按条件退出。' : '. Existing positions retain their exits.'}`
     : (zh ? '下一步：完整阅读并同意条款，再审阅认购；链上仍核验资格与额度。' : 'Next: read and accept the full terms, then review a subscription. Eligibility and limits are checked on chain.');
   // A subscribable chain state is not an open subscription: the server closes it at the snapshot block's deadline or at full supply.
-  const closedLabel = (offer) => offer.subscription_open !== false || !['Open', 'Subscribed', 'Repriced'].includes(offer.state) ? null
+  const closedLabel = (offer) => offer.subscription_open !== false || !SUBSCRIBABLE.includes(offer.state) ? null
+    : offer.finalize_funding_available ? (zh ? '待关闭募集' : 'Awaiting finalization')
+    : offer.empty_expired ? (zh ? '零认购已截止' : 'Ended unsubscribed')
     : Number(offer.subscription_deadline) < Number(listing?.snapshot?.block_timestamp) ? (zh ? '募集已截止' : 'Subscription ended')
-    : BigInt(offer.subscribed) >= BigInt(offer.shares) ? (zh ? '已募满' : 'Fully subscribed') : (zh ? '不接受认购' : 'Not accepting subscriptions');
+    : BigInt(offer.subscribed) >= BigInt(offer.shares) ? (zh ? '已募满' : 'Fully subscribed')
+    : blockerTexts(offer, zh)[0] ?? (zh ? '不接受认购' : 'Not accepting subscriptions');
   const offerLabel = (offer) => closedLabel(offer) ?? stateLabel(offer.state);
   const storageKey = () => `agentbl.controlled-intent:${status.config.contracts.RWAOfferingPool.toLowerCase()}:${wallet.toLowerCase()}`;
   const onIntent = (intent) => { const value = { intent_id: intent.intent_id, operation: intent.operation }; localStorage.setItem(storageKey(), JSON.stringify(value)); setPending(value); };
@@ -268,20 +311,23 @@ export function ControlledFinancePanel({ primary = false }) {
             <div><dt>{zh ? '募集截止' : 'Subscription deadline'}</dt><dd><ChainTime value={offer.subscription_deadline} zh={zh} /></dd></div>
             <div><dt>{zh ? '放款截止' : 'Disbursement deadline'}</dt><dd><ChainTime value={offer.disbursement_deadline} zh={zh} /></dd></div>
             <div><dt>{zh ? '到期' : 'Maturity'}</dt><dd><ChainTime value={offer.maturity} zh={zh} /></dd></div>
-            <div><dt>{zh ? '进度' : 'Progress'}</dt><dd>{offer.subscribed} / {offer.shares} {zh ? '份；实收与回款见上表。' : 'shares; actual cash amounts appear above.'}</dd></div>
+            {offer.valuation_valid_until && <div><dt>{zh ? '估值有效至' : 'Valuation valid until'}</dt><dd><ChainTime value={offer.valuation_valid_until} zh={zh} /></dd></div>}
+            <div><dt>{zh ? '进度' : 'Progress'}</dt><dd>{progressText(offer, zh)} {zh ? '份；实收与回款见下表。' : 'shares; actual cash amounts appear in the table.'}</dd></div>
             <div><dt>{zh ? '退出责任' : 'Cash exit'}</dt><dd>{zh ? '出资人自行退款或领取；融资方实际回款。处置与异议按已签条款执行。' : 'Investors refund or claim for themselves; the borrower sends actual repayments. Resolution and disputes follow the signed terms.'}</dd></div></dl>
           <p>{zh ? '目标兑付不是预测收益；可能损失本金。公开条款在每次钱包授权前独立核验。' : 'Target redemption is not a return forecast; principal may be lost. Full terms are independently checked before wallet authorization.'}</p>
+          <ResolutionStatus offer={offer} zh={zh} />
+          {!SUBSCRIBABLE.includes(offer.state) || offer.finalize_funding_available || offer.empty_expired ? stateGuidance(offer, zh) && <p className="finance-next-step" role="note">{stateGuidance(offer, zh)}</p> : <>
           <div className="finance-detail-actions">
         <label className="controlled-shares">{zh ? '认购份额' : 'Subscription shares'} <input inputMode="numeric" value={shares} onChange={(event) => { setShares(event.target.value); setReview(null); }} /></label>
           <div className="controlled-actions controlled-steps"><button type="button" disabled={busy || loading || demo || !wallet || !offer.subscription_open || Boolean(pending)} onClick={() => startReview('acknowledge', offer)}><span className="step-badge" aria-hidden="true">1</span>{zh ? '阅读并同意条款' : 'Read and accept terms'}</button>
           <button type="button" className="finance-button-primary" disabled={busy || loading || demo || !wallet || !offer.subscription_open || Boolean(pending) || !/^[1-9]\d{0,8}$/u.test(shares)} onClick={() => startReview('subscribe', offer)}><span className="step-badge" aria-hidden="true">2</span>{zh ? '审阅认购' : 'Review subscription'}</button></div></div>
-          <p className="small muted">{zh ? '第 1 步只在链上记录你同意当前条款，不转移资金；报价更新后需要重新同意。第 2 步才会请求代币授权并认购。' : 'Step 1 only records on chain that you accept these terms; no funds move, and a new quote needs a new acceptance. Step 2 asks for the token approval and the subscription.'}</p>
+          <p className="small muted">{zh ? '第 1 步只在链上记录你同意当前条款，不转移资金；报价更新后需要重新同意。第 2 步才会请求代币授权并认购。' : 'Step 1 only records on chain that you accept these terms; no funds move, and a new quote needs a new acceptance. Step 2 asks for the token approval and the subscription.'}</p></>}
           <button type="button" disabled={busy || loading} onClick={() => readPublicTerms(offer)}>{zh ? '只读查看完整条款' : 'Read full terms without signing'}</button>
           {problem?.scope === offer.pool_id && error && <p role="alert" className="finance-alert finance-alert-inline">{error}</p>}
           {publicTerms?.pool_id === offer.pool_id && <ReadableTerms pack={publicTerms.pack} zh={zh} />}
         </section>)}
         <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份价格 / 兑付' : 'Price / redemption per share'}</th><th>{zh ? '募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
-          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{offer.subscribed}/{offer.shares}<br />{zh ? '到期 ' : 'Maturity '}<ChainTime value={offer.maturity} zh={zh} dateOnly /></td>
+          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{progressText(offer, zh)}<br />{zh ? '到期 ' : 'Maturity '}<ChainTime value={offer.maturity} zh={zh} dateOnly /></td>
             <td>{amount(offer.issue_price_atomic)} / {amount(offer.redemption_per_share_atomic)} TEST_USDC</td><td>{amount(offer.raised_atomic)} / {amount(offer.disbursed_atomic)} / {amount(offer.recovered_atomic)}</td>
             <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '查看详情' : 'View details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">{selectedPool === offer.pool_id ? '−' : '↑'}</span></button></td></tr>)}</tbody></table></div>
         {!offers.length && listing && listing.complete !== false && <p>{zh ? '此实例尚无发行。' : 'This instance has no offerings.'}</p>}
