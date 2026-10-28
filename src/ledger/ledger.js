@@ -2,6 +2,18 @@ import crypto from 'node:crypto';
 import { LedgerWriter } from './writer.js';
 
 const POSITION_KINDS = new Set(['INVESTOR_DEPOSIT', 'REFUND', 'CLAIM']);
+// A wallet operation's life. Only the first three stop the same wallet from sending again on the same chain:
+//   draft ─► broadcast_prepared ─► broadcast ─► confirmed            (the chain shows its cash event)
+//                │                    ├──────► reverted             (a canonical receipt with status 0, deep enough)
+//                │                    └──────► reconciliation_required (not found; re-checked on request)
+//                ├─► released    the wallet reported it did not send; its nonce stays reserved for the next send,
+//                │               so at most one of the two can ever be mined
+//                └─► superseded  another transaction used the saved nonce; this operation can never be mined
+//   draft ─► abandoned          nothing was checkpointed
+// The chain decides last: a cash event that matches any of them confirms it, and a reorganisation re-opens
+// `confirmed` and `reverted` for reconciliation.
+export const BLOCKING_INTENT_STATUSES = Object.freeze(['broadcast_prepared', 'broadcast', 'reconciliation_required']);
+export const SETTLED_INTENT_STATUSES = Object.freeze(['confirmed', 'reverted', 'superseded', 'released', 'abandoned']);
 const money = (value) => {
   const text = String(value ?? '0');
   if (!/^\d+$/u.test(text)) throw new Error('Ledger amounts must be unsigned atomic integers');
@@ -77,6 +89,27 @@ export class Ledger {
     return rows.length ? Object.assign({}, ...rows) : null;
   }
 
+  /** The latest state of every intent, optionally narrowed to one wallet on one chain. */
+  async listIntents({ investor, chainId } = {}) {
+    const latest = new Map();
+    for (const row of await this.writer.readIntents()) latest.set(row.intent_id, { ...latest.get(row.intent_id), ...row });
+    return [...latest.values()].filter((intent) => (!investor || lower(intent.investor) === lower(investor))
+      && (chainId === undefined || Number(intent.protocol_instance?.chain_id) === Number(chainId)));
+  }
+
+  /** Move an intent to a status that carries no new transaction hash (release, supersede, abandon). */
+  async #settle(intentId, status, allowed, extra = {}) {
+    return this.writer.exclusive(async () => {
+      const intent = await this.getIntent(intentId);
+      if (!intent) throw new Error('intent not found');
+      if (intent.status === status) return intent;
+      if (!allowed.includes(intent.status)) throw Object.assign(new Error(`A ${intent.status} operation cannot become ${status}`), { code: 'intent_state_conflict', status: 409, expose: true });
+      const updated = { ...intent, ...extra, status, [`${status}_at`]: new Date().toISOString() };
+      await this.writer.appendIntent(updated);
+      return updated;
+    });
+  }
+
   async #updateIntent(intentId, status, txHash, extra = {}) {
     return this.writer.exclusive(async () => {
       const intent = await this.getIntent(intentId);
@@ -84,31 +117,55 @@ export class Ledger {
       if (!/^0x[0-9a-f]{64}$/iu.test(txHash)) throw new Error('invalid transaction hash');
       const occupied = await this.writer.readIntents((row) => row.tx_hash && lower(row.tx_hash) === lower(txHash) && row.intent_id !== intentId);
       if (occupied.length) throw new Error('Transaction already bound to another intent');
-      if (intent.tx_hash && lower(intent.tx_hash) !== lower(txHash)) throw new Error('Intent already bound to another transaction; reconcile before retrying');
-      if (intent.status === 'confirmed' && status === 'broadcast') return intent;
-      const updated = { ...intent, ...extra, status, tx_hash: lower(txHash), [`${status}_at`]: new Date().toISOString() };
+      // A replacement (the wallet re-sent the same call with the same nonce) is the one rebinding allowed.
+      const replaced = Boolean(intent.tx_hash) && lower(intent.tx_hash) !== lower(txHash);
+      if (replaced && !extra.replaces) throw new Error('Intent already bound to another transaction; reconcile before retrying');
+      if (['confirmed', 'reverted'].includes(intent.status) && status === 'broadcast' && !replaced) return intent;
+      const { replaces, ...fields } = extra;
+      const updated = { ...intent, ...fields, status, tx_hash: lower(txHash), [`${status}_at`]: new Date().toISOString(),
+        ...(replaced ? { replaced_tx_hashes: [...(intent.replaced_tx_hashes ?? []), lower(replaces)] } : {}) };
       await this.writer.appendIntent(updated);
       return updated;
     });
   }
 
   markBroadcast(intentId, txHash) { return this.#updateIntent(intentId, 'broadcast', txHash); }
+  /** The wallet re-sent the same call with the same nonce (a speed-up): bind the hash that was mined instead. */
+  replaceTransaction(intentId, txHash, previousHash) { return this.#updateIntent(intentId, 'broadcast', txHash, { replaces: previousHash }); }
   checkpointBroadcast(intentId, checkpoint) {
     return this.writer.exclusive(async () => {
       const intent = await this.getIntent(intentId);
       if (!intent || intent.tx_hash || intent.broadcast_nonce !== undefined) throw new Error('Intent already has a broadcast checkpoint; reconcile it before another send');
       const history = await this.writer.readIntents();
       const latest = new Map(); for (const row of history) latest.set(row.intent_id, { ...latest.get(row.intent_id), ...row });
-      if ([...latest.values()].some((other) => other.intent_id !== intentId && lower(other.investor) === lower(intent.investor)
-        && Number(other.protocol_instance?.chain_id) === Number(intent.protocol_instance.chain_id)
-        && ['broadcast_prepared', 'broadcast', 'reconciliation_required'].includes(other.status))) throw Object.assign(new Error('Reconcile the saved wallet operation before another send'), { code: 'wallet_reconciliation_required', status: 409, expose: true });
+      const siblings = [...latest.values()].filter((other) => other.intent_id !== intentId && lower(other.investor) === lower(intent.investor)
+        && Number(other.protocol_instance?.chain_id) === Number(intent.protocol_instance.chain_id));
+      const blocking = siblings.filter((other) => BLOCKING_INTENT_STATUSES.includes(other.status));
+      if (blocking.length) throw Object.assign(new Error('Reconcile the saved wallet operation before another send'), { code: 'wallet_reconciliation_required', status: 409, expose: true,
+        details: { intent_ids: blocking.map((other) => other.intent_id) } });
       if (!Number.isSafeInteger(checkpoint.nonce) || checkpoint.nonce < 0 || !Number.isSafeInteger(checkpoint.block) || checkpoint.block < 0) throw new Error('Invalid broadcast checkpoint');
+      // A released operation might still surface: the next send must take its nonce so only one of them can be mined.
+      if (siblings.some((other) => other.status === 'released' && other.broadcast_nonce !== checkpoint.nonce)) {
+        throw Object.assign(new Error('A released wallet operation reserves another nonce; resolve it before this send'), { code: 'wallet_nonce_reserved', status: 409, expose: true });
+      }
       const updated = { ...intent, status: 'broadcast_prepared', broadcast_nonce: checkpoint.nonce, prepared_block: checkpoint.block };
       await this.writer.appendIntent(updated); return updated;
     });
   }
   confirmIntent(intentId, txHash, blockNumber) { return this.#updateIntent(intentId, 'confirmed', txHash, { block_number: Number(blockNumber) }); }
   reconcileIntent(intentId, txHash) { return this.#updateIntent(intentId, 'reconciliation_required', txHash); }
+  /** The transaction was mined and failed: no cash moved. The receipt's block is kept so a reorganisation can re-open it. */
+  revertIntent(intentId, txHash, { block_number: blockNumber, block_hash: blockHash }) {
+    return this.#updateIntent(intentId, 'reverted', txHash, { block_number: Number(blockNumber), block_hash: lower(blockHash) });
+  }
+  /** The wallet reported that it never sent the checkpointed operation. The caller has checked its nonce is unused. */
+  releaseIntent(intentId) { return this.#settle(intentId, 'released', ['broadcast_prepared', 'broadcast', 'reconciliation_required']); }
+  /** Another transaction consumed the saved nonce, so this operation can never be mined. */
+  supersedeIntent(intentId, { by_tx_hash: byTxHash }) {
+    return this.#settle(intentId, 'superseded', ['broadcast_prepared', 'broadcast', 'reconciliation_required', 'released'], { superseded_by_tx_hash: lower(byTxHash) });
+  }
+  /** A draft that never reached a checkpoint. */
+  abandonIntent(intentId) { return this.#settle(intentId, 'abandoned', ['draft']); }
 
   #entry(input) {
     return { ...input, entry_id: crypto.randomUUID(),

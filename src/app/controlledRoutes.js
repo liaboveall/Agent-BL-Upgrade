@@ -102,6 +102,19 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
       await authorizeWallet(intent.investor, intent, false, true);
       result = { intent: await capital.attach(intent.intent_id, (await readJsonBody(request))?.tx_hash) };
     }
+    else if (/^intents\/[a-f0-9-]{36}\/release$/u.test(route) && method === 'POST') {
+      // The wallet reported that it did not send: the service checks the chain before it lets the wallet send again.
+      const intent = await capital.ledger.getIntent(route.split('/')[1]);
+      if (!intent) throw new HttpError(404, 'controlled_intent_not_found', 'Wallet operation not found');
+      await authorizeWallet(intent.investor, intent, false, true);
+      result = { intent: await capital.releaseIntent(intent.intent_id) };
+    }
+    else if (route === 'intents' && method === 'GET') {
+      // Lets another browser (or a cleared one) find the operation that holds this wallet's next send.
+      const wallet = url.searchParams.get('wallet'); if (!isAddress(wallet)) throw new HttpError(400, 'invalid_wallet', 'A valid EVM wallet is required');
+      await authorizeWallet(wallet, null, false, true);
+      result = { intents: await capital.openIntents(wallet) };
+    }
     else if (/^intents\/[a-f0-9-]{36}$/u.test(route) && method === 'GET') {
       const intent = await capital.ledger.getIntent(route.split('/')[1]);
       if (!intent) throw new HttpError(404, 'controlled_intent_not_found', 'Wallet operation not found');

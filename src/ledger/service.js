@@ -1,5 +1,5 @@
 import { Contract, isAddress } from 'ethers';
-import { Ledger } from './ledger.js';
+import { Ledger, BLOCKING_INTENT_STATUSES } from './ledger.js';
 import { ChainEventRebuilder } from './rebuilder.js';
 import { buildPositionView, balanceKey } from './positionView.js';
 import { PROTOCOL_V5_ABI } from '../chain/protocolV5Abi.js';
@@ -136,7 +136,24 @@ export class CapitalLedgerService {
       || intent.broadcast_nonce !== undefined && tx.nonce !== intent.broadcast_nonce) fail('intent_transaction_mismatch', 'Transaction does not match the saved wallet intent');
     await this.ledger.markBroadcast(intentId, txHash);
     await this.sync();
-    return this.ledger.getIntent(intentId);
+    return this.#settleReceipt(intentId, ctx);
+  }
+
+  /**
+   * A mined transaction without a cash event may have failed. Only a canonical receipt with status 0 that is as deep as
+   * the ledger's confirmations ends the operation as `reverted`; a receipt that disappeared re-opens it for reconciliation.
+   */
+  async #settleReceipt(intentId, ctx) {
+    const intent = await this.ledger.getIntent(intentId);
+    if (!intent?.tx_hash || intent.status === 'confirmed') return intent;
+    const { read } = this.readPool.budget(20);
+    const receipt = await read(() => ctx.provider.getTransactionReceipt(intent.tx_hash));
+    if (!receipt) return intent.status === 'reverted' ? this.ledger.reconcileIntent(intentId, intent.tx_hash) : intent;
+    if (Number(receipt.status) !== 0) return intent;
+    const [block, latest] = await Promise.all([read(() => ctx.provider.getBlock(receipt.blockNumber)), read(() => ctx.provider.getBlockNumber())]);
+    if (!block?.hash || !same(block.hash, receipt.blockHash) || Number(latest) - Number(receipt.blockNumber) + 1 < this.confirmations) return intent;
+    if (intent.status === 'reverted' && same(intent.block_hash, receipt.blockHash)) return intent;
+    return this.ledger.revertIntent(intentId, intent.tx_hash, { block_number: receipt.blockNumber, block_hash: receipt.blockHash });
   }
 
   async prepareRefund({ wallet, chain_pool_id: poolId, authorization_subject, authorization_session }) {
@@ -161,20 +178,38 @@ export class CapitalLedgerService {
       || Number(intent.protocol_instance.chain_id) !== Number(this.chainConfig.chainIdDecimal)) fail('invalid_intent', 'Intent belongs to another protocol');
     if (intent.execution_generation !== undefined && intent.execution_generation !== this.getGeneration()) fail('execution_context_changed', 'Execution mode changed; prepare and review a new draft');
     await ctx.provider.call({ from: intent.investor, to: intent.protocol_instance.pool_address, data: intent.calldata, value: 0n });
-    const [nonce, block] = await Promise.all([ctx.provider.getTransactionCount(intent.investor, 'pending'), ctx.provider.getBlockNumber()]);
+    const [pending, block] = await Promise.all([ctx.provider.getTransactionCount(intent.investor, 'pending'), ctx.provider.getBlockNumber()]);
+    // An operation the wallet said it never sent keeps its nonce: this send reuses it, so at most one of them is mined.
+    const reserved = await this.#reservedNonce(intent, ctx);
+    if (reserved !== null && Number(pending) > reserved) fail('wallet_nonce_pending', 'A pending wallet transaction uses the saved nonce. Wait until it is mined, then reconcile before sending again');
+    const nonce = reserved ?? Number(pending);
     if (intent.execution_generation !== undefined && intent.execution_generation !== this.getGeneration() || this.getMode() !== 'live') fail('execution_context_changed', 'Execution context changed before broadcast');
     return this.ledger.checkpointBroadcast(intentId, { nonce, block });
   }
 
-  async recoverIntent(intentId) {
-    const intent = await this.ledger.getIntent(intentId);
-    if (!intent) fail('invalid_intent', 'Saved transaction not found', 404);
-    const ctx = await this.context(), { read } = this.readPool.budget(2000);
-    if (intent.tx_hash) {
-      if (!await read(() => ctx.provider.getTransaction(intent.tx_hash))) return this.ledger.reconcileIntent(intentId, intent.tx_hash);
-      return this.attach(intentId, intent.tx_hash);
+  /** Resolve this wallet's released operations against the chain; the nonce still reserved by them, or null. */
+  async #reservedNonce(intent, ctx) {
+    const released = (await this.ledger.listIntents({ investor: intent.investor, chainId: intent.protocol_instance.chain_id }))
+      .filter((other) => other.status === 'released' && other.intent_id !== intent.intent_id);
+    if (!released.length) return null;
+    const { read } = this.readPool.budget(2000);
+    const latestNonce = Number(await read(() => ctx.provider.getTransactionCount(intent.investor, 'latest')));
+    const open = [];
+    for (const other of released) {
+      if (latestNonce <= other.broadcast_nonce) { open.push(other.broadcast_nonce); continue; }
+      // The nonce was used meanwhile: by something else (the operation can never be mined), or by the released
+      // operation after all. Then the wallet did send it, and this send must not repeat it without the user seeing so.
+      const settled = await this.#resolveConsumedNonce(other, ctx, read);
+      if (settled.status !== 'superseded') {
+        throw Object.assign(new Error('An operation the wallet reported as not sent was mined after all; review it before sending again'),
+          { code: 'released_operation_mined', status: 409, expose: true, details: { intent_ids: [other.intent_id] } });
+      }
     }
-    if (intent.broadcast_nonce === undefined) return intent;
+    return open.length ? Math.min(...open) : null;
+  }
+
+  /** The saved nonce was consumed: bind the transaction if it is this operation (perhaps re-sent), else supersede it. */
+  async #resolveConsumedNonce(intent, ctx, read) {
     const latest = await read(() => ctx.provider.getBlockNumber());
     let found;
     try { found = await findNonceTransaction(ctx.provider, read, { from: intent.investor, nonce: intent.broadcast_nonce, fromBlock: intent.prepared_block, latest }); }
@@ -183,9 +218,60 @@ export class CapitalLedgerService {
       if (error?.code === 'recovery_block_missing' || error?.code === 'recovery_transaction_missing') fail('chain_unavailable', 'A recovery block or transaction is unavailable', 503);
       throw error;
     }
-    if (!found) return { ...intent, reconciliation_required: true };
+    if (!found) return intent;
     const { hash, tx } = found;
-    if (!same(tx.to, intent.protocol_instance.pool_address) || !same(tx.data, intent.calldata) || tx.value !== 0n) fail('nonce_consumed_by_other_transaction', 'Another transaction used the saved nonce; reconcile in the wallet');
-    return this.attach(intentId, hash);
+    // A later send of the same call can carry the reserved nonce; then that operation owns the transaction.
+    const boundElsewhere = (await this.ledger.listIntents({ investor: intent.investor })).some((other) => other.intent_id !== intent.intent_id && same(other.tx_hash ?? '', hash));
+    if (boundElsewhere || !same(tx.to, intent.protocol_instance.pool_address) || !same(tx.data, intent.calldata) || BigInt(tx.value) !== 0n) {
+      return this.ledger.supersedeIntent(intent.intent_id, { by_tx_hash: hash });
+    }
+    if (intent.tx_hash && !same(intent.tx_hash, hash)) await this.ledger.replaceTransaction(intent.intent_id, hash, intent.tx_hash);
+    return this.attach(intent.intent_id, hash);
+  }
+
+  /**
+   * The wallet reported that it did not send a checkpointed operation. Nothing here trusts that report alone: a
+   * transaction the node still knows keeps the operation open, a consumed nonce is resolved against the chain, and
+   * an unused nonce is released but stays reserved for the next send of this wallet (see checkpointBroadcast).
+   */
+  async releaseIntent(intentId) {
+    const intent = await this.ledger.getIntent(intentId);
+    if (!intent) fail('invalid_intent', 'Saved transaction not found', 404);
+    if (intent.status === 'draft') return this.ledger.abandonIntent(intentId);
+    if (!BLOCKING_INTENT_STATUSES.includes(intent.status)) return intent;
+    if (intent.broadcast_nonce === undefined) fail('manual_reconciliation_required', 'This operation has no saved nonce; attach its original wallet hash');
+    const ctx = await this.context(), { read } = this.readPool.budget(2000);
+    if (intent.tx_hash && await read(() => ctx.provider.getTransaction(intent.tx_hash))) {
+      if (await read(() => ctx.provider.getTransactionReceipt(intent.tx_hash))) return this.recoverIntent(intentId);
+      fail('transaction_pending', 'The wallet transaction is still pending. Speed it up or cancel it in the wallet, then reconcile');
+    }
+    if (Number(await read(() => ctx.provider.getTransactionCount(intent.investor, 'latest'))) > intent.broadcast_nonce) return this.#resolveConsumedNonce(intent, ctx, read);
+    return this.ledger.releaseIntent(intentId);
+  }
+
+  /** Operations of one wallet in this instance that still need attention (blocking or holding a reserved nonce). */
+  async openIntents(wallet) {
+    const pool = this.chainConfig.contracts.RWAOfferingPool;
+    return (await this.ledger.listIntents({ investor: wallet, chainId: this.chainConfig.chainIdDecimal }))
+      .filter((intent) => same(intent.protocol_instance.pool_address, pool) && [...BLOCKING_INTENT_STATUSES, 'released'].includes(intent.status))
+      .map(({ intent_id, operation, chain_pool_id, status, tx_hash, broadcast_nonce, created_at }) => ({ intent_id, operation, chain_pool_id, status, tx_hash: tx_hash ?? null, broadcast_nonce: broadcast_nonce ?? null, created_at }));
+  }
+
+  async recoverIntent(intentId) {
+    const intent = await this.ledger.getIntent(intentId);
+    if (!intent) fail('invalid_intent', 'Saved transaction not found', 404);
+    if (['superseded', 'abandoned'].includes(intent.status)) return intent;
+    const ctx = await this.context(), { read } = this.readPool.budget(2000);
+    if (intent.tx_hash) {
+      if (await read(() => ctx.provider.getTransaction(intent.tx_hash))) return this.attach(intentId, intent.tx_hash);
+      // The hash is unknown to the node: dropped, replaced by a re-send with the same nonce, or never propagated.
+      if (intent.broadcast_nonce !== undefined && Number(await read(() => ctx.provider.getTransactionCount(intent.investor, 'latest'))) > intent.broadcast_nonce) {
+        return this.#resolveConsumedNonce(intent, ctx, read);
+      }
+      return intent.status === 'released' ? intent : this.ledger.reconcileIntent(intentId, intent.tx_hash);
+    }
+    if (intent.broadcast_nonce === undefined) return intent;
+    const settled = await this.#resolveConsumedNonce(intent, ctx, read);
+    return settled === intent && intent.status !== 'released' ? { ...intent, reconciliation_required: true } : settled;
   }
 }

@@ -99,6 +99,49 @@ describe('W5 actual controlled capital HTTP, wallet and crash recovery', () => {
     const after = (await f.get(`intents/${intent.intent_id}`)).intent;
     assert.equal(after.status, 'reconciliation_required');
   });
+  it('releases a checkpoint the wallet never sent, makes the retry reuse its nonce, and supersedes the original', async (t) => {
+    const f = await fixture(t), { c } = f, p = await f.create();
+    await c.send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), 8000000n));
+    const deadline = String(await c.now() + 600n);
+    const subscribe = async () => (await f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '2', max_unit_price: '800000', expected_quote_version: '1', deadline, reviewed_disclosure_hash: p.terms.disclosureHash })).intent;
+    const first = (await f.post(`intents/${(await subscribe()).intent_id}/broadcast`, {})).intent;
+    // The wallet refused: nothing was sent. The next send is held until the first is resolved.
+    const second = await subscribe();
+    await assert.rejects(f.post(`intents/${second.intent_id}/broadcast`, {}), { code: 'wallet_reconciliation_required' });
+    assert.deepEqual((await f.get(`intents?wallet=${c.investor.address}`)).intents.map((intent) => intent.intent_id), [first.intent_id]);
+    assert.equal((await f.post(`intents/${first.intent_id}/release`, {})).intent.status, 'released');
+    const retry = (await f.post(`intents/${second.intent_id}/broadcast`, {})).intent;
+    assert.equal(retry.broadcast_nonce, first.broadcast_nonce);
+    // The retry is the same call: whichever is mined, it happens once, and it belongs to the retry.
+    assert.equal(retry.calldata, first.calldata);
+    const tx = await c.investor.sendTransaction({ to: retry.protocol_instance.pool_address, data: retry.calldata, nonce: retry.broadcast_nonce }); await tx.wait();
+    assert.equal((await f.post(`intents/${retry.intent_id}/transaction`, { tx_hash: tx.hash })).intent.status, 'confirmed');
+    const original = (await f.get(`intents/${first.intent_id}`)).intent;
+    assert.equal(original.status, 'superseded'); assert.equal(original.superseded_by_tx_hash, tx.hash.toLowerCase());
+    assert.equal((await f.get(`positions?wallet=${c.investor.address}`)).positions[0].shares, '2');
+    assert.equal(await c.pool.escrowed(p.poolId, p.terms.settlementAsset), 1600000n);
+  });
+  it('ends a subscription whose mined transaction reverted, without blocking the next one', async (t) => {
+    const f = await fixture(t), { c } = f, p = await f.create();
+    await c.send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), 8000000n));
+    const deadline = await c.now() + 600n;
+    const prepared = (await f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '2', max_unit_price: '800000', expected_quote_version: '1', deadline: String(deadline), reviewed_disclosure_hash: p.terms.disclosureHash })).intent;
+    const intent = (await f.post(`intents/${prepared.intent_id}/broadcast`, {})).intent;
+    // Mined after its deadline: the receipt has status 0 and no cash event.
+    await c.provider.send('evm_setAutomine', [false]);
+    let tx;
+    try {
+      tx = await c.investor.sendTransaction({ to: intent.protocol_instance.pool_address, data: intent.calldata, nonce: intent.broadcast_nonce, gasLimit: 1_000_000n });
+      await c.provider.send('evm_setNextBlockTimestamp', [Number(deadline) + 1]); await c.provider.send('evm_mine', []);
+    } finally { await c.provider.send('evm_setAutomine', [true]); }
+    assert.equal((await c.provider.getTransactionReceipt(tx.hash)).status, 0);
+    const reverted = (await f.post(`intents/${intent.intent_id}/transaction`, { tx_hash: tx.hash })).intent;
+    assert.equal(reverted.status, 'reverted');
+    assert.deepEqual((await f.get(`intents?wallet=${c.investor.address}`)).intents, []);
+    assert.equal(await c.pool.escrowed(p.poolId, p.terms.settlementAsset), 0n);
+    const next = (await f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '1', max_unit_price: '800000', expected_quote_version: '1', deadline: String(await c.now() + 600n), reviewed_disclosure_hash: p.terms.disclosureHash })).intent;
+    assert.equal((await f.post(`intents/${next.intent_id}/broadcast`, {})).intent.status, 'broadcast_prepared');
+  });
   it('refunds exact paid principal through a saved wallet intent after failed fundraising, preserving Demo isolation', async (t) => {
     const f = await fixture(t), { c } = f, p = await f.create();
     f.setMode('demo'); await assert.rejects(f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '1' }), { code: 'live_mode_required' }); f.setMode('live');

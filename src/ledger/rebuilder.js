@@ -119,6 +119,8 @@ export class ChainEventRebuilder {
         && (intent.created_block === undefined || item.block_number >= intent.created_block));
       if (!entry) {
         if (reorg && intent.status === 'confirmed' && intent.tx_hash) await this.ledger.reconcileIntent(intent.intent_id, intent.tx_hash);
+        // A failure recorded in a block the replay re-read is checked again; the reorganised chain may differ.
+        else if (reorg && intent.status === 'reverted' && intent.tx_hash && Number(intent.block_number) >= scanFrom) await this.ledger.reconcileIntent(intent.intent_id, intent.tx_hash);
         continue;
       }
       const occupied = await this.ledger.writer.readIntents((row) => row.tx_hash && same(row.tx_hash, entry.source.tx_hash) && row.intent_id !== intent.intent_id);
