@@ -1,6 +1,6 @@
 # 运行与维护
 
-范围是离线 Demo 和 Injective EVM 测试网研究应用。人工验收已完成，结果见[人工验收](acceptance.md)；真实手机、独立主机/签名权接管及商用部署不再列为后续交付任务。
+范围是离线 Demo 和 Injective EVM 测试网研究应用。人工钱包验收已在 v2 实例完成，当前 v3 实例尚未重新验收，见[人工验收](acceptance.md)；真实手机、独立主机/签名权接管及商用部署不再列为后续交付任务。
 
 ## 启动和配置
 
@@ -38,6 +38,14 @@ npm run dev
 
 `GET /api/health` 检查进程存活，`GET /api/ready` 检查就绪，`GET /api/ops/status` 提供运行状态。就绪并不表示真实业务启用。
 
+研究案例目录在内存中缓存，超过 `AGENTBL_CATALOG_TTL_MS`（默认 60 秒）后在后台重建，请求不等待冷启动的公开数据源。Demo 资金池只在首次请求时建立；状态仍跟随报价的池（未被 Agent 动作接管）至多每 `AGENTBL_POOL_REQUOTE_MS`（默认 60 秒）按当前数据重新定价，所以启动时因数据源慢而暂停的案例会在数据恢复后自动重新开放，实时数据也不会悄悄过期。
+
+## 受控实例的日常条件
+
+受控合约对每笔认购和放款都检查实例级条件：来源审查（`refreshScreening`，最长 24 小时）、该池估值有效期（最长 30 天，不能续期）、估值人权限、单证状态、结算资产许可和进件开关。任一条件不满足，所有人都无法认购或放款。资金池列表的 `subscription_blockers` 与页面上的“不接受认购”原因来自这些链上读数；合规角色需按期刷新来源审查，估值过期后只能等放款截止后由 `startExit` 退回本金。
+
+部分募集（最低募集额小于满额）在募集截止后需要先执行“关闭已达最低额的募集”（`finalize_funding`，链上任何人可调用）才能放款；零认购且已过募集截止的池需运营方“取消无人认购的发行”（`cancel_offering`）才释放质押单证。两者都在角色工作台中，按普通交易计划预检和钱包确认。
+
 ## 容器与安全停止
 
 ```sh
@@ -73,6 +81,8 @@ npm run runtime:backup -- restore --directory <新目标目录> --key-file <独�
 恢复使用新目录，核对材料、配置、历史与余额后才接入服务。备份解密、材料解密和交易签名密钥分别保管；不复制密钥到 Git、产物包或日志。旧 v1 专用恢复演练器已移除，日常恢复使用上述通用备份工具。
 
 ## 测试与维护入口
+
+已批准条款的公开副本可用 `npm run disclosures:import -- <实例 deployment-state.json 或 public-evidence/*.json>` 导入 `data/disclosures/`：只复制能重算出自身哈希、且与配置实例链上 `termsHash` 和披露哈希一致的条款包（默认实例为 `public/rights-instance.json`，可用 `--config` 指定，`--dry-run` 只核对）。
 
 日常检查使用 README 的命令表。`test:capital`、`test:rights`、`test:evidence`、`test:operations` 和 `test:finance` 共享一个集成入口，在隔离的本地 EVM 执行，不读取公共测试网资金。
 

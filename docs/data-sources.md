@@ -20,7 +20,7 @@ IMF PortWatch 每周发布一次逐日通行量，最新一天通常比当天晚
 
 ## 可选模型
 
-接入使用 `.env.example` 的实际变量，配置 provider、model、端点、输出 token 上限及可选 reasoning effort。连通性不代表模型身份、质量或业务适用性已经通过。
+接入使用 `.env.example` 的实际变量，配置 provider、model、端点、输出 token 上限及可选 reasoning effort。`LLM_MODEL` 必须是所选端点实际提供的模型；未配置任何 provider 时，Agent 版本承诺把模型记为 `none:deterministic-only`，而不是默认模型名。连通性不代表模型身份、质量或业务适用性已经通过。
 
 材料视为不可信输入，抽取保留来源和不确定性；模型超时或无效输出进入可见回退。LLM 可以解释确定性结果，不能绕过资格、签名或修改已签条款。
 

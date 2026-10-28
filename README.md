@@ -99,6 +99,7 @@ For custom settings, copy [.env.example](.env.example) to `.env` without overwri
 | `npm run test:browser` | Bilingual browser, keyboard, and wallet-context regressions |
 | `npm run build:clean` / `npm run verify:release` | Reproducible builds and complete local delivery checks |
 | `npm run terms:verify -- <terms.json>` | Verify public financing terms offline |
+| `npm run disclosures:import -- <record.json>` | Ship approved terms that match the instance's on-chain commitments |
 | `npm run mcp:stdio` | MCP interface over standard input/output |
 | `npm run smoke:x402` / `npm run x402:intel` | Report-payment checks and intelligence utilities |
 

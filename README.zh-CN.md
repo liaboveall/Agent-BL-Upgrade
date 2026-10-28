@@ -99,6 +99,7 @@ npm run dev
 | `npm run test:browser` | 双语界面、键盘和钱包上下文回归 |
 | `npm run build:clean` / `npm run verify:release` | 可复现构建与完整本地交付检查 |
 | `npm run terms:verify -- <terms.json>` | 离线复算公开融资条款 |
+| `npm run disclosures:import -- <record.json>` | 导入与实例链上承诺一致的已批准条款 |
 | `npm run mcp:stdio` | MCP 标准输入输出接口 |
 | `npm run smoke:x402` / `npm run x402:intel` | 报告付款检查与情报工具 |
 
