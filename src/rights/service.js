@@ -110,9 +110,9 @@ export class RightsService {
     let state = 'waiting', timer;
     queue.queued++;
     const leave = (next) => { if (state === 'waiting') { state = next; queue.queued--; } };
+    // Kept referenced so a waiting caller always gets its answer; the finally below always clears it.
     const expired = new Promise((_, reject) => {
       timer = setTimeout(() => { if (state === 'waiting') { leave('abandoned'); queue.rejected++; reject(busy()); } }, this.waitMs);
-      timer.unref?.();
     });
     const work = this.writer.exclusive(async () => {
       if (state === 'abandoned') return undefined; // its caller already received rights_vault_busy; never run it late
