@@ -14,7 +14,7 @@ async function financePage(page, language) {
       throw new Error('No transaction is authorized by this browser fixture');
     } };
   }, { language, wallet, pool, intentId });
-  const config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 3, contracts: { RWAOfferingPool: pool }, abis: { RWAOfferingPool: [] } };
+  const config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 4, contracts: { RWAOfferingPool: pool }, abis: { RWAOfferingPool: [] } };
   await page.route('**/api/demo/mode', (route) => route.fulfill({ json: { mode: 'live', demoMode: false, liveAvailable: true, generation: 3 } }));
   await page.route('**/api/controlled/status', (route) => route.fulfill({ json: { active: true, config, controller: `0x${'90'.repeat(20)}` } }));
   await page.route('**/api/controlled/offerings**', (route) => route.fulfill({ json: { config, snapshot: { block_number: 700, block_hash: `0x${'ab'.repeat(32)}`, block_timestamp: Math.floor(Date.now() / 1000) - 180 },

@@ -8,7 +8,7 @@ import {AssetIdentityHub} from "./AssetIdentityHub.sol";
 interface IRightsReleasePolicy {
     function onCollateralReleased(uint256 eblId) external returns (bool riskLocked);
     function capitalPool() external view returns (address);
-    function canWithdrawPledge(uint256 eblId, bytes32 termsHash) external view returns (bool);
+    function canWithdrawPledge(uint256 eblId, uint256 pledgeId) external view returns (bool);
 }
 
 /// @notice No commercial document fields or public document URLs are accepted on chain.
@@ -46,6 +46,8 @@ contract CommittedEBLRegistry is EIP712 {
     mapping(uint256 => uint256) public holderNonce;
     mapping(uint256 => address) public pledgedTo;
     mapping(uint256 => bytes32) public pledgeTerms;
+    /// @notice Identifies each pledge of a title, so a release always names the pledge it ends.
+    mapping(uint256 => uint256) public pledgeId;
     mapping(uint256 => bool) public invalidated;
     mapping(bytes32 => mapping(address => bool)) public revokedIssuer;
 
@@ -147,13 +149,13 @@ contract CommittedEBLRegistry is EIP712 {
         require(controller != address(0) && pool == IRightsReleasePolicy(controller).capitalPool()
             && termsHash != bytes32(0) && validUntil >= block.timestamp, "invalid pledge");
         require(msg.sender == t.holder || SignatureChecker.isValidSignatureNow(t.holder, pledgeDigest(eblId, pool, termsHash, validUntil), signature), "holder consent missing");
-        holderNonce[eblId]++;
+        pledgeId[eblId] = ++holderNonce[eblId];
         pledgedTo[eblId] = pool; pledgeTerms[eblId] = termsHash;
         emit EBLPledged(eblId, pool, t.holder);
     }
     function withdrawUnopenedPledge(uint256 eblId) external {
         require(msg.sender == titles[eblId].holder && pledgedTo[eblId] != address(0), "not holder or pledged");
-        require(IRightsReleasePolicy(controller).canWithdrawPledge(eblId, pledgeTerms[eblId]), "offering exists");
+        require(IRightsReleasePolicy(controller).canWithdrawPledge(eblId, pledgeId[eblId]), "offering exists");
         address pool = pledgedTo[eblId];
         delete pledgedTo[eblId]; delete pledgeTerms[eblId]; holderNonce[eblId]++;
         emit EBLPledgeReleased(eblId, pool, msg.sender);

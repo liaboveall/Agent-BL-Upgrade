@@ -11,6 +11,7 @@ import { readOfferings } from '../rights/offerings.js';
 import { HttpError, readJsonBody, sendJson } from './http.js';
 import { RightsService } from '../rights/service.js';
 import { financingReview } from '../rights/financingReview.js';
+import { CONTROL_VERSION } from '../rights/typedData.js';
 
 export function controlledCapitalConfig(configuration) {
   return { protocolVersion: 5, controlVersion: configuration.control_version, chainIdDecimal: Number(configuration.chain_id), confirmations: Number(configuration.chain_id) === 31337 ? 1 : 3, explorerBase: 'https://testnet.blockscout.injective.network',
@@ -58,7 +59,9 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
     };
     let result;
     if (route === 'status' && method === 'GET') result = { active: true, scope: 'research_test_assets_only', business_enabled: false, mode: getMode(),
-      controller: await chain.controller.getAddress(), config, terms_acceptance_required: true, eligibility_required: true };
+      controller: await chain.controller.getAddress(), config, terms_acceptance_required: true, eligibility_required: true,
+      // A superseded control version keeps only the exits that add no new risk (src/rights/chain.js LEGACY_OPERATIONS).
+      exit_only: Number(config.controlVersion) < CONTROL_VERSION };
     else if (pagedRead && method === 'GET') {
       const query = readPage(url.searchParams);
       if (route !== 'offerings') { query.pool_id = Number(route.split('/')[1]); if (!Number.isSafeInteger(query.pool_id)) throw new HttpError(400, 'invalid_pool_id', 'A safe positive pool ID is required'); }

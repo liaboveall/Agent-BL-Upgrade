@@ -29,20 +29,27 @@ test('N2 readable obligations are canonical, complete, immutable and independent
     const changed = inputOf(pack); mutate(changed); assert.throws(() => createDisclosure(changed));
   }
 });
-test('version 2 disclosures keep verifying under their own policy and domain; versions cannot be swapped', async () => {
-  const { FINANCE_POLICY, FINANCE_POLICY_V2 } = await import('../src/rights/financePolicy.js');
+test('version 2 and 3 disclosures keep verifying under their own policy and domain; versions cannot be swapped', async () => {
+  const { FINANCE_POLICY, FINANCE_POLICY_V2, FINANCE_POLICY_V3 } = await import('../src/rights/financePolicy.js');
   const { hashOfferingTerms } = await import('../src/rights/typedData.js');
-  const legacy = disclosureFixture(2), current = disclosureFixture();
-  assert.equal('control_version' in legacy.document.instance, false); assert.equal(current.document.instance.control_version, 3);
-  assert.deepEqual(legacy.document.policy, FINANCE_POLICY_V2); assert.deepEqual(current.document.policy, FINANCE_POLICY);
-  assert.equal(FINANCE_POLICY.max_subscription_segments_per_investor, 32);
-  for (const pack of [legacy, current]) { assert.equal(verifyDisclosure(pack), true); assert.deepEqual(createDisclosure(inputOf(pack)), pack); }
+  const legacy = disclosureFixture(2), previous = disclosureFixture(3), current = disclosureFixture();
+  assert.equal('control_version' in legacy.document.instance, false);
+  assert.deepEqual([previous.document.instance.control_version, current.document.instance.control_version], [3, 4]);
+  assert.deepEqual(legacy.document.policy, FINANCE_POLICY_V2); assert.deepEqual(previous.document.policy, FINANCE_POLICY_V3); assert.deepEqual(current.document.policy, FINANCE_POLICY);
+  // The v3 text is what the published v3 disclosures embed, byte for byte.
+  assert.equal(FINANCE_POLICY_V3.version, 'agentbl-cash-rights-v3'); assert.equal(FINANCE_POLICY_V3.pricing, 'fixed_after_first_subscription_full_raise_must_reach_minimum');
+  assert.equal(FINANCE_POLICY.version, 'agentbl-cash-rights-v4');
+  for (const policy of [FINANCE_POLICY_V3, FINANCE_POLICY]) assert.equal(policy.max_subscription_segments_per_investor, 32);
+  for (const pack of [legacy, previous, current]) { assert.equal(verifyDisclosure(pack), true); assert.deepEqual(createDisclosure(inputOf(pack)), pack); }
   const { chain_id: chainId, controller } = current.document.instance;
   assert.equal(legacy.terms_hash, hashOfferingTerms(chainId, controller, legacy.terms, 2));
-  assert.equal(current.terms_hash, hashOfferingTerms(chainId, controller, current.terms, 3));
-  const relabelled = structuredClone(legacy); relabelled.document.instance.control_version = 3; assert.equal(verifyDisclosure(relabelled), false);
+  assert.equal(previous.terms_hash, hashOfferingTerms(chainId, controller, previous.terms, 3));
+  assert.equal(current.terms_hash, hashOfferingTerms(chainId, controller, current.terms, 4));
+  for (const [pack, version] of [[legacy, 3], [previous, 4], [current, 3]]) {
+    const relabelled = structuredClone(pack); relabelled.document.instance.control_version = version; assert.equal(verifyDisclosure(relabelled), false);
+  }
   const downgraded = structuredClone(current); delete downgraded.document.instance.control_version; assert.equal(verifyDisclosure(downgraded), false);
-  for (const version of [1, 2, 4]) assert.throws(() => createDisclosure({ ...inputOf(current), instance: { ...current.document.instance, control_version: version } }));
+  for (const version of [1, 2, 5]) assert.throws(() => createDisclosure({ ...inputOf(current), instance: { ...current.document.instance, control_version: version } }));
 });
 test('N2 public disclosure requires issuing authority and two approved bindings; restart and old revisions retain exact terms without private title', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'n2-vault-')); t.after(() => fs.rm(directory, { recursive: true, force: true }));

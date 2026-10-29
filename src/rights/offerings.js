@@ -78,8 +78,10 @@ function offeringRow(config, block, instance, value, second) {
     // A successful partial raise stays Subscribed until anyone closes it with finalizeFunding().
     finalize_funding_available: finalized === false && SUBSCRIBABLE.includes(state) && expired && BigInt(offer.subscribed) > 0n
       && offer.minRaise != null && BigInt(offer.raisedAtomic) >= BigInt(offer.minRaise),
-    // No subscriber and past its deadline: only the operator's cancellation releases the pledged title.
+    // No subscriber and past its deadline: the operator's cancellation releases the pledged title and, from version 4,
+    // anyone's startExit does too unless the pool is frozen.
     empty_expired: BigInt(offer.subscribed) === 0n && expired && CANCELLABLE_EMPTY.includes(state),
+    unsubscribed_exit_available: config.controlVersion >= 4 && BigInt(offer.subscribed) === 0n && expired && CANCELLABLE_EMPTY.includes(state) && state !== 8,
     resolution: resolutionOf(value.resolutions, instance.controller),
     subscription_blockers: blockers, subscription_open: blockers.length === 0 } };
 }

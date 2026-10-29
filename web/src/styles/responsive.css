@@ -43,10 +43,31 @@
   .market-layout { grid-template-columns: minmax(0, 1fr); }
   .market-aside { position: static; }
   .market-back { display: inline-flex; margin-bottom: 8px; }
+  /* One column: a tapped card opens its detail as a sheet over the shelf; the list keeps its place underneath. */
+  .market-aside.is-sheet {
+    position: fixed; inset: auto 0 0 0; top: auto !important; z-index: 45; max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain;
+    max-width: 720px; margin-inline: auto; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--bg); box-shadow: var(--shadow-lg);
+    animation: sheet-in var(--dur) var(--ease-out);
+  }
+  .market-aside.is-sheet:focus { outline: none; }
+  .market-aside.is-sheet .detail-panel { box-shadow: none; }
+  .sheet-bar { position: sticky; top: 0; z-index: 1; display: grid; justify-items: start; gap: 2px; padding: 8px 0 4px; background: var(--bg); }
+  .sheet-grip { justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+  .sheet-bar .market-back { margin: 0; }
+  .sheet-backdrop { position: fixed; inset: 0; z-index: 44; background: rgb(0 0 0 / 0.32); }
+  html.has-sheet { overflow: hidden; }
 }
+@keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .market-aside.is-sheet { animation: none; } }
 @media (max-width: 1199px) {
   .mint-layout, .mint-secondary, .agent-layout { grid-template-columns: minmax(0, 1fr); }
   .mint-aside { position: static; }
+  /* One column: the issuing panel follows the documents instead of the whole valuation and waterfall. */
+  .mint-layout { gap: var(--s-5); }
+  .mint-main { display: contents; }
+  .mint-main > .documents { order: 1; }
+  .mint-aside { order: 2; }
+  .mint-main > :not(.documents) { order: 3; }
   .page-head { flex-wrap: wrap; gap: 20px; }
   .page-head-stats { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
   .toolbar { flex-wrap: wrap; }
@@ -89,9 +110,33 @@
   .case-picker { width: 100%; }
   .deal-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .deal-strip-item:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .deal-grid { grid-template-columns: minmax(0, 1fr); }
-  .chip-group { flex-wrap: wrap; }
-  .search { flex-basis: 100%; max-width: none; margin-left: 0; }
+  .deal-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  /* The market's first screen goes to the projects: the introduction folds, the categories scroll in one row
+     and a card keeps only status, price, upside, funding and the date. */
+  .market .page-head { gap: 8px; margin-bottom: 12px; }
+  .market .page-head-text h1 { font-size: var(--fs-22); }
+  .market .page-head-stats { width: 100%; justify-content: space-between; align-items: center; }
+  .market .page-head-stats .stat { flex-direction: row; align-items: baseline; gap: 8px; }
+  .market .page-head-stats .stat-value { font-size: var(--fs-18); }
+  .page-intro > summary { width: fit-content; min-height: 32px; color: var(--accent); font-size: var(--fs-13); font-weight: 600; cursor: pointer; }
+  .page-intro[open] > summary { margin-bottom: 6px; }
+  .mint .page-head { gap: 12px; margin-bottom: 12px; }
+  .mint .page-head-text h1 { font-size: var(--fs-22); }
+  /* The case summary is one sideways row on a phone rather than three rows above the documents. */
+  .mint .deal-strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(140px, max-content); overflow-x: auto; margin-bottom: var(--s-4); overscroll-behavior-x: contain; }
+  .mint .deal-strip-item:last-child:nth-child(odd) { grid-column: auto; }
+  .toolbar { gap: 8px; margin-bottom: 12px; }
+  .chip-group { flex-wrap: nowrap; flex-basis: 100%; overflow-x: auto; padding: 2px 2px 4px; margin-inline: -2px; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .chip-group::-webkit-scrollbar { display: none; }
+  .chip-btn { flex: none; }
+  .search { flex-basis: 100%; max-width: none; margin-left: 0; order: 2; }
+  .sort-field { order: 3; }
+  .board-head { margin-bottom: 8px; }
+  .deal-card { gap: 10px; padding: 12px 14px; }
+  @supports (grid-template-rows: subgrid) { .deal-card { grid-row: auto; grid-template-rows: none; row-gap: 10px; } }
+  .deal-badges, .deal-meta { margin-top: -4px; }
+  .deal-kpi-value { font-size: var(--fs-18); }
+  .deal-kpi-note { display: none; }
   .toolbar > .select { max-width: 100%; }
   .kv-grid-3, .kv-grid-4, .readout-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .controlled-panel > details, .role-workspace, .controlled-confirm, .controlled-position { padding: 12px; }

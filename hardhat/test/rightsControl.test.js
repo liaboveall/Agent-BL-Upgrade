@@ -95,10 +95,12 @@ describe('W3 committed rights and controlled capital instance', () => {
     await send(c.usdc.mint(c.investor.address, 10_000_000n)); await send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), ethers.MaxUint256));
     await expect(c.pool.connect(c.investor).subscribe(p.poolId, 1)).to.be.revertedWithCustomError(c.pool, 'NotEligible');
     await c.eligible(p);
-    await send(c.controller.connect(c.operator).applyPricingAction(p.poolId, 700000, ACTION.REPRICE_DOWN, uniqueHash(), uniqueHash()));
-    await expect(c.pool.connect(c.investor).subscribe(p.poolId, 1)).to.be.revertedWithCustomError(c.pool, 'NotEligible');
-    await send(c.controller.connect(c.investor).acknowledgeTerms(p.poolId, p.hash, 2, p.terms.subscribeUntil));
-    await send(c.pool.connect(c.investor).subscribeWithTerms(p.poolId, 1, 700000, 2, p.terms.subscribeUntil));
+    // The price is part of the signed terms: an operator cannot change it, so the accepted quote stays the only one.
+    await expect(c.controller.connect(c.operator).applyPricingAction(p.poolId, 700000, ACTION.REPRICE_DOWN, uniqueHash(), uniqueHash()))
+      .to.be.revertedWithCustomError(c.controller, 'InvalidOperation');
+    await expect(c.controller.connect(c.investor).acknowledgeTerms(p.poolId, p.hash, 2, p.terms.subscribeUntil)).to.be.revertedWith('terms changed');
+    await expect(c.pool.connect(c.investor).subscribeWithTerms(p.poolId, 1, 700000, 1, p.terms.subscribeUntil)).to.be.revertedWithCustomError(c.pool, 'PriceAboveUserLimit');
+    await send(c.pool.connect(c.investor).subscribeWithTerms(p.poolId, 1, 800000, 1, p.terms.subscribeUntil));
     await send(c.pool.connect(c.investor).subscribe(p.poolId, 1));
     await send(c.controller.connect(c.compliance).setEligibility(c.investor.address, uniqueHash(), uniqueHash(), 0));
     await expect(c.pool.connect(c.investor).subscribe(p.poolId, 1)).to.be.revertedWithCustomError(c.pool, 'NotEligible');
@@ -127,8 +129,8 @@ describe('W3 committed rights and controlled capital instance', () => {
     await c.lifecycle(c.attestor, 'recordImporterPayment', [p.poolId, uniqueHash(), 10_000_000n]);
     await c.lifecycle(c.attestor, 'recordCargoArrival', [p.poolId, uniqueHash()]);
     await c.lifecycle(c.operator, 'settle', [p.poolId, 10_000_000n]);
-    const badFee = await c.queue(c.controller, 'deductFee', [p.poolId, 1_000_001n, uniqueHash()]); await c.advance(badFee.eta);
-    await expect(c.governance.execute(badFee.id, badFee.data)).to.be.revertedWith('fee cap exceeded');
+    // Version 4 has no fee path at all: the controller, the pool's only owner, cannot deduct one.
+    expect(c.controller.interface.getFunction('deductFee')).to.equal(null);
     await send(c.controller.connect(c.guardian).setIntakeStopped(true, uniqueHash()));
     await c.govern(c.controller, 'setRole', [await c.controller.COMPLIANCE(), c.compliance.address, false]);
     await send(c.pool.connect(c.investor).claim(p.poolId));
@@ -162,7 +164,9 @@ describe('W3 committed rights and controlled capital instance', () => {
   });
   it('preserves governed cancellation and expiry of queued operations', async () => {
     const c = await deployRights(), op = await c.queue(c.controller, 'setIntakeStopped', [true, uniqueHash()]);
-    await send(c.governance.connect(c.memberC).cancel(op.id)); await c.advance(op.eta);
+    await send(c.governance.connect(c.memberC).cancel(op.id));
+    expect((await c.governance.operations(op.id)).done).to.equal(false);
+    await send(c.governance.connect(c.memberA).cancel(op.id)); await c.advance(op.eta);
     await expect(c.governance.execute(op.id, op.data)).to.be.revertedWith('not approved');
     const expired = await c.queue(c.controller, 'setIntakeStopped', [true, uniqueHash()]);
     await c.advance(expired.eta + 7n * 86400n + 1n);

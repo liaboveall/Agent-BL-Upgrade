@@ -21,10 +21,10 @@ const uint = (value) => { requireThat(typeof value === 'string' && /^(?:0|[1-9]\
 const ARTIFACTS = path.resolve(import.meta.dirname, '../../hardhat/artifacts/contracts');
 const CONTRACTS = ['RightsGovernance', 'AssetIdentityHub', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5'];
 // Earlier instances are verified against the ABI/runtime frozen before the next version's edits.
-export const FROZEN_ARTIFACTS = Object.freeze({ 1: 'rights-v1-artifacts.json', 2: 'rights-v2-artifacts.json' });
+export const FROZEN_ARTIFACTS = Object.freeze({ 1: 'rights-v1-artifacts.json', 2: 'rights-v2-artifacts.json', 3: 'rights-v3-artifacts.json' });
 // Superseded instances keep only exits that add no new risk; v1 predates the public exit paths.
-const LEGACY_OPERATIONS = { 1: ['notify_resolution', 'review_resolution', 'finalize_resolution'],
-  2: ['repay', 'record_payment', 'record_arrival', 'settle', 'mark_default', 'notify_resolution', 'review_resolution', 'finalize_resolution', 'start_exit', 'dispute_resolution', 'cancel_offering'] };
+const V2_EXITS = ['repay', 'record_payment', 'record_arrival', 'settle', 'mark_default', 'notify_resolution', 'review_resolution', 'finalize_resolution', 'start_exit', 'dispute_resolution', 'cancel_offering'];
+export const LEGACY_OPERATIONS = Object.freeze({ 1: ['notify_resolution', 'review_resolution', 'finalize_resolution'], 2: V2_EXITS, 3: [...V2_EXITS, 'retry_collateral_release'] });
 export function maskImmutableBytecode(bytecode, artifact) {
   let code = String(bytecode).toLowerCase();
   for (const ranges of Object.values(artifact.immutableReferences ?? {})) for (const { start, length } of ranges) {
@@ -33,6 +33,15 @@ export function maskImmutableBytecode(bytecode, artifact) {
     code = code.slice(0, offset) + '0'.repeat(length * 2) + code.slice(offset + length * 2);
   }
   return code;
+}
+
+let frozenGovernance;
+/** RightsGovernance as deployed by every superseded version; the shared hub's governance must be one of them. */
+export function frozenGovernanceArtifacts() {
+  frozenGovernance ??= Promise.all(Object.values(FROZEN_ARTIFACTS).map(async (file) =>
+    (await readJson(path.resolve(import.meta.dirname, '../../scripts/config', file)))?.contracts?.RightsGovernance))
+    .then((list) => list.filter((a) => a?.deployedBytecode));
+  return frozenGovernance;
 }
 
 // How long a complete verification serves the hot read paths before it is repeated in full.
@@ -98,7 +107,18 @@ export class RightsChainService {
       && equal(controllerDomain.verifyingContract, owner) && equal(registryDomain.verifyingContract, actualRegistry)
       && BigInt(controllerDomain.chainId) === BigInt(this.chainId) && BigInt(registryDomain.chainId) === BigInt(this.chainId), 'rights_signature_domain_mismatch');
     const hub = new Contract(hubAddress, ['function registry(address) view returns (bool)', 'function governance() view returns (address)'], this.provider);
-    requireThat(await view(hub, 'registry', actualRegistry) && equal(await view(hub, 'governance'), gov), 'rights_registry_not_enrolled');
+    const hubGovernance = await view(hub, 'governance');
+    requireThat(await view(hub, 'registry', actualRegistry), 'rights_registry_not_enrolled');
+    // From version 4 an instance has its own governance; the shared hub, and with it the reservations of every
+    // earlier instance, stays under the governance that created it, which must be a known delayed 2-of-3 governance.
+    if (!equal(hubGovernance, gov)) {
+      requireThat(BigInt(version) >= 4n, 'rights_registry_not_enrolled');
+      const predecessor = new Contract(hubGovernance, ['function memberCount() view returns (uint256)', 'function delay() view returns (uint64)'], this.provider);
+      const [code, members, wait, own] = await Promise.all([read(() => this.provider.getCode(hubGovernance, readAt?.blockTag)), view(predecessor, 'memberCount'), view(predecessor, 'delay'),
+        this.artifacts?.RightsGovernance ?? readJson(path.join(ARTIFACTS, 'RightsGovernance.sol', 'RightsGovernance.json'))]);
+      requireThat(BigInt(members) >= 3n && BigInt(wait) >= 3600n && [own, ...await frozenGovernanceArtifacts()]
+        .some((a) => a?.deployedBytecode && maskImmutableBytecode(code, a) === maskImmutableBytecode(a.deployedBytecode, a)), 'rights_registry_not_enrolled');
+    }
     const addresses = { RightsGovernance: gov, AssetIdentityHub: hubAddress, CommittedEBLRegistry: actualRegistry,
       RightsController: owner, ControlledRWAToken: actualToken, RWAOfferingPoolV5: actualPool };
     for (const name of CONTRACTS) {
@@ -185,10 +205,16 @@ export class RightsChainService {
     if (block?.hash !== receipt.blockHash) return { tx_hash: txHash, status: 'reconciling', block_number: null, block_hash: null };
     const latest = await this.provider.getBlockNumber();
     // Local chains confirm immediately; controlled testnet candidates require two successors.
-    const depth = BigInt(plan.chain_id) === 31337n ? 0 : 2;
+    const depth = this.confirmationDepth(plan.chain_id);
     return { tx_hash: txHash, status: receipt.status === 0 ? 'reverted' : latest - receipt.blockNumber < depth ? 'confirming' : 'confirmed',
       block_number: receipt.blockNumber, block_hash: receipt.blockHash };
   }
+  /** Blocks a receipt needs on top of it before a decision rests on it; local chains decide at once. */
+  confirmationDepth(chainId = this.chainId) { return BigInt(chainId) === 31337n ? 0 : 2; }
+  /**
+   * The transaction that used a saved plan's nonce, or null while the nonce is unused. Another transaction is
+   * reported with `settled`: whether its receipt is canonical and deep enough for the plan to be superseded by it.
+   */
   async recoverTransaction(plan) {
     const { read } = this.readPool.budget(2000);
     const latest = await read(() => this.provider.getBlockNumber());
@@ -201,8 +227,26 @@ export class RightsChainService {
     }
     if (!found) return null;
     const { hash, tx } = found;
-    if (!equal(tx.to, plan.to) || !equal(tx.data, plan.calldata) || tx.value !== 0n) return { status: 'nonce_consumed_by_other_transaction', observed_tx_hash: hash };
-    return this.verifyTransaction(plan, hash);
+    if (equal(tx.to, plan.to) && equal(tx.data, plan.calldata) && tx.value === 0n) return this.verifyTransaction(plan, hash);
+    const receipt = await read(() => this.provider.getTransactionReceipt(hash));
+    const block = receipt && await read(() => this.provider.getBlock(receipt.blockNumber));
+    const settled = Boolean(block?.hash && equal(block.hash, receipt.blockHash)
+      && BigInt(latest) - BigInt(receipt.blockNumber) >= BigInt(this.confirmationDepth(plan.chain_id)));
+    return { status: 'nonce_consumed_by_other_transaction', observed_tx_hash: hash, settled,
+      block_number: receipt?.blockNumber ?? null, block_hash: receipt?.blockHash ?? null };
+  }
+  /**
+   * What a wallet's "rejected" answer can be checked against: a transaction the node still knows for the plan,
+   * a transaction waiting in the mempool with its nonce, a mined one (this plan's or another), or an unused nonce.
+   */
+  async releaseObservation(plan) {
+    const { read } = this.readPool.budget(2000);
+    if (plan.tx_hash && await read(() => this.provider.getTransaction(plan.tx_hash))) return { state: 'own', observed: await this.verifyTransaction(plan, plan.tx_hash) };
+    const [latest, pending] = await Promise.all([read(() => this.provider.getTransactionCount(plan.from, 'latest')), read(() => this.provider.getTransactionCount(plan.from, 'pending'))]);
+    if (Number(latest) <= plan.nonce) return { state: Number(pending) > plan.nonce ? 'pending' : 'unused' };
+    const observed = await this.recoverTransaction(plan);
+    if (!observed) return { state: 'unused' };
+    return observed.status === 'nonce_consumed_by_other_transaction' ? { state: 'other', ...observed } : { state: 'own', observed };
   }
 }
 

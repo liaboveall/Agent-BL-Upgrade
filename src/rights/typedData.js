@@ -26,7 +26,7 @@ export const SESSION_TYPES = Object.freeze({ BusinessSession: fields([
   ['subject', 'bytes32'], ['organization', 'bytes32'], ['wallet', 'address'], ['nonce', 'bytes32'], ['validUntil', 'uint64']
 ]) });
 /** Control version of newly deployed instances. Older instances keep their own signing domain. */
-export const CONTROL_VERSION = 3;
+export const CONTROL_VERSION = 4;
 export function rightsDomain(chainId, verifyingContract, version = CONTROL_VERSION) { return { name: 'AgentBL Rights', version: String(version), chainId, verifyingContract }; }
 export function titleDomain(chainId, verifyingContract) { return { name: 'AgentBL Title', version: '1', chainId, verifyingContract }; }
 export function hashOfferingTerms(chainId, controller, terms, version = CONTROL_VERSION) { return TypedDataEncoder.hash(rightsDomain(chainId, controller, version), TERMS_TYPES, terms); }

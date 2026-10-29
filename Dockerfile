@@ -48,9 +48,9 @@ COPY --from=web /app/dist ./dist
 COPY data ./data
 # Shared loopback-port and transaction recovery helpers are runtime dependencies.
 COPY scripts/lib ./scripts/lib
-# Retain the frozen ABI/runtime inventories needed to read and exit deployed v1 and v2 instances
+# Retain the frozen ABI/runtime inventories needed to read and exit deployed v1, v2 and v3 instances
 # (src/rights/chain.js FROZEN_ARTIFACTS; npm run check keeps the two lists in step).
-COPY scripts/config/rights-v1-artifacts.json scripts/config/rights-v2-artifacts.json ./scripts/config/
+COPY scripts/config/rights-v1-artifacts.json scripts/config/rights-v2-artifacts.json scripts/config/rights-v3-artifacts.json ./scripts/config/
 COPY --from=contracts /contracts/artifacts/contracts ./hardhat/artifacts/contracts
 
 # x402 receipts, cached paid reports, decision logs and Mystery reveals live here:

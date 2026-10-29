@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContractFactory, JsonRpcProvider, id } from 'ethers';
 import { RightsChainService } from '../../src/rights/chain.js';
 import { createDisclosure } from '../../src/rights/disclosure.js';
-import { ISSUANCE_TYPES, TERMS_TYPES, VALUATION_TYPES, rightsDomain, titleDomain, hashOfferingTerms } from '../../src/rights/typedData.js';
+import { CONTROL_VERSION, ISSUANCE_TYPES, TERMS_TYPES, VALUATION_TYPES, rightsDomain, titleDomain, hashOfferingTerms } from '../../src/rights/typedData.js';
 
 export async function deployRightsRpc(node, t) {
   const provider = new JsonRpcProvider(node.url, undefined, { cacheTimeout: -1 }); provider.pollingInterval = 10;
@@ -25,11 +25,12 @@ export async function deployRightsRpc(node, t) {
   const usdc = await deploy('MockUSDC');
   const now = async () => BigInt((await provider.getBlock('latest')).timestamp);
   const advance = async (time) => { await provider.send('evm_setNextBlockTimestamp', [Number(time)]); await provider.send('evm_mine', []); };
-  const govern = async (contract, method, args) => {
-    const data = contract.interface.encodeFunctionData(method, args), receipt = await send(governance.propose(await contract.getAddress(), data, fresh()));
-    const event = receipt.logs.map((log) => { try { return governance.interface.parseLog(log); } catch { return null; } }).find((event) => event?.name === 'Proposed');
-    await send(governance.connect(memberB).approve(event.args.id)); await advance((await governance.operations(event.args.id)).eta);
-    await send(governance.execute(event.args.id, data));
+  // `through` is the governance that owns the target (an instance's own, or the shared hub's).
+  const govern = async (contract, method, args, through = governance) => {
+    const data = contract.interface.encodeFunctionData(method, args), receipt = await send(through.connect(memberA).propose(await contract.getAddress(), data, fresh()));
+    const event = receipt.logs.map((log) => { try { return through.interface.parseLog(log); } catch { return null; } }).find((event) => event?.name === 'Proposed');
+    await send(through.connect(memberB).approve(event.args.id)); await advance((await through.operations(event.args.id)).eta);
+    await send(through.connect(memberA).execute(event.args.id, data));
   };
   await govern(hub, 'setRegistry', [await registry.getAddress(), true]);
   await govern(registry, 'bindController', [await controller.getAddress()]);
@@ -47,7 +48,7 @@ export async function deployRightsRpc(node, t) {
       settlementAsset: await usdc.getAddress(), exporter: holder.address, feeRecipient: memberC.address, supply: '10', issuePrice: '800000', target: '1000000', minRaise: '8000000',
       maturity: String(time + 200000n), subscribeUntil: String(time + 80000n), disburseUntil: String(time + 90000n), maxFee: '0', policyHash: fresh('disposal-policy'), disclosureHash: fresh('disclosure'), nonce: String(serial++) };
     const { policyHash: _policy, disclosureHash: _disclosure, ...rawTerms } = terms;
-    const pack = createDisclosure({ revision: 1, instance: { chain_id: Number(chainId), controller: await controller.getAddress(), pool: await pool.getAddress(), control_version: 3 }, terms: rawTerms,
+    const pack = createDisclosure({ revision: 1, instance: { chain_id: Number(chainId), controller: await controller.getAddress(), pool: await pool.getAddress(), control_version: CONTROL_VERSION }, terms: rawTerms,
       parties: { issuer: issuer.address, holder: holder.address, operator: operator.address, valuer: valuer.address, compliance: compliance.address, disposer: disposer.address, reviewer: reviewer.address, governance: await governance.getAddress() },
       sources: ['invoice', 'cost', 'collateral', 'risk'].map((field) => ({ field, status: 'fixture', reference: 'synthetic research fixture; not real cargo' })) });
     Object.assign(terms, pack.terms);

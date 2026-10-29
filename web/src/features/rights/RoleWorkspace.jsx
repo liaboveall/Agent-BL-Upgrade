@@ -30,7 +30,7 @@ const labels = {
   register_title: ['登记已签单证', 'Register signed title'], pledge: ['同意本池质押', 'Consent to this pledge'], create_offering: ['发行已审融资', 'Create approved offering'],
   disburse: ['放款', 'Disburse'], repay_action: ['回款', 'Repay'], approve_repayment: ['批准精确回款额度', 'Approve exact repayment allowance'], set_eligibility: ['核准出资钱包', 'Approve investor eligibility'], refresh_screening: ['更新来源审查', 'Refresh screening'],
   mark_in_transit: ['记录发运', 'Record departure'], record_payment: ['记录回款证明', 'Record payment evidence'], record_arrival: ['记录到货证明', 'Record arrival evidence'], settle: ['正常结清', 'Settle repayment'],
-  notify_resolution: ['公告处置', 'Notify resolution'], review_resolution: ['独立审核处置', 'Review resolution'], finalize_resolution: ['终局现金分配', 'Finalize cash distribution'], start_exit: ['到期发起现金退出', 'Start cash exit'], dispute_resolution: ['提交一次异议', 'Submit one dispute'],
+  notify_resolution: ['公告处置', 'Notify resolution'], review_resolution: ['独立审核处置', 'Review resolution'], finalize_resolution: ['终局现金分配', 'Finalize cash distribution'], start_exit: ['发起退出（无人认购的取消，或到期退出）', 'Start exit (cancel an unsubscribed offering, or exit at maturity)'], dispute_resolution: ['提交一次异议', 'Submit one dispute'],
   sign_issuance: ['钱包签发单证', 'Sign title issuance'], sign_valuation: ['钱包签署估值', 'Sign valuation'],
   finalize_funding: ['关闭已达最低额的募集', 'Finalize a raise that met its minimum'], cancel_offering: ['取消无人认购的发行', 'Cancel an offering nobody subscribed'],
   retry_collateral_release: ['重试释放质押单证', 'Retry title release'], finalize_required: ['已达最低额，待关闭募集', 'Minimum reached; finalize the raise'],
@@ -63,8 +63,41 @@ const FILE_HELP = {
   create_offering: ['估值方用“钱包签署估值”导出的 research-valuation-signed.json；条款取自已发布的完整条款。', 'The research-valuation-signed.json the valuer exported with “Sign valuation”; the terms come from the published disclosure.'],
   set_eligibility: ['资格审查文件 JSON，含出资主体的身份承诺 subject_hash；不上传身份原文。', 'The eligibility review JSON with the investor’s subject_hash commitment; no identity document is uploaded.']
 };
+// Saved operations that can send nothing more; anything else still needs reconciling before this wallet sends again.
+const SETTLED_PLAN = ['confirmed', 'reverted', 'released', 'superseded', 'abandoned'];
+const PLAN_STATUS = { draft: ['未广播预览', 'Unbroadcast preview'], broadcast_prepared: ['已准备发送，结果未知', 'Prepared to send; outcome unknown'],
+  pending: ['已发出，等待打包', 'Sent; waiting to be mined'], confirming: ['已打包，等待确认块', 'Mined; waiting for confirmations'], reconciling: ['区块变化，正在重新核对', 'Block changed; reconciling again'],
+  confirmed: ['已确认', 'Confirmed'], reverted: ['链上执行失败，状态未改变', 'Reverted on chain; nothing changed'],
+  released: ['钱包未发出：已释放，可再次确认', 'The wallet sent nothing: released, you can confirm it again'],
+  superseded: ['同一 nonce 已被另一笔已确认交易使用，原操作不会再上链', 'Another confirmed transaction used its nonce; the operation can never be mined'],
+  abandoned: ['已放弃的预览', 'Abandoned preview'] };
 const atomic = (value) => `${BigInt(value ?? 0) / 1000000n}.${(BigInt(value ?? 0) % 1000000n).toString().padStart(6, '0')}`;
 const subjectKey = (wallet) => `agentbl.rights-subject:${wallet.toLowerCase()}`;
+const COMMITMENT = /^0x[a-fA-F0-9]{64}$/u;
+/**
+ * A bytes32 commitment, typed in or computed here as keccak256 of a local file's bytes. The file never leaves the
+ * browser: only the commitment goes on chain, and whoever keeps the original can show later that it matches.
+ */
+function CommitmentField({ zh, id, label, value, onChange }) {
+  const [source, setSource] = useState(null);
+  const pick = async (file) => {
+    if (!file) return;
+    if (file.size > 8 * 1048576) { setSource({ error: zh ? '文件超过 8 MiB' : 'The file exceeds 8 MiB' }); return; }
+    try {
+      const { keccak256 } = await loadEthers();
+      onChange(keccak256(new Uint8Array(await file.arrayBuffer())));
+      setSource({ name: file.name, size: file.size });
+    } catch { setSource({ error: zh ? '无法读取该文件，请改为直接填写承诺' : 'The file could not be read; enter the commitment instead' }); }
+  };
+  const help = source?.error ?? (source?.name ? `keccak256 · ${source.name} · ${source.size.toLocaleString()} ${zh ? '字节（文件未上传）' : 'bytes (not uploaded)'}`
+    : value && !COMMITMENT.test(value) ? (zh ? '承诺须为 0x 开头的 64 位十六进制' : 'A commitment is 0x followed by 64 hex digits')
+    : (zh ? '链上只记录承诺；原件由你保管，日后用于核对。' : 'Only the commitment goes on chain; keep the original to verify it later.'));
+  return <div className="role-commitment">
+    <label>{label} <input value={value} aria-describedby={`${id}-help`} onChange={(e) => { setSource(null); onChange(e.target.value); }} /></label>
+    <label className="role-commitment-file">{zh ? '或从本地文件生成（文件不会上传）' : 'Or compute it from a local file (not uploaded)'} <input type="file" onChange={(e) => pick(e.target.files[0])} /></label>
+    <small id={`${id}-help`} className="role-exact" role={source?.error ? 'alert' : undefined}>{help}</small>
+  </div>;
+}
 function exportJson(value, name) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -111,6 +144,15 @@ export function RoleWorkspace({ zh, status, wallet }) {
   }, [wallet]);
   // The reviewer confirmed the preview as it read in the previous language; ask for that one confirmation again.
   useEffect(() => { setApproved(false); }, [zh]);
+  // Keep the saved operation only while it still needs reconciling; settled ones free the wallet for the next send.
+  const remember = (result) => {
+    if (SETTLED_PLAN.includes(result?.status)) { try { localStorage.removeItem(key); } catch {} setPending(null); return; }
+    const saved = { plan_id: result.plan_id, status: result.status };
+    try { localStorage.setItem(key, JSON.stringify(saved)); } catch {}
+    setPending(saved);
+  };
+  const describePlan = (result) => `${PLAN_STATUS[result.status]?.[zh ? 0 : 1] ?? result.status}${result.confirmation_pending
+    ? (zh ? '（另一笔交易已使用其 nonce，正在等待足够确认）' : ' (another transaction used its nonce; waiting for confirmations)') : ''} · ${result.tx_hash ?? result.superseded_by_tx_hash ?? '—'}`;
   const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(failure); } finally { setBusy(false); } };
   const reload = async () => { setMaterials((await rightsRequest('materials')).materials); if (materialId) setWorkflow(await rightsRequest(`materials/${materialId}/workflow`)); };
   const login = (exitOnly = false) => run(async () => { const value = await openRightsSession(subjectId, { exitOnly }); setPrincipal(value);
@@ -187,11 +229,25 @@ export function RoleWorkspace({ zh, status, wallet }) {
       const tx = await asset.approve(selected.preview.spender, selected.preview.amount_atomic); await tx.wait(status.config.confirmations ?? 1);
       setNotice(`${zh ? '额度回执' : 'Allowance receipt'}: ${tx.hash}`);
     } else {
-      const result = await sendRightsPlan(selected, { session, ethersFn: loadEthers, assertCurrent,
-        beforeBroadcast: async (value) => { const checked = await rightsRequest(`transaction-plans/${value.plan_id}/broadcast`, {}); const recovery = { plan_id: value.plan_id, status: checked.status }; localStorage.setItem(key, JSON.stringify(recovery)); setPending(recovery); return checked; },
-        attachTransaction: (id, hash) => rightsRequest(`transaction-plans/${id}/transaction`, { tx_hash: hash }) });
-      setNotice(`${zh ? '原交易状态' : 'Original transaction status'}: ${result.status} · ${result.tx_hash}`);
-      if (result.status === 'confirmed') { localStorage.removeItem(key); setPending(null); }
+      let checkpointed = false, result;
+      try {
+        result = await sendRightsPlan(selected, { session, ethersFn: loadEthers, assertCurrent,
+          beforeBroadcast: async (value) => { const checked = await rightsRequest(`transaction-plans/${value.plan_id}/broadcast`, {}); checkpointed = true; remember(checked); return checked; },
+          attachTransaction: (id, hash) => rightsRequest(`transaction-plans/${id}/transaction`, { tx_hash: hash }) });
+      } catch (failure) {
+        // The wallet says it sent nothing. The server checks the chain before it frees this wallet: an unused nonce
+        // releases the operation (the same preview can be confirmed again), anything else stays for reconciliation.
+        if (checkpointed && (failure?.code === 'ACTION_REJECTED' || failure?.code === 4001)) {
+          const released = await rightsRequest(`transaction-plans/${selected.plan_id}/release`, {});
+          remember(released);
+          setNotice(released.status === 'released'
+            ? (zh ? '钱包拒绝了交易，没有发出任何内容。操作已释放：可以再次确认同一预览，或关闭预览后准备其他操作。' : 'The wallet rejected the transaction and sent nothing. The operation is released: confirm the same preview again, or close it and prepare another action.')
+            : `${zh ? '原操作状态' : 'Original operation status'}: ${describePlan(released)}`);
+        }
+        throw failure;
+      }
+      setNotice(`${zh ? '原交易状态' : 'Original transaction status'}: ${describePlan(result)}`);
+      remember(result);
       await reload();
     }
     setPlan(null); setApproved(false);
@@ -199,9 +255,18 @@ export function RoleWorkspace({ zh, status, wallet }) {
   const recover = () => run(async () => {
     if (originalHash) await rightsRequest(`transaction-plans/${pending.plan_id}/transaction`, { tx_hash: originalHash });
     const result = await rightsRequest(`transaction-plans/${pending.plan_id}`);
-    setNotice(`${zh ? '原交易状态' : 'Original transaction status'}: ${result.status} · ${result.tx_hash ?? '—'}`);
-    if (['confirmed', 'reverted'].includes(result.status)) { localStorage.removeItem(key); setPending(null); }
-    else { const saved = { plan_id: result.plan_id, status: result.status }; localStorage.setItem(key, JSON.stringify(saved)); setPending(saved); }
+    setNotice(`${zh ? '原交易状态' : 'Original transaction status'}: ${describePlan(result)}`);
+    remember(result);
+  });
+  // For an operation the wallet never sent (rejected, closed, or the page reloaded before it answered).
+  const release = () => run(async () => {
+    const result = await rightsRequest(`transaction-plans/${pending.plan_id}/release`, {});
+    setNotice(`${zh ? '原操作状态' : 'Original operation status'}: ${describePlan(result)}`);
+    remember(result);
+  });
+  const dismissDraft = () => run(async () => {
+    try { await rightsRequest(`transaction-plans/${pending.plan_id}/release`, {}); } catch { /* an unsent draft blocks nothing on the server */ }
+    try { localStorage.removeItem(key); } catch {} setPending(null); setPlan(null);
   });
   return <section className="role-workspace" aria-label={zh ? '融资角色工作台' : 'Financing role workspace'}>
     <h3>{zh ? '融资角色工作台' : 'Financing role workspace'}</h3>
@@ -221,7 +286,12 @@ export function RoleWorkspace({ zh, status, wallet }) {
         {workflow.snapshot && <p>{zh ? '规范区块' : 'Canonical block'} #{workflow.snapshot.block_number} · <code>{workflow.snapshot.block_hash}</code></p>}
         {pack && <ReadableTerms pack={{ ...pack, pool_id: workflow.pool_id }} zh={zh} />}</>}
       <p>{zh ? '认购、退款和独立领取在下方资金池与持仓中办理。角色登记不替代链上权限；每项操作准备时会重新检查。' : 'Use the funding pools and positions below for subscriptions, refunds and independent claims. Enrolled roles also require current on-chain permission, checked when preparing each action.'}</p>
-      {pending && <div role="status"><p>{zh ? '已保存操作，先核对原交易。' : 'Saved operation: reconcile the original transaction first.'} {pending.plan_id}</p><label>{zh ? '原钱包交易哈希（可选）' : 'Original wallet hash (optional)'} <input value={originalHash} onChange={(e) => setOriginalHash(e.target.value)} /></label><button type="button" disabled={busy || pending.invalid} onClick={recover}>{zh ? '核对原操作' : 'Reconcile original operation'}</button>{pending.status === 'draft' && <button type="button" disabled={busy} onClick={() => { localStorage.removeItem(key); setPending(null); setPlan(null); }}>{zh ? '取消未广播预览' : 'Dismiss unbroadcast preview'}</button>}</div>}
+      {pending && <div role="status" className="role-pending"><p>{zh ? '已保存操作，先核对原交易。' : 'Saved operation: reconcile the original transaction first.'} <code>{pending.plan_id}</code>{pending.status && ` · ${PLAN_STATUS[pending.status]?.[zh ? 0 : 1] ?? pending.status}`}</p>
+        <label>{zh ? '原钱包交易哈希（可选）' : 'Original wallet hash (optional)'} <input value={originalHash} onChange={(e) => setOriginalHash(e.target.value)} /></label>
+        <button type="button" disabled={busy || pending.invalid} onClick={recover}>{zh ? '核对原操作' : 'Reconcile original operation'}</button>
+        {pending.status === 'draft' ? <button type="button" disabled={busy} onClick={dismissDraft}>{zh ? '取消未广播预览' : 'Dismiss unbroadcast preview'}</button>
+          : !pending.invalid && <button type="button" disabled={busy} onClick={release}>{zh ? '钱包没有发出，释放记录' : 'The wallet sent nothing: release'}</button>}
+        <small className="role-exact">{zh ? '释放前服务会在链上核对：钱包仍有同一 nonce 的待处理交易、或原交易已上链时不会释放；nonce 被另一笔已确认交易使用时，原操作标记为不会再上链。' : 'Before releasing, the service checks the chain: it does not release while a transaction with the same nonce is pending or once the original is mined; if another confirmed transaction used the nonce, the operation is marked as never to be mined.'}</small></div>}
       <label>{zh ? '本次操作' : 'Next action'} <select value={operation} onChange={(e) => { setOperation(e.target.value); setPlan(null); setApproved(false); setFile(null); }}><option value="">{zh ? '选择操作' : 'Choose action'}</option>
         {(() => {
           const allowed = actions.filter(([, roles]) => roles.some((role) => principal.roles.includes(role))).map(([name]) => name);
@@ -239,8 +309,8 @@ export function RoleWorkspace({ zh, status, wallet }) {
           <small id="role-file-help" className="role-exact">{FILE_HELP[operation][zh ? 0 : 1]}</small></>}
         {['disburse', 'repay_action', 'approve_repayment', 'settle', 'record_payment', 'notify_resolution'].includes(operation) && <><label>{zh ? '金额（TEST_USDC，最多 6 位小数）' : 'Amount (TEST_USDC, up to 6 decimals)'} <input inputMode="decimal" aria-describedby="role-amount-exact" value={amountText} onChange={(e) => { setAmountText(e.target.value); setPlan(null); }} /></label>
           <small id="role-amount-exact" className="role-exact">{amount ? `= ${amount} ${zh ? '原子单位（链上精确值）' : 'atomic units (exact on-chain value)'}` : amountText ? (zh ? '请输入大于 0、最多 6 位小数的金额' : 'Enter an amount above 0 with at most six decimals') : (zh ? '1 TEST_USDC = 1,000,000 原子单位' : '1 TEST_USDC = 1,000,000 atomic units')}</small></>}
-        {['disburse', 'mark_in_transit', 'record_payment', 'record_arrival', 'notify_resolution', 'review_resolution', 'dispute_resolution', 'set_eligibility', 'refresh_screening', 'cancel_offering'].includes(operation) && <label>{zh ? '审查材料承诺' : 'Evidence commitment'} <input value={evidence} onChange={(e) => { setEvidence(e.target.value); setPlan(null); }} /></label>}
-        {operation === 'notify_resolution' && <label>{zh ? '分配方案承诺' : 'Distribution commitment'} <input value={distribution} onChange={(e) => { setDistribution(e.target.value); setPlan(null); }} /></label>}
+        {['disburse', 'mark_in_transit', 'record_payment', 'record_arrival', 'notify_resolution', 'review_resolution', 'dispute_resolution', 'set_eligibility', 'refresh_screening', 'cancel_offering'].includes(operation) && <CommitmentField zh={zh} id="role-evidence" label={zh ? '审查材料承诺' : 'Evidence commitment'} value={evidence} onChange={(value) => { setEvidence(value); setPlan(null); }} />}
+        {operation === 'notify_resolution' && <CommitmentField zh={zh} id="role-distribution" label={zh ? '分配方案承诺' : 'Distribution commitment'} value={distribution} onChange={(value) => { setDistribution(value); setPlan(null); }} />}
         {operation === 'set_eligibility' && <label>{zh ? '待审查出资钱包' : 'Investor wallet to approve'} <input value={investorWallet} onChange={(e) => { setInvestorWallet(e.target.value); setPlan(null); }} /></label>}
         {['set_eligibility', 'refresh_screening'].includes(operation) && <><label>{zh ? '有效截止（本地时间）' : 'Valid until (local time)'} <input type="datetime-local" aria-describedby="role-valid-exact" value={validUntilLocal} onChange={(e) => { setValidUntilLocal(e.target.value); setPlan(null); }} /></label>
           <small id="role-valid-exact" className="role-exact">{validUntil ? `= Unix ${validUntil} · ${new Date(Number(validUntil) * 1000).toISOString().replace('.000Z', 'Z')}` : (zh ? '链上以 Unix 秒记录' : 'Recorded on chain in Unix seconds')}</small></>}

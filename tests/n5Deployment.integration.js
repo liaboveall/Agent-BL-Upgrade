@@ -28,11 +28,15 @@ it('deploys a new instance against a shared hub, enforces delay, resumes canonic
     const settlement = await new ContractFactory(asset.abi, asset.bytecode, signers.governorA).deploy(); await settlement.waitForDeployment();
     const nonce = await c.provider.getTransactionCount(signers.governorA.address);
     const candidate = await prepareRightsCandidate({ instance_id: 'n5-integration', chain_id: 31337, governance: c.governance.target,
-      hub: c.hub.target, deployer: signers.governorA.address, nonce });
+      hub: c.hub.target, deployer: signers.governorA.address, nonce, delay: 3600,
+      members: [signers.governorA.address, signers.governorB.address, signers.governorC.address] });
     candidate.contracts.MockAuthorizationUSDC = settlement.target; candidate.rpc_url = node.url; candidate.artifacts.MockAuthorizationUSDC = asset;
     const before = await c.hub.registry(c.registry.target);
     let run = await executeCandidate({ directory, candidate, provider: c.provider, signers, action: 'prepare', confirmations: 1 });
-    assert.equal(run.state.transactions.length, 33);
+    // The instance's own governance, registry, token, pool and controller, three bindings and 13 proposals with approvals.
+    assert.equal(run.state.transactions.length, 34);
+    assert.equal(run.state.operations[0].governance.toLowerCase(), c.governance.target.toLowerCase(), 'the shared hub enrolls through its own governance');
+    assert.ok(run.state.operations.slice(1).every((op) => op.governance.toLowerCase() === run.state.contracts.RightsGovernance.toLowerCase()));
     assert.equal(run.state.active, false);
     const afterPreparation = await c.provider.getTransactionCount(signers.governorA.address);
     run = await executeCandidate({ directory, candidate, provider: c.provider, signers, action: 'prepare', confirmations: 1 });
@@ -40,10 +44,10 @@ it('deploys a new instance against a shared hub, enforces delay, resumes canonic
     await assert.rejects(executeCandidate({ directory, candidate, provider: c.provider, signers, action: 'activate', confirmations: 1 }), /Governance delay/);
     await c.advance(BigInt(Math.max(...run.state.operations.map((op) => Number(op.eta)))));
     run = await executeCandidate({ directory, candidate, provider: c.provider, signers, action: 'activate', confirmations: 1 });
-    assert.equal(run.state.transactions.length, 46); assert.equal(run.state.active, true);
+    assert.equal(run.state.transactions.length, 47); assert.equal(run.state.active, true);
     assert.equal(await c.hub.registry(c.registry.target), before, 'Predecessor enrollment is retained');
     const chain = await loadRightsChain(path.join(directory, 'rights-instance.json'));
-    assert.equal((await chain.verify()).control_version, 3); assert.equal(await chain.controller.intakeStopped(), false); await chain.provider.destroy();
+    assert.equal((await chain.verify()).control_version, 4); assert.equal(await chain.controller.intakeStopped(), false); await chain.provider.destroy();
     const nonceBefore = await c.provider.getTransactionCount(signers.governorA.address);
     await executeCandidate({ directory, candidate, provider: c.provider, signers, action: 'activate', confirmations: 1 });
     assert.equal(await c.provider.getTransactionCount(signers.governorA.address), nonceBefore);

@@ -17,11 +17,19 @@ export const FINANCE_POLICY_V2 = Object.freeze({ version: 'agentbl-cash-rights-v
   direct_transfer: 'not_pool_repayment_requires_separate_reconciliation' });
 
 const { max_segments: _segments, ...shared } = FINANCE_POLICY_V2;
-export const FINANCE_POLICY = Object.freeze({ ...shared, version: 'agentbl-cash-rights-v3',
+// Byte-identical to what v3 disclosures embed.
+export const FINANCE_POLICY_V3 = Object.freeze({ ...shared, version: 'agentbl-cash-rights-v3',
   max_subscription_segments_per_investor: 32,
   pricing: 'fixed_after_first_subscription_full_raise_must_reach_minimum',
   early_liquidation: 'delayed_governance_before_maturity_operator_may_only_freeze',
   issuer_keys: 'rotation_keeps_existing_titles_revocation_invalidates_them',
   collateral_release: 'anyone_may_retry_after_terminal_state' });
 
-export function financePolicy(controlVersion) { return controlVersion >= 3 ? FINANCE_POLICY : FINANCE_POLICY_V2; }
+export const FINANCE_POLICY = Object.freeze({ ...FINANCE_POLICY_V3, version: 'agentbl-cash-rights-v4',
+  pricing: 'signed_terms_price_only_a_new_price_is_a_new_offering',
+  undisbursed_exit: 'public_close_at_disbursement_deadline_principal_only_or_unsubscribed_cancel_after_subscription_deadline_unless_frozen',
+  default: 'only_a_shortfall_at_maturity_cash_covered_pools_close_as_repaid',
+  collateral_release: 'anyone_may_retry_after_terminal_state_only_for_the_pledge_the_offering_was_created_on',
+  governance_cancel: 'two_members_cancel_an_approved_operation_its_only_approver_may_withdraw_it_before' });
+
+export function financePolicy(controlVersion) { return controlVersion >= 4 ? FINANCE_POLICY : controlVersion === 3 ? FINANCE_POLICY_V3 : FINANCE_POLICY_V2; }

@@ -21,7 +21,7 @@ import { materialWorkflow } from './workflow.js';
 import { RpcReadPool } from './reads.js';
 import { verifyChain } from './chain.js';
 import { SHIPPED_DISCLOSURES, readPublicDisclosure, savePublicDisclosure } from './public-disclosures.js';
-import { MATERIAL_ARCHIVE_MS, initialRetention, materialPhase, materialRetention } from './retention.js';
+import { MATERIAL_ARCHIVE_MS, SETTLED_PLAN, initialRetention, materialPhase, materialRetention } from './retention.js';
 
 const VAULT_AAD = 'agentbl-rights-vault-v1';
 // The research case whose cargo and route match the disclosure scenario (copper, Singapore -> Shanghai).
@@ -58,7 +58,7 @@ export function pruneExpiredAccess(state, now) {
 // The vault is re-encrypted whole on every write, so records past their purpose leave it. Material leaves at the end of
 // its archive window (retention.js: never while its financing or an unreconciled operation needs it) together with the
 // evidence built on it; other evidence goes a month after its own expiry. Wallet plans that can no longer send anything
-// (unsent drafts, confirmed or reverted receipts) go after half a year. Plans still waiting for reconciliation,
+// (retention.js SETTLED_PLAN) go after half a year. Plans still waiting for reconciliation,
 // publications, approved disclosures and identities are always kept.
 export const EXPIRED_MATERIAL_GRACE_MS = MATERIAL_ARCHIVE_MS;
 export const SETTLED_PLAN_RETENTION_MS = 180 * 24 * 60 * 60 * 1000;
@@ -72,7 +72,7 @@ export function pruneExpiredRecords(state, now) {
   }
   for (const [key, review] of Object.entries(state.evidence_reviews ?? {})) if (!state.evidence?.[review?.evidence_id]) delete state.evidence_reviews[key];
   for (const [key, plan] of Object.entries(state.plans ?? {})) {
-    if (['draft', 'confirmed', 'reverted'].includes(plan?.status) && (plan.checkpoint_at ?? plan.prepared_at) + SETTLED_PLAN_RETENTION_MS <= now) delete state.plans[key];
+    if (SETTLED_PLAN.includes(plan?.status) && (plan.checkpoint_at ?? plan.prepared_at) + SETTLED_PLAN_RETENTION_MS <= now) delete state.plans[key];
   }
 }
 
@@ -81,6 +81,12 @@ export function pruneExpiredRecords(state, now) {
 export const VAULT_QUEUE_LIMIT = 64;
 export const VAULT_WAIT_MS = 15_000;
 const STALE = Symbol('stale plan');
+/** Another canonical, deep transaction used the plan's nonce: the plan can never be mined. */
+function supersede(plan, observed, ctx) {
+  Object.assign(plan, { superseded_from: plan.status, status: 'superseded', superseded_by_tx_hash: observed.observed_tx_hash,
+    superseded_block_number: observed.block_number, superseded_block_hash: observed.block_hash, superseded_at: ctx.now });
+  delete plan.released_at; ctx.dirty = true;
+}
 // A wallet finds the identities enrolled for it by signing a lookup challenge, so nobody else learns which organizations
 // enrolled a public address. Lookups live in memory (a restart only means asking again), are shared per wallet while they
 // leave time to sign, and are spent only by the wallet's valid signature, like sign-in challenges.
@@ -563,17 +569,40 @@ export class RightsService {
       const reviewed = await financingReview(this.chain, this, draft.plan_input.pool_id);
       if (draft.plan_input.reviewed_disclosure_hash !== reviewed.disclosure_hash || String(draft.plan_input.quote_version) !== reviewed.quote_version) throw new HttpError(409, 'financing_review_required', 'Review current complete terms before wallet submission');
     }
+    // Released operations of this wallet (sent nothing, by the wallet's word) keep their nonce reserved: a new send must
+    // reuse it, so at most one of them can ever be mined. Each one whose nonce has since been used is resolved first.
+    let released = [];
     const context = (state, plan, principal) => {
-      if (plan.status !== 'draft') throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the original operation before another wallet send');
+      // A released plan is the same reviewed operation with its reserved nonce, so it may be sent again.
+      if (!['draft', 'released'].includes(plan.status)) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the original operation before another wallet send');
       if (this.getMode && this.getMode() !== 'live' || plan.execution_generation !== this.getGeneration() || plan.session_id !== principal.session_id
         || plan.material_id && plan.material_revision !== state.materials[plan.material_id]?.revision) throw new HttpError(409, 'execution_context_changed', 'Session, mode or material changed; prepare a new review');
       if (!this.chain) throw new HttpError(503, 'rights_chain_not_configured', 'Verified chain unavailable');
     };
     return this.#planWithChain(token, planId, {
-      check: context,
-      // The preflight call and nonce read run unlocked; the commit re-checks session, mode, material and plan.
-      read: (plan, principal) => this.chain.prepare(principal, plan.plan_input),
-      apply: (state, plan, fresh, ctx, principal) => {
+      check: (state, plan, principal) => {
+        context(state, plan, principal);
+        released = Object.values(state.plans).filter((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
+          && other.status === 'released').map((other) => structuredClone(other));
+      },
+      // The preflight call and nonce reads run unlocked; the commit re-checks session, mode, material and plan.
+      read: async (plan, principal) => {
+        const fresh = await this.chain.prepare(principal, plan.plan_input), resolved = [];
+        for (const other of released) if (fresh.nonce > other.nonce) resolved.push({ other, observed: await this.chain.recoverTransaction(other) });
+        return { fresh, resolved };
+      },
+      apply: (state, plan, { fresh, resolved }, ctx, principal) => {
+        for (const { other, observed } of resolved) {
+          const saved = state.plans[other.plan_id];
+          if (saved?.status !== 'released') continue;
+          if (observed?.status === 'nonce_consumed_by_other_transaction' && observed.settled) { supersede(saved, observed, ctx); continue; }
+          throw new HttpError(409, observed?.status === 'nonce_consumed_by_other_transaction' ? 'rights_wallet_nonce_unconfirmed' : 'rights_released_operation_mined',
+            observed ? 'An operation the wallet reported as not sent was mined, or its nonce is still settling; reconcile it before sending again'
+              : 'The nonce of an operation the wallet did not send is pending; wait, then reconcile it', { plan_ids: [other.plan_id] });
+        }
+        const reserved = Object.values(state.plans).filter((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
+          && other.status === 'released').map((other) => other.nonce);
+        if (reserved.length && fresh.nonce !== Math.min(...reserved)) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send', { reserved_nonce: Math.min(...reserved) });
         if (fresh.chain_id !== plan.chain_id || fresh.pool !== plan.pool || fresh.controller !== plan.controller || fresh.calldata !== plan.calldata
           || fresh.nonce !== plan.nonce) throw new HttpError(409, 'rights_plan_changed', 'Chain, nonce or transaction changed; prepare a new review');
         if (plan.material_id) {
@@ -584,7 +613,8 @@ export class RightsService {
           }
         }
         if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
-          && !['draft', 'confirmed', 'reverted'].includes(other.status))) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send');
+          && !SETTLED_PLAN.includes(other.status))) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send');
+        if (plan.status === 'released') { delete plan.released_at; plan.resent = (plan.resent ?? 0) + 1; }
         plan.status = 'broadcast_prepared'; plan.checkpoint_at = ctx.now; ctx.dirty = true; return plan;
       }
     });
@@ -632,8 +662,27 @@ export class RightsService {
   async getPlan(token, planId) {
     if (!this.chain) return this.#transaction((state, ctx) => this.#ownedPlan(state, token, planId, ctx.now).plan);
     return this.#planWithChain(token, planId, {
-      read: (plan) => plan.tx_hash ? this.chain.verifyTransaction(plan, plan.tx_hash) : this.chain.recoverTransaction(plan),
+      read: async (plan) => {
+        // A draft can still have been sent by a client that skips the checkpoint, so it is looked up like any other.
+        if (plan.status === 'abandoned') return null;
+        // Superseded holds only while the transaction that took the nonce is still canonical and deep.
+        if (plan.status === 'superseded') return { superseding: await this.chain.recoverTransaction({ ...plan, tx_hash: undefined }) };
+        return plan.tx_hash ? this.chain.verifyTransaction(plan, plan.tx_hash) : this.chain.recoverTransaction(plan);
+      },
       apply: (state, plan, observed, ctx) => {
+        if (observed && 'superseding' in observed) {
+          const still = observed.superseding;
+          if (still?.status === 'nonce_consumed_by_other_transaction' && still.settled && still.observed_tx_hash?.toLowerCase() === plan.superseded_by_tx_hash?.toLowerCase()) return plan;
+          plan.supersede_history = [...plan.supersede_history ?? [], { by_tx_hash: plan.superseded_by_tx_hash, block_hash: plan.superseded_block_hash, reopened_at: ctx.now }];
+          plan.status = plan.superseded_from ?? 'broadcast_prepared';
+          for (const key of ['superseded_by_tx_hash', 'superseded_block_hash', 'superseded_block_number', 'superseded_from', 'superseded_at']) delete plan[key];
+          ctx.dirty = true; return plan;
+        }
+        if (observed?.status === 'nonce_consumed_by_other_transaction') {
+          // Another transaction took the nonce: final once canonical and deep, until then the plan keeps its status.
+          if (!observed.settled) return { ...plan, nonce_used_by_tx_hash: observed.observed_tx_hash, confirmation_pending: true };
+          supersede(plan, observed, ctx); return plan;
+        }
         if (observed?.tx_hash && Object.values(state.plans).some((other) => other.plan_id !== planId && other.tx_hash?.toLowerCase() === observed.tx_hash.toLowerCase())) {
           throw new HttpError(409, 'rights_transaction_reused', 'Transaction is already bound to another plan');
         }
@@ -641,8 +690,32 @@ export class RightsService {
           plan.receipt_history ??= [];
           plan.receipt_history.push({ tx_hash: plan.tx_hash, block_number: plan.block_number, block_hash: plan.block_hash, status: plan.status, invalidated_at: ctx.now });
         }
-        if (observed) { Object.assign(plan, observed); ctx.dirty = true; }
+        if (observed) { Object.assign(plan, observed); delete plan.released_at; ctx.dirty = true; }
         return plan;
+      }
+    });
+  }
+  /**
+   * The wallet reported that it did not send a checkpointed operation. Nothing here trusts that report alone: a
+   * transaction the node still knows keeps the operation open, a consumed nonce is resolved against the chain, and
+   * an unused nonce releases the operation while keeping its nonce reserved for this wallet's next send. A draft
+   * nobody checkpointed is simply abandoned.
+   */
+  async releasePlan(token, planId) {
+    if (!this.chain) throw new HttpError(409, 'rights_chain_not_configured', 'No verified W3 protocol instance is configured');
+    return this.#planWithChain(token, planId, {
+      read: (plan) => plan.status === 'draft' || !SETTLED_PLAN.includes(plan.status) ? this.chain.releaseObservation(plan) : null,
+      apply: (state, plan, observed, ctx) => {
+        if (plan.status !== 'draft' && SETTLED_PLAN.includes(plan.status)) return plan;
+        // A draft whose nonce is unused, or was taken by another transaction, can be dropped; one that was sent is bound.
+        if (plan.status === 'draft' && ['unused', 'other'].includes(observed.state)) { plan.status = 'abandoned'; plan.abandoned_at = ctx.now; ctx.dirty = true; return plan; }
+        if (observed.state === 'pending') throw new HttpError(409, 'rights_transaction_pending', 'A wallet transaction with this nonce is still pending. Speed it up or cancel it in the wallet, then reconcile');
+        if (observed.state === 'own') { Object.assign(plan, observed.observed); ctx.dirty = true; return plan; }
+        if (observed.state === 'other') {
+          if (!observed.settled) return { ...plan, nonce_used_by_tx_hash: observed.observed_tx_hash, confirmation_pending: true };
+          supersede(plan, observed, ctx); return plan;
+        }
+        plan.status = 'released'; plan.released_at = ctx.now; ctx.dirty = true; return plan;
       }
     });
   }

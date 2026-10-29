@@ -961,9 +961,13 @@ export class AgentService {
     });
     const started = Date.now();
     const ownRun = !run;
+    // The trace names its case itself: it is kept under its own retention and may outlive the decision record.
     const activeRun = run ?? this.tracer.startRun({
       decision_id: decision.decision_id,
-      name: 'agent.execute'
+      name: 'agent.execute',
+      attributes: {
+        case_id: decision.case_id
+      }
     });
     try {
       const retried = await activeRun.span('execute', async () => executeWithRetry(() => route.executor.execute(this.#command(decision)), {

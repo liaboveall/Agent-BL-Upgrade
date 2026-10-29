@@ -139,6 +139,9 @@
 .research-constraints th { padding: 8px 12px; background: var(--surface-2); color: var(--muted); font-size: var(--fs-12); font-weight: 600; text-align: left; }
 .research-constraints td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
 .research-constraints ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-12); }
+.research-more { display: grid; gap: var(--s-3); }
+.research-more > summary { width: fit-content; min-height: 32px; color: var(--accent); font-size: var(--fs-13); font-weight: 600; cursor: pointer; }
+.research-more[open] > summary { margin-bottom: var(--s-2); }
 
 /* ---------- financing role workspace ---------- */
 .role-workspace { display: grid; gap: var(--s-3); margin-block: var(--s-4); padding: var(--s-5); border: 1px solid var(--card-edge); border-radius: var(--r-lg); background: var(--surface); color: var(--text-2); font-size: var(--fs-13); box-shadow: var(--shadow-sm); }

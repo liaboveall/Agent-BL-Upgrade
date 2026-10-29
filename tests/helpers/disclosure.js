@@ -1,6 +1,7 @@
 import { createDisclosure } from '../../src/rights/disclosure.js';
+import { CONTROL_VERSION } from '../../src/rights/typedData.js';
 // Version 2 disclosures carry no control_version; later versions name theirs.
-export function disclosureFixture(controlVersion = 3) {
+export function disclosureFixture(controlVersion = CONTROL_VERSION) {
   const a = (n) => `0x${n.repeat(20)}`;
   return createDisclosure({ revision: 1, instance: { chain_id: 1439, controller: a('90'), pool: a('34'), ...(controlVersion >= 3 ? { control_version: controlVersion } : {}) },
     terms: { eblId: '1', assetKey: `0x${'ac'.repeat(32)}`, documentHash: `0x${'de'.repeat(32)}`, settlementAsset: a('56'),

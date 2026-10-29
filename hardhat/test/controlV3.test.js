@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { deployRights, ethers, send, uniqueHash, STATE, ACTION, ISSUANCE_TYPES, VALUATION_TYPES } from './helpers/rights.js';
+import { deployRights, ethers, send, uniqueHash, STATE, ACTION, ISSUANCE_TYPES } from './helpers/rights.js';
 import { deployProtocolV5, newOfferingV5, ISSUE_PRICE } from './helpers/protocolV5.js';
 import { FINANCE_POLICY } from '../../src/rights/financePolicy.js';
 import { createDisclosure } from '../../src/rights/disclosure.js';
@@ -11,17 +11,8 @@ async function funded(c, patch = {}) {
 }
 const liquidation = (p) => [p.poolId, 0, ACTION.TRIGGER_LIQUIDATION, uniqueHash(), uniqueHash()];
 
+// The version 3 remediations, still in force in version 4 (see controlV4.test.js for what version 4 adds).
 describe('control version 3 remediation', () => {
-  it('signs offering terms and valuations under the version 3 domain', async () => {
-    const c = await deployRights();
-    expect(await c.controller.controlVersion()).to.equal(3n);
-    expect((await c.controller.eip712Domain()).version).to.equal('3');
-    const p = await c.prepare();
-    await send(c.registry.pledge(p.eblId, await c.pool.getAddress(), p.hash, p.pledge.validUntil, p.pledgeSignature));
-    const v2Signature = await c.valuer.signTypedData({ ...c.domain, version: '2' }, VALUATION_TYPES, p.valuation);
-    await expect(c.controller.connect(c.issuer).createControlledOffering(p.terms, p.valuation, c.valuer.address, v2Signature)).to.be.revertedWith('invalid valuation signature');
-  });
-
   it('lets only delayed governance liquidate before maturity while an operator can still freeze', async () => {
     const c = await deployRights(), p = await funded(c);
     await expect(c.controller.connect(c.operator).applyPricingAction(...liquidation(p))).to.be.revertedWithCustomError(c.controller, 'GovernanceRequired');
@@ -43,23 +34,6 @@ describe('control version 3 remediation', () => {
     await c.advance(p.terms.maturity);
     await send(c.controller.connect(c.operator).applyPricingAction(...liquidation(p)));
     expect(await c.pool.stateOf(p.poolId)).to.equal(STATE.Liquidation);
-  });
-
-  it('fixes the price at the first subscription and keeps the minimum reachable at any new price', async () => {
-    const c = await deployRights(), p = await c.create({ minRaise: 7_000_000n });
-    const reprice = (price) => c.controller.connect(c.operator).applyPricingAction(p.poolId, price, ACTION.REPRICE_DOWN, uniqueHash(), uniqueHash());
-    await expect(reprice(699_999n)).to.be.revertedWithCustomError(c.pool, 'MinRaiseAboveMax');
-    await send(reprice(700_000n));
-    expect(await c.pool.quoteVersion(p.poolId)).to.equal(2n);
-    await c.eligible(p, c.investor);
-    await send(c.pool.connect(c.investor).subscribe(p.poolId, 4));
-    await expect(reprice(650_000n)).to.be.revertedWithCustomError(c.pool, 'HasSubscribers');
-    await c.eligible(p, c.outsider);
-    await send(c.pool.connect(c.outsider).subscribe(p.poolId, 6));
-    expect(await c.pool.stateOf(p.poolId)).to.equal(STATE.Funded);
-    const asset = await c.usdc.getAddress();
-    expect(await c.pool.investorPaid(p.poolId, asset, c.investor.address)).to.equal(4n * 700_000n);
-    expect(await c.pool.investorPaid(p.poolId, asset, c.outsider.address)).to.equal(6n * 700_000n);
   });
 
   it('keeps titles of a rotated issuer key active and invalidates them only on revocation', async () => {
@@ -153,7 +127,7 @@ describe('control version 3 remediation', () => {
     expect(await rights.lotCount(p.poolId, c.outsider.address)).to.equal(3n);
 
     const { policyHash: _policy, disclosureHash: _disclosure, ...raw } = p.terms;
-    const pack = createDisclosure({ revision: 1, instance: { chain_id: 31337, controller: await c.controller.getAddress(), pool: await c.pool.getAddress(), control_version: 3 },
+    const pack = createDisclosure({ revision: 1, instance: { chain_id: 31337, controller: await c.controller.getAddress(), pool: await c.pool.getAddress(), control_version: 4 },
       terms: Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, String(value)])),
       parties: Object.fromEntries(['issuer', 'holder', 'operator', 'valuer', 'compliance', 'disposer', 'reviewer'].map((role) => [role, c[role].address]).concat([['governance', await c.governance.getAddress()]])),
       sources: ['invoice', 'cost', 'collateral', 'risk'].map((field) => ({ field, status: 'fixture', reference: 'fictional research data' })) });

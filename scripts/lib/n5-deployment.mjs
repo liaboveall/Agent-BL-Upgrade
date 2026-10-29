@@ -96,10 +96,13 @@ export async function executeCandidate({ directory, candidate, provider, signers
   const contract = (name) => new Contract(state.contracts[name], candidate.artifacts[name].abi, provider);
   const call = (label, target, method, args, actor = 'governorA') => txSend(label, signers[actor], { to: target.target, data: target.interface.encodeFunctionData(method, args) });
   const governance = contract('RightsGovernance');
-  ensure(await governance.member(signers.governorA.address) && await governance.member(signers.governorB.address)
-    && await governance.memberCount() >= 3n && await governance.delay() >= 3600n, 'Shared governance changed');
+  const governs = async (g) => await g.member(signers.governorA.address) && await g.member(signers.governorB.address)
+    && await g.memberCount() >= 3n && await g.delay() >= 3600n;
+  // The shared hub keeps the governance that created it; from version 4 the instance has its own (candidate.hub_governance).
   const hub = contract('AssetIdentityHub');
-  ensure(same(await hub.governance(), governance.target), 'Shared hub governance changed');
+  const hubGovernance = new Contract(candidate.hub_governance ?? state.contracts.RightsGovernance, candidate.artifacts.RightsGovernance.abi, provider);
+  ensure(same(await hub.governance(), hubGovernance.target) && await governs(hubGovernance), 'Shared hub governance changed');
+  const governanceAt = (address) => same(address ?? governance.target, hubGovernance.target) ? hubGovernance : governance;
   if (action === 'prepare') {
     for (const tx of candidate.transactions) {
       const { label, expected_address, from: _from, chainId: _chainId, ...request } = tx;
@@ -107,6 +110,7 @@ export async function executeCandidate({ directory, candidate, provider, signers
       if (expected_address) ensure(same(sent.receipt.contractAddress, expected_address), 'Deployment address changed');
     }
     const controller = contract('RightsController'), registry = contract('CommittedEBLRegistry');
+    ensure(await governs(governance) && same(await registry.governance(), governance.target) && same(await controller.governance(), governance.target), 'Instance governance changed');
     await candidateRuntime(provider, candidate, state);
     // Reuse the predecessor's explicitly labelled research token. No old pool is changed.
     ensure(state.contracts.MockAuthorizationUSDC && await provider.getCode(state.contracts.MockAuthorizationUSDC) !== '0x', 'Research settlement token missing');
@@ -119,13 +123,15 @@ export async function executeCandidate({ directory, candidate, provider, signers
       [controller, 'setIntakeStopped', [false, id(`N5_AUTHORIZED_RESEARCH:${candidate.instance_id}`)]]
     ];
     for (const [index, [target, method, args]] of operations.entries()) {
+      // Only the hub's enrollment goes through the hub's governance; everything else through the instance's own.
+      const g = target === hub ? hubGovernance : governance;
       const data = target.interface.encodeFunctionData(method, args), salt = id(`n5:${candidate.instance_id}:${index}`);
-      const sent = await call(`governance:propose:${index}`, governance, 'propose', [target.target, data, salt]);
-      const proposed = sent.receipt.logs.map((log) => { try { return governance.interface.parseLog(log); } catch { return null; } }).find((log) => log?.name === 'Proposed');
+      const sent = await call(`governance:propose:${index}`, g, 'propose', [target.target, data, salt]);
+      const proposed = sent.receipt.logs.map((log) => { try { return g.interface.parseLog(log); } catch { return null; } }).find((log) => log?.name === 'Proposed');
       ensure(proposed, 'Governance proposal receipt missing');
-      await call(`governance:approve:${index}`, governance, 'approve', [proposed.args.id], 'governorB');
-      const op = await governance.operations(proposed.args.id);
-      state.operations[index] = { id: proposed.args.id, target: target.target, method, data, eta: String(op.eta), epoch: String(op.epoch) }; await save();
+      await call(`governance:approve:${index}`, g, 'approve', [proposed.args.id], 'governorB');
+      const op = await g.operations(proposed.args.id);
+      state.operations[index] = { id: proposed.args.id, governance: g.target, target: target.target, method, data, eta: String(op.eta), epoch: String(op.epoch) }; await save();
     }
     state.prepared_at ??= new Date().toISOString();
     state.ready_after = new Date(Math.max(...state.operations.map((op) => Number(op.eta))) * 1000).toISOString(); await save();
@@ -135,9 +141,9 @@ export async function executeCandidate({ directory, candidate, provider, signers
     const now = (await provider.getBlock('latest')).timestamp;
     ensure(state.operations.every((op) => Number(op.eta) <= now), `Governance delay applies until ${state.ready_after}`);
     for (const [index, op] of state.operations.entries()) {
-      const actual = await governance.operations(op.id);
-      ensure(actual.epoch === await governance.epoch() && actual.approvals === 2n && same(actual.target, op.target) && actual.dataHash === keccak256(op.data), 'Governance approval changed');
-      await call(`governance:execute:${index}`, governance, 'execute', [op.id, op.data]);
+      const g = governanceAt(op.governance), actual = await g.operations(op.id);
+      ensure(actual.epoch === await g.epoch() && actual.approvals === 2n && same(actual.target, op.target) && actual.dataHash === keccak256(op.data), 'Governance approval changed');
+      await call(`governance:execute:${index}`, g, 'execute', [op.id, op.data]);
     }
     await candidateRuntime(provider, candidate, state);
     state.active = true; state.activated_at ??= new Date().toISOString(); await save();

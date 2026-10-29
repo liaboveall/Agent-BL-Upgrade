@@ -21,7 +21,8 @@ export function rightsSessionToken() {
 }
 /** What the identity status line shows: whether a business session is live, until when, and whether it is exit-only. */
 export function rightsSessionInfo() {
-  return rightsSessionToken() ? { active: true, expires_at: authorization.expires_at, exit_only: Boolean(authorization.exit_only) } : { active: false };
+  return rightsSessionToken() ? { active: true, expires_at: authorization.expires_at, exit_only: Boolean(authorization.exit_only),
+    organization: authorization.organization ?? null, roles: authorization.roles ?? [] } : { active: false };
 }
 provideRightsSessionToken(rightsSessionToken);
 export async function rightsRequest(route, body) {
@@ -53,5 +54,8 @@ export async function openRightsSession(subjectId, { exitOnly = false } = {}) {
   const signature = await session.signer.signTypedData(challenge.domain, challenge.types, challenge.message); assertCurrent();
   const result = await rightsRequest('sessions', { challenge_id: challenge.challenge_id, signature }); assertCurrent();
   remember({ ...result, wallet, generation, session, exit_only: exitOnly });
-  return rightsRequest(`me${exitOnly ? '?exit_only=1' : ''}`);
+  const principal = await rightsRequest(`me${exitOnly ? '?exit_only=1' : ''}`);
+  // The status line names the organization and roles this session acts for.
+  if (authorization?.token === result.token) remember({ ...authorization, organization: principal.organization, roles: principal.roles });
+  return principal;
 }

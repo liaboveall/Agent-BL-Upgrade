@@ -74,6 +74,7 @@ function ResolutionStatus({ offer, zh }) {
 /** What the pool needs next when it is not taking subscriptions. */
 function stateGuidance(offer, zh) {
   if (offer.finalize_funding_available) return zh ? '募集期已结束且达到最低募集额：需先“关闭已达最低额的募集”（任一业务角色可在工作台操作，链上任何人可调用），之后才能放款。' : 'The raise ended above its minimum: it must be finalized first (any business role can do this in the workspace; anyone can on chain) before a draw.';
+  if (offer.unsubscribed_exit_available) return zh ? '募集截止时无人认购。单证仍质押在资金池：融资方或任何参与方都可在工作台“到期发起退出”取消发行并取回单证，不必等待运营方。' : 'Nobody subscribed before the deadline. The title stays pledged: the borrower or any participant can start the exit in the workspace to cancel the offering and release the title, without waiting for the operator.';
   if (offer.empty_expired) return zh ? '募集截止时无人认购。单证仍质押在资金池，需运营方在工作台“取消无人认购的发行”后释放。' : 'Nobody subscribed before the deadline. The title stays pledged until the operator cancels the offering in the workspace.';
   return ({ Funded: ['募集已完成，等待放款或回款。', 'Fully raised; awaiting the draw or repayment.'], InTransit: ['货物在途，等待回款与到货证明。', 'Cargo in transit; awaiting repayment and arrival evidence.'],
     Paused: ['发行已暂停。已有持仓可按条件退款或等待恢复。', 'Paused. Existing positions may refund under the conditions or wait for resumption.'], Frozen: ['资金池已冻结，等待治理处理。', 'Frozen pending governance.'],
@@ -109,10 +110,41 @@ function MyTasks({ zh, positions, pending, busy, demo, onOpen, onClaim, onReconc
   </section>;
 }
 /**
- * The three things every financing action needs, for every role including investors: the enrolled wallet, a live
- * business session, and the chain's own eligibility check. Shown before anything fails, with the next step.
+ * Why pools in view cannot move, grouped by cause, with who can unblock each and how (report 2026-10-29 §9.1). The
+ * directory is paged, so this reads the pools on this page plus the instance-wide switches; Open on chain is not
+ * shown as open when its window, valuation or source review has lapsed.
  */
-function IdentityStatus({ zh, wallet, busy, onConnect, onVerify }) {
+function PoolAttention({ zh, offers, listing, legacy, busy, onOpen }) {
+  const ids = (match) => offers.filter(match).map((offer) => offer.pool_id);
+  const blocked = (code) => (offer) => SUBSCRIBABLE.includes(offer.state) && (offer.subscription_blockers ?? []).includes(code);
+  const items = [
+    legacy && { key: 'legacy', who: ['任何参与方', 'Any participant'], what: ['这是已被新控制版本取代的实例：只保留退款、领取、回款与处置等退出，不能新增认购或放款。', 'This instance is superseded by a newer control version: only refunds, claims, repayment and resolution exits remain; no new subscriptions or draws.'] },
+    // A superseded instance takes no new risk anyway, so its instance-wide switches are not a task for anyone.
+    !legacy && listing?.availability?.intake_stopped && { key: 'intake', who: ['延时治理', 'Delayed governance'], what: ['发行进件已暂停：所有池不接受新认购与放款，已有持仓的退出不受影响。', 'Intake is stopped: no pool takes new subscriptions or draws; existing exits are unaffected.'] },
+    !legacy && listing?.availability?.screening_valid === false && { key: 'screening', who: ['资格审查方', 'Compliance'], what: ['全局来源审查已过期：所有池同时停止新认购与放款。合规角色在工作台“更新来源审查”后恢复（不会延长已截止的募集）。', 'The instance-wide source screening has expired, so every pool stops new subscriptions and draws. Compliance refreshes it in the workspace (this does not reopen a closed subscription window).'] },
+    { key: 'unsubscribed', pools: ids((offer) => offer.unsubscribed_exit_available), who: ['融资方或任何参与方', 'The borrower or any participant'], what: ['募集已截止且无人认购：在工作台“发起退出”即取消发行并释放质押单证。', 'Subscription ended with nobody subscribed: start the exit in the workspace to cancel the offering and release the title.'] },
+    { key: 'empty', pools: ids((offer) => offer.empty_expired && !offer.unsubscribed_exit_available), who: ['运营方', 'Operator'], what: ['募集已截止且无人认购：运营方在工作台“取消无人认购的发行”后释放质押单证。', 'Subscription ended with nobody subscribed: the operator cancels the offering in the workspace to release the title.'] },
+    { key: 'finalize', pools: ids((offer) => offer.finalize_funding_available), who: ['任一业务角色', 'Any business role'], what: ['已达最低募集额，需先“关闭已达最低额的募集”才能放款。', 'The raise met its minimum; finalize it before any draw.'] },
+    { key: 'valuation', pools: ids(blocked('valuation_expired')), who: ['发行方与估值方', 'Issuer and valuer'], what: ['估值已过期且不能续期：只能按重新同意的新条款另行发行。', 'The valuation has expired and cannot be extended: a new offering on newly agreed terms is required.'] },
+    { key: 'resolution', pools: ids((offer) => ['Defaulted', 'Liquidation'].includes(offer.state) && !offer.resolution?.finalized), who: ['处置负责人、审核人；硬截止后任何人', 'Disposer and reviewer; anyone after the hard deadline'], what: ['处置未终局：按通知期、复核与硬截止推进，见池详情中的处置进度。', 'Resolution is not final: it moves by notice, review and hard deadline; see the resolution progress in the pool detail.'] }
+  ].filter((item) => item && (!item.pools || item.pools.length));
+  if (!items.length) return null;
+  return <section className="finance-attention" aria-label={zh ? '需要处理的事项' : 'Needs attention'}>
+    <h2>{zh ? '需要处理的事项' : 'Needs attention'}<small>{zh ? '本页资金池与实例开关' : 'Pools on this page and instance switches'}</small></h2>
+    <ul>{items.map((item) => <li key={item.key}>
+      <p>{item.what[zh ? 0 : 1]}</p>
+      <p className="finance-attention-meta"><span>{zh ? '负责：' : 'Who: '}{item.who[zh ? 0 : 1]}</span>
+        {item.pools && <span>{zh ? '资金池：' : 'Pools: '}{item.pools.slice(0, 8).map((poolId) => <button key={poolId} type="button" className="finance-pool-link" disabled={busy} onClick={() => onOpen(poolId)}>#{poolId}</button>)}{item.pools.length > 8 ? ` +${item.pools.length - 8}` : ''}</span>}</p>
+    </li>)}</ul>
+  </section>;
+}
+
+/**
+ * The things every financing action needs, for every role including investors: the enrolled wallet on the instance's
+ * network, a live business session (with the organization and roles it carries), and the chain's own eligibility
+ * check. Shown before anything fails, with the next step.
+ */
+function IdentityStatus({ zh, wallet, network, busy, onConnect, onVerify }) {
   const [, rerender] = useState(0);
   useEffect(() => {
     const update = () => rerender((n) => n + 1);
@@ -122,8 +154,10 @@ function IdentityStatus({ zh, wallet, busy, onConnect, onVerify }) {
   const session = rightsSessionInfo();
   return <div className="finance-identity" role="group" aria-label={zh ? '身份状态' : 'Identity status'}>
     <span className={wallet ? 'is-ok' : 'is-missing'}><strong>{zh ? '钱包' : 'Wallet'}</strong>{wallet ? `${wallet.slice(0, 8)}…${wallet.slice(-4)}` : (zh ? '未连接' : 'Not connected')}</span>
+    {/* Connecting switches the wallet to this network, and a later switch in the wallet disconnects it here. */}
+    <span className={wallet ? 'is-ok' : 'is-missing'}><strong>{zh ? '网络' : 'Network'}</strong>{network ?? '—'}{wallet ? '' : (zh ? '（连接时切换）' : ' (switched on connect)')}</span>
     <span className={session.active ? 'is-ok' : 'is-missing'}><strong>{zh ? '业务会话' : 'Business session'}</strong>{session.active
-      ? <>{session.exit_only ? (zh ? '仅退出 · ' : 'Exits only · ') : ''}{zh ? '有效至 ' : 'until '}<ChainTime value={Math.floor(session.expires_at / 1000)} zh={zh} /></>
+      ? <>{session.organization ? `${session.organization} · ` : ''}{session.roles?.length ? `${session.roles.join(' / ')} · ` : ''}{session.exit_only ? (zh ? '仅退出 · ' : 'Exits only · ') : ''}{zh ? '有效至 ' : 'until '}<ChainTime value={Math.floor(session.expires_at / 1000)} zh={zh} /></>
       : (zh ? '未验证或已过期' : 'Not verified or expired')}</span>
     <span><strong>{zh ? '链上资格' : 'Chain eligibility'}</strong>{zh ? '每次认购由合约核验' : 'Checked by the contract on each subscription'}</span>
     {!wallet ? <button type="button" disabled={busy} onClick={onConnect}>{zh ? '连接钱包' : 'Connect wallet'}</button>
@@ -132,7 +166,7 @@ function IdentityStatus({ zh, wallet, busy, onConnect, onVerify }) {
   </div>;
 }
 export function ControlledFinancePanel({ primary = false }) {
-  const zh = useLang() === 'zh', demo = useApp((s) => s.demoMode), generation = useApp((s) => s.modeGeneration);
+  const zh = useLang() === 'zh', demo = useApp((s) => s.demoMode), generation = useApp((s) => s.modeGeneration), networkName = useApp((s) => s.networkName);
   const stateLabel = (state) => zh ? ({ Open: '开放募集', Subscribed: '募集中', Funded: '募集成功', InTransit: '运输中', Repriced: '已更新报价', Paused: '暂停', Frozen: '冻结', Repaid: '已结清', Liquidation: '处置中', Cancelled: '已取消', Defaulted: '已违约', LossSettled: '损失结算' })[state] ?? state : state;
   const [wallet, setWallet] = useState(connectedAddress()), [status, setStatus] = useState(null), [offers, setOffers] = useState([]), [positions, setPositions] = useState([]);
   const [refresh, setRefresh] = useState(0), [problem, setProblem] = useState(null), [busy, setBusy] = useState(false), [review, setReview] = useState(null), [pending, setPending] = useState(null), [notice, setNotice] = useState('');
@@ -421,7 +455,8 @@ export function ControlledFinancePanel({ primary = false }) {
         </div>
         {wallet && !loading && (pending || positions.length > 0) && <MyTasks zh={zh} positions={positions} pending={pending} busy={busy} demo={demo} onOpen={openPool}
           onClaim={(position) => setReview({ kind: 'claim', position })} onReconcile={reconcile} />}
-        <IdentityStatus zh={zh} wallet={wallet} busy={busy} onConnect={connect} onVerify={verifyIdentity} />
+        <IdentityStatus zh={zh} wallet={wallet} network={networkName} busy={busy} onConnect={connect} onVerify={verifyIdentity} />
+        {!loading && <PoolAttention zh={zh} offers={offers} listing={listing} legacy={status.exit_only === true} busy={busy} onOpen={openPool} />}
         <div className="finance-directory-toolbar">
           <div><h2>{zh ? '浏览资金池' : 'Explore funding pools'}</h2><p>{zh ? '查看状态、资金流转与每个池的完整条款。' : 'Review each pool’s status, cash movements, and terms.'}</p></div>
           <form className="finance-pool-lookup" onSubmit={(event) => { event.preventDefault(); if (!busy && /^[1-9]\d{0,8}$/u.test(lookup)) { setReview(null); setPage({ from: Number(lookup), pool_id: Number(lookup) }); } }}>

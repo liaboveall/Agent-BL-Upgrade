@@ -135,11 +135,10 @@ describe('N0/N1 bounded exits, permanent recovery rights and zero fees', () => {
     const p = await funded(c); await draw(c, p); await pay(c, p.poolId, c.holder, 10_000_001n); await liquidate(c, p);
     await send(c.controller.connect(c.reviewer).reviewResolution(p.poolId, uniqueHash())); await c.advance((await c.controller.resolutions(p.poolId)).noticeUntil);
     await send(c.controller.finalizeResolution(p.poolId));
-    for (const w of [c.outsider, c.investor]) {
-      const fee = await c.queue(c.controller, 'deductFee', [p.poolId, 1n, uniqueHash()]); await c.advance(fee.eta);
-      await expect(c.governance.execute(fee.id, fee.data)).to.be.revertedWith('fee cap exceeded');
-      await send(c.pool.connect(w).claim(p.poolId));
-    }
+    // No governed deduction exists: the controller has no fee function and is the pool's only owner.
+    expect(c.controller.interface.getFunction('deductFee')).to.equal(null);
+    await expect(c.pool.connect(c.memberA).deductFee(p.poolId, 1n, c.memberA.address, uniqueHash())).to.be.revertedWith('not owner');
+    for (const w of [c.outsider, c.investor]) await send(c.pool.connect(w).claim(p.poolId));
     expect(await c.pool.totalClaimed(p.poolId)).to.equal(10_000_001n); await assertCash(c, p);
   });
   it('rejects v1/cross-instance valuation signatures and commits the exact draw deadline', async () => {

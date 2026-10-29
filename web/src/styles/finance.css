@@ -53,6 +53,13 @@
 .finance-identity > span.is-ok::before { background: var(--ok); }
 .finance-identity > span.is-missing::before { background: var(--warn); }
 .finance-identity > small { flex-basis: 100%; color: var(--muted); }
+.finance-attention { margin: 0 28px 16px; padding: 14px 16px; border: 1px solid var(--warn-line); border-radius: var(--r); background: var(--warn-soft); }
+.finance-attention h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 8px; font-size: var(--fs-14); }
+.finance-attention h2 small { color: var(--muted); font-size: var(--fs-12); font-weight: 500; }
+.finance-attention ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.finance-attention li p { margin: 0; font-size: var(--fs-13); }
+.finance-attention .finance-attention-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 4px; color: var(--text-2); font-size: var(--fs-12); }
+.finance-attention .finance-pool-link { margin-left: 4px; }
 .controlled-panel .finance-identity > button { min-height: 32px; padding: 4px 12px; }
 .controlled-panel .finance-amount-note { margin: 8px 28px 0; }
 .controlled-panel .finance-alert .finance-alert-funds { display: block; margin-top: 6px; color: var(--text-2); font-size: var(--fs-12); }
@@ -159,3 +166,7 @@
   .controlled-panel .controlled-position, .controlled-panel .controlled-confirm, .controlled-panel .controlled-pending, .controlled-panel .finance-alert { margin: 16px; }
 }
 .controlled-panel .finance-alert.finance-alert-inline { margin: 12px 0; }
+/* A commitment field: the hash, or a local file it is computed from. */
+.role-commitment { display: grid; gap: 4px; }
+.role-commitment-file { color: var(--muted); font-size: var(--fs-12); }
+.role-commitment-file input[type='file'] { display: block; max-width: 100%; margin-top: 2px; font-size: var(--fs-12); }

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RpcReadPool, readPage } from '../src/rights/reads.js';
 import { readOfferings } from '../src/rights/offerings.js';
+import { CONTROL_VERSION } from '../src/rights/typedData.js';
 
 test('N3 bounds shared RPC work, queue and timeouts even while the transport is stuck', async () => {
   const pool = new RpcReadPool({ concurrency: 2, queueLimit: 2, timeoutMs: 25 });
@@ -84,7 +85,7 @@ test('N3 a current pool opens only when screening, valuation, valuer, title, ass
       disbursedAtomic: async () => 0n, recoveredAtomic: async () => 0n, escrowed: async () => 0n, fundingFinalized: async () => s.finalized,
       offerings: async () => ({ state: s.state, tokenSupply: 10n, subscribed: s.subscribed, issuePrice: 800000n, targetRedemptionValue: 1000000n,
         settlementAsset: 'asset', raisedAtomic: s.subscribed * 800000n, minRaise: 4000000n }) } };
-  const read = async () => { const page = await readOfferings(chain, { controlVersion: 3 }, new RpcReadPool(), { from: 1, limit: 10 }); return { ...page.offerings[0], availability: page.availability }; };
+  const read = async () => { const page = await readOfferings(chain, { controlVersion: CONTROL_VERSION }, new RpcReadPool(), { from: 1, limit: 10 }); return { ...page.offerings[0], availability: page.availability }; };
   reset(); let offer = await read();
   assert.deepEqual([offer.subscription_open, offer.subscription_blockers, offer.availability.screening_valid], [true, [], true]);
   for (const [change, code] of [[{ screening: block.timestamp - 1 }, 'screening_expired'], [{ valuation: block.timestamp - 1 }, 'valuation_expired'],

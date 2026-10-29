@@ -8,6 +8,8 @@ import { scrollBehavior } from '../../lib/accessibility.js';
 import { useStickyFit } from '../../hooks/useStickyFit.js';
 import { retryCaseLoad, selectCase } from '../../state/controller.js';
 import { Button, Card, Empty } from '../../components/ui.jsx';
+import { PageIntro } from '../../components/PageIntro.jsx';
+import { PHONE, useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { Valuation } from './Valuation.jsx';
 import { Waterfall } from './Waterfall.jsx';
 import { MintPanel } from './MintPanel.jsx';
@@ -26,6 +28,8 @@ export function MintPage() {
   const focusRequest = state.focusRequest;
   const aside = useRef(null);
   useStickyFit(aside);
+  // On a phone the case summary scrolls sideways, so keyboard users must be able to reach it.
+  const phone = useMediaQuery(PHONE);
   useEffect(() => {
     if (focusRequest?.target !== 'mint') return;
     const node = document.getElementById('waterfall');
@@ -49,7 +53,7 @@ export function MintPage() {
         <div className="page-head-text">
           <p className="eyebrow">{t('hero_eyebrow')}</p>
           <h1>{t('hero_h1')}</h1>
-          <p className="page-sub">{t('mint_subtitle_short')}</p>
+          <PageIntro summary={t('mint_intro_more')}><p className="page-sub">{t('mint_subtitle_short')}</p></PageIntro>
         </div>
         <div className="case-picker">
           <label className="field-label" htmlFor="case-dropdown">{t('case_label')}</label>
@@ -70,7 +74,7 @@ export function MintPage() {
 
       <StartBar selected={selected} />
 
-      <dl className="deal-strip" aria-label={t('mint_strip_label')}>
+      <dl className="deal-strip" aria-label={t('mint_strip_label')} {...(phone ? { tabIndex: 0 } : {})}>
         {strip.map(([label, value]) => (
           <div key={label} className="deal-strip-item"><dt>{label}</dt><dd>{value}</dd></div>
         ))}

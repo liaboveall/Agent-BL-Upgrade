@@ -5,7 +5,7 @@ import { disclosureFixture } from '../helpers/disclosure.js';
 for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440]) {
   test(`N2 ${language} ${width}: complete terms, keyboard consent, changed/missing/corrupt material block signatures`, async ({ page }, info) => {
     const pack = { ...disclosureFixture(), pool_id: 1, quote_version: '3' }, wallet = `0x${'12'.repeat(20)}`;
-    const config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 3, contracts: { RWAOfferingPool: pack.document.instance.pool }, abis: { RWAOfferingPool: [] } };
+    const config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 4, contracts: { RWAOfferingPool: pack.document.instance.pool }, abis: { RWAOfferingPool: [] } };
     const offer = { pool_id: 1, state: 'Open', shares: '10', subscribed: '0', issue_price_atomic: pack.terms.issuePrice, redemption_per_share_atomic: pack.terms.target,
       settlement_asset: pack.terms.settlementAsset, raised_atomic: '0', disbursed_atomic: '0', recovered_atomic: '0', maturity: pack.terms.maturity,
       subscription_deadline: pack.terms.subscribeUntil, disbursement_deadline: pack.terms.disburseUntil, quote_version: '3', terms_hash: pack.terms_hash,
@@ -45,7 +45,9 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
     await expect(terms).toContainText(pack.terms.exporter); await expect(terms).toContainText('0 TEST_USDC');
     await expect(terms).toContainText(language === 'zh' ? '烧毁份额后仍保留' : 'Burning shares preserves');
     await expect(terms).toContainText(language === 'zh' ? '每个钱包在同一池最多 32 段' : 'at most 32 separate subscription segments in one pool');
-    await expect(terms).toContainText(language === 'zh' ? '首笔认购后价格固定' : 'The price is fixed from the first subscription');
+    // Version 4 terms: the price is the signed one, no default without a shortfall, unsubscribed pools exit without an operator.
+    await expect(terms).toContainText(language === 'zh' ? '运营方和治理都不能修改' : 'neither the operator nor governance can change it');
+    await expect(terms).toContainText(language === 'zh' ? '只有真实欠款才进入违约' : 'only a real shortfall becomes a default');
     await expect(terms.getByRole('link')).toHaveAttribute('href', '/api/controlled/offerings/1/terms?download=1');
     const confirm = card.getByRole('button', { name: language === 'zh' ? '确认并前往钱包' : 'Confirm and continue to wallet', exact: true });
     await expect(confirm).toBeDisabled(); await card.getByRole('checkbox').focus(); await page.keyboard.press('Space'); await expect(confirm).toBeEnabled();

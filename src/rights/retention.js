@@ -10,7 +10,9 @@ const DAY = 86_400_000;
 export const MATERIAL_RETENTION_MS = 90 * DAY;
 export const FINANCING_RECORD_RETENTION_MS = 180 * DAY;
 export const MATERIAL_ARCHIVE_MS = 30 * DAY;
-const SETTLED_PLAN = ['draft', 'confirmed', 'reverted'];
+// Plans that can send nothing more: unsent or abandoned drafts, receipts, operations the wallet did not send (`released`,
+// whose nonce the next send of that wallet reuses) and operations whose nonce another canonical transaction took.
+export const SETTLED_PLAN = Object.freeze(['draft', 'abandoned', 'confirmed', 'reverted', 'released', 'superseded']);
 
 /** Retention date of a new record: the base period after the declared tenor. */
 export function initialRetention(now, summary) { return now + MATERIAL_RETENTION_MS + summary.tenor_days * DAY; }

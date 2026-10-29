@@ -46,6 +46,14 @@ async function backend(c, t) {
   return { directory, env, service, app, post, login, plan, execute };
 }
 
+// A superseded version ran under the governance code of its time: its test deploys that governance and a hub it owns.
+async function frozenShared(c, frozen) {
+  const deploy = async (name, args) => (await new ContractFactory(frozen[name].abi, frozen[name].bytecode, c.memberA).deploy(...args)).waitForDeployment();
+  const governance = await deploy('RightsGovernance', [[c.memberA.address, c.memberB.address, c.memberC.address], 3600]);
+  const hub = await deploy('AssetIdentityHub', [governance.target]);
+  return { governance, hub, govern: (contract, method, args) => c.govern(contract, method, args, governance) };
+}
+
 describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process.env.AGENTBL_W3_INTEGRATION !== '1' }, () => {
   let node;
   before(async () => { node = await runHardhatNode(); });
@@ -132,6 +140,35 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     assert.equal(await c.provider.getTransactionCount(c.issuer.address), count + 1);
     await assert.rejects(app.execute(issuer, result), { code: 'RIGHTS_PLAN_MISMATCH' });
   });
+  it('F01 releases a role plan the wallet rejected, reuses its nonce and supersedes it once another transaction takes it', async (t) => {
+    const c = await deployRightsRpc(node, t), app = await backend(c, t), compliance = await app.login(c.compliance, ['compliance']);
+    const input = { operation: 'refresh_screening', valid_until: String(await c.now() + 80000n), evidence_hash: c.fresh() };
+    const rejecting = { address: c.compliance.address, signer: { provider: c.provider, getAddress: () => c.compliance.getAddress(),
+      sendTransaction: async () => { throw Object.assign(new Error('User rejected the request'), { code: 4001 }); } } };
+    const checkpoint = (plan) => app.post(`transaction-plans/${plan.plan_id}/broadcast`, {}, compliance.token);
+    const before = await c.provider.getTransactionCount(c.compliance.address);
+    const first = await app.plan(compliance, input);
+    await assert.rejects(sendRightsPlan(first, { session: rejecting, beforeBroadcast: checkpoint }), { code: 4001 });
+    assert.equal(await c.provider.getTransactionCount(c.compliance.address), before, 'the rejecting wallet sent nothing');
+    const blocked = await app.plan(compliance, { ...input, evidence_hash: c.fresh() });
+    await assert.rejects(checkpoint(blocked), { code: 'rights_plan_reconcile_required' });
+    const released = await app.post(`transaction-plans/${first.plan_id}/release`, {}, compliance.token);
+    assert.equal(released.status, 'released');
+    // The same wallet sends the same reviewed plan again with its reserved nonce.
+    const sent = await sendRightsPlan(first, { session: { signer: c.compliance, address: c.compliance.address }, beforeBroadcast: checkpoint,
+      attachTransaction: (planId, txHash) => app.post(`transaction-plans/${planId}/transaction`, { tx_hash: txHash }, compliance.token) });
+    assert.equal(sent.status, 'confirmed');
+    // A rejected plan whose nonce another transaction then takes is superseded and frees the wallet.
+    const second = await app.plan(compliance, { ...input, evidence_hash: c.fresh() });
+    await assert.rejects(sendRightsPlan(second, { session: rejecting, beforeBroadcast: checkpoint }), { code: 4001 });
+    assert.equal((await app.post(`transaction-plans/${second.plan_id}/release`, {}, compliance.token)).status, 'released');
+    await c.send(c.compliance.sendTransaction({ to: c.compliance.address, value: 0n, nonce: second.nonce }));
+    const superseded = await app.service.getPlan(compliance.token, second.plan_id);
+    assert.equal(superseded.status, 'superseded');
+    const third = await app.plan(compliance, { ...input, evidence_hash: c.fresh() });
+    assert.equal(third.nonce, second.nonce + 1);
+    assert.equal((await checkpoint(third)).status, 'broadcast_prepared');
+  });
   it('verifies manifest artifacts, refuses code/network tampering, and preserves receipt reorg failures', async (t) => {
     const c = await deployRightsRpc(node, t), app = await backend(c, t), issuer = await app.login(c.issuer, ['issuer']);
     const contracts = Object.fromEntries(await Promise.all(['RightsGovernance', 'CommittedEBLRegistry', 'RightsController', 'ControlledRWAToken', 'RWAOfferingPoolV5'].map(async (name) => [name,
@@ -139,7 +176,7 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     const file = path.join(app.directory, 'instance.json');
     await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', rpc_url: node.url, chain_id: String(c.chainId), contracts }));
     const loaded = await loadRightsChain(file); t.after(() => loaded.provider.destroy());
-    assert.equal((await loaded.verify()).control_version, 3);
+    assert.equal((await loaded.verify()).control_version, 4);
     const expected = c.chain.chainId; c.chain.chainId = 1;
     await assert.rejects(c.chain.verify(), { code: 'rights_network_mismatch' }); c.chain.chainId = expected;
     const issue = await c.issuance(), plan = await app.plan(issuer, { operation: 'register_title', payload: issue });
@@ -160,7 +197,8 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     t.after(() => fs.rm(directory, { recursive: true, force: true }));
     const issue = await c.issuance(); await c.send(c.registry.registerTitle(issue.issuance, issue.signature));
     const input = { instance_id: 'n1-local-candidate', chain_id: 31337, governance: await c.governance.getAddress(), hub: await c.hub.getAddress(),
-      deployer: c.memberA.address, nonce: await c.provider.getTransactionCount(c.memberA.address, 'pending') };
+      deployer: c.memberA.address, nonce: await c.provider.getTransactionCount(c.memberA.address, 'pending'),
+      members: [c.memberA.address, c.memberB.address, c.memberC.address], delay: 3600 };
     const prepared = await prepareRightsCandidate(input);
     const written = await writeRightsCandidate(input, directory);
     assert.equal(written.broadcast, false);
@@ -171,36 +209,41 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
       if (address) assert.equal(receipt.contractAddress.toLowerCase(), address.toLowerCase());
     }
     const contract = (name) => new Contract(prepared.contracts[name], prepared.artifacts[name].abi, c.memberA);
-    const registry = contract('CommittedEBLRegistry'), controller = contract('RightsController'), pool = contract('RWAOfferingPoolV5');
-    await c.govern(c.hub, 'setRegistry', [registry.target, true]); await c.govern(registry, 'bindController', [controller.target]);
-    await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
+    const registry = contract('CommittedEBLRegistry'), controller = contract('RightsController'), pool = contract('RWAOfferingPoolV5'), governance = contract('RightsGovernance');
+    // The instance has its own governance; only the shared hub's enrollment goes through the hub's governance.
+    assert.notEqual(governance.target.toLowerCase(), c.governance.target.toLowerCase());
+    assert.equal((await registry.governance()).toLowerCase(), governance.target.toLowerCase());
+    await c.govern(c.hub, 'setRegistry', [registry.target, true]); await c.govern(registry, 'bindController', [controller.target], governance);
+    await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address], governance);
     const duplicate = { ...issue.issuance, nonce: '9999', validUntil: String(await c.now() + 10000n) };
     await assert.rejects(registry.registerTitle(duplicate, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, duplicate)), /asset already reserved/u);
     assert.equal(await pool.owner(), controller.target); assert.equal(await controller.intakeStopped(), true);
     const file = path.join(directory, 'instance.json');
-    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 3,
+    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 4,
       rpc_url: node.url, chain_id: 31337, contracts: prepared.contracts }));
     const loaded = await loadRightsChain(file); t.after(() => loaded.provider.destroy());
-    assert.equal(prepared.control_version, 3); assert.equal(prepared.signature_domain.version, '3');
-    assert.equal((await loaded.verify()).control_version, 3);
+    assert.equal(prepared.control_version, 4); assert.equal(prepared.signature_domain.version, '4');
+    assert.equal((await loaded.verify()).control_version, 4);
     assert.equal((await loaded.verify()).exit_only, false);
     // An old instance's exact calldata/nonce journal cannot name the new pool.
     assert.notEqual(prepared.runtime_namespace, `controlled-capital-${String(c.pool.target).toLowerCase()}`);
     await assert.rejects(prepareRightsCandidate({ ...input, chain_id: 1 }));
+    await assert.rejects(prepareRightsCandidate({ ...input, members: [c.memberA.address, c.memberB.address] }));
+    await assert.rejects(prepareRightsCandidate({ ...input, delay: 60 }));
   });
   it('loads frozen v2 code after recompilation, keeps its original rules, closes new risk and preserves exits', async (t) => {
     const frozen = JSON.parse(await fs.readFile('scripts/config/rights-v2-artifacts.json', 'utf8')).contracts;
-    const c = await deployRightsRpc(node, t), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-legacy-v2-'));
+    const c = await deployRightsRpc(node, t), shared = await frozenShared(c, frozen), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-legacy-v2-'));
     t.after(() => fs.rm(dir, { recursive: true, force: true }));
     const deploy = async (name, args) => (await new ContractFactory(frozen[name].abi, frozen[name].bytecode, c.memberA).deploy(...args)).waitForDeployment();
-    const registry = await deploy('CommittedEBLRegistry', [c.governance.target, c.hub.target]), token = await deploy('ControlledRWAToken', []);
+    const registry = await deploy('CommittedEBLRegistry', [shared.governance.target, shared.hub.target]), token = await deploy('ControlledRWAToken', []);
     const pool = await deploy('RWAOfferingPoolV5', [registry.target, token.target]); await c.send(token.bindPool(pool.target));
-    const controller = await deploy('RightsController', [c.governance.target, registry.target, token.target, pool.target]);
+    const controller = await deploy('RightsController', [shared.governance.target, registry.target, token.target, pool.target]);
     await c.send(pool.transferOwnership(controller.target)); await c.send(controller.activate());
-    await c.govern(c.hub, 'setRegistry', [registry.target, true]); await c.govern(registry, 'bindController', [controller.target]);
-    const issue = await c.issuance(); await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
-    for (const [role, wallet] of [['ISSUER', c.issuer], ['VALUER', c.valuer], ['COMPLIANCE', c.compliance]]) await c.govern(controller, 'setRole', [await controller[role](), wallet.address, true]);
-    await c.govern(controller, 'setTestAsset', [c.usdc.target, true]); await c.govern(controller, 'setIntakeStopped', [false, c.fresh()]);
+    await shared.govern(shared.hub, 'setRegistry', [registry.target, true]); await shared.govern(registry, 'bindController', [controller.target]);
+    const issue = await c.issuance(); await shared.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
+    for (const [role, wallet] of [['ISSUER', c.issuer], ['VALUER', c.valuer], ['COMPLIANCE', c.compliance]]) await shared.govern(controller, 'setRole', [await controller[role](), wallet.address, true]);
+    await shared.govern(controller, 'setTestAsset', [c.usdc.target, true]); await shared.govern(controller, 'setIntakeStopped', [false, c.fresh()]);
     issue.issuance.validUntil = String(await c.now() + 100000n);
     await c.send(registry.registerTitle(issue.issuance, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, issue.issuance)));
     const { terms, valuation: current } = await c.offering(1, issue.issuance), oldDomain = rightsDomain(c.chainId, controller.target, 2);
@@ -215,7 +258,7 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     await c.send(pool.connect(c.investor).subscribe(1, 1));
     const file = path.join(dir, 'v2.json');
     await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 2,
-      rpc_url: node.url, chain_id: 31337, contracts: { RightsGovernance: c.governance.target, AssetIdentityHub: c.hub.target,
+      rpc_url: node.url, chain_id: 31337, contracts: { RightsGovernance: shared.governance.target, AssetIdentityHub: shared.hub.target,
         CommittedEBLRegistry: registry.target, RightsController: controller.target, ControlledRWAToken: token.target, RWAOfferingPoolV5: pool.target } }));
     const legacy = await loadRightsChain(file); t.after(() => legacy.provider.destroy());
     assert.deepEqual([(await legacy.verify()).control_version, (await legacy.verify()).exit_only], [2, true]);
@@ -224,25 +267,62 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     // Exits pass the legacy filter and reach the chain preflight, which still applies the old instance's rules.
     await assert.rejects(legacy.prepare({ wallet: c.investor.address, roles: ['investor'] }, { operation: 'start_exit', pool_id: '1' }), { code: 'rights_preflight_failed' });
     // Source changes do not repair a deployed instance: frozen v2 still drops the title when its issuer key rotates.
-    await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.outsider.address]);
+    await shared.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.outsider.address]);
     assert.equal(await registry.isActive(1), false);
     await c.advance(BigInt(terms.subscribeUntil) + 1n);
     await c.send(pool.connect(c.investor).refundInvestor(1, c.investor.address));
     assert.equal(await pool.escrowed(1, c.usdc.target), 0n); assert.equal(await token.balanceOf(1, c.investor.address), 0n);
   });
-  it('loads frozen v1 code after recompilation, closes its risk entry, and preserves funded wallet exits', async (t) => {
-    const frozen = JSON.parse(await fs.readFile('scripts/config/rights-v1-artifacts.json', 'utf8')).contracts;
-    const c = await deployRightsRpc(node, t), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-legacy-'));
+  it('loads frozen v3 code after the version 4 edits, keeps its own rules and allows only exits', async (t) => {
+    const frozen = JSON.parse(await fs.readFile('scripts/config/rights-v3-artifacts.json', 'utf8')).contracts;
+    const c = await deployRightsRpc(node, t), shared = await frozenShared(c, frozen), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-legacy-v3-'));
     t.after(() => fs.rm(dir, { recursive: true, force: true }));
     const deploy = async (name, args) => (await new ContractFactory(frozen[name].abi, frozen[name].bytecode, c.memberA).deploy(...args)).waitForDeployment();
-    const registry = await deploy('CommittedEBLRegistry', [c.governance.target, c.hub.target]);
-    const controller = await deploy('RightsController', [c.governance.target, registry.target]); await c.send(controller.activate());
+    const registry = await deploy('CommittedEBLRegistry', [shared.governance.target, shared.hub.target]), token = await deploy('ControlledRWAToken', []);
+    const pool = await deploy('RWAOfferingPoolV5', [registry.target, token.target]); await c.send(token.bindPool(pool.target));
+    const controller = await deploy('RightsController', [shared.governance.target, registry.target, token.target, pool.target]);
+    await c.send(pool.transferOwnership(controller.target)); await c.send(controller.activate());
+    await shared.govern(shared.hub, 'setRegistry', [registry.target, true]); await shared.govern(registry, 'bindController', [controller.target]);
+    const issue = await c.issuance(); await shared.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
+    for (const [role, wallet] of [['ISSUER', c.issuer], ['VALUER', c.valuer], ['COMPLIANCE', c.compliance], ['OPERATOR', c.operator]]) await shared.govern(controller, 'setRole', [await controller[role](), wallet.address, true]);
+    await shared.govern(controller, 'setTestAsset', [c.usdc.target, true]); await shared.govern(controller, 'setIntakeStopped', [false, c.fresh()]);
+    issue.issuance.validUntil = String(await c.now() + 100000n);
+    await c.send(registry.registerTitle(issue.issuance, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, issue.issuance)));
+    const { terms, valuation: current } = await c.offering(1, issue.issuance), oldDomain = rightsDomain(c.chainId, controller.target, 3);
+    const hash = TypedDataEncoder.hash(oldDomain, TERMS_TYPES, terms), valuation = { ...current, termsHash: hash };
+    const pledge = { eblId: 1, pool: pool.target, termsHash: hash, nonce: await registry.holderNonce(1), validUntil: terms.subscribeUntil };
+    await c.send(registry.pledge(1, pool.target, hash, terms.subscribeUntil, await c.holder.signTypedData(titleDomain(c.chainId, registry.target), PLEDGE_TYPES, pledge)));
+    await c.send(controller.connect(c.issuer).createControlledOffering(terms, valuation, c.valuer.address, await c.valuer.signTypedData(oldDomain, VALUATION_TYPES, valuation)));
+    const file = path.join(dir, 'v3.json');
+    await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 3,
+      rpc_url: node.url, chain_id: 31337, contracts: { RightsGovernance: shared.governance.target, AssetIdentityHub: shared.hub.target,
+        CommittedEBLRegistry: registry.target, RightsController: controller.target, ControlledRWAToken: token.target, RWAOfferingPoolV5: pool.target } }));
+    const legacy = await loadRightsChain(file); t.after(() => legacy.provider.destroy());
+    assert.deepEqual([(await legacy.verify()).control_version, (await legacy.verify()).exit_only], [3, true]);
+    await assert.rejects(legacy.prepare({ wallet: c.investor.address, roles: ['investor'] }, { operation: 'acknowledge_terms', pool_id: '1' }), { code: 'rights_legacy_exit_only' });
+    await assert.rejects(legacy.prepare({ wallet: c.compliance.address, roles: ['compliance'] }, { operation: 'refresh_screening', valid_until: '1', evidence_hash: c.fresh() }), { code: 'rights_legacy_exit_only' });
+    // A failed-release retry and the public exit stay available; the chain preflight still applies v3's own rules.
+    await assert.rejects(legacy.prepare({ wallet: c.holder.address, roles: ['holder'] }, { operation: 'retry_collateral_release', pool_id: '1' }), { code: 'rights_preflight_failed' });
+    // Source changes do not repair a deployed instance: v3's governance still lets one member cancel an approved change.
+    const data = controller.interface.encodeFunctionData('setIntakeStopped', [true, c.fresh()]);
+    const proposed = await c.send(shared.governance.connect(c.memberA).propose(controller.target, data, c.fresh()));
+    const id = proposed.logs.map((log) => { try { return shared.governance.interface.parseLog(log); } catch { return null; } }).find((event) => event?.name === 'Proposed').args.id;
+    await c.send(shared.governance.connect(c.memberB).approve(id)); await c.send(shared.governance.connect(c.memberC).cancel(id));
+    assert.equal((await shared.governance.operations(id)).done, true);
+  });
+  it('loads frozen v1 code after recompilation, closes its risk entry, and preserves funded wallet exits', async (t) => {
+    const frozen = JSON.parse(await fs.readFile('scripts/config/rights-v1-artifacts.json', 'utf8')).contracts;
+    const c = await deployRightsRpc(node, t), shared = await frozenShared(c, frozen), dir = await fs.mkdtemp(path.join(os.tmpdir(), 'n1-legacy-'));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    const deploy = async (name, args) => (await new ContractFactory(frozen[name].abi, frozen[name].bytecode, c.memberA).deploy(...args)).waitForDeployment();
+    const registry = await deploy('CommittedEBLRegistry', [shared.governance.target, shared.hub.target]);
+    const controller = await deploy('RightsController', [shared.governance.target, registry.target]); await c.send(controller.activate());
     const pool = new Contract(await controller.capitalPool(), frozen.RWAOfferingPoolV5.abi, c.memberA);
     const token = new Contract(await controller.token(), frozen.ControlledRWAToken.abi, c.memberA);
-    await c.govern(c.hub, 'setRegistry', [registry.target, true]); await c.govern(registry, 'bindController', [controller.target]);
-    const issue = await c.issuance(); await c.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
-    for (const [role, wallet] of [['ISSUER', c.issuer], ['VALUER', c.valuer], ['COMPLIANCE', c.compliance]]) await c.govern(controller, 'setRole', [await controller[role](), wallet.address, true]);
-    await c.govern(controller, 'setTestAsset', [c.usdc.target, true]); await c.govern(controller, 'setIntakeStopped', [false, c.fresh()]);
+    await shared.govern(shared.hub, 'setRegistry', [registry.target, true]); await shared.govern(registry, 'bindController', [controller.target]);
+    const issue = await c.issuance(); await shared.govern(registry, 'setIssuer', [issue.issuance.issuerOrg, c.issuer.address]);
+    for (const [role, wallet] of [['ISSUER', c.issuer], ['VALUER', c.valuer], ['COMPLIANCE', c.compliance]]) await shared.govern(controller, 'setRole', [await controller[role](), wallet.address, true]);
+    await shared.govern(controller, 'setTestAsset', [c.usdc.target, true]); await shared.govern(controller, 'setIntakeStopped', [false, c.fresh()]);
     issue.issuance.validUntil = String(await c.now() + 100000n);
     await c.send(registry.registerTitle(issue.issuance, await c.issuer.signTypedData(titleDomain(c.chainId, registry.target), ISSUANCE_TYPES, issue.issuance)));
     const current = await c.offering(1, issue.issuance), { disburseUntil: _drawDeadline, ...terms } = current.terms;
@@ -260,7 +340,7 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     await c.send(pool.connect(c.investor).subscribe(1, 1));
     const file = path.join(dir, 'v1.json');
     await fs.writeFile(file, JSON.stringify({ schema: 'agentbl-rights-instance-v1', scope: 'research_test_assets_only', control_version: 1,
-      rpc_url: node.url, chain_id: 31337, contracts: { RightsGovernance: c.governance.target, AssetIdentityHub: c.hub.target,
+      rpc_url: node.url, chain_id: 31337, contracts: { RightsGovernance: shared.governance.target, AssetIdentityHub: shared.hub.target,
         CommittedEBLRegistry: registry.target, RightsController: controller.target, ControlledRWAToken: token.target, RWAOfferingPoolV5: pool.target } }));
     const legacy = await loadRightsChain(file); t.after(() => legacy.provider.destroy());
     assert.equal((await legacy.verify()).exit_only, true);

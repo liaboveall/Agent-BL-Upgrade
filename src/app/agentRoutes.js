@@ -15,6 +15,7 @@ import { publicAgentPolicy } from '../mcp/agentTools.js';
 import { subscriptionAvailability } from '../core/subscription.js';
 import { workspaceOwner, canReadWorkspaceCase, canReadJob, requireWorkspaceCase, settleCaseAccess, requireCaseAccess } from './workspaceAccess.js';
 import { parsePreferences } from '../agent/runtime/preferences.js';
+import { ANCHOR_SCHEMA } from '../agent/runtime/anchorProof.js';
 
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
 // Routes that decide who may read a case: a request to one waits while the case access records load.
@@ -171,6 +172,14 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       const id = pathId(decisionMatch[1]);
       const privateDecision = await service.getDecision(id);
       if (privateDecision) requireWorkspaceCase(service, request, privateDecision.case_id, privateDecision);
+      // A trace or anchor leaf is kept under its own retention and can outlive the decision record. Without that record
+      // each is authorized against the case it names itself; one that names no readable case is for an administrator.
+      // Which record retention removed first never decides who may read the other.
+      const requireDerivedCase = (caseId, record) => {
+        if (privateDecision) return;
+        if (typeof caseId === 'string' && caseId) return requireWorkspaceCase(service, request, caseId, record);
+        if (!checkAdminToken(request).authorized) throw new HttpError(404, 'decision_not_found', 'Unknown decision');
+      };
       if (decisionMatch[2] === 'evidence') {
         if (!service.evidenceArchive) throw new HttpError(503, 'evidence_archive_not_configured', 'Evidence archive is unavailable');
         const pack = await service.evidenceArchive.get(id, { owner: workspaceOwner(request), admin: checkAdminToken(request).authorized });
@@ -180,7 +189,10 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         sendJson(response, 200, pack); return true;
       }
       if (decisionMatch[2] === 'anchor') {
-        sendJson(response, 200, { ok: true, anchor: await service.getDecisionAnchor(id) });
+        const anchor = await service.getDecisionAnchor(id);
+        // The private anchor schema commits to the case only as a hash, so its leaf is public proof material.
+        if (anchor?.payload && anchor.payload.schema === ANCHOR_SCHEMA) requireDerivedCase(anchor.payload.case_id, anchor.payload);
+        sendJson(response, 200, { ok: true, anchor });
         return true;
       }
       if (decisionMatch[2] === 'replay') {
@@ -191,6 +203,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       if (decisionMatch[2] === 'trace') {
         const trace = await service.getTrace(id);
         if (!trace) throw new HttpError(404, 'trace_not_found', 'No trace is recorded for this decision');
+        requireDerivedCase(trace.attributes?.case_id, trace);
         sendJson(response, 200, { ok: true, trace });
         return true;
       }

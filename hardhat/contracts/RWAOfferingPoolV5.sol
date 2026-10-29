@@ -802,11 +802,15 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         if (!cumulativeClaims || o.raisedAtomic == 0) return gross;
         return o.raisedAtomic + Math.mulDiv(gross - o.raisedAtomic, disbursedAtomic[poolId], o.raisedAtomic, Math.Rounding.Ceil);
     }
+    /// @notice Anyone may close, as repaid, a raise whose principal was never drawn once the draw
+    ///         deadline passes, or a drawn pool whose escrowed cash covers every claim at maturity.
+    ///         A pool with nothing owed is never routed through default.
     function closeUndisbursed(uint256 poolId) external nonReentrant {
         Offering storage o = offerings[poolId];
-        if (!cumulativeClaims || !o.exists || o.subscribed == 0 || disbursedAtomic[poolId] != 0
-            || block.timestamp < disbursementDeadline[poolId] || o.raisedAtomic < o.minRaise
-            || o.state == OfferingState.Repaid || o.state == OfferingState.LossSettled || o.state == OfferingState.Cancelled) revert BadState();
+        if (!cumulativeClaims || !o.exists || o.subscribed == 0 || o.raisedAtomic < o.minRaise
+            || o.state == OfferingState.Repaid || o.state == OfferingState.LossSettled || o.state == OfferingState.Cancelled
+            || (disbursedAtomic[poolId] == 0 ? block.timestamp < disbursementDeadline[poolId]
+                : !(_isActive(o.state) || o.state == OfferingState.Paused) || block.timestamp < maturityAt[poolId] || outstandingDebt(poolId) != 0)) revert BadState();
         fundingFinalized[poolId] = true;
         _sealRecovery(poolId, o);
         _changeState(poolId, OfferingState.Repaid, SETTLE_OFFERING);
@@ -829,7 +833,8 @@ contract RWAOfferingPoolV5 is Owned, ReentrancyGuard {
         Offering storage o = offerings[poolId];
         if (!(_isActive(o.state) || o.state == OfferingState.Paused || o.state == OfferingState.Frozen)) revert IllegalTransition();
         if (!(fundingFinalized[poolId])) revert FundingNotFinalized();
-        if (!(o.subscribed > 0 && block.timestamp >= maturityAt[poolId] && (cumulativeClaims || outstandingDebt(poolId) > 0))) revert NotOverdue();
+        // Only a real shortfall at maturity is a default; a pool whose cash covers every claim closes as repaid.
+        if (!(o.subscribed > 0 && block.timestamp >= maturityAt[poolId] && outstandingDebt(poolId) > 0)) revert NotOverdue();
         _changeState(poolId, OfferingState.Defaulted, TRIGGER_LIQUIDATION);
         emit OfferingDefaulted(poolId, outstandingDebt(poolId));
     }

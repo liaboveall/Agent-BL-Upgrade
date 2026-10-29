@@ -4,12 +4,16 @@ pragma solidity 0.8.24;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @notice Two distinct members approve the exact call, then a visible delay starts.
+///         Cancelling an approved call takes two members as well, so one member cannot veto the
+///         others; a proposal still short of its second approval can be withdrawn by its approver.
 ///         Rotation invalidates every queued operation from the former membership epoch.
 contract RightsGovernance is ReentrancyGuard {
     struct Operation { address target; bytes32 dataHash; uint64 eta; uint64 epoch; uint8 approvals; bool done; }
     mapping(address => bool) public member;
     mapping(bytes32 => Operation) public operations;
     mapping(bytes32 => mapping(address => bool)) public approved;
+    mapping(bytes32 => mapping(address => bool)) public cancelVoted;
+    mapping(bytes32 => uint8) public cancelVotes;
     uint256 public memberCount;
     uint64 public epoch = 1;
     uint64 public immutable delay;
@@ -19,6 +23,7 @@ contract RightsGovernance is ReentrancyGuard {
     event Approved(bytes32 indexed id, address indexed member, uint64 eta);
     event Executed(bytes32 indexed id);
     event Cancelled(bytes32 indexed id);
+    event CancelVoted(bytes32 indexed id, address indexed member);
     event MemberChanged(address indexed member, bool enabled, uint64 epoch);
 
     constructor(address[] memory members, uint64 delay_) {
@@ -53,8 +58,12 @@ contract RightsGovernance is ReentrancyGuard {
     }
 
     function cancel(bytes32 id) external {
-        require(member[msg.sender] && operations[id].target != address(0) && !operations[id].done, "cannot cancel");
-        operations[id].done = true;
+        Operation storage op = operations[id];
+        require(member[msg.sender] && op.target != address(0) && op.epoch == epoch && !op.done && !cancelVoted[id][msg.sender], "cannot cancel");
+        cancelVoted[id][msg.sender] = true;
+        emit CancelVoted(id, msg.sender);
+        if (++cancelVotes[id] < 2 && !(op.approvals < 2 && approved[id][msg.sender])) return;
+        op.done = true;
         emit Cancelled(id);
     }
 

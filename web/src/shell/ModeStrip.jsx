@@ -1,8 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../state/hooks.js';
 import { t } from '../lib/i18n.js';
-import { resetDemo, toggleRuntimeMode } from '../state/controller.js';
+import { resetDemo, setView, toggleRuntimeMode } from '../state/controller.js';
+import { rightsSessionInfo } from '../lib/rights-session.js';
+import { scrollBehavior } from '../lib/accessibility.js';
 import { NetworkSelect } from './TopBar.jsx';
+
+/**
+ * Live only: who the app is acting as, on every page, with the way to fix what is missing. Wallet and network come
+ * from the connected wallet (connecting switches its network; switching it disconnects), the organization and roles
+ * from the business session.
+ */
+function IdentityChip() {
+  const wallet = useApp((state) => state.wallet?.address);
+  const [, rerender] = useState(0);
+  useEffect(() => {
+    const update = () => rerender((n) => n + 1);
+    window.addEventListener('agentbl:rightssession', update);
+    return () => window.removeEventListener('agentbl:rightssession', update);
+  }, []);
+  const session = rightsSessionInfo();
+  const state = !wallet ? 'missing' : session.active ? 'ok' : 'partial';
+  const text = !wallet ? t('identity_chip_no_wallet')
+    : session.active ? t('identity_chip_session', { who: [session.organization, session.roles?.join(' / ')].filter(Boolean).join(' · ') || `${wallet.slice(0, 6)}…${wallet.slice(-4)}` })
+    : t('identity_chip_no_session', { wallet: `${wallet.slice(0, 6)}…${wallet.slice(-4)}` });
+  const open = () => {
+    setView('finance');
+    requestAnimationFrame(() => document.querySelector('.finance-identity')?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' }));
+  };
+  return <button type="button" className={`link-btn mode-identity is-${state}`} onClick={open} title={t('identity_chip_hint')}>{text}</button>;
+}
 
 /** The Demo / Live boundary, always visible under the top bar. */
 export function ModeStrip() {
@@ -35,6 +62,7 @@ export function ModeStrip() {
           {expanded ? t('mode_details_hide') : t('mode_details_show')}
         </button>
         <span id="mode-strip-details" className="mode-details">
+          {demoMode ? null : <IdentityChip />}
           <NetworkSelect className="mode-network" />
           <span className="mode-chain muted" title={chainReal ? t('chain_deployed', { network: networkName }) : t('chain_not_deployed')}>{chainReal ? t('chain_deployed', { network: networkName }) : t('chain_not_deployed')}</span>
           <span className="mode-actions">

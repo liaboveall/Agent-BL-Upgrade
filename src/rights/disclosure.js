@@ -19,7 +19,7 @@ export const disclosureInputSchema = z.object({ revision: z.number().int().posit
     fictional: z.literal(true) }).strict().default({ asset_class: 'copper', origin: 'Singapore', destination: 'Shanghai', fictional: true }),
   // Absent on version 2 disclosures, whose published bytes must keep verifying.
   instance: z.object({ chain_id: z.number().int().refine((n) => [1439, 31337].includes(n)), controller: address, pool: address,
-    control_version: z.number().int().min(3).max(3).optional() }).strict(),
+    control_version: z.number().int().min(3).max(4).optional() }).strict(),
   terms: termsSchema, parties: partiesSchema,
   sources: z.array(z.object({ field: z.enum(['invoice', 'cost', 'collateral', 'risk']),
     status: z.enum(['live', 'stale', 'fixture', 'unavailable']), reference: z.string().min(1).max(160) }).strict()).length(4)

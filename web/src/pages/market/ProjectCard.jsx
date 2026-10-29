@@ -7,13 +7,13 @@ import {
 import { selectCase } from '../../state/controller.js';
 import { Badge, Progress, cx } from '../../components/ui.jsx';
 import { poolStateLabel } from '../../features/copilot/Recommendations.jsx';
-import { scrollBehavior } from '../../lib/accessibility.js';
+import { SINGLE_COLUMN } from '../../hooks/useMediaQuery.js';
 
-// Below 960px the detail card follows the whole shelf, so a tap would otherwise change nothing in view.
-const SINGLE_COLUMN = '(max-width: 959px)';
+/** Asks the market page to open the selected project's detail sheet (single column only). */
+export const DETAIL_SHEET_REQUEST = 'agentbl:market-detail';
+// Below 960px there is no detail column beside the shelf: a tap opens the detail as a sheet over the list.
 function revealSelectedDetail() {
-  if (!window.matchMedia?.(SINGLE_COLUMN).matches) return;
-  requestAnimationFrame(() => document.querySelector('.market-aside')?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }));
+  if (window.matchMedia?.(SINGLE_COLUMN).matches) window.dispatchEvent(new Event(DETAIL_SHEET_REQUEST));
 }
 
 /** The status chip next to the risk level: historical, an inactive pool, or the quote's pricing action. */

@@ -123,3 +123,7 @@
 .position-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .position-values dt { color: var(--muted); font-size: var(--fs-12); }
 .position-values dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+/* Live identity chip in the mode strip: a dot says whether wallet and business session are in place. */
+.mode-identity { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mode-identity::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.mode-identity.is-ok::before { background: var(--ok); }

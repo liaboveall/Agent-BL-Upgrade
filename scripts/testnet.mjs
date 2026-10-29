@@ -1,10 +1,10 @@
-// Explicit execution only, against the existing research governance and identity hub.
+// Explicit execution only. A new instance shares the existing identity hub (and its governance) and deploys its own governance.
 import '../src/env.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { JsonRpcProvider, FetchRequest, Wallet } from 'ethers';
+import { Contract, JsonRpcProvider, FetchRequest, Wallet } from 'ethers';
 import { prepareRightsCandidate } from './prepare-rights-candidate.mjs';
 import { releaseRoot, releaseSourceSnapshot } from './lib/release-source.mjs';
 import { executeCandidate } from './lib/n5-deployment.mjs';
@@ -67,8 +67,13 @@ try {
       if (action !== 'prepare') throw new Error('Prepare candidate first');
       const [latest, pending] = await Promise.all([provider.getTransactionCount(signers.governorA.address, 'latest'), provider.getTransactionCount(signers.governorA.address, 'pending')]);
       if (latest !== pending) throw new Error('Deployer nonce unresolved');
-      candidate = await prepareRightsCandidate({ instance_id: instanceId, chain_id: 1439, governance: predecessor.contracts.RightsGovernance,
-        hub: predecessor.contracts.AssetIdentityHub, deployer: signers.governorA.address, nonce: latest });
+      // The hub's own governance enrolls the new registry; the new instance gets its own governance with the same
+      // research members and the same delay (control version 4: two members to approve and two to cancel).
+      const hubGovernance = await new Contract(predecessor.contracts.AssetIdentityHub, ['function governance() view returns (address)'], provider).governance();
+      const delay = Number(await new Contract(hubGovernance, ['function delay() view returns (uint64)'], provider).delay());
+      candidate = await prepareRightsCandidate({ instance_id: instanceId, chain_id: 1439, governance: hubGovernance,
+        hub: predecessor.contracts.AssetIdentityHub, deployer: signers.governorA.address, nonce: latest, delay,
+        members: [signers.governorA.address, signers.governorB.address, signers.governorC.address] });
       candidate.contracts.MockAuthorizationUSDC = predecessor.contracts.MockAuthorizationUSDC;
       candidate.artifacts.MockAuthorizationUSDC = await readJson(path.join(releaseRoot, 'hardhat/artifacts/contracts/MockAuthorizationUSDC.sol/MockAuthorizationUSDC.json'));
       candidate.authorization = `${new Date().toISOString().slice(0, 10)} direct user authorization: control version ${candidate.control_version} commits, pushes, deployment and activation`;

@@ -6,14 +6,16 @@ import * as f from '../../lib/format.js';
 import { MARKET_SORTS, categoryOptions, duplicateLabelIds, marketStats, sortMarketCases, visibleCases } from '../../lib/market.js';
 import { scrollBehavior } from '../../lib/accessibility.js';
 import { useStickyFit } from '../../hooks/useStickyFit.js';
+import { SINGLE_COLUMN, useMediaQuery } from '../../hooks/useMediaQuery.js';
+import { PageIntro } from '../../components/PageIntro.jsx';
 import {
   clearAiSearch, ensureComparisons, keepSelectionVisible, replaceSearchResult, resetMarketFilters, runAiSearch, selectCase, setCategory, setMarketSort, setSearchQuery
 } from '../../state/controller.js';
-import { Button, Empty, Stat } from '../../components/ui.jsx';
+import { Button, Empty, Stat, cx } from '../../components/ui.jsx';
 import { Icon } from '../../components/Icon.jsx';
 import { Recommendations } from '../../features/copilot/Recommendations.jsx';
 import { useNow } from '../../hooks/useNow.js';
-import { ProjectCard } from './ProjectCard.jsx';
+import { DETAIL_SHEET_REQUEST, ProjectCard } from './ProjectCard.jsx';
 import { DetailPanel } from './DetailPanel.jsx';
 import { PortfolioDialog } from './PortfolioDialog.jsx';
 
@@ -30,6 +32,24 @@ export function MarketPage() {
   const [portfolioOpen, setPortfolioOpen] = useState(false);
   const aside = useRef(null);
   useStickyFit(aside);
+  // One column (phones, narrow windows): the detail is a sheet over the shelf, opened by a card, instead of a
+  // second screenful after every card. The introduction folds away on a phone so the projects start near the top.
+  const singleColumn = useMediaQuery(SINGLE_COLUMN);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const sheet = singleColumn ? (sheetOpen ? 'open' : 'closed') : null;
+  useEffect(() => {
+    const open = () => setSheetOpen(true);
+    window.addEventListener(DETAIL_SHEET_REQUEST, open);
+    return () => window.removeEventListener(DETAIL_SHEET_REQUEST, open);
+  }, []);
+  useEffect(() => { if (!singleColumn) setSheetOpen(false); }, [singleColumn]);
+  useEffect(() => {
+    if (sheet !== 'open') return undefined;
+    aside.current?.focus({ preventScroll: true });
+    document.documentElement.classList.add('has-sheet');
+    return () => document.documentElement.classList.remove('has-sheet');
+  }, [sheet]);
+  const closeSheet = () => { setSheetOpen(false); returnToCard(state.caseId); };
   // Search includes translated fields, so derive the small catalog on both language and store renders.
   const cases = sortMarketCases(state, visibleCases(state));
   const selectionVisible = cases.some((entry) => entry.case_id === state.caseId);
@@ -58,11 +78,13 @@ export function MarketPage() {
         <div className="page-head-text">
           <p className="eyebrow">{t('market_eyebrow')}</p>
           <h1 id="market-title">{t('market_h1')}</h1>
-          <p className="page-sub">{t('market_subtitle_short')}</p>
-          {/* Sample statistics of fictional research cases are context, not the task: one quiet line, with what they are. */}
-          <p className="muted small market-sample-stats" aria-live="polite">
-            {`${t('market_stat_target')} ${f.usdCompact(stats.target)} (${t('market_stat_sample_hint')}) · ${t('market_stat_yield')} ${stats.avgYield == null ? '—' : f.bpsToPct(stats.avgYield)} (${t('market_stat_yield_hint')})`}
-          </p>
+          <PageIntro summary={t('market_intro_more')}>
+            <p className="page-sub">{t('market_subtitle_short')}</p>
+            {/* Sample statistics of fictional research cases are context, not the task: one quiet line, with what they are. */}
+            <p className="muted small market-sample-stats" aria-live="polite">
+              {`${t('market_stat_target')} ${f.usdCompact(stats.target)} (${t('market_stat_sample_hint')}) · ${t('market_stat_yield')} ${stats.avgYield == null ? '—' : f.bpsToPct(stats.avgYield)} (${t('market_stat_yield_hint')})`}
+            </p>
+          </PageIntro>
         </div>
         <div className="page-head-stats" aria-live="polite">
           <Stat label={t('market_stat_open')} value={`${stats.open} / ${stats.priced}`} />
@@ -103,12 +125,22 @@ export function MarketPage() {
             </Empty>
           )}
         </section>
-        <aside ref={aside} className="market-aside" aria-label={t('a11y_selected_project')}>
-          {/* Single column: the detail sits after the whole shelf, so say how to get back to the chosen card. */}
-          {selectionVisible ? (
-            <Button variant="ghost" size="sm" className="market-back" onClick={() => returnToCard(state.caseId)}>
-              <Icon name="arrowUp" size={14} />{t('market_back_to_card')}
-            </Button>
+        {sheet === 'open' ? <div className="sheet-backdrop" aria-hidden="true" onClick={closeSheet} /> : null}
+        <aside
+          ref={aside}
+          className={cx('market-aside', sheet && 'is-sheet', sheet === 'open' && 'is-open')}
+          aria-label={t('a11y_selected_project')}
+          hidden={sheet === 'closed'}
+          {...(sheet ? { role: 'dialog', 'aria-modal': 'true', tabIndex: -1, onKeyDown: (event) => sheetKeys(event, closeSheet) } : {})}
+        >
+          {/* Single column: the detail is a sheet over the shelf; closing it returns to the chosen card. */}
+          {sheet ? (
+            <div className="sheet-bar">
+              <span className="sheet-grip" aria-hidden="true" />
+              <Button variant="ghost" size="sm" className="market-back" onClick={closeSheet}>
+                <Icon name="arrowUp" size={14} />{t('market_back_to_card')}
+              </Button>
+            </div>
           ) : null}
           <DetailPanel now={now} noMatches={!cases.length && state.cases.length > 0} selectionVisible={selectionVisible} />
         </aside>
@@ -116,6 +148,18 @@ export function MarketPage() {
       <PortfolioDialog open={portfolioOpen} onClose={() => setPortfolioOpen(false)} />
     </div>
   );
+}
+
+/** In the detail sheet Escape closes it and Tab cycles through its own controls, as in any modal dialog. */
+function sheetKeys(event, close) {
+  if (event.key === 'Escape') { event.stopPropagation(); close(); return; }
+  if (event.key !== 'Tab') return;
+  const focusable = [...event.currentTarget.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex="0"]')]
+    .filter((node) => node.getClientRects().length);
+  if (!focusable.length) return;
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 }
 
 function returnToCard(caseId) {

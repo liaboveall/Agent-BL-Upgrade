@@ -46,6 +46,7 @@ export function createRightsRoutes({ env = process.env, getVersion = null, getMo
     else if (/^transaction-plans\/[a-f0-9-]{36}$/u.test(path) && method === 'GET') result = await service.getPlan(token, path.split('/')[1]);
     else if (/^transaction-plans\/[a-f0-9-]{36}\/broadcast$/u.test(path) && method === 'POST') result = await service.checkpointPlan(token, path.split('/')[1]);
     else if (/^transaction-plans\/[a-f0-9-]{36}\/transaction$/u.test(path) && method === 'POST') result = await service.attachTransaction(token, path.split('/')[1], (await body())?.tx_hash);
+    else if (/^transaction-plans\/[a-f0-9-]{36}\/release$/u.test(path) && method === 'POST') result = await service.releasePlan(token, path.split('/')[1]);
     else if (/^publications\/[a-f0-9-]{36}$/u.test(path) && method === 'GET') result = await service.publication(path.split('/')[1]);
     else if (path === 'transaction-plans' && method === 'POST') {
       const input = await body();

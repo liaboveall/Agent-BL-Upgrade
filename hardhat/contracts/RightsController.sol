@@ -70,7 +70,7 @@ contract RightsController is EIP712 {
     bytes32 public constant GUARDIAN = keccak256("GUARDIAN");
     uint64 public constant NOTICE_PERIOD = 1 days;
     uint64 public constant MAX_RESOLUTION_PERIOD = 3 days;
-    uint256 public constant controlVersion = 3;
+    uint256 public constant controlVersion = 4;
     bytes32 public constant scope = keccak256("RESEARCH_TEST_ASSETS_ONLY");
     address public immutable governance;
     CommittedEBLRegistry public immutable registry;
@@ -84,6 +84,8 @@ contract RightsController is EIP712 {
     mapping(uint256 => address) public valuer;
     mapping(address => mapping(uint256 => bool)) public usedValuationNonce;
     mapping(uint256 => uint256) public latestPoolForEbl;
+    /// @notice The registry pledge each offering was created on; only that pledge can be released for it.
+    mapping(uint256 => uint256) public pledgeOf;
     mapping(address => Eligibility) public eligibility;
     mapping(uint256 => mapping(address => Acceptance)) public acceptances;
     mapping(uint256 => Resolution) public resolutions;
@@ -111,7 +113,7 @@ contract RightsController is EIP712 {
     modifier onlyGovernance() { require(msg.sender == governance, "not governance"); _; }
     modifier onlyRole(bytes32 role) { require(roles[role][msg.sender], "role required"); _; }
 
-    constructor(address governance_, address registry_, address token_, address pool_) EIP712("AgentBL Rights", "3") {
+    constructor(address governance_, address registry_, address token_, address pool_) EIP712("AgentBL Rights", "4") {
         if (governance_.code.length == 0 || registry_.code.length == 0) revert InvalidSetup();
         if (RightsGovernance(governance_).delay() < 1 hours || RightsGovernance(governance_).memberCount() < 3
             || CommittedEBLRegistry(registry_).governance() != governance_) revert InvalidSetup();
@@ -158,7 +160,10 @@ contract RightsController is EIP712 {
         external onlyRole(ISSUER) returns (uint256 poolId) {
         require(activated && !intakeStopped && registry.controller() == address(this) && registry.isActive(t.eblId), "intake unavailable");
         bytes32 hash = hashTerms(t);
-        require(registry.pledgedTo(t.eblId) == address(pool) && registry.pledgeTerms(t.eblId) == hash, "holder terms not approved");
+        // A pledge backs one offering: after that offering ends the holder consents again for the next one.
+        uint256 pledge = registry.pledgeId(t.eblId);
+        require(registry.pledgedTo(t.eblId) == address(pool) && registry.pledgeTerms(t.eblId) == hash
+            && pledgeOf[latestPoolForEbl[t.eblId]] != pledge, "holder terms not approved");
         require(t.assetKey == registry.cargoHashOf(t.eblId) && t.documentHash == registry.metadataHashOf(t.eblId), "asset mismatch");
         require(testAsset[t.settlementAsset] && t.exporter != address(0) && t.feeRecipient != address(0), "invalid asset or recipient");
         require(t.policyHash != bytes32(0) && t.disclosureHash != bytes32(0), "policy missing");
@@ -175,7 +180,7 @@ contract RightsController is EIP712 {
         poolId = pool.createOfferingWithTerms(t.eblId, t.supply, t.issuePrice, t.target, t.maturity, t.subscribeUntil, t.settlementAsset, t.minRaise);
         pool.setDisbursementDeadline(poolId, t.disburseUntil);
         terms[poolId] = t; termsHash[poolId] = hash; valuations[poolId] = v; valuer[poolId] = signer;
-        latestPoolForEbl[t.eblId] = poolId;
+        latestPoolForEbl[t.eblId] = poolId; pledgeOf[poolId] = pledge;
         emit TermsCommitted(poolId, hash, t.policyHash, t.disclosureHash);
         emit ValuationAccepted(poolId, signer, v.netValue, v.coverageBps, v.validUntil);
     }
@@ -214,10 +219,6 @@ contract RightsController is EIP712 {
             && roles[COMPLIANCE][_screeningAttestor], "draw sources unavailable");
         pool.disburseToExporter(poolId, amount, terms[poolId].exporter, evidenceHash);
     }
-    function deductFee(uint256 poolId, uint256 amount, bytes32 evidenceHash) external onlyGovernance {
-        require(pool.feesDeducted(poolId) + amount <= terms[poolId].maxFee, "fee cap exceeded");
-        pool.deductFee(poolId, amount, terms[poolId].feeRecipient, evidenceHash);
-    }
     /// @notice Typed allowlist: executors cannot mint, amend terms, redirect funds or replace controls.
     function executeLifecycle(bytes calldata data) external {
         if (data.length < 36) revert InvalidOperation();
@@ -235,14 +236,15 @@ contract RightsController is EIP712 {
         if (!ok) assembly ("memory-safe") { revert(add(result, 32), mload(result)) }
         emit LifecycleExecuted(selector, poolId, msg.sender);
     }
-    /// @notice An operator may reprice, pause, freeze or resume. Before maturity only delayed
-    ///         governance may start liquidation; an operator's emergency brake is FREEZE_POOL.
-    function applyPricingAction(uint256 poolId, uint256 price, uint8 action, bytes32 evidenceHash, bytes32 quoteHash) external {
+    /// @notice An operator may pause, freeze or resume. Before maturity only delayed governance may
+    ///         start liquidation; an operator's emergency brake is FREEZE_POOL. The price is never
+    ///         changed here: it is part of the terms the holder pledged and the valuer signed, so a
+    ///         new price is a new offering on newly approved terms.
+    function applyPricingAction(uint256 poolId, uint256, uint8 action, bytes32 evidenceHash, bytes32 quoteHash) external {
         require(roles[OPERATOR][msg.sender] || msg.sender == governance, "role required");
-        if (termsHash[poolId] == bytes32(0) || action < 2 || action > 6) revert InvalidOperation();
-        if (action == 2 && (intakeStopped || price == 0 || price >= pool.issuePriceOf(poolId))) revert InvalidOperation();
+        if (termsHash[poolId] == bytes32(0) || action < 3 || action > 6) revert InvalidOperation();
         if (action == 5 && msg.sender != governance && block.timestamp < pool.maturityAt(poolId)) revert GovernanceRequired();
-        pool.applyPricingAction(poolId, price, action, evidenceHash, quoteHash);
+        pool.applyPricingAction(poolId, 0, action, evidenceHash, quoteHash);
     }
     function notifyResolution(uint256 poolId, bytes32 evidenceHash, bytes32 distributionHash, uint256 expectedRecovery) external onlyRole(DISPOSER) {
         require(evidenceHash != bytes32(0) && distributionHash != bytes32(0), "resolution missing");
@@ -262,12 +264,22 @@ contract RightsController is EIP712 {
         Resolution storage r = resolutions[poolId];
         return keccak256(abi.encode(block.chainid, address(this), poolId, r.evidenceHash, r.distributionHash, r.expectedRecovery));
     }
-    /// @notice Deterministic cash-only fallback if business operators are unavailable.
+    /// @notice Deterministic exits anyone may start if business operators are unavailable:
+    ///         an offering nobody subscribed is cancelled once its window closes (unless frozen),
+    ///         undisbursed principal or cash that already covers every claim closes as repaid,
+    ///         and only a real shortfall after maturity becomes a default with a cash-only resolution.
     function startExit(uint256 poolId) external {
         require(termsHash[poolId] != bytes32(0), "offering missing");
-        if (pool.disbursedAtomic(poolId) == 0) { pool.closeUndisbursed(poolId); return; }
         RWAOfferingPoolV5.OfferingState state = pool.stateOf(poolId);
+        (,,,, uint256 subscribed,,,,,,,,) = pool.offerings(poolId);
+        if (subscribed == 0) {
+            require(block.timestamp > terms[poolId].subscribeUntil && state != RWAOfferingPoolV5.OfferingState.Frozen, "offering still open");
+            pool.cancelOffering(poolId, keccak256(abi.encode(termsHash[poolId], "UNSUBSCRIBED_EXIT")));
+            return;
+        }
+        if (pool.disbursedAtomic(poolId) == 0) { pool.closeUndisbursed(poolId); return; }
         if (state != RWAOfferingPoolV5.OfferingState.Liquidation && state != RWAOfferingPoolV5.OfferingState.Defaulted) {
+            if (pool.outstandingDebt(poolId) == 0) { pool.closeUndisbursed(poolId); return; }
             require(block.timestamp >= terms[poolId].maturity, "not overdue");
             pool.markDefault(poolId);
         }
@@ -308,17 +320,20 @@ contract RightsController is EIP712 {
         (,,,,,,,,,, uint256 raised,,) = pool.offerings(poolId);
         return pool.recoveredAtomic(poolId) + raised - pool.disbursedAtomic(poolId);
     }
+    /// @dev A retry by an earlier terminal pool cannot end a later pledge: the pledge being released
+    ///      must be the one the latest offering was created on.
     function onCollateralReleased(uint256 eblId) external view returns (bool) {
         require(msg.sender == address(registry) && registry.pledgedTo(eblId) == address(pool), "not registry");
         uint256 poolId = latestPoolForEbl[eblId];
-        require(poolId != 0, "offering missing");
+        require(poolId != 0 && pledgeOf[poolId] == registry.pledgeId(eblId), "offering missing");
         RWAOfferingPoolV5.OfferingState state = pool.stateOf(poolId);
         require(state == RWAOfferingPoolV5.OfferingState.Repaid || state == RWAOfferingPoolV5.OfferingState.Cancelled
             || (state == RWAOfferingPoolV5.OfferingState.LossSettled && resolutions[poolId].finalized), "release not approved");
         return state == RWAOfferingPoolV5.OfferingState.LossSettled;
     }
-    function canWithdrawPledge(uint256 eblId, bytes32 hash) external view returns (bool) {
-        return pool.poolOfEbl(eblId) == 0 && (latestPoolForEbl[eblId] == 0 || termsHash[latestPoolForEbl[eblId]] != hash);
+    /// @notice A holder may withdraw a pledge no offering was ever created on.
+    function canWithdrawPledge(uint256 eblId, uint256 pledge) external view returns (bool) {
+        return pool.poolOfEbl(eblId) == 0 && pledgeOf[latestPoolForEbl[eblId]] != pledge;
     }
     function clearRiskLock(uint256 eblId, bytes32 evidenceHash) external onlyGovernance {
         uint256 poolId = latestPoolForEbl[eblId];

@@ -16,7 +16,7 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   }, { language, wallet });
   let total = 25, snapshot = 500, partial = false, outage = false, positionsOutage = false, delay = false;
   const requests = [];
-  const config = { chainIdDecimal: 1439, controlVersion: 3, contracts: { RWAOfferingPool: pool } };
+  const config = { chainIdDecimal: 1439, controlVersion: 4, contracts: { RWAOfferingPool: pool } };
   await page.route('**/api/demo/mode', (route) => route.fulfill({ json: { demoMode: false, liveAvailable: true, generation: 4 } }));
   await page.route('**/api/controlled/status', (route) => route.fulfill({ json: { active: true, config } }));
   await page.route('**/api/controlled/positions?**', (route) => route.fulfill(positionsOutage ? { status: 503, json: { error: 'Position unavailable' } } : { json: { complete: true, positions: [], next_cursor: null } }));
@@ -87,6 +87,11 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   }
   // Real native modal, Escape, focus return and language redraw in the regular catalog.
   await page.locator('#tab-market').click();
+  // In one column the detail is a sheet opened from the chosen card.
+  if (width < 960) {
+    await page.locator('.deal-card[aria-pressed="true"]').click();
+    await expect(page.locator('.market-aside.is-sheet')).toBeVisible();
+  }
   const opener = page.locator('.market-aside button').filter({ hasText: zh ? '航程与风险' : 'Voyage and risk' }).first();
   await expect(opener).toBeVisible(); await opener.focus(); await page.keyboard.press('Enter');
   const dialog = page.locator('#deal-detail-modal'); await expect(dialog).toBeVisible();
@@ -96,6 +101,11 @@ for (const language of ['zh', 'en']) for (const width of [390, 768, 1280, 1440])
   await page.keyboard.press('Tab'); await expect(controls.first()).toBeFocused();
   await page.screenshot({ path: info.outputPath(`dialog-${language}-${width}.png`), fullPage: true });
   await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible(); await expect(opener).toBeFocused();
+  // The sheet stays open under the dialog; Escape closes it too and returns to the chosen card.
+  if (width < 960) {
+    await page.keyboard.press('Escape'); await expect(page.locator('.market-aside')).toBeHidden();
+    await expect(page.locator('.deal-card[aria-pressed="true"]')).toBeFocused();
+  }
   await page.locator('.lang-btn').click(); await expect(page.locator('#tab-finance')).toHaveText(zh ? 'Finance & exits' : '融资与退出');
   expect(await page.evaluate(() => window.n4Calls.filter((method) => /sendTransaction|sign/iu.test(method)))).toEqual([]);
 });

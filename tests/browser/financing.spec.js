@@ -1,10 +1,11 @@
+import { keccak256, toUtf8Bytes } from 'ethers';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { disclosureFixture } from '../helpers/disclosure.js';
 
 for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440]) test(`N3 ${language} ${width}: pages, partial failures, role preview and wallet invalidation`, async ({ page }, info) => {
   const zh = language === 'zh', wallet = `0x${'12'.repeat(20)}`, pack = disclosureFixture(), materialId = '11111111-1111-4111-8111-111111111111';
-  const snapshot = { block_number: 500, block_hash: `0x${'ab'.repeat(32)}` }, config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 3,
+  const snapshot = { block_number: 500, block_hash: `0x${'ab'.repeat(32)}` }, config = { chainIdDecimal: 1439, protocolVersion: 5, controlVersion: 4,
     contracts: { RWAOfferingPool: pack.document.instance.pool }, abis: { RWAOfferingPool: [] } };
   await page.setViewportSize({ width, height: 1000 });
   await page.addInitScript(({ language, wallet }) => {
@@ -65,6 +66,10 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
   await workspace.getByLabel(zh ? '本次操作' : 'Next action').selectOption('disburse');
   await workspace.getByLabel(zh ? '金额（TEST_USDC，最多 6 位小数）' : 'Amount (TEST_USDC, up to 6 decimals)').fill('8');
   await expect(workspace.locator('#role-amount-exact')).toContainText('8000000');
+  // A commitment can come from a local file: its keccak256 is computed in the browser and the file is not uploaded.
+  await workspace.getByLabel(zh ? '或从本地文件生成' : 'Or compute it from a local file').setInputFiles({ name: 'evidence.txt', mimeType: 'text/plain', buffer: Buffer.from('agentbl evidence') });
+  await expect(workspace.getByLabel(zh ? '审查材料承诺' : 'Evidence commitment')).toHaveValue(keccak256(toUtf8Bytes('agentbl evidence')));
+  await expect(workspace.locator('#role-evidence-help')).toContainText('evidence.txt');
   await workspace.getByLabel(zh ? '审查材料承诺' : 'Evidence commitment').fill(`0x${'bc'.repeat(32)}`);
   const prepare = workspace.getByRole('button', { name: zh ? '准备可读预览' : 'Prepare readable preview' }); await prepare.focus(); await page.keyboard.press('Enter');
   const preview = workspace.getByRole('region', { name: zh ? '角色操作预览' : 'Role action preview' }); await expect(preview).toContainText('8.000000 TEST_USDC');
