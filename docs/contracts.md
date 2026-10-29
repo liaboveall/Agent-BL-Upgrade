@@ -20,7 +20,7 @@
 
 认购时付款与份额原子产生；失败募集退回成本。放款受独立放款截止、到期和估值有效期约束，未放款本金有关闭退出路径。部分放款按实际净债务处理。
 
-源码当前为**控制版本 4**；公共测试网上运行的仍是已部署的 v3 实例 `n5-v3-20261027`，在 v4 实例部署并切换配置之前，应用把它当作旧版本、只保留退出（见下文“v3 → v4”）。
+当前控制版本为 **4**，公开配置指向 2026-10-29 部署的 v4 实例 `n5-v4-20261029`；v3 实例 `n5-v3-20261027` 冻结为旧版本、只保留退出（见下文“v3 → v4 迁移”）。
 
 v4 沿用 v2 的零费、固定通知期和有硬截止的处置规则：回款不重启通知，重复异议不能反复冻结。累计回款按永久认购槽位分配，首次领取烧毁份额后仍可领取迟到回款；领取顺序不改变权益。份额不可转让，无二级交易。
 
@@ -55,7 +55,7 @@ Hardhat 依赖安装使用 `npm --prefix hardhat ci`。当前保留 Zod 4.6.7 �
 
 旧实例在应用内只接受不增加风险的操作：v2 为回款、付款与到港证明、结清、违约、处置的通知/审核/异议/终局、`startExit` 与取消无人认购的发行；v3 另加 `retryCollateralRelease`。投资者的退款与领取不受影响。v2 发行披露不含 `control_version` 字段，按原 v2 政策和签名域核验；v3、v4 披露分别写明 `control_version: 3` / `4`，按各自政策（`FINANCE_POLICY_V3` 与 v3 文本逐字节相同）和签名域核验，不能互换。
 
-`npm run rights:plan` 与 `npm run rights:candidate` 生成无签名计划（v4 候选输入需给出共享 Hub 的治理 `governance`、新实例治理的三名成员 `members` 与延时 `delay`）；`npm run testnet -- status n5-v3-20261027` 查询当前部署记录，`npm run testnet -- status n5-v2-20261019` 查询旧 v2。部署、激活和资金执行需要显式 `--execute`、干净提交及同提交 CI 收据。已存在实例只能沿原 journal 恢复，不能用新实例 ID 绕过原交易。
+`npm run rights:plan` 与 `npm run rights:candidate` 生成无签名计划（v4 候选输入需给出共享 Hub 的治理 `governance`、新实例治理的三名成员 `members` 与延时 `delay`）；`npm run testnet -- status n5-v4-20261029` 查询当前部署记录，`status n5-v3-20261027`、`status n5-v2-20261019` 查询旧 v3、v2。部署、激活和资金执行需要显式 `--execute`、干净提交及同提交 CI 收据。已存在实例只能沿原 journal 恢复，不能用新实例 ID 绕过原交易。
 
 ## v2 → v3 迁移与已知限制
 
@@ -81,13 +81,21 @@ v3 及更早的共享治理为"任意 2 名成员批准、任一成员可单独�
 
 ## v3 → v4 迁移
 
-已完成（源码与本地验证）：
+迁移已按以下步骤完成：
 
 1. **冻结 v3**：`scripts/config/rights-v3-artifacts.json`；`src/rights/chain.js` 用它核验已部署的 v3 实例，v3 只保留退出。回归 `loads frozen v3 code after the version 4 edits` 在本地链部署冻结的 v3 产物，证明它仍可核验、只保留退出，且旧规则（单人取消治理提案）仍在。
 2. **v4 合约测试**：`hardhat/test/controlV4.test.js` 把综合评估 R1–R5 反例改写为反向断言（旧池重试不能释放新质押、拒绝任何改价、足额回款按 Repaid 结清、一原子欠款仍违约、无人认购可自行取消、两人取消），原有用例按新规则更新。
 3. **披露与工具**：`FINANCE_POLICY`（`agentbl-cash-rights-v4`）写明新规则；`prepare-rights-candidate.mjs` 先部署实例自己的治理，`n5-deployment.mjs` 让 Hub 登记走 Hub 的治理、其余 12 项走新治理。
+4. **部署与激活**：v4 以独立实例 `n5-v4-20261029` 从提交 598490c（CI 40820752122，16/16 作业）部署：`prepare` 34 笔（自有治理、Registry、Token、Pool、Controller、绑定，以及 13 项治理提案与批准；Hub 登记走原治理 `0x1Df0…E2e5`，其余 12 项走新治理 `0x8878…9609`），1 小时延时后 `activate` 执行 13 项，链上核验为 control version 4、非只退出。资金路径验证：正常回款（池 #3）与失败募集退款（池 #2）已通过；损失路径（池 #1）已违约、公告并独立复核，1 天通知期满后（2026-10-30 06:42 UTC 之后）再运行一次 `npm run testnet -- funding n5-v4-20261029 --execute` 完成终局与迟到回款领取。之后两份公开配置同时切换到 v4，25 个池的公开条款写入 `data/disclosures/`。
 
-待用户执行（公共链交易，需要明确授权、干净提交与同提交 CI 收据）：部署并激活 v4 实例（`npm run testnet -- prepare <新实例ID> --execute`，延时后 `activate`），资金路径验证，之后同时切换 `public/rights-instance.json` 与 `public/application-config.json`。在此之前公共测试网上的 v3 实例在应用内只读并只保留退出。
+| v4 合约 | 地址 |
+| --- | --- |
+| RightsGovernance（v4 自有） | `0x88787e574A676724F6C20871a5AFb99c9Ff99609` |
+| CommittedEBLRegistry | `0xBC1F19322ACAFBBA4d7FDD53493785f6b48114Ea` |
+| RightsController | `0x9f0EC67601FDDE2c633eaE5a20bCBa65D295dA22` |
+| RWAOfferingPoolV5 | `0xada046f870fbE922Ed9423BC3e7aC7C4b3048F29` |
+| ControlledRWAToken | `0xdbCB6FC89415968a1833d7f6667c540e7849A78B` |
+| AssetIdentityHub（共享，原治理） | `0x471c70CAb4166AF7D0261cb0dE9Be26B53C01e88` |
 
 ## 仍保留的已知限制
 

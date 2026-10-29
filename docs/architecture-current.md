@@ -90,7 +90,7 @@ Agent 事件总线把接收当作提交：审计行和含该事件的索引都�
 
 ## 当前实例与信任边界
 
-当前公开配置是 control version 3、Rights v3 签名域。旧 v1、v2 使用各自冻结的 ABI/runtime，只保留应用内查询与既有退出；不能用新 ABI 解释旧条款。共享治理与 Hub 保留旧资产占用，新 Registry、Pool、Controller 和资金账本独立。
+当前公开配置是 control version 4（实例 `n5-v4-20261029`）、Rights v4 签名域。旧 v1、v2、v3 使用各自冻结的 ABI/runtime，只保留应用内查询与既有退出；不能用新 ABI 解释旧条款。共享 Hub 保留旧资产占用并仍归原治理；v4 有自己的治理，Registry、Pool、Controller 和资金账本独立。
 
 完整条款可下载并离线复算，前端也独立核对签名域和承诺。当前实例全部已发行池的公开条款随仓库发布在 `data/disclosures/`，新 checkout 无需 vault 即可阅读。已批准的条款包另按披露哈希保存公开副本（运行目录 `rights/public-disclosures/`，可复制到 `data/disclosures/` 随仓库发布）。公开读取先找公开副本，所以 vault 缺失、密钥配错或密文损坏都不会挡住已发布的条款；副本必须重算出相同哈希，否则不被采用（私有材料读写对损坏数据仍一律拒绝）。
 

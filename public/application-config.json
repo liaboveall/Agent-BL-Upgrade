@@ -30,13 +30,13 @@
       "confirmations": 3,
       "rightsConfig": "/rights-instance.json",
       "contracts": {
-        "RightsGovernance": "0x1Df02ED170bA2367d56F190Cc1b8225f58f6E2e5",
+        "RightsGovernance": "0x88787e574A676724F6C20871a5AFb99c9Ff99609",
         "AssetIdentityHub": "0x471c70CAb4166AF7D0261cb0dE9Be26B53C01e88",
-        "CommittedEBLRegistry": "0x4558234020d2692940f50B3dF501A58c7E9db891",
-        "RightsController": "0x1E3D356cf439e2b0e7d781A02D364e142f50DB51",
+        "CommittedEBLRegistry": "0xBC1F19322ACAFBBA4d7FDD53493785f6b48114Ea",
+        "RightsController": "0x9f0EC67601FDDE2c633eaE5a20bCBa65D295dA22",
         "MockAuthorizationUSDC": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C",
-        "RWAOfferingPoolV5": "0x84d82e9BC685bD4377F701d233657DBb63daD15F",
-        "ControlledRWAToken": "0x3150F3309B39a1ACcE69355F09EfA7075ae4459d",
+        "RWAOfferingPoolV5": "0xada046f870fbE922Ed9423BC3e7aC7C4b3048F29",
+        "ControlledRWAToken": "0xdbCB6FC89415968a1833d7f6667c540e7849A78B",
         "PaymentOracle": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
         "AgentDecisionLog": "0xA95200a69A62eD9e2A8D024fDeAAc7BB231E05f4"
       },
@@ -541,9 +541,9 @@
       },
       "deployments": {
         "RWAOfferingPoolV5": {
-          "address": "0x84d82e9BC685bD4377F701d233657DBb63daD15F",
-          "blockNumber": 145730878,
-          "deployTx": "0x1d779085a1c856a68bcaa4847fc1da696fce2f7613b6ebb34e7295f68242cc25"
+          "address": "0xada046f870fbE922Ed9423BC3e7aC7C4b3048F29",
+          "blockNumber": 145993714,
+          "deployTx": "0x533ab9eda0b1644985c707b1c12c2f88e006a329ed0519f68cbdf35b54b1c12a"
         },
         "PaymentOracle": {
           "address": "0x064AF06C9fFD7c2Bd2bB2B5e4CA4f36019a39Ff8",
@@ -556,7 +556,7 @@
           "blockNumber": 144218776
         }
       },
-      "controlVersion": 3
+      "controlVersion": 4
     }
   }
 }

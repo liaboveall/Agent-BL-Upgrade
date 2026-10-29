@@ -52,7 +52,7 @@ A bilingual interface for borrowers, reviewers, and investors, with financing po
 
 [![AgentBL English financing workspace](docs/assets/financing-en.png)](docs/assets/financing-en.png)
 
-<sub>Actual interface (Liquid Glass design), run locally against the control version 3 instance. The screenshot shows public testnet pool data in Demo viewing mode, with no wallet connected.</sub>
+<sub>Actual interface (Liquid Glass design), run locally against the control version 3 instance (the v4 interface keeps the same layout). The screenshot shows public testnet pool data in Demo viewing mode, with no wallet connected.</sub>
 
 ## One workflow, three cash outcomes
 
@@ -140,7 +140,7 @@ Supporting documents under `docs/` are currently written in Chinese.
 
 ## Research scope and delivery
 
-> **Current delivery:** since 2026-10-27 the public configuration points to the new control version 3 instance `n5-v3-20261027`, which fixes pre-maturity liquidation rights, repricing after subscription, issuer key rotation and collateral release retry (see the [contract notes](docs/contracts.md)); the v2 instance is frozen as exit-only. The v2 testnet deployment, all three funding paths, late recovery, ledger reconciliation, and local container recovery have been verified; **human wallet acceptance was completed on v2 on 2026-10-23** (pools #26 and #27) and has not been repeated on v3.
+> **Current delivery:** since 2026-10-29 the public configuration points to the control version 4 instance `n5-v4-20261029`. It binds every collateral release to the pledge its offering was created on, never reprices signed terms, closes a matured pool whose cash covers every claim as repaid instead of defaulting it, lets anyone exit an offering nobody subscribed, and takes two governance members to cancel an approved change (see the [contract notes](docs/contracts.md)). The v3 and v2 instances are frozen as exit-only. On v4 the testnet deployment and the normal-repayment and failed-raise refund paths are verified; the loss path completes after its one-day resolution notice. **Human wallet acceptance was completed on v2 on 2026-10-23** (pools #26 and #27) and has not been repeated on v3 or v4.
 
 Contracts constrain registered assets, authorizations, and test tokens deposited into them. Material hashes do not prove real goods or legal claims; duplicate financing outside the registry domain is not automatically prevented. Research addresses do not represent independent organizations. Test tokens are not real dollars, and shares are non-transferable.
 

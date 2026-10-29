@@ -101,11 +101,11 @@ npm run runtime:backup -- restore --directory <新目标目录> --key-file <独�
 
 `npm run build:clean` 比较两次干净构建；`npm run test:load -- --soak-seconds 600 --output test-results/load.json` 测量现有离线服务，不代表公共 RPC 或并发商业容量。
 
-源码已是控制版本 4，公共测试网仍是 v3 实例：在 v4 实例部署、激活并切换两份公开配置之前，应用把 v3 当作旧版本，只保留退款、领取、回款与处置等退出；融资页“需要处理的事项”会说明这一点。v4 部署由用户授权后执行（`npm run testnet -- prepare <新实例ID> --execute`，延时后 `activate`，再 `funding`），v4 会部署自己的治理，共享 Hub 的登记仍由原治理两名成员批准。
+公开配置指向控制版本 4 实例 `n5-v4-20261029`；v3 实例 `n5-v3-20261027` 在应用中只保留退款、领取、回款与处置等退出。v4 有自己的治理，共享 Hub 的登记仍由原治理两名成员批准。v4 的损失路径验证需在 2026-10-30 06:42 UTC 之后再运行一次 `npm run testnet -- funding n5-v4-20261029 --execute`（同样需要干净提交和同提交 CI 收据）。
 
-测试网工具 `npm run testnet -- status n5-v3-20261027`（旧实例为 `n5-v2-20261019`）只查询原部署记录。`prepare` / `activate` / `funding` 需要 `--execute` 和相同提交 CI 收据，未知交易先找原 nonce/hash，不能自动重发；历史已结清样例不应重新广播。`npm run testnet:legacy -- status` 仅查询旧部署。
+测试网工具 `npm run testnet -- status n5-v4-20261029`（旧实例为 `n5-v3-20261027`、`n5-v2-20261019`）只查询原部署记录。`prepare` / `activate` / `funding` 需要 `--execute` 和相同提交 CI 收据，未知交易先找原 nonce/hash，不能自动重发；历史已结清样例不应重新广播。`npm run testnet:legacy -- status` 仅查询旧部署。
 
-人工验收的新池由 `npm run testnet -- acceptance n5-v3-20261027 <阶段>` 准备，输入为实例目录中的 `acceptance-input.json`：批次名、两个验收钱包、两个池的认购截止，以及可选的审查截止。各阶段如下：
+人工验收的新池由 `npm run testnet -- acceptance n5-v4-20261029 <阶段>` 准备，输入为实例目录中的 `acceptance-input.json`：批次名、两个验收钱包、两个池的认购截止，以及可选的审查截止。各阶段如下：
 
 - `plan` 不读密钥，列出每个阶段将发送的交易及其原交易状态。
 - `prepare` 建立正常兑付池和失败募集池，登记出资身份，并发放资格、测试代币和 gas。执行前先停止该实例应用；执行期间持有运行租约，独占写材料 vault。

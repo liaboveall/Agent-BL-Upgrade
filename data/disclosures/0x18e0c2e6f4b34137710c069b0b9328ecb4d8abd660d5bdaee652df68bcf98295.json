@@ -1,0 +1,119 @@
+{
+  "document": {
+    "schema": "agentbl-financing-disclosure-v1",
+    "revision": 1,
+    "scenario": {
+      "asset_class": "copper",
+      "origin": "Singapore",
+      "destination": "Shanghai",
+      "fictional": true
+    },
+    "instance": {
+      "chain_id": 1439,
+      "controller": "0x9f0EC67601FDDE2c633eaE5a20bCBa65D295dA22",
+      "pool": "0xada046f870fbE922Ed9423BC3e7aC7C4b3048F29",
+      "control_version": 4
+    },
+    "terms": {
+      "eblId": "13",
+      "assetKey": "0xde7bab22d58e6e70b53a54986fa70ce21d23ca60b45cdc33456df121d7ee7912",
+      "documentHash": "0x05506dd0a9f0bf58a825386d34b7797d687a7b90f66d3e8e14e52b7950c696e4",
+      "settlementAsset": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C",
+      "exporter": "0x61B50775195cf7d8b288526D1eC788e42E13e4eA",
+      "feeRecipient": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+      "supply": "10",
+      "issuePrice": "800000",
+      "target": "1000000",
+      "minRaise": "8000000",
+      "maturity": "1793269480",
+      "subscribeUntil": "1793262280",
+      "disburseUntil": "1793265880",
+      "maxFee": "0",
+      "nonce": "96533337334812973537024451480380927620930757706059677858048303885309568997"
+    },
+    "parties": {
+      "issuer": "0x322140Bf8E89620f6f3B8AA0aCAC02295e969b9f",
+      "holder": "0x61B50775195cf7d8b288526D1eC788e42E13e4eA",
+      "operator": "0x3380438e25317E9124205224d8C69f27e082Faf7",
+      "valuer": "0x9AbF28BC2d4af34ED512da0d07522BFc52Fc21be",
+      "compliance": "0x6fa9F654928BaEB49676E42dd21224eA67692878",
+      "disposer": "0x6ef22BcEdeF687b31b95f32Ca90B5eaE798d4309",
+      "reviewer": "0xEF4E3d1e99e3551452BA222Db7A83df2D37ab8c5",
+      "governance": "0x88787e574A676724F6C20871a5AFb99c9Ff99609"
+    },
+    "sources": [
+      {
+        "field": "invoice",
+        "status": "fixture",
+        "reference": "Fictional N5 research data; no verified real cargo or rights"
+      },
+      {
+        "field": "cost",
+        "status": "fixture",
+        "reference": "Fictional N5 research data; no verified real cargo or rights"
+      },
+      {
+        "field": "collateral",
+        "status": "fixture",
+        "reference": "Fictional N5 research data; no verified real cargo or rights"
+      },
+      {
+        "field": "risk",
+        "status": "fixture",
+        "reference": "Fictional N5 research data; no verified real cargo or rights"
+      }
+    ],
+    "policy": {
+      "version": "agentbl-cash-rights-v4",
+      "scope": "research_test_assets_only",
+      "token_decimals": 6,
+      "platform_fee_atomic": "0",
+      "subscription_boundary": "at_or_before",
+      "disbursement_boundary": "strictly_before",
+      "valuation": "revalidate_each_draw_no_deadline_extension",
+      "undisbursed_exit": "public_close_at_disbursement_deadline_principal_only_or_unsubscribed_cancel_after_subscription_deadline_unless_frozen",
+      "partial_target": "P+ceil((G-P)*L/P)",
+      "debt": "max(partial_target-(P-L+recovery),0)",
+      "resolution_notice_seconds": 86400,
+      "resolution_hard_limit_seconds": 259200,
+      "dispute": "one_freeze_per_pool_notice_window_only_no_hash_or_actor_reset",
+      "fallback": "public_cash_finalization_at_hard_deadline",
+      "allocation": "permanent_subscription_slots_cyclic_atomic_units_claim_order_independent",
+      "late_recovery": "beneficiaries_survive_share_burn",
+      "max_supply": "1000000",
+      "loss": "principal_and_target_return_at_risk_no_guarantee",
+      "external_rights": "fictional_title_no_verified_real_cargo_debt_or_disposal_rights",
+      "governance": "research_addresses_do_not_establish_independent_organizations",
+      "direct_transfer": "not_pool_repayment_requires_separate_reconciliation",
+      "max_subscription_segments_per_investor": 32,
+      "pricing": "signed_terms_price_only_a_new_price_is_a_new_offering",
+      "early_liquidation": "delayed_governance_before_maturity_operator_may_only_freeze",
+      "issuer_keys": "rotation_keeps_existing_titles_revocation_invalidates_them",
+      "collateral_release": "anyone_may_retry_after_terminal_state_only_for_the_pledge_the_offering_was_created_on",
+      "default": "only_a_shortfall_at_maturity_cash_covered_pools_close_as_repaid",
+      "governance_cancel": "two_members_cancel_an_approved_operation_its_only_approver_may_withdraw_it_before"
+    }
+  },
+  "policy_hash": "0x5494d9ce6266e74a46bdd84c6652772ea925fa458a95c6b1d77f76d6bfcce996",
+  "disclosure_hash": "0x18e0c2e6f4b34137710c069b0b9328ecb4d8abd660d5bdaee652df68bcf98295",
+  "terms": {
+    "eblId": "13",
+    "assetKey": "0xde7bab22d58e6e70b53a54986fa70ce21d23ca60b45cdc33456df121d7ee7912",
+    "documentHash": "0x05506dd0a9f0bf58a825386d34b7797d687a7b90f66d3e8e14e52b7950c696e4",
+    "settlementAsset": "0x127501470e26EEAEF38B3638aD87FE1f19692a4C",
+    "exporter": "0x61B50775195cf7d8b288526D1eC788e42E13e4eA",
+    "feeRecipient": "0x9da22292D85e2A584ace6bb347D7054486b5ed6B",
+    "supply": "10",
+    "issuePrice": "800000",
+    "target": "1000000",
+    "minRaise": "8000000",
+    "maturity": "1793269480",
+    "subscribeUntil": "1793262280",
+    "disburseUntil": "1793265880",
+    "maxFee": "0",
+    "nonce": "96533337334812973537024451480380927620930757706059677858048303885309568997",
+    "policyHash": "0x5494d9ce6266e74a46bdd84c6652772ea925fa458a95c6b1d77f76d6bfcce996",
+    "disclosureHash": "0x18e0c2e6f4b34137710c069b0b9328ecb4d8abd660d5bdaee652df68bcf98295"
+  },
+  "terms_hash": "0x4bb48d47a916a1984f37be2c808e4ad7eaa6f0200897b5c88f3f79075635392f"
+}
