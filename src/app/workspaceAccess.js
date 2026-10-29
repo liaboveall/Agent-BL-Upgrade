@@ -30,7 +30,27 @@ export function canReadJob(service, request, job) {
   return Boolean(job) && (service.ingest?.canReadJob?.(job, viewer(request)) ?? true);
 }
 export function requireWorkspaceCase(service, request, caseId, record) {
-  if (!canReadWorkspaceCase(service, request, caseId, record)) throw new HttpError(404, 'case_not_found', 'Case not found in this workspace');
+  if (canReadWorkspaceCase(service, request, caseId, record)) return;
+  // Every case but a curated sample answers the same while the access records are unavailable, so this says nothing
+  // about whether one exists.
+  if (service.ingest && service.ingest.accessReady === false) {
+    throw new HttpError(503, 'case_access_unavailable', 'Private cases are unavailable until the case access records are loaded');
+  }
+  throw new HttpError(404, 'case_not_found', 'Case not found in this workspace');
+}
+/**
+ * Wait for the access records (and the saved preferences, which can make a case private on their own) to load before
+ * answering a request that checks them, so a slow start answers late instead of refusing. A failed load is not an
+ * error here: every check then refuses what is not a curated sample.
+ */
+export async function settleCaseAccess(service) {
+  await Promise.all([service.ingest?.init?.(), service.preferences?.init?.()].map((loading) => Promise.resolve(loading).catch(() => {})));
+}
+/** For a route that lists or writes private cases: refuse while the access records are not loaded. */
+export function requireCaseAccess(service) {
+  if (service.ingest && service.ingest.accessReady === false) {
+    throw new HttpError(503, 'case_access_unavailable', 'Private cases are unavailable until the case access records are loaded');
+  }
 }
 /** The public view (MCP, resources): only what an anonymous reader may see. */
 export function publicCaseFilter(service) {

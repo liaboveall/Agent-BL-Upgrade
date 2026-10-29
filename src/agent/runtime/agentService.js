@@ -111,6 +111,9 @@ export class AgentService {
     });
     this.bus.handler = event => this.#handleEvent(event);
     this.bus.onSettled = entry => this.#onEventSettled(entry);
+    // A case whose only private state is its saved preferences has no owner the intake knows of without its access
+    // records: until the preferences are read, and while they hold the case, it is not treated as public.
+    this.ingest?.trackPrivateState?.(caseId => this.preferences.ready === false || this.preferences.has?.(caseId) === true);
   }
 
   /**
@@ -267,8 +270,35 @@ export class AgentService {
         queued: busStatus.queued,
         processing: busStatus.processing,
         counts: busStatus.counts,
-        dead: busStatus.dead
+        dead: busStatus.dead,
+        orphaned: busStatus.orphaned ?? 0,
+        oldest_pending_ms: busStatus.oldest_pending_ms ?? 0,
+        unsaved: busStatus.unsaved ?? false
       },
+      // Counts only: whether the access records are loaded, held jobs, review room and bytes retention released.
+      intake: this.ingest?.usage ? (({
+        access_state,
+        jobs,
+        max_jobs,
+        logical_jobs,
+        held_jobs,
+        review_headroom_jobs,
+        stored_bytes,
+        max_stored_bytes,
+        reclaimable_bytes,
+        unsaved_records
+      }) => ({
+        access_state,
+        jobs,
+        max_jobs,
+        logical_jobs,
+        held_jobs,
+        review_headroom_jobs,
+        stored_bytes,
+        max_stored_bytes,
+        reclaimable_bytes,
+        unsaved_records
+      }))(this.ingest.usage()) : null,
       executor: this.getMode() === 'live' ? 'analysis' : 'sim',
       // Booleans only: whether a key is configured, never anything about the key.
       signers: Object.fromEntries(Object.entries(roles).map(([role, configured]) => [role, {
@@ -430,32 +460,32 @@ export class AgentService {
       ownerId: original.owner_id,
       visibility: original.visibility
     });
-    if (!result.created) return {
-      job: result.job,
-      idempotency_key: `event:review:${result.job.job_id}`
-    };
-    await this.ingest.updateJob(result.job.job_id, {
-      reviewed_job_id: jobId
-    });
-    const accepted = await this.submitEvent({
-      event_id: `review:${result.job.job_id}`,
-      type: 'REVIEW_RESOLVED',
-      case_id: original.case_id,
-      source: 'admin',
-      data: {
-        job_id: result.job.job_id,
-        document_ids: result.job.document_ids,
-        reviewed_job_id: jobId,
-        resolution: 'approve',
-        note: body.note.trim(),
-        ...(original.source_case_id ? {
-          template_case_id: original.source_case_id
-        } : {})
-      }
-    });
+    const job = result.job;
+    // The review job is stored with what it reviews and its event identity (a FAILED or INTERRUPTED one gets a new
+    // attempt's). Until it leaves QUEUED its event may never have reached the bus -- the delivery failed after the job
+    // was stored -- so a retry delivers it again; the bus answers a delivered one as a duplicate.
+    let accepted = null;
+    if (result.created || job.status === 'QUEUED') {
+      accepted = await this.submitEvent({
+        event_id: job.event_id ?? `review:${job.job_id}`,
+        type: 'REVIEW_RESOLVED',
+        case_id: original.case_id,
+        source: 'admin',
+        data: {
+          job_id: job.job_id,
+          document_ids: job.document_ids,
+          reviewed_job_id: jobId,
+          resolution: 'approve',
+          note: body.note.trim(),
+          ...(original.source_case_id ? {
+            template_case_id: original.source_case_id
+          } : {})
+        }
+      });
+    }
     return {
-      job: this.ingest.getJob(result.job.job_id),
-      idempotency_key: accepted.idempotency_key
+      job: this.ingest.getJob(job.job_id),
+      idempotency_key: accepted?.idempotency_key ?? `event:${job.event_id ?? `review:${job.job_id}`}`
     };
   }
 
@@ -1266,9 +1296,19 @@ export class AgentService {
     await this.approvals.pruneRetention?.(retention);
     await this.activity.prune?.(retention);
     await this.tracer.prune?.(retention);
+    // Upload bytes retention released come back without waiting for the next upload, records a failed write left
+    // unsaved are written again, and an accepted event that no queue or run holds is handed over again.
+    try {
+      await this.ingest?.saveUnsaved?.();
+      await this.ingest?.reclaimExpired?.();
+    } catch (error) {
+      this.#noteError(error);
+    }
+    const requeued = await this.bus.recoverOrphans?.() ?? 0;
     return {
       ok: true,
-      expired: expired.length
+      expired: expired.length,
+      requeued
     };
   }
 

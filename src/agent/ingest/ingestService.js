@@ -10,6 +10,13 @@
 // only a run record. Curated sample IDs are a read-only public namespace: a private upload against one works on
 // the uploader's own copy (`WS-<hash>-<sample id>`), so nobody's upload changes what anybody else can read.
 // Working-copy IDs are private before anything is stored for them: only the workspace they derive from reads them.
+// A manifest (`ingest-manifest.json`) records that the directory keeps access records, so losing the access file is
+// never read as a fresh start, whatever else the directory still holds; and a case with private state (saved
+// preferences) but no access record has an unknown owner, which only an operator reads -- never everybody.
+//
+// A commit writes the bytes, then the document records, then the job records: the job file is the commit point.
+// Nothing of a request whose commit failed stays visible, so its retry commits it again instead of answering from
+// memory, and document records no committed job references are removed when the intake starts.
 //
 // Raw bytes: the whole batch is validated before anything is written. Each content hash is stored once,
 // sealed with AES-256-GCM (AGENTBL_INTAKE_KEY, or a local key file created with owner-only permissions), and
@@ -18,7 +25,18 @@
 //
 // Job retention never depends on other workspaces' volume: a job leaves only when it is finished, needs no review
 // and is older than the retention period. Queued, running and held jobs stay with their bytes; when the job table
-// or a workspace's share of it is full of those, a new upload is refused instead.
+// or a workspace's share of it is full of those, a new upload is refused instead. Expired jobs are removed before
+// any quota is checked, when the intake starts and on the agent's tick, so space comes back without a new upload.
+//
+// A held job and the reviews that correct it are versions of one logical job and hold one slot of the job quota:
+// a full table never blocks the correction its own advice asks for. Every version is kept (none is discarded to
+// make room); the table may hold at most twice the quota, so repeated reviews stay bounded too. Bytes work the same
+// way: the first correction of a held job may use a reserve of one batch above the byte quota, so held material
+// filling the quota never blocks its own correction, and the store stays below quota + reserve.
+//
+// The owner may also withdraw a held (or failed) job: the job and every version of it stop waiting, their raw bytes
+// are released at once rather than after retention, the records stay (status WITHDRAWN) until retention, and every
+// decision keeps its own evidence. Withdrawn records count towards the table's ceiling, not the logical quota.
 //
 // What this module does NOT do: it never reads document content as instructions, and it never claims
 // an upload was verified. The ENI record is a MOCK acknowledgement and says so (`mode: 'mock'`).
@@ -46,19 +64,23 @@ export const DEFAULT_JOB_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_NAME_LENGTH = 255;
 const CASE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,127}$/u;
 const WORKSPACE_COPY = /^WS-[0-9A-F]{10}-(.+)$/u;
-const FINISHED = new Set(['DONE', 'FAILED', 'INTERRUPTED']);
+const FINISHED = new Set(['DONE', 'FAILED', 'INTERRUPTED', 'WITHDRAWN']);
+const RETRYABLE = new Set(['FAILED', 'INTERRUPTED', 'WITHDRAWN']);
 const ACCESS_SCHEMA = 'agentbl-case-access-v1';
+const MANIFEST_SCHEMA = 'agentbl-intake-manifest-v1';
+const PRIVATE_FILE = { mode: 0o600 };
 const SEALED = Buffer.from('AGBLUP01');
 const STORED_FILE = /^[0-9a-f]{64}\.(?:md|txt|pdf|png|jpg)(?:\.sealed)?$/u;
 const UPLOAD_EVENT = /^(?:ingest|review):(job_[a-f0-9]{20})/u;
 
 export class IngestError extends Error {
-  constructor(code, message, status = 400) {
+  constructor(code, message, status = 400, details = undefined) {
     super(message);
     this.name = 'IngestError';
     this.code = code;
     this.status = status;
     this.expose = true;
+    if (details !== undefined) this.details = details;
   }
 }
 
@@ -174,17 +196,21 @@ export class IngestService {
    * @param {number} [options.maxJobs]          retained jobs in total
    * @param {number} [options.maxOwnerJobs]     retained jobs of one workspace
    * @param {number} [options.jobRetentionMs]   how long a finished job that needs no review is kept
+   * @param {number} [options.reviewReserveBytes]  bytes the first correction of a held job may use above the byte quota
+   * @param {(caseId: string) => boolean} [options.hasPrivateState]  whether another store holds private state for a case
    * @param {() => Date} [options.now]
    */
   constructor({ dir = null, maxBytes = 8_388_608, maxBatchBytes = DEFAULT_BATCH_MAX_BYTES, maxOwnerBytes = 50_331_648,
     maxStoredBytes = 134_217_728, blobCacheBytes = 67_108_864, publicCaseIds = curatedCaseIds(), env = process.env,
     maxJobs = DEFAULT_MAX_JOBS, maxOwnerJobs = Math.max(1, Math.floor(maxJobs / 5)), jobRetentionMs = DEFAULT_JOB_RETENTION_MS,
-    now = () => new Date(), getMode = () => 'demo' } = {}) {
+    reviewReserveBytes, hasPrivateState = () => false, now = () => new Date(), getMode = () => 'demo' } = {}) {
     this.dir = dir;
     this.maxBytes = maxBytes;
     this.maxBatchBytes = Math.max(maxBatchBytes, maxBytes);
     this.maxOwnerBytes = maxOwnerBytes;
     this.maxStoredBytes = maxStoredBytes;
+    this.reviewReserveBytes = Math.max(0, reviewReserveBytes ?? this.maxBatchBytes);
+    this.hasPrivateState = hasPrivateState;
     this.maxJobs = maxJobs;
     this.maxOwnerJobs = Math.min(maxOwnerJobs, maxJobs);
     this.jobRetentionMs = jobRetentionMs;
@@ -199,20 +225,39 @@ export class IngestService {
     this.jobs = new Map();      // job_id -> job (a run record, bounded)
     this.cases = new Map();     // case_id -> case built from uploaded documents
     this.access = new Map();    // case_id -> who may read it (never evicted)
+    // 'unloaded' | 'loading' | 'ready' | 'failed'. Until the access records are loaded, nobody's case is known to be
+    // public except a curated sample: an unknown visibility is never read as public.
+    this.accessState = dir ? 'unloaded' : 'ready';
     this.casesLoaded = false;
     this.queue = createWriteQueue();
     this.commits = createWriteQueue(); // ownership, blobs, documents and jobs change together
     this.loading = null;
+    // The last write of the document and job records that failed, until one succeeds: what memory holds is then
+    // ahead of the disk, so an idempotent retry writes it before confirming anything.
+    this.unsavedRecords = null;
   }
 
   get documentsFile() { return this.dir ? path.join(this.dir, 'ingest-documents.json') : null; }
   get jobsFile() { return this.dir ? path.join(this.dir, 'ingest-jobs.json') : null; }
   get accessFile() { return this.dir ? path.join(this.dir, 'ingest-case-access.json') : null; }
+  get manifestFile() { return this.dir ? path.join(this.dir, 'ingest-manifest.json') : null; }
+
+  /** Another store (the saved preferences) tells the intake which cases hold private state of its own. */
+  trackPrivateState(probe) {
+    if (typeof probe === 'function') this.hasPrivateState = probe;
+  }
 
   init() {
-    this.loading ??= this.#load().then(() => this);
+    if (!this.loading) {
+      if (this.accessState === 'unloaded') this.accessState = 'loading';
+      this.loading = this.#load().then(() => { this.accessState = 'ready'; return this; },
+        (error) => { this.accessState = 'failed'; throw error; });
+    }
     return this.loading;
   }
+
+  /** Whether the access records are loaded: only then can a case that is not a curated sample be shown to anyone. */
+  get accessReady() { return this.accessState === 'ready'; }
 
   async #load() {
     if (!this.dir) return;
@@ -233,8 +278,14 @@ export class IngestService {
     // A corrupt access file stops the intake from starting: guessing ownership would make private cases public.
     const access = await readJson(this.accessFile, null);
     if (access && access.schema !== ACCESS_SCHEMA) throw new Error('Unsupported case access file');
-    // Jobs written by this version (they record their mode) prove an access file existed: its loss is not a fresh start.
-    if (!access && [...this.jobs.values()].some((job) => job.mode)) throw new Error('Case access records are missing; restore ingest-case-access.json');
+    const manifest = await readJson(this.manifestFile, null);
+    if (manifest && manifest.schema !== MANIFEST_SCHEMA) throw new Error('Unsupported intake manifest');
+    // The manifest says access records were kept here; jobs written by this version (they record their mode) say the same
+    // for a directory older than the manifest. Either way their loss is not a fresh start, even when no job is left
+    // (retention removed them, or only preferences were ever saved).
+    if (!access && (manifest?.access_records_since || [...this.jobs.values()].some((job) => job.mode))) {
+      throw new Error('Case access records are missing; restore ingest-case-access.json');
+    }
     for (const record of Object.values(access?.cases ?? {})) this.access.set(record.case_id, record);
     // Runtimes written before the access file existed: their jobs and saved cases are the only ownership records left.
     await this.#loadCases();
@@ -246,36 +297,60 @@ export class IngestService {
     };
     for (const job of this.jobs.values()) adopt(job.case_id, job.owner_id, job.visibility, job.created_at);
     for (const data of this.cases.values()) adopt(data.case_id, data.workspace_owner_id, data.visibility, null);
-    if (migrated) await this.#persistAccess();
+    // From the first start on the access file exists, and the manifest says so.
+    if (migrated || !access) await this.#persistAccess();
+    if (!manifest) {
+      await writeJsonAtomic(this.manifestFile, { schema: MANIFEST_SCHEMA, access_records_since: this.now().toISOString() }, { durable: true, ...PRIVATE_FILE });
+    }
+    // Document records no job references: a commit that failed after its documents were written but before its job was.
+    await this.#collect();
+    await this.#reclaim();
     await this.#sweepUploads();
   }
 
   #persist() {
     if (!this.dir) return Promise.resolve();
     return this.queue(async () => {
-      await writeJsonAtomic(this.documentsFile, Object.fromEntries(this.documents));
-      await writeJsonAtomic(this.jobsFile, Object.fromEntries(this.jobs));
+      try {
+        await writeJsonAtomic(this.documentsFile, Object.fromEntries(this.documents), PRIVATE_FILE);
+        await writeJsonAtomic(this.jobsFile, Object.fromEntries(this.jobs), PRIVATE_FILE);
+        this.unsavedRecords = null;
+      } catch (error) {
+        this.unsavedRecords = { at: this.now().toISOString(), message: String(error?.message ?? error).slice(0, 200) };
+        throw error;
+      }
     });
+  }
+
+  /** Write the document and job records again after a failed write (the agent's tick). True when nothing is left unsaved. */
+  async saveUnsaved() {
+    if (!this.unsavedRecords || this.accessState !== 'ready') return !this.unsavedRecords;
+    await this.commits(() => this.#persist());
+    return true;
   }
 
   #persistAccess() {
     if (!this.dir) return Promise.resolve();
-    return this.queue(() => writeJsonAtomic(this.accessFile, { schema: ACCESS_SCHEMA, cases: Object.fromEntries(this.access) }, { durable: true }));
+    return this.queue(() => writeJsonAtomic(this.accessFile, { schema: ACCESS_SCHEMA, cases: Object.fromEntries(this.access) }, { durable: true, ...PRIVATE_FILE }));
   }
 
   // ---------------------------------------------------------------- who may read a case
 
   /** A curated sample, or a case a Demo scenario published. Anyone may read it; nobody's upload changes it. */
   isPublicCase(caseId) {
-    return this.publicCaseIds.has(caseId) || this.access.get(caseId)?.visibility === 'public-demo';
+    return this.publicCaseIds.has(caseId) || this.accessReady && this.access.get(caseId)?.visibility === 'public-demo';
   }
 
   isPrivateCase(caseId) {
     if (this.publicCaseIds.has(caseId)) return false;
+    if (!this.accessReady) return true;
     const record = this.access.get(caseId);
     if (record) return record.visibility !== 'public-demo';
     // A working-copy ID is private before anything is stored for it: its owner is the workspace it derives from.
-    return WORKSPACE_COPY.test(String(caseId ?? ''));
+    if (WORKSPACE_COPY.test(String(caseId ?? ''))) return true;
+    // Private state another store holds (saved preferences) without an access record: the owner is unknown, which makes
+    // the case readable by an operator only -- an unknown owner is never everybody.
+    return Boolean(this.hasPrivateState(caseId));
   }
 
   caseOwner(caseId) { return this.access.get(caseId)?.owner_id ?? null; }
@@ -335,13 +410,16 @@ export class IngestService {
 
   canReadCase(caseId, { ownerId = null, admin = false } = {}) {
     if (admin || !this.isPrivateCase(caseId)) return true;
-    if (!ownerId) return false;
+    // Without the access records nobody can be shown to own a case: refuse rather than guess.
+    if (!ownerId || !this.accessReady) return false;
     const owner = this.caseOwner(caseId);
     return owner ? owner === ownerId : this.workspaceSource(caseId, ownerId) !== null;
   }
 
   canReadJob(job, { ownerId = null, admin = false } = {}) {
-    if (admin || job?.visibility === 'public-demo') return true;
+    if (admin) return true;
+    if (!this.accessReady) return false;
+    if (job?.visibility === 'public-demo') return true;
     return Boolean(ownerId) && job?.owner_id === ownerId;
   }
 
@@ -351,6 +429,7 @@ export class IngestService {
    */
   canReadUploadRecord(caseId, eventId, { ownerId = null, admin = false } = {}) {
     if (admin) return true;
+    if (!this.accessReady) return false;
     const job = this.jobs.get(UPLOAD_EVENT.exec(String(eventId ?? ''))?.[1]);
     if (job) return this.canReadJob(job, { ownerId });
     const record = this.access.get(caseId);
@@ -404,24 +483,29 @@ export class IngestService {
       // older successful upload. Ordinary upload fingerprints remain unchanged.
       const jobId = `job_${fingerprint.slice(0, 20)}`;
       const existing = this.jobs.get(jobId);
-      if (existing && !['FAILED', 'INTERRUPTED'].includes(existing.status) && unique.every((item) => this.documents.has(item.document_id))) {
+      if (existing && !RETRYABLE.has(existing.status) && unique.every((item) => this.documents.has(item.document_id))) {
+        // Memory may be ahead of the disk after a failed write: the job is confirmed only once it is on disk.
+        if (this.unsavedRecords) await this.#persist();
         return { job: structuredClone(existing), documents: unique.map((item) => structuredClone(this.documents.get(item.document_id))), created: false };
       }
-      // Only finished jobs past their retention make room; a held or running job of anybody never does.
-      const expired = new Set(this.#expiredJobs());
-      if (!existing) {
-        const kept = [...this.jobs.values()].filter((job) => !expired.has(job.job_id));
-        if (kept.filter((job) => job.owner_id === ownerId).length >= this.maxOwnerJobs) {
-          throw new IngestError('upload_job_quota_exceeded', 'This workspace keeps the most jobs it may; review held jobs or wait until finished ones expire', 413);
-        }
-        if (kept.length >= this.maxJobs) throw new IngestError('intake_jobs_full', 'The intake keeps no more jobs until finished ones reach their retention period; try again later', 507);
-      }
+      // Only finished jobs past their retention make room; a held or running job of anybody never does. They go first,
+      // so neither the job nor the byte quota counts what retention already released. (A retry keeps its own job.)
+      await this.#reclaim(jobId);
+      const takeover = this.#takesOver(reviewOf);
+      if (!existing) this.#assertJobRoom(ownerId, takeover);
       const fresh = unique.filter((item) => !this.documents.has(item.document_id));
       const freshBytes = fresh.reduce((sum, item) => sum + item.buffer.length, 0);
       const stored = [...this.documents.values()];
       const ownerBytes = stored.filter((record) => record.owner_id === ownerId).reduce((sum, record) => sum + record.size, 0);
-      if (ownerBytes + freshBytes > this.maxOwnerBytes) throw new IngestError('upload_quota_exceeded', 'This workspace has reached its upload storage quota; finished jobs release space as they expire', 413);
-      if (stored.reduce((sum, record) => sum + record.size, 0) + freshBytes > this.maxStoredBytes) throw new IngestError('intake_storage_full', 'The intake store is full; try again later', 507);
+      const totalBytes = stored.reduce((sum, record) => sum + record.size, 0);
+      // The first correction of a held job may use the reserve: the held material may fill the quota, its correction never waits for it.
+      const reserve = takeover ? this.reviewReserveBytes : 0;
+      if (ownerBytes + freshBytes > this.maxOwnerBytes + reserve) {
+        throw this.#capacityError('upload_quota_exceeded', 413, ownerId, { used: ownerBytes, limit: this.maxOwnerBytes + reserve, incoming: freshBytes, scope: 'workspace' });
+      }
+      if (totalBytes + freshBytes > this.maxStoredBytes + reserve) {
+        throw this.#capacityError('intake_storage_full', 507, ownerId, { used: totalBytes, limit: this.maxStoredBytes + reserve, incoming: freshBytes, scope: 'intake' });
+      }
 
       // 3. commit: the access record first, then the bytes, then the records that point at them
       if (!access) await this.claimCase(caseId, { ownerId, visibility, sourceCaseId: target.source_case_id });
@@ -443,9 +527,11 @@ export class IngestService {
       }
 
       const at = this.now().toISOString();
-      // A retry of a failed or interrupted job is a new event: reusing the first event id would be
+      // A retry of a failed, interrupted or withdrawn job is a new event: reusing the first event id would be
       // dropped by the bus as a duplicate and the retry would never run.
       const attempt = existing ? (existing.attempt ?? 1) + 1 : 1;
+      // A review is written with the job it reviews and its own event identity, so a retry can deliver it again.
+      const eventBase = reviewOf ? `review:${jobId}` : `ingest:${jobId}`;
       const job = {
         job_id: jobId,
         owner_id: ownerId,
@@ -453,20 +539,50 @@ export class IngestService {
         mode: this.getMode(),
         case_id: caseId,
         ...(target.source_case_id ? { source_case_id: target.source_case_id } : {}),
+        ...(reviewOf ? { reviewed_job_id: reviewOf } : {}),
         status: 'QUEUED',
         document_ids: unique.map((item) => item.document_id),
         steps: [],
         decision_ids: [],
         ...(attempt > 1 ? { attempt, previous_decision_ids: [...(existing.previous_decision_ids ?? []), ...(existing.decision_ids ?? [])] } : {}),
-        event_id: attempt > 1 ? `ingest:${jobId}:attempt-${attempt}` : `ingest:${jobId}`,
+        event_id: attempt > 1 ? `${eventBase}:attempt-${attempt}` : eventBase,
         created_at: at,
         updated_at: at
       };
       this.jobs.set(jobId, job);
-      for (const id of expired) if (id !== jobId) this.jobs.delete(id);
-      await this.#persist();
-      await this.#collect();
+      try {
+        await this.#persist();
+      } catch (error) {
+        // Not committed: nothing of this request stays visible, so a retry commits it again. (The access record stays: it
+        // is this workspace's either way.) Document records the failed write did leave on disk reference no job and
+        // are removed the next time the intake starts or writes.
+        if (existing) this.jobs.set(jobId, existing); else this.jobs.delete(jobId);
+        for (const [record] of records) { this.documents.delete(record.document_id); this.#uncache(record.document_id); }
+        for (const file of written) await fs.rm(path.join(this.dir, file), { force: true }).catch(() => {});
+        throw error;
+      }
       return { job: structuredClone(job), documents: unique.map((item) => structuredClone(this.documents.get(item.document_id))), created: true };
+    });
+  }
+
+  /** Whether a review of `reviewOf` is the first correction of a held job (it then takes over that job's slot). */
+  #takesOver(reviewOf) {
+    return Boolean(reviewOf) && this.jobs.has(reviewOf) && !this.#reviewChains().superseded.has(reviewOf);
+  }
+
+  /** A capacity refusal that says what is used, what the limit is, which held jobs of this workspace hold it, and what to do. */
+  #capacityError(code, status, ownerId, { used, limit, incoming, scope }) {
+    const held = this.#openJobs().filter((job) => job.owner_id === ownerId);
+    const reclaimable = this.usage().reclaimable_bytes;
+    const message = scope === 'workspace'
+      ? 'This workspace has reached its upload storage quota; correct or withdraw its held jobs, or wait until finished ones expire'
+      : 'The intake store is full; correct or withdraw held jobs, or try again once finished jobs expire';
+    return new IngestError(code, message, status, {
+      scope, used_bytes: used, limit_bytes: limit, incoming_bytes: incoming, reclaimable_bytes: reclaimable,
+      held_jobs: held.length,
+      // This workspace's own held jobs only: another workspace's are not its business.
+      held_job_ids: held.slice(0, 20).map((job) => job.job_id),
+      next_step: held.length ? 'correct_or_withdraw_held_jobs' : 'wait_for_retention'
     });
   }
 
@@ -497,7 +613,7 @@ export class IngestService {
   async #writeBlob(record, buffer) {
     if (!this.dir) return false;
     const file = path.join(this.dir, record.stored_as);
-    if (await fs.access(file).then(() => true, () => false)) return false;
+    if (await fs.stat(file).then((stat) => stat.isFile(), () => false)) return false;
     await writeFileAtomic(file, seal(await this.#key(), record.sha256.slice(2), buffer), { mode: 0o600 });
     return true;
   }
@@ -533,34 +649,161 @@ export class IngestService {
   }
 
   /**
-   * Jobs whose retention has ended: finished, needing no review (or resolved by a later review that needs none), and
-   * unchanged for the retention period. Their decisions keep their own evidence; only the raw bytes go with them.
+   * Held jobs a later review has taken over, and every earlier version under them: a review that needs none resolves
+   * the whole chain it corrects, not only the job it named.
+   */
+  #reviewChains() {
+    const superseded = new Set(), resolved = new Set();
+    for (const job of this.jobs.values()) {
+      // A withdrawn correction takes nothing over: the job it corrected holds its own slot again.
+      if (job.status === 'WITHDRAWN') continue;
+      const done = job.status === 'DONE' && !job.review_required;
+      for (let id = job.reviewed_job_id, seen = 0; id && this.jobs.has(id) && seen < this.jobs.size; id = this.jobs.get(id).reviewed_job_id, seen++) {
+        superseded.add(id);
+        if (done) resolved.add(id);
+      }
+    }
+    return { superseded, resolved };
+  }
+
+  /**
+   * Where each job stands for whoever must act on it: a held job is 'open' (it waits for a correction), 'superseded'
+   * (a correction of it is queued, running or held itself) or 'resolved' (a correction needs no review); a withdrawn one
+   * is 'withdrawn'. `latest` is the newest correction of each job. Only 'open' jobs are anybody's to-do.
+   */
+  #reviewStates() {
+    const { resolved } = this.#reviewChains();
+    const live = new Set(), latest = new Map();
+    for (const job of this.jobs.values()) {
+      if (!job.reviewed_job_id) continue;
+      if (!RETRYABLE.has(job.status)) live.add(job.reviewed_job_id);
+      const seen = latest.get(job.reviewed_job_id);
+      if (!seen || Date.parse(job.created_at) >= Date.parse(seen.created_at)) latest.set(job.reviewed_job_id, job);
+    }
+    const states = new Map();
+    for (const job of this.jobs.values()) {
+      if (job.status === 'WITHDRAWN') states.set(job.job_id, 'withdrawn');
+      else if (job.status === 'DONE' && job.review_required) states.set(job.job_id, resolved.has(job.job_id) ? 'resolved' : live.has(job.job_id) ? 'superseded' : 'open');
+    }
+    return { states, latest };
+  }
+
+  /** Jobs that wait for a correction (the to-dos), in no particular order. */
+  #openJobs() {
+    const { states } = this.#reviewStates();
+    return [...this.jobs.values()].filter((job) => states.get(job.job_id) === 'open');
+  }
+
+  /**
+   * Jobs whose retention has ended: finished, needing no review (or resolved by a later review that needs none, or
+   * withdrawn), and unchanged for the retention period. Their decisions keep their own evidence; only the raw bytes go.
    */
   #expiredJobs() {
     const cutoff = this.now().getTime() - this.jobRetentionMs;
-    const jobs = [...this.jobs.values()];
-    const resolved = new Set(jobs.filter((job) => job.reviewed_job_id && job.status === 'DONE' && !job.review_required).map((job) => job.reviewed_job_id));
-    return jobs.filter((job) => FINISHED.has(job.status) && (!job.review_required || resolved.has(job.job_id))
+    const { resolved } = this.#reviewChains();
+    return [...this.jobs.values()].filter((job) => FINISHED.has(job.status) && (job.status === 'WITHDRAWN' || !job.review_required || resolved.has(job.job_id))
       && Date.parse(job.updated_at ?? job.created_at) <= cutoff).map((job) => job.job_id);
   }
 
-  /** Drop documents no retained job references, and their files when no other document shares the content. */
-  async #collect() {
-    const referenced = new Set([...this.jobs.values()].flatMap((job) => job.document_ids));
-    const removed = [];
-    for (const [id, record] of this.documents) {
-      if (referenced.has(id)) continue;
-      this.documents.delete(id);
-      this.#uncache(id);
-      removed.push(record);
+  /** Remove the jobs retention released (except `keep`, a job being retried) and the bytes only they referenced. */
+  async #reclaim(keep = null) {
+    const expired = this.#expiredJobs().filter((id) => id !== keep);
+    if (!expired.length) return 0;
+    for (const id of expired) this.jobs.delete(id);
+    if (!await this.#collect()) await this.#persist();
+    return expired.length;
+  }
+
+  /** Release what retention allows now, without waiting for the next upload (startup, the agent's tick). */
+  async reclaimExpired() {
+    await this.init();
+    return this.commits(() => this.#reclaim());
+  }
+
+  /**
+   * Room for one more job. Every record counts towards the table's ceiling of twice the quota (earlier versions and
+   * withdrawn jobs stay until retention). A new upload also needs a free slot of the workspace's and the intake's job
+   * quota, counted in logical jobs. The first review of a held job takes over that job's slot, so it only needs the
+   * ceiling; a second, parallel correction of the same job counts as a new logical job.
+   */
+  #assertJobRoom(ownerId, takeover) {
+    const { superseded } = this.#reviewChains();
+    const jobs = [...this.jobs.values()], own = jobs.filter((job) => job.owner_id === ownerId);
+    if (own.length >= this.maxOwnerJobs * 2 || jobs.length >= this.maxJobs * 2) {
+      if (takeover) throw new IngestError('review_capacity_exhausted', 'Earlier review versions fill the intake; they are released when their corrections finish and expire', 507);
+      throw new IngestError(own.length >= this.maxOwnerJobs * 2 ? 'upload_job_quota_exceeded' : 'intake_jobs_full',
+        'Earlier versions and withdrawn jobs fill the job table until they reach their retention period', own.length >= this.maxOwnerJobs * 2 ? 413 : 507);
     }
+    if (takeover) return;
+    const logical = (job) => !superseded.has(job.job_id) && job.status !== 'WITHDRAWN';
+    if (own.filter(logical).length >= this.maxOwnerJobs) {
+      throw new IngestError('upload_job_quota_exceeded', 'This workspace keeps the most jobs it may; correct or withdraw held jobs, or wait until finished ones expire', 413,
+        { held_jobs: this.#openJobs().filter((job) => job.owner_id === ownerId).length, next_step: 'correct_or_withdraw_held_jobs' });
+    }
+    if (jobs.filter(logical).length >= this.maxJobs) {
+      throw new IngestError('intake_jobs_full', 'The intake keeps no more jobs until finished ones reach their retention period; try again later', 507);
+    }
+  }
+
+  /**
+   * Drop documents no retained job references (a withdrawn job references none), and their files when no other
+   * document shares the content. The records are written first: a crash before the files are removed leaves only
+   * orphans, which the next start sweeps. A failed write puts the records back, so memory never runs ahead of the disk.
+   */
+  async #collect() {
+    const referenced = new Set([...this.jobs.values()].filter((job) => job.status !== 'WITHDRAWN').flatMap((job) => job.document_ids));
+    const removed = [...this.documents].filter(([id]) => !referenced.has(id));
     if (!removed.length) return 0;
+    for (const [id] of removed) this.documents.delete(id);
+    try {
+      await this.#persist();
+    } catch (error) {
+      for (const [id, record] of removed) this.documents.set(id, record);
+      throw error;
+    }
+    for (const [id] of removed) this.#uncache(id);
     const kept = new Set([...this.documents.values()].map((record) => record.stored_as));
-    for (const record of removed) {
+    for (const [, record] of removed) {
       if (this.dir && record.stored_as && !kept.has(record.stored_as)) await fs.rm(path.join(this.dir, record.stored_as), { force: true });
     }
-    await this.#persist();
     return removed.length;
+  }
+
+  /**
+   * The owner gives up a job: a held job waiting for a correction (with every version it corrects and their failed
+   * corrections), or a failed or interrupted one. They become WITHDRAWN, wait for nothing, and their raw bytes are
+   * released now instead of after retention; the records stay until retention and each decision keeps its evidence.
+   * A version that another correction still builds on (queued, running or held) is not withdrawn from under it.
+   */
+  async withdraw(jobId) {
+    await this.init();
+    return this.commits(async () => {
+      const job = this.jobs.get(jobId);
+      if (!job) throw new IngestError('job_not_found', 'Unknown ingest job', 404);
+      const { states } = this.#reviewStates();
+      const members = new Set([job]);
+      if (states.get(jobId) === 'open') {
+        for (let id = job.reviewed_job_id, seen = 0; id && this.jobs.has(id) && seen < this.jobs.size; id = this.jobs.get(id).reviewed_job_id, seen++) members.add(this.jobs.get(id));
+        const ids = new Set([...members].map((member) => member.job_id));
+        for (const other of this.jobs.values()) {
+          if (!ids.has(other.reviewed_job_id) || ids.has(other.job_id) || other.status === 'WITHDRAWN') continue;
+          if (!RETRYABLE.has(other.status)) throw new IngestError('review_in_progress', 'Another correction still builds on this job; withdraw or finish that one first', 409);
+          members.add(other);
+        }
+      } else if (!['FAILED', 'INTERRUPTED'].includes(job.status)) {
+        throw new IngestError('job_not_withdrawable', 'Only a held job waiting for a correction, or a failed one, can be withdrawn', 409);
+      }
+      const at = this.now().toISOString();
+      const before = [...members].map((member) => [member.job_id, structuredClone(member)]);
+      for (const member of members) Object.assign(member, { status: 'WITHDRAWN', withdrawn_from: member.status, withdrawn_at: at, updated_at: at });
+      try {
+        if (!await this.#collect()) await this.#persist();
+      } catch (error) {
+        for (const [id, copy] of before) this.jobs.set(id, copy);
+        throw error;
+      }
+      return { job: structuredClone(job), withdrawn: [...members].map((member) => member.job_id) };
+    });
   }
 
   /** Files left by older versions or by a crash between writing bytes and recording them. */
@@ -583,6 +826,22 @@ export class IngestService {
       .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
       .slice(0, limit)
       .map((job) => structuredClone(job));
+  }
+
+  /**
+   * One page of jobs and the totals a page alone cannot show: how many jobs match, and how many of them wait for a
+   * correction. Those come first (newest first), then every other job (newest first), so the to-dos are always on the
+   * first page. Each job says where it stands in its review chain (`review_state`) and names its newest correction.
+   */
+  pageJobs({ case_id: caseId, limit = 50, offset = 0, filter } = {}) {
+    const { states, latest } = this.#reviewStates();
+    const open = (job) => states.get(job.job_id) === 'open';
+    const matching = [...this.jobs.values()].filter((job) => (!caseId || job.case_id === caseId) && (!filter || filter(job)))
+      .sort((a, b) => Number(open(b)) - Number(open(a)) || Date.parse(b.created_at) - Date.parse(a.created_at) || a.job_id.localeCompare(b.job_id));
+    const page = matching.slice(offset, offset + limit).map((job) => ({ ...structuredClone(job), review_state: states.get(job.job_id) ?? null,
+      ...(latest.has(job.job_id) ? { reviewed_by: latest.get(job.job_id).job_id } : {}) }));
+    const end = offset + page.length;
+    return { jobs: page, total: matching.length, held_total: matching.filter(open).length, next_offset: end < matching.length ? end : null };
   }
 
   async updateJob(id, patch) {
@@ -631,8 +890,22 @@ export class IngestService {
   /** What the store holds, for operations and the retention tests. */
   usage() {
     const records = [...this.documents.values()];
+    const { superseded } = this.#reviewChains();
+    const expired = new Set(this.#expiredJobs());
+    const keptIds = new Set([...this.jobs.values()].filter((job) => !expired.has(job.job_id) && job.status !== 'WITHDRAWN').flatMap((job) => job.document_ids));
+    const jobs = [...this.jobs.values()], withdrawn = jobs.filter((job) => job.status === 'WITHDRAWN').length;
     return { documents: records.length, jobs: this.jobs.size, max_jobs: this.maxJobs, stored_bytes: records.reduce((sum, record) => sum + record.size, 0),
-      max_stored_bytes: this.maxStoredBytes, cached_bytes: this.cachedBytes, cases_with_access_records: this.access.size };
+      max_stored_bytes: this.maxStoredBytes, review_reserve_bytes: this.reviewReserveBytes, cached_bytes: this.cachedBytes, cases_with_access_records: this.access.size,
+      access_state: this.accessState,
+      // Jobs waiting for a correction (the same count the job list reports), the logical jobs the quota counts, and what
+      // the table can still take for reviews.
+      held_jobs: this.#openJobs().length, withdrawn_jobs: withdrawn,
+      logical_jobs: jobs.filter((job) => !superseded.has(job.job_id) && job.status !== 'WITHDRAWN').length,
+      review_headroom_jobs: Math.max(0, this.maxJobs * 2 - this.jobs.size),
+      // Bytes retention already released but not yet removed (the next reclaim removes them).
+      reclaimable_bytes: records.filter((record) => !keptIds.has(record.document_id)).reduce((sum, record) => sum + record.size, 0),
+      // Whether the last write of the document and job records failed (the tick writes them again).
+      unsaved_records: Boolean(this.unsavedRecords) };
   }
 
   /** Case IDs that hold Live material (a Live job or a case a Live upload produced): a Demo reset leaves them alone. */
@@ -663,7 +936,7 @@ export class IngestService {
     const privateCase = { ...caseData, visibility, title_identity_hash: titleHash ?? null, workspace_owner_id: this.caseOwner(caseData.case_id),
       ...(access?.source_case_id ? { source_case_id: access.source_case_id } : {}), mode: this.getMode() };
     this.cases.set(caseData.case_id, structuredClone(privateCase));
-    if (this.dir) await writeJsonAtomic(path.join(this.dir, 'cases', `${caseData.case_id}.case.json`), privateCase);
+    if (this.dir) await writeJsonAtomic(path.join(this.dir, 'cases', `${caseData.case_id}.case.json`), privateCase, PRIVATE_FILE);
     return caseData.case_id;
   }
 

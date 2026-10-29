@@ -89,6 +89,24 @@ export class OperationsMonitor {
       check('emergency_stop', !agent.emergency_stop, 'intake_stopped');
       check('queue', (agent.queue?.queued ?? 0) <= positive(this.env.AGENTBL_MAX_QUEUE, 100) && !(agent.queue?.dead > 0), 'queue_backlog',
         { queued: agent.queue?.queued ?? 0, dead: agent.queue?.dead ?? 0, pending_approvals: agent.pending_approvals ?? 0 });
+      // An event can stall with nothing queued or dead: accepted but held by no queue, or waiting far too long.
+      const orphaned = agent.queue?.orphaned ?? 0, oldest = agent.queue?.oldest_pending_ms ?? 0;
+      warn('event_flow', orphaned === 0 && oldest <= positive(this.env.AGENTBL_MAX_EVENT_WAIT_MS, 15 * 60_000), orphaned > 0 ? 'events_not_queued' : 'events_waiting',
+        { observation: { orphaned, oldest_pending_ms: oldest, owner: 'operator', action: 'inspect_event_queue' } });
+      // A write of the event index or the intake records failed: memory is ahead of the disk until the tick writes it.
+      const unsaved = { event_index: Boolean(agent.queue?.unsaved), intake_records: Boolean(agent.intake?.unsaved_records) };
+      warn('persistence', !unsaved.event_index && !unsaved.intake_records, 'runtime_records_unsaved',
+        { observation: { ...unsaved, owner: 'operator', action: 'check_runtime_storage' } });
+      const intake = agent.intake;
+      if (intake) {
+        // Without its access records the intake cannot tell who may read a case: no new material comes in until restored.
+        check('case_access', intake.access_state === 'ready', 'case_access_unavailable',
+          { observation: { access_state: intake.access_state, owner: 'operator', action: 'restore_case_access_records' } });
+        const max = intake.max_jobs ?? Infinity;
+        warn('intake_capacity', intake.logical_jobs < max * 0.9 && intake.review_headroom_jobs > max * 0.1, 'intake_jobs_near_full',
+          { observation: { held_jobs: intake.held_jobs, logical_jobs: intake.logical_jobs, max_jobs: intake.max_jobs, review_headroom_jobs: intake.review_headroom_jobs,
+            stored_bytes: intake.stored_bytes, max_stored_bytes: intake.max_stored_bytes, reclaimable_bytes: intake.reclaimable_bytes, owner: 'operator', action: 'resolve_held_reviews' } });
+      }
       check('audit', !agent.activity?.persist_error, 'audit_persistence_failed');
       check('source_freshness', !live || !(agent.sources?.expired_live > 0 || agent.sources?.unavailable > 0), 'source_refresh_required', { observation: agent.sources ?? { observed: false } });
       const anchoring = agent.anchoring;
@@ -122,6 +140,12 @@ export class OperationsMonitor {
     const d = this.details();
     return [`agentbl_ready ${Number(d.readiness.ok)}`, `agentbl_http_requests_total ${d.requests.total}`, `agentbl_http_errors_total ${d.requests.failed}`,
       `agentbl_http_inflight ${d.requests.inflight}`, `agentbl_http_max_duration_ms ${d.requests.max_ms}`, `agentbl_memory_rss_bytes ${d.memory_rss_bytes}`,
-      ...d.checks.map((c) => `agentbl_check_ok{check="${c.name}"} ${Number(c.ok)}`)].join('\n') + '\n';
+      ...d.checks.map((c) => `agentbl_check_ok{check="${c.name}"} ${Number(c.ok)}`),
+      // Business stalls the check booleans alone would hide.
+      ...d.checks.flatMap((c) => c.name === 'event_flow' ? [`agentbl_events_orphaned ${c.observation?.orphaned ?? 0}`, `agentbl_event_oldest_pending_ms ${c.observation?.oldest_pending_ms ?? 0}`]
+        : c.name === 'persistence' ? [`agentbl_unsaved_records{store="event_index"} ${Number(Boolean(c.observation?.event_index))}`,
+          `agentbl_unsaved_records{store="intake"} ${Number(Boolean(c.observation?.intake_records))}`]
+        : c.name === 'intake_capacity' ? [`agentbl_intake_held_jobs ${c.observation?.held_jobs ?? 0}`, `agentbl_intake_review_headroom_jobs ${c.observation?.review_headroom_jobs ?? 0}`,
+          `agentbl_intake_reclaimable_bytes ${c.observation?.reclaimable_bytes ?? 0}`] : [])].join('\n') + '\n';
   }
 }

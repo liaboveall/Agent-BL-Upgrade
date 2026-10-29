@@ -17,6 +17,8 @@ function request(method, path, body = null) {
       headers: body ? { 'Content-Type': 'application/json' } : {}
     }, (res) => {
       let data = '';
+      // One decoder for the whole body: a multi-byte character can straddle two chunks.
+      res.setEncoding('utf8');
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
@@ -143,8 +145,9 @@ test('BE-15: Agent Activity API Tests', async (t) => {
         assert.match(res.headers['cache-control'], /^no-cache(,|$)/u);
 
         let receivedData = '';
+        res.setEncoding('utf8');
         res.on('data', (chunk) => {
-          receivedData += chunk.toString();
+          receivedData += chunk;
 
           // Check for connection event
           if (receivedData.includes('"type":"connected"')) {

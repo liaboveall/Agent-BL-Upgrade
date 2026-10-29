@@ -13,10 +13,12 @@ import { isRecord } from './shapes.js';
 import { withReferences } from '../agent/runtime/references.js';
 import { publicAgentPolicy } from '../mcp/agentTools.js';
 import { subscriptionAvailability } from '../core/subscription.js';
-import { workspaceOwner, canReadWorkspaceCase, canReadJob, requireWorkspaceCase } from './workspaceAccess.js';
+import { workspaceOwner, canReadWorkspaceCase, canReadJob, requireWorkspaceCase, settleCaseAccess, requireCaseAccess } from './workspaceAccess.js';
 import { parsePreferences } from '../agent/runtime/preferences.js';
 
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/u;
+// Routes that decide who may read a case: a request to one waits while the case access records load.
+const CASE_ACCESS_PATH = /^\/api\/agent\/(?:workspace|decisions|references|approvals|ingest|jobs|cases|events)(?:\/|$)/u;
 
 function pathId(value) {
   const id = decodeURIComponent(value);
@@ -70,10 +72,11 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     const method = request.method;
     if (!pathname.startsWith('/api/agent/')) return false;
     const service = getService();
+    if (CASE_ACCESS_PATH.test(pathname)) await settleCaseAccess(service);
     const caseFilter = (caseId, record) => canReadWorkspaceCase(service, request, caseId, record);
 
     if (method === 'GET' && pathname === '/api/agent/workspace/cases') {
-      await service.ingest?.init?.();
+      requireCaseAccess(service);
       const cases = (await service.ingest?.listCases() ?? []).filter((data) => caseFilter(data.case_id));
       sendJson(response, 200, { ok: true, visibility: 'private', cases });
       return true;
@@ -83,7 +86,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
     const copyMatch = COPY_PATH.exec(pathname);
     if (method === 'GET' && copyMatch) {
       const sourceId = pathId(copyMatch[1]);
-      await service.ingest?.init?.();
+      requireCaseAccess(service);
       if (!service.ingest) throw new HttpError(503, 'ingest_unavailable', 'This runtime has no document intake');
       requireWorkspaceCase(service, request, sourceId);
       const ownerId = workspaceOwner(request, response);
@@ -280,6 +283,15 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       sendJson(response, 202, { ok: true, ...(await service.reviewDocuments(pathId(reviewMatch[1]), body)) });
       return true;
     }
+    // Withdrawing gives a held job up and releases its bytes: it is never new intake, so a paused intake still allows it.
+    const withdrawMatch = /^\/api\/agent\/jobs\/([^/]+)\/withdraw$/u.exec(pathname);
+    if (method === 'POST' && withdrawMatch) {
+      authorizeIntake(request);
+      const job = service.ingest?.getJob(pathId(withdrawMatch[1]));
+      if (!job || !canReadJob(service, request, job)) throw new HttpError(404, 'job_not_found', 'Unknown ingest job');
+      sendJson(response, 200, { ok: true, ...(await service.ingest.withdraw(job.job_id)) });
+      return true;
+    }
     const jobMatch = /^\/api\/agent\/jobs\/([^/]+)$/u.exec(pathname);
     if (method === 'GET' && jobMatch) {
       const job = service.ingest?.getJob(pathId(jobMatch[1]));
@@ -288,8 +300,11 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       return true;
     }
     if (method === 'GET' && pathname === '/api/agent/jobs') {
-      sendJson(response, 200, { ok: true, jobs: service.ingest?.listJobs({ case_id: url.searchParams.get('case_id') ?? undefined, limit: intParam(url, 'limit', { fallback: 50 }),
-        filter: (job) => canReadJob(service, request, job) }) ?? [] });
+      // A page of jobs, the to-dos first, with the totals the page alone cannot show (all matching jobs, those held).
+      const page = service.ingest?.pageJobs({ case_id: url.searchParams.get('case_id') ?? undefined, limit: intParam(url, 'limit', { fallback: 50 }),
+        offset: intParam(url, 'offset', { min: 0, max: 100_000, fallback: 0 }), filter: (job) => canReadJob(service, request, job) })
+        ?? { jobs: [], total: 0, held_total: 0, next_offset: null };
+      sendJson(response, 200, { ok: true, ...page });
       return true;
     }
 
@@ -298,6 +313,8 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
       const caseId = pathId(caseMatch[1]);
       requireWorkspaceCase(service, request, caseId);
       if (method === 'GET') {
+        // A read during start-up waits for the stored preferences instead of answering that none were saved.
+        await service.preferences.init?.();
         sendJson(response, 200, { ok: true, case_id: caseId, ...(service.preferences.describe(caseId) ?? { preferences: {}, updated_at: null }) });
         return true;
       }
@@ -309,7 +326,7 @@ export function createAgentRoutes({ getService, runtimeMode, activityLog }) {
         // The agent enforces these, so a public sample's preferences are an operator decision. Every other case is
         // private: whoever first stores something for it -- a workspace or the operator -- owns it before it is stored.
         if (service.ingest?.claimCase) {
-          await service.ingest.init?.();
+          requireCaseAccess(service);
           const ownerId = workspaceOwner(request, response);
           if (service.ingest.isPublicCase(caseId)) {
             if (!checkAdminToken(request).authorized) {

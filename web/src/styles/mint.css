@@ -106,6 +106,13 @@
 .job-step.is-warn span:last-child, .job-step.is-review span:last-child { color: var(--warn); }
 .job-step.is-pass span:last-child { color: var(--ok); }
 .job-review { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+/* a job that waits for corrected documents: the to-do the summary counts */
+.job.is-open { border-color: var(--warn-line); }
+.job-head .job-id { margin-left: auto; font-family: var(--mono); }
+.job-withdraw-open { justify-self: start; }
+.job-withdraw { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); padding: var(--s-3); border-radius: var(--r); background: var(--warn-soft); }
+.job-withdraw p { flex: 1 1 100%; margin: 0; }
+#ebl-jobs-more { justify-self: start; }
 .field-list { display: grid; gap: 4px; }
 .field-list > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--s-2); font-size: var(--fs-13); }
 .field-list dt { color: var(--muted); }
@@ -117,3 +124,10 @@
 .events-head { display: flex; align-items: center; justify-content: space-between; }
 .pricing-event { display: grid; gap: 2px; padding: var(--s-2) 0; border-top: 1px solid var(--line); font-size: var(--fs-12); }
 .pricing-event-head { display: flex; justify-content: space-between; gap: var(--s-2); }
+
+/* where to start: the priced case, then a public sample, my own documents or a held review */
+.mint-start { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3) var(--s-5); margin: calc(-1 * var(--s-2)) 0 var(--s-4); }
+.mint-start .quote-source { flex: 1 1 420px; margin: 0; }
+.mint-start-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.case-load-error { display: grid; gap: var(--s-2); justify-items: start; margin-bottom: var(--s-5); }
+.mint-panel.is-unavailable { padding: var(--s-5); }

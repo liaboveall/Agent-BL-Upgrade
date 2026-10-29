@@ -47,17 +47,25 @@ export class PreferenceStore {
     this.now = now;
     this.byCase = new Map();
     this.queue = createWriteQueue();
-    this.loaded = false;
+    this.loading = null;
+    // Whether `has` answers for what is stored: a file-backed store does not know before its file is read.
+    this.ready = !file;
   }
 
-  async init() {
-    if (this.loaded) return this;
-    this.loaded = true;
-    if (this.file) {
-      const stored = await readJson(this.file, {});
-      for (const [caseId, value] of Object.entries(stored ?? {})) this.byCase.set(caseId, value);
-    }
-    return this;
+  /**
+   * Load once. Every caller waits for the same read: a save that arrived while the file was still being read would
+   * otherwise start from an empty store and write that over what was saved.
+   */
+  init() {
+    this.loading ??= (async () => {
+      if (this.file) {
+        const stored = await readJson(this.file, {});
+        for (const [caseId, value] of Object.entries(stored ?? {})) this.byCase.set(caseId, value);
+      }
+      this.ready = true;
+      return this;
+    })().catch((error) => { this.loading = null; throw error; });
+    return this.loading;
   }
 
   get(caseId) {
@@ -104,7 +112,7 @@ export class PreferenceStore {
     return this.queue(async () => {
       const next = new Map(this.byCase);
       change(next);
-      if (this.file) await writeJsonAtomic(this.file, Object.fromEntries(next));
+      if (this.file) await writeJsonAtomic(this.file, Object.fromEntries(next), { mode: 0o600 });
       this.byCase = next;
     });
   }

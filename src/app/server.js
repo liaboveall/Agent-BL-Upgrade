@@ -72,7 +72,7 @@ import { PayerRecoverySessions } from '../x402/payerRecovery.js';
 import { paymentSummary } from '../x402/settlement.js';
 import { createPricingDelegate } from '../interop/delegation.js';
 import { createInteropRoutes } from './interopRoutes.js';
-import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase } from './workspaceAccess.js';
+import { workspaceOwner, canReadWorkspaceCase, requireWorkspaceCase, settleCaseAccess } from './workspaceAccess.js';
 import { createRightsRoutes } from './rightsRoutes.js';
 import { createEvidenceRoutes } from './evidenceRoutes.js';
 import { handleOperationsRoute, guardNewIntake } from './operationsRoutes.js';
@@ -1719,6 +1719,10 @@ async function routeRequest(request, response, url) {
   throw new HttpError(405, 'method_not_allowed', 'Method not allowed');
 }
 
+// The routes outside the agent router that decide who may read a case.
+const CASE_ACCESS_ROUTES = new Set(['/api/pool/subscribe', '/api/pool/status', '/api/investors/portfolio', '/api/positions',
+  '/api/exporters/dashboard', '/api/ebl/upload', '/api/agent/activity', '/api/agent/activity/stream']);
+
 export async function handleRequest(request, response) {
   const requestId = crypto.randomBytes(6).toString('hex');
   response.setHeader('X-Request-Id', requestId);
@@ -1731,6 +1735,9 @@ export async function handleRequest(request, response) {
     if (handleOperationsRoute(request, response, url, operations)) return;
     guardNewIntake(request, url, operations);
     enforceRateLimits(request, response, url);
+    // Access checks are synchronous: a request to a route that makes one waits while the case access records load.
+    // (The agent routes wait on their own; the stateless Agent API never touches the agent service.)
+    if (agentService && CASE_ACCESS_ROUTES.has(url.pathname)) await settleCaseAccess(agentService);
     await routeRequest(request, response, url);
   } catch (error) {
     sendError(response, error, { requestId });

@@ -85,7 +85,7 @@ test('W5 runtime lease prevents a second OS writer, survives SIGKILL and refuses
 
 test('W5 readiness separates storage, RPC/reorg uncertainty, queues and startup; alerts arrive, deduplicate and recover', async (t) => {
   const directory = await temporary(t), received = [];
-  const receiver = http.createServer(async (req, res) => { let raw = ''; for await (const chunk of req) raw += chunk; received.push(JSON.parse(raw)); res.end('ok'); });
+  const receiver = http.createServer(async (req, res) => { let raw = ''; req.setEncoding('utf8'); for await (const chunk of req) raw += chunk; received.push(JSON.parse(raw)); res.end('ok'); });
   const url = await startHttp(t, receiver); let agent = healthyAgent(), storageOk = true, now = Date.now();
   const monitor = new OperationsMonitor({ directory, env: { AGENTBL_RELEASE_REVISION: 'reviewed-commit' }, now: () => now,
     getAgentStatus: async () => agent, probeStorage: async () => { if (!storageOk) throw Object.assign(new Error('disk full'), { code: 'ENOSPC' }); return {}; },

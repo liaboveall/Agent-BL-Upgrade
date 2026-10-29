@@ -24,9 +24,10 @@ npm run dev
 | `AGENTBL_RELEASE_REVISION` | 运行版本标识 |
 | `LLM_HTTP_RELAY` | 设为 `true` 才开放浏览器 LLM 中继 `POST /api/llm/chat`；默认关闭，Copilot 等服务端模型功能不受影响 |
 | `AGENTBL_INTAKE_KEY` | 研究上传的独立封存密钥（32 字节十六进制）；未设置时在 `research-agent/ingest-uploads.key` 生成，只保护上传目录的单独副本 |
-| `AGENT_UPLOAD_BATCH_MAX_BYTES` / `AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES` / `AGENT_UPLOAD_TOTAL_QUOTA_BYTES` | 单次上传合计、每个浏览器工作区与整个上传存储的容量；默认 24 MiB、48 MiB、128 MiB。上传存储最多占一次运行备份上限（256 MiB）的一半，更大的设置按 128 MiB 处理 |
-| `AGENT_INGEST_MAX_JOBS` / `AGENT_INGEST_WORKSPACE_MAX_JOBS` / `AGENT_INGEST_JOB_RETENTION_DAYS` | 保留的上传任务总数、每个工作区的任务数，以及已完成且无需复核的任务保留天数；默认 500、100、30。排队、处理中和待复核的任务不会为腾出空间而删除，任务表被它们占满时新上传返回 507 `intake_jobs_full`（单个工作区为 413 `upload_job_quota_exceeded`） |
+| `AGENT_UPLOAD_BATCH_MAX_BYTES` / `AGENT_UPLOAD_WORKSPACE_QUOTA_BYTES` / `AGENT_UPLOAD_TOTAL_QUOTA_BYTES` | 单次上传合计、每个浏览器工作区与整个上传存储的容量；默认 24 MiB、48 MiB、128 MiB。上传存储最多占一次运行备份上限（256 MiB）的一半，更大的设置按 128 MiB 处理。待复核任务的第一次纠正可再用一批上传大小的预留，所以待复核材料占满额度时纠正不被卡住；容量拒绝会写明已用量、上限、占用空间的待复核任务和下一步（提交纠正或撤回） |
+| `AGENT_INGEST_MAX_JOBS` / `AGENT_INGEST_WORKSPACE_MAX_JOBS` / `AGENT_INGEST_JOB_RETENTION_DAYS` | 保留的上传任务总数、每个工作区的任务数，以及已完成且无需复核的任务保留天数；默认 500、100、30。排队、处理中和待复核的任务不会为腾出空间而删除，任务表被它们占满时新上传返回 507 `intake_jobs_full`（单个工作区为 413 `upload_job_quota_exceeded`）。配额按逻辑任务计：待复核任务与纠正它的复核版本共占一个名额，所以占满时仍可提交每个待复核任务的纠正；任务表最多保留配额的两倍，再多的复核版本返回 507 `review_capacity_exhausted` |
 | `AGENTBL_BACKUP_BUDGET_INTERVAL_MS` / `AGENTBL_BACKUP_WARN_RATIO` | 运维监测按此间隔（默认 60 秒）测量运行目录相对备份上限的大小；达到该比例（默认 0.8）时向运维告警 `backup_budget_near`，超过上限时 `backup_budget_exceeded` 并暂停新的进件 |
+| `AGENTBL_MAX_EVENT_WAIT_MS` | Agent 事件最长等待时间（默认 15 分钟）。最老的未完成事件超过它，或有已接收却不在任何队列里的事件时，就绪检查发出 `events_waiting` / `events_not_queued` 警告 |
 | `AGENTBL_ALLOWED_HOSTS` | 除 localhost/127.0.0.1 外允许的主机名；经回环到达但 Host 不在名单内的请求返回 421（防 DNS 重绑定）。Compose 默认 `localhost,127.0.0.1`，反向代理提供公网域名时加入该域名 |
 
 合资格钱包连接 Live 后按角色工作台操作。管理员登记身份，链上角色另行核对；参与者逐次确认钱包请求。材料创建、完整条款绑定、双审、发布和交易准备均检查当前版本与权限。测试代币与 gas 由实际研究账户准备，不要把私钥放入公开 JSON。
@@ -43,6 +44,8 @@ npm run dev
 `GET /api/health` 检查进程存活，`GET /api/ready` 检查就绪，`GET /api/ops/status` 提供运行状态。就绪并不表示真实业务启用。容器 healthcheck 只调用 `/api/health`，`healthy` 标签不代表 `/api/ready` 已就绪，更不代表融资条件满足。
 
 未就绪时暂停所有带入新材料或新资金的入口（`src/app/operationsRoutes.js` 的 `NEW_INTAKE_ROUTES`）：`POST /api/agent/ingest`、旧接口 `POST /api/ebl/upload`、复核重传 `POST /api/agent/jobs/:id/review`、认购 intent 与 Demo 认购，均返回 503 `operations_not_ready`。Agent 服务自身也检查同一就绪状态，后续新增的别名或 MCP 调用同样被拦下（Demo 场景回放只重放仓库内样例，不受影响）。读取、领取、退款、原交易附加与核对、钱包操作释放保持可用。
+
+就绪检查还看业务是否停滞，而不只看失败数和队列长度：`case_access` 在案例访问记录未加载成功时失败（新进件因此暂停，除公开样例外的私有案例一律不可读，接口返回 503 `case_access_unavailable`，恢复 `ingest-case-access.json` 后重启）；`event_flow` 在出现“已接收但不在队列”的事件，或最老未完成事件超过 `AGENTBL_MAX_EVENT_WAIT_MS` 时告警（Agent 每次巡检会把这类事件重新入队）；`intake_capacity` 在逻辑任务达到配额 90% 或复核余量不足 10% 时告警，观测值含待复核任务数、复核余量和已到期待回收字节。已到期的上传任务在启动时、每次 Agent 巡检和每次新上传前回收，不依赖再有一次成功上传。`persistence` 在事件索引或上传记录的最近一次写盘失败、尚未补写时告警（`runtime_records_unsaved`，观测值分别给出 `event_index` 和 `intake_records`）；Agent 巡检会重写它们，持续告警说明运行目录的磁盘或权限仍有问题。开始处理时写盘失败的事件不再停在“处理中”：它回到已接收，计入 `events_not_queued`，由巡检重新交出。`GET /api/ops/metrics` 另外导出 `agentbl_events_orphaned`、`agentbl_event_oldest_pending_ms`、`agentbl_unsaved_records{store=...}`、`agentbl_intake_held_jobs`、`agentbl_intake_review_headroom_jobs` 与 `agentbl_intake_reclaimable_bytes`。待复核任务占满容量时，所有者可在上传卡片上提交纠正，或撤回不再需要的任务（`POST /api/agent/jobs/:id/withdraw`，立即释放原始文件，记录与决策证据保留）；撤回不受进件暂停影响。
 
 研究案例目录在内存中缓存，超过 `AGENTBL_CATALOG_TTL_MS`（默认 60 秒）后在后台重建，请求不等待冷启动的公开数据源。Demo 资金池只在首次请求时建立；状态仍跟随报价的池（未被 Agent 动作接管）至多每 `AGENTBL_POOL_REQUOTE_MS`（默认 60 秒）按当前数据重新定价，所以启动时因数据源慢而暂停的案例会在数据恢复后自动重新开放，实时数据也不会悄悄过期。
 
@@ -77,7 +80,7 @@ docker stop -t 210 <容器>
 
 ## 备份与恢复
 
-`data/runtime/` 保存材料、资金历史、原交易和恢复检查点，不属于开发垃圾。研究上传的访问记录 `research-agent/ingest-case-access.json` 与封存密钥（`AGENTBL_INTAKE_KEY` 或 `research-agent/ingest-uploads.key`）须与上传目录一起备份：访问记录缺失或损坏时 intake 拒绝启动（只有升级前写下的旧运行目录会按其任务和案例补建一次），缺少密钥则无法读回已封存的原始文件。其中 `rights/public-disclosures/` 是已批准条款的公开副本，不含私有材料；要让其他实例或新 checkout 显示这些条款，可复制到 `data/disclosures/` 并提交。备份前停止所有相关写入者；备份实例父目录时，还要检查应用子目录租约及 `owner-cli` 锁。
+`data/runtime/` 保存材料、资金历史、原交易和恢复检查点，不属于开发垃圾。研究上传的访问记录 `research-agent/ingest-case-access.json`、清单 `research-agent/ingest-manifest.json` 与封存密钥（`AGENTBL_INTAKE_KEY` 或 `research-agent/ingest-uploads.key`）须与上传目录一起备份：清单记录该目录保存访问记录的起始时间，访问记录缺失或损坏时 intake 拒绝启动（只有升级前写下的旧运行目录会按其任务和案例补建一次），缺少密钥则无法读回已封存的原始文件。即使只恢复了偏好、丢了访问记录和清单，保存过偏好的案例也只有管理员可读，不会变成公开。其中 `rights/public-disclosures/` 是已批准条款的公开副本，不含私有材料；要让其他实例或新 checkout 显示这些条款，可复制到 `data/disclosures/` 并提交。备份前停止所有相关写入者；备份实例父目录时，还要检查应用子目录租约及 `owner-cli` 锁。
 
 ```sh
 npm run runtime:backup -- create --directory <已停止目录> --key-file <独立密钥文件> --output <新加密包> --configuration <实例JSON> --revision <源码版本>

@@ -5,7 +5,7 @@
 // Every async path checks that the case, the runtime generation and the wallet it started with are
 // still current before it writes, so a slow reply never overwrites a newer selection.
 
-import { appStore, selectedQuote, findCase, quoteKey, quoteCurrent } from './app-store.js';
+import { appStore, selectedQuote, findCase, quoteKey, quoteCurrent, caseRevision } from './app-store.js';
 import * as api from '../lib/api.js';
 import * as web3 from '../lib/web3.js';
 import * as f from '../lib/format.js';
@@ -293,27 +293,41 @@ function workspaceEntry(data) {
     private: true, source_case_id: data.source_case_id ?? null, case: data };
 }
 
-/** The working cases of the current mode; Demo and Live material never appear in one list. */
-export async function refreshWorkspaceCases() {
+/**
+ * The working cases of the current mode; Demo and Live material never appear in one list. When the selected working
+ * case comes back with other material (an upload or a review changed it under the same ID), the page follows the new
+ * revision and reprices it: the old comparison stays visible, marked stale and not issuable, until the new one is in.
+ */
+export async function refreshWorkspaceCases({ follow = true } = {}) {
   const generation = get().modeGeneration, mode = get().demoMode ? 'demo' : 'live';
   try {
     const cases = await api.getWorkspaceCases();
     if (generation !== get().modeGeneration) return;
     set({ workspaceCases: cases.filter((data) => (data.mode ?? 'demo') === mode).map(workspaceEntry) });
-  } catch { /* the public samples still work; the list is asked for again after the next upload */ }
+  } catch { return; /* the public samples still work; the list is asked for again after the next upload */ }
+  const state = get(), entry = findCase(state);
+  if (!follow || !entry?.private || !state.caseData || caseRevision(entry.case) === caseRevision(state.caseData)) return;
+  const version = ++versions.caseVersion;
+  set({ caseData: entry.case, mint: null, marketSubscriptionResult: null });
+  await loadSelectedCase(entry, 'quote', version, state.modeGeneration);
 }
 
 /** Switch the page to the case an upload produced, so the quote, the preferences and the evidence are about it. */
 export async function openWorkspaceCase(caseId) {
-  await refreshWorkspaceCases();
+  // selectCase loads the newest revision itself; following it here as well would price it twice.
+  await refreshWorkspaceCases({ follow: false });
   if (!findCase(get(), caseId)) { toast(t('t_pricing_fail', { msg: caseId }), true); return false; }
   await selectCase(caseId);
   return true;
 }
 
-/** The server case this browser writes for a catalog case: its own working copy of a public sample. */
-async function resolveWorkspaceCase(caseId) {
-  try { return (await api.getWorkspaceCopy(caseId))?.case_id ?? caseId; } catch { return caseId; }
+/**
+ * The server case this browser writes for a catalog case: its own working copy of a public sample. A failure is
+ * thrown: guessing the sample itself would list its public jobs and preferences as if they were this browser's.
+ */
+async function resolveWorkspaceCase(entry) {
+  if (entry.private) return entry.case_id;
+  return (await api.getWorkspaceCopy(entry.case_id))?.case_id ?? entry.case_id;
 }
 
 /**
@@ -348,9 +362,10 @@ async function loadExporterPreferences(caseId, version, generation) {
       speed: values.payout_speed_preference ?? ''
     };
     set((state) => ({ preferences, preferencesError: null, preferencesUnsaved: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
-  } catch {
+  } catch (error) {
     if (version === versions.caseVersion && generation === get().modeGeneration) set({ preferencesError: t('pref_load_failed') });
-    throw new Error(t('pref_load_failed'));
+    // The page names the step; the reason is what the server or the network said.
+    throw new Error(error?.message || t('pref_load_failed'), { cause: error });
   }
 }
 
@@ -385,7 +400,7 @@ async function commitPreferences(logLine) {
   // issued from it, until repricing with the saved ones succeeds. A failure keeps it visible for reference only.
   set((state) => ({ preferencesUnsaved: null, quoteError: null, preferencesByCase: { ...state.preferencesByCase, [caseId]: preferences } }));
   if (logLine) agentLog(logLine);
-  const key = quoteKey(get());
+  const key = quoteKey(get(), caseId, entry.case);
   try {
     const comparison = await getCaseComparison(entry, true);
     if (current()) set({ comparison, comparisonKey: key });
@@ -419,7 +434,7 @@ export function retryPreferences() {
 export async function requote() {
   const state = get(), entry = findCase(state);
   if (state.busy || !entry) return false;
-  const caseId = state.caseId, version = versions.caseVersion, generation = state.modeGeneration, key = quoteKey(state);
+  const caseId = state.caseId, version = versions.caseVersion, generation = state.modeGeneration, key = quoteKey(state, caseId, entry.case);
   const current = () => get().caseId === caseId && version === versions.caseVersion && generation === get().modeGeneration && key === quoteKey(get());
   set({ busy: true });
   try {
@@ -447,7 +462,8 @@ export function getCaseComparison(entry, forceUpdate = false) {
   const generation = get().modeGeneration;
   const preference = get().preferencesByCase[entry.case_id];
   const floor = preference?.minPrice === '' || preference?.minPrice === undefined ? NaN : Number(preference.minPrice);
-  const cacheKey = JSON.stringify([generation, preference ?? null]);
+  // New material under the same ID is a new revision: it never reuses the comparison of the old one.
+  const cacheKey = JSON.stringify([generation, preference ?? null, caseRevision(entry.case)]);
   if (!forceUpdate && cached?.cacheKey === cacheKey && cached?.comparison) return Promise.resolve(cached.comparison);
   if (!forceUpdate && cached?.cacheKey === cacheKey && cached?.promise) return cached.promise;
   const requestId = Symbol();
@@ -484,20 +500,41 @@ export async function selectCase(caseId) {
   if (get().evidenceSelected?.case_id !== caseId) clearEvidenceSelection();
   rememberWorkspaceCase(entry.private ? caseId : null);
   set({ caseId, caseData: entry.case, comparison: null, comparisonKey: null, quoteError: null, busy: true, preferences: { minPrice: '', speed: '' }, preferencesError: null, preferencesUnsaved: null,
-    workspaceCaseId: null, financingUsd: null, mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: [], marketSubscriptionResult: null });
+    workspaceCaseId: null, caseLoad: null, intakeHeld: 0, financingUsd: null, mint: null, poolId: null, voyageInjected: false, voyageOffering: null, voyageEvents: [], marketSubscriptionResult: null });
   emit('agentbl:casechange', { case_id: caseId });
   subscribeToAgentActivity(caseId);
+  await loadSelectedCase(entry, 'workspace', version, generation);
+}
+
+const LOAD_STEPS = ['workspace', 'preferences', 'quote'];
+
+/**
+ * Load the selected case from `from` on: this browser's working copy, then the constraints saved for it, then its
+ * quote (each needs the one before). A failure stops at its step and stays on the page with a retry that resumes there;
+ * the upload card only needs the first step, so materials stay reachable while pricing is down.
+ */
+async function loadSelectedCase(entry, from, version, generation) {
+  const caseId = entry.case_id;
+  const current = () => version === versions.caseVersion && generation === get().modeGeneration && get().caseId === caseId;
+  let step = from;
+  set({ busy: true, caseLoad: null });
   try {
-    const workspaceCaseId = await resolveWorkspaceCase(caseId);
-    if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
-    set({ workspaceCaseId });
-    await loadExporterPreferences(caseId, version, generation);
-    if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
-    const key = quoteKey(get());
+    if (LOAD_STEPS.indexOf(from) <= 0) {
+      const workspaceCaseId = await resolveWorkspaceCase(entry);
+      if (!current()) return;
+      set({ workspaceCaseId });
+    }
+    if (LOAD_STEPS.indexOf(from) <= 1) {
+      step = 'preferences';
+      await loadExporterPreferences(caseId, version, generation);
+      if (!current()) return;
+    }
+    step = 'quote';
+    const key = quoteKey(get(), caseId, entry.case);
     const comparison = await getCaseComparison(entry);
-    if (version !== versions.caseVersion || generation !== get().modeGeneration) return;
+    if (!current()) return;
     const speed = get().preferences.speed || comparison.recommended_payout_speed || comparison.quotes?.[0]?.payout_speed || 'BALANCED';
-    set({ comparison, comparisonKey: key, speed });
+    set({ comparison, comparisonKey: key, speed, quoteError: null });
     const quote = selectedQuote();
     set({
       financingUsd: Math.round(quote?.requested_cash_usd ?? quote?.expected_cash_to_exporter_usd ?? 0),
@@ -505,10 +542,27 @@ export async function selectCase(caseId) {
       marketSubscriptionResult: null
     });
   } catch (error) {
-    toast(t('t_pricing_fail', { msg: error.message }), true);
+    if (current()) set({ caseLoad: { step, message: error.message || t('case_load_unknown') } });
   } finally {
     if (version === versions.caseVersion) set({ busy: false });
   }
+}
+
+/** Resume loading the selected case at the step that failed, without leaving the page. */
+export function retryCaseLoad() {
+  const state = get(), entry = findCase(state);
+  if (!entry || state.busy || !state.caseLoad) return Promise.resolve();
+  return loadSelectedCase(entry, state.caseLoad.step, versions.caseVersion, state.modeGeneration);
+}
+
+/**
+ * The Documents card reports how many of the selected case's jobs wait for corrected documents: the server's count of
+ * every such job, not how many of them one page happens to show.
+ */
+export function noteIntakeJobs(caseId, held) {
+  if (get().workspaceCaseId !== caseId) return;
+  const count = Math.max(0, Number(held) || 0);
+  if (count !== get().intakeHeld) set({ intakeHeld: count });
 }
 
 export function selectSpeed(speed) {

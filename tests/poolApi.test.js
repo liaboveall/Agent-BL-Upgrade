@@ -17,6 +17,8 @@ function request(method, path, body = null) {
       headers: body ? { 'Content-Type': 'application/json' } : {}
     }, (res) => {
       let data = '';
+      // One decoder for the whole body: a multi-byte character can straddle two chunks.
+      res.setEncoding('utf8');
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {

@@ -9,6 +9,14 @@
 //    kept with its payload so an operator can inspect or replay it;
 //  - restart: events that were RECEIVED or PROCESSING when the process stopped are queued again. The
 //    handler is idempotent (decision log + executor reconciliation), so this cannot double-execute.
+//  - acceptance is a commit: an event becomes visible (and a duplicate of it is answered as one) only once its
+//    audit line and the index holding it are written and it is queued. A write that fails leaves nothing behind,
+//    so a retry records and queues it; a second submission of a key still being recorded waits for that outcome.
+//  - every unfinished event has exactly one place: queued, running (a run holds it), or orphaned. Orphaned covers an
+//    event no queue or run holds, RECEIVED or PROCESSING; a retry of its key and the agent's tick hand it over again,
+//    never while a run still holds it. When writing PROCESSING fails before the handler starts, the event goes back
+//    to RECEIVED in memory (nothing ran), so it is recovered in place rather than waiting for a restart.
+//  - a failed index write is remembered until a later one succeeds (`status().unsaved`); the tick writes it again.
 //
 // Every accepted event is also appended to a JSONL audit log; the index file holds only state.
 
@@ -59,10 +67,13 @@ export class EventBus {
     this.onSettled = options.onSettled ?? (() => {});
 
     this.entries = new Map();         // idempotency_key -> entry
+    this.staging = new Map();         // idempotency_key -> { entry, done } while its acceptance is being written
     this.lastOccurred = new Map();    // "case::type" -> ISO occurred_at of the newest handled event
     this.queue = [];                  // idempotency keys, arrival order
     this.activeCases = new Set();
     this.activeRuns = new Set();      // in-flight run promises
+    this.running = new Set();         // idempotency keys a run holds right now
+    this.unsaved = null;              // the last index write that failed, until one succeeds
     this.started = false;
     this.initialized = false;
     this.enqueueWrite = createWriteQueue();
@@ -120,9 +131,17 @@ export class EventBus {
     event = stripSecretFields(event);
     const key = event.idempotency_key;
     if (!key) throw new TypeError('event.idempotency_key is required (use normalizeEvent)');
+    const recording = this.staging.get(key);
+    if (recording) {
+      // The same key is being recorded right now: whether this is a duplicate depends on whether that succeeds.
+      await recording.done.catch(() => {});
+      return this.submit(event);
+    }
     const existing = this.entries.get(key);
     if (existing) {
-      return { accepted: false, duplicate: true, event_id: existing.event_id, idempotency_key: key, status: existing.status };
+      // Recorded but neither queued nor running (an index written by an older version): hand it over again.
+      const requeued = this.#orphaned(existing) ? await this.#requeue(existing) : false;
+      return { accepted: false, duplicate: true, event_id: existing.event_id, idempotency_key: key, status: existing.status, ...(requeued ? { requeued } : {}) };
     }
     const receivedAt = this.now().toISOString();
     const entry = {
@@ -138,12 +157,43 @@ export class EventBus {
       updated_at: receivedAt,
       event
     };
-    this.entries.set(key, entry);
-    if (this.eventsFile) await this.enqueueWrite(() => appendJsonl(this.eventsFile, sanitizeAudit({ received_at: receivedAt, event })));
-    await this.flush();
-    this.queue.push(key);
-    this.#pump();
+    // Staged before the first write starts, so every index snapshot taken from here on holds it.
+    const staged = { entry, done: null };
+    this.staging.set(key, staged);
+    staged.done = this.#accept(entry, receivedAt);
+    try { await staged.done; }
+    finally { this.staging.delete(key); }
     return { accepted: true, duplicate: false, event_id: event.event_id, idempotency_key: key, status: EVENT_STATUS.RECEIVED };
+  }
+
+  /** Audit line, then the index that holds the entry, then the queue. Nothing of a failed attempt stays in memory. */
+  async #accept(entry, receivedAt) {
+    if (this.eventsFile) await this.enqueueWrite(() => appendJsonl(this.eventsFile, sanitizeAudit({ received_at: receivedAt, event: entry.event })));
+    await this.flush(); // the snapshot includes staged entries
+    this.entries.set(entry.idempotency_key, entry);
+    this.queue.push(entry.idempotency_key);
+    this.#pump();
+  }
+
+  /** Unfinished with its payload, yet in no queue and held by no run: nothing will ever pick it up. */
+  #orphaned(entry) {
+    return (entry.status === EVENT_STATUS.RECEIVED || entry.status === EVENT_STATUS.PROCESSING) && Boolean(entry.event)
+      && !this.running.has(entry.idempotency_key) && !this.queue.includes(entry.idempotency_key);
+  }
+
+  /** An orphan goes back to RECEIVED (no run holds it, so none is executing it) and is written before it is queued. */
+  async #adopt(entries) {
+    const at = this.now().toISOString();
+    for (const entry of entries) { entry.status = EVENT_STATUS.RECEIVED; entry.updated_at = at; }
+    await this.flush();
+  }
+
+  async #requeue(entry) {
+    await this.#adopt([entry]);
+    if (!this.#orphaned(entry)) return false;
+    this.queue.push(entry.idempotency_key);
+    this.#pump();
+    return true;
   }
 
   /** Wait until nothing is queued or running (tests and graceful shutdown). */
@@ -172,14 +222,29 @@ export class EventBus {
 
   status() {
     const counts = {};
-    for (const entry of this.entries.values()) counts[entry.status] = (counts[entry.status] ?? 0) + 1;
+    let oldest = null, orphaned = 0;
+    for (const entry of this.entries.values()) {
+      counts[entry.status] = (counts[entry.status] ?? 0) + 1;
+      if (entry.status === EVENT_STATUS.RECEIVED || entry.status === EVENT_STATUS.PROCESSING) {
+        const at = Date.parse(entry.received_at);
+        if (Number.isFinite(at) && (oldest === null || at < oldest)) oldest = at;
+      }
+      if (this.#orphaned(entry)) orphaned++;
+    }
     return {
       started: this.started,
       queued: this.queue.length,
       processing: this.activeRuns.size,
       concurrency: this.concurrency,
       counts,
-      dead: counts[EVENT_STATUS.DEAD] ?? 0
+      dead: counts[EVENT_STATUS.DEAD] ?? 0,
+      // Accepted events no queue or run holds, and how long the oldest unfinished one has waited: a stalled event
+      // shows here even when nothing is queued or dead.
+      orphaned,
+      oldest_pending_ms: oldest === null ? 0 : Math.max(0, this.now().getTime() - oldest),
+      // Whether the last index write failed: memory is then ahead of the disk until a write succeeds.
+      unsaved: Boolean(this.unsaved),
+      ...(this.unsaved ? { last_write_error: { ...this.unsaved } } : {})
     };
   }
 
@@ -210,6 +275,25 @@ export class EventBus {
     if (this.eventsFile) await this.enqueueWrite(() => pruneJsonl(this.eventsFile, 3, { ...options, timestamp: 'received_at' }));
   }
 
+  /**
+   * Queue every accepted event that no queue or run holds, after writing the index again if its last write failed
+   * (the agent's tick). Returns how many were handed over.
+   */
+  async recoverOrphans() {
+    if (this.unsaved) await this.flush();
+    const orphans = [...this.entries.values()].filter((entry) => this.#orphaned(entry));
+    if (!orphans.length) return 0;
+    await this.#adopt(orphans);
+    let count = 0;
+    for (const entry of orphans) {
+      if (!this.#orphaned(entry)) continue;
+      this.queue.push(entry.idempotency_key);
+      count++;
+    }
+    this.#pump();
+    return count;
+  }
+
   /** Put a DEAD event back in the queue (operator action). */
   async retryDead(key) {
     const entry = this.entries.get(key);
@@ -236,9 +320,11 @@ export class EventBus {
       const entry = this.entries.get(key);
       if (!entry) continue;
       this.activeCases.add(entry.case_id);
+      this.running.add(key);
       const run = this.#run(entry)
         .catch(() => {})
         .finally(() => {
+          this.running.delete(key);
           this.activeCases.delete(entry.case_id);
           this.activeRuns.delete(run);
           this.#pump();
@@ -257,7 +343,14 @@ export class EventBus {
 
     entry.status = EVENT_STATUS.PROCESSING;
     entry.updated_at = this.now().toISOString();
-    await this.flush();
+    try {
+      await this.flush();
+    } catch (error) {
+      // The handler has not started: back to RECEIVED, so once this run lets go it is an orphan the tick or a retry
+      // of its key hands over again -- not a PROCESSING entry nothing runs until the next restart.
+      entry.status = EVENT_STATUS.RECEIVED;
+      throw error;
+    }
 
     try {
       const retried = await executeWithRetry(async (attempt) => {
@@ -281,12 +374,16 @@ export class EventBus {
     Object.assign(entry, patch, { status, updated_at: this.now().toISOString() });
     if (!KEEP_PAYLOAD.has(status)) delete entry.event;
     this.#prune();
-    await this.flush();
+    // The outcome happened whether or not this write succeeds (a failed one stays unsaved until the tick writes it),
+    // so the listener hears of it either way.
+    let failure = null;
+    try { await this.flush(); } catch (error) { failure = error; }
     try {
       this.onSettled(structuredClone(entry));
     } catch {
       // A listener bug must not change the event's outcome.
     }
+    if (failure) throw failure;
   }
 
   #prune() {
@@ -310,12 +407,20 @@ export class EventBus {
       this.flushing = (async () => {
         while (this.dirty) {
           this.dirty = false;
+          // An event whose acceptance is being written is in the index before it is visible: on a restart it runs.
+          const staged = [...this.staging.values()].map(({ entry }) => entry).filter((entry) => !this.entries.has(entry.idempotency_key));
           const snapshot = {
             version: 1,
             last_occurred: Object.fromEntries(this.lastOccurred),
-            entries: [...this.entries.values()]
+            entries: [...this.entries.values(), ...staged]
           };
-          await this.enqueueWrite(() => writePrivateJson(this.indexFile, snapshot));
+          try {
+            await this.enqueueWrite(() => writePrivateJson(this.indexFile, snapshot));
+          } catch (error) {
+            this.unsaved = { at: this.now().toISOString(), message: String(error?.message ?? error).slice(0, 200) };
+            throw error;
+          }
+          this.unsaved = null; // every snapshot holds the whole state
         }
       })().finally(() => { this.flushing = null; });
     }

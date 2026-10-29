@@ -4,7 +4,7 @@ import * as f from '../../lib/format.js';
 import * as web3 from '../../lib/web3.js';
 import { PAUSED_ACTIONS, potentialYieldText } from '../../lib/market.js';
 import { mint, requote, selectSpeed, setFinancing, setView } from '../../state/controller.js';
-import { quoteCurrent } from '../../state/app-store.js';
+import { quoteCurrent, quoteStaleReason } from '../../state/app-store.js';
 import { Badge, Button, Card, Field, KV, cx, useRovingKeys } from '../../components/ui.jsx';
 import { RichT } from '../../components/RichText.jsx';
 
@@ -22,6 +22,9 @@ export function MintPanel({ quote }) {
   const result = useApp((s) => s.mint);
   // A comparison computed before the constraints now saved stays on screen for reference, but cannot be issued.
   const current = useApp((s) => quoteCurrent(s));
+  // New material under the same case (an upload or a review): the comparison priced the old revision.
+  const staleMaterial = useApp((s) => quoteStaleReason(s) === 'material');
+  const repriceFailed = useApp((s) => s.caseLoad?.step === 'quote');
   const quoteError = useApp((s) => s.quoteError);
   const quotes = comparison?.quotes ?? [];
   const recommended = comparison?.recommended_payout_speed;
@@ -50,9 +53,11 @@ export function MintPanel({ quote }) {
       </header>
 
       {current ? null : (
-        <div className="callout tone-warn" id="quote-stale" role="status">
-          <p>{quoteError ? t('quote_stale', { msg: quoteError }) : t('quote_stale_pending')}</p>
-          {quoteError ? <Button variant="secondary" size="sm" disabled={busy} onClick={requote}>{t('quote_retry')}</Button> : null}
+        <div className="callout tone-warn" id="quote-stale" role="status" data-reason={staleMaterial ? 'material' : 'constraints'}>
+          {staleMaterial
+            ? <p>{t(repriceFailed ? 'quote_stale_material_failed' : 'quote_stale_material_pending')}</p>
+            : <p>{quoteError ? t('quote_stale', { msg: quoteError }) : t('quote_stale_pending')}</p>}
+          {!staleMaterial && quoteError ? <Button variant="secondary" size="sm" disabled={busy} onClick={requote}>{t('quote_retry')}</Button> : null}
         </div>
       )}
 

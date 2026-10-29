@@ -24,6 +24,7 @@ export function rawRequest(port, payload, { timeoutMs = 2000 } = {}) {
   return new Promise((resolve) => {
     let received = '';
     const socket = net.connect(port, '127.0.0.1', () => socket.write(payload));
+    socket.setEncoding('utf8');
     socket.on('data', (chunk) => { received += chunk; });
     socket.on('error', (error) => resolve({ error: error.code, statusLine: '', text: received }));
     socket.on('close', () => resolve({ statusLine: received.split('\r\n')[0], text: received }));
