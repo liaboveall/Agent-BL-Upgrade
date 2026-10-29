@@ -1,6 +1,6 @@
 # 运行与维护
 
-范围是离线 Demo 和 Injective EVM 测试网研究应用。人工钱包验收已在 v2 实例完成，当前 v3 实例尚未重新验收，见[人工验收](acceptance.md)；真实手机、独立主机/签名权接管及商用部署不再列为后续交付任务。
+范围是离线 Demo 和 Injective EVM 测试网研究应用。人工钱包验收已在 v2 实例完成，当前 v4 实例（以及已冻结为只退出的 v3）尚未重新验收，见[人工验收](acceptance.md)；真实手机、独立主机/签名权接管及商用部署不再列为后续交付任务。
 
 ## 启动和配置
 
@@ -39,11 +39,11 @@ npm run dev
 | 旧 v2 退出 | <http://127.0.0.1:3000/#/finance> | `data/runtime/n5-deployment/n5-v2-20261019/application/` |
 | 旧 v1 退出 | <http://127.0.0.1:3001/#/finance> | `data/runtime/w5-app/` |
 
-以上地址指已经初始化的本机容器；新 checkout 不会自动具有其私有材料和运行状态。各实例分别保留配置、vault 和账本，不能互相覆盖。当前 v3 实例的运行目录是 `data/runtime/n5-deployment/n5-v3-20261027/application/`，`AGENTBL_RIGHTS_CONFIG` 指向同目录上一级的 `rights-instance.json`；启动它时使用新端口，不能复用 v2 的运行目录。旧 v1、v2 不在应用内开放新增风险；用当前代码服务 v2 时，它按冻结产物核验并自动进入只退出状态。
+以上地址指已经初始化的本机容器；新 checkout 不会自动具有其私有材料和运行状态。各实例分别保留配置、vault 和账本，不能互相覆盖。当前 v4 实例的运行目录是 `data/runtime/n5-deployment/n5-v4-20261029/application/`，`AGENTBL_RIGHTS_CONFIG` 指向同目录上一级的 `rights-instance.json`；启动它时使用新端口，不能复用 v2、v3 的运行目录（v3 的在 `n5-v3-20261027/application/`）。旧 v1、v2、v3 不在应用内开放新增风险；用当前代码服务它们时，按冻结产物核验并自动进入只退出状态。
 
 `GET /api/health` 检查进程存活，`GET /api/ready` 检查就绪，`GET /api/ops/status` 提供运行状态。就绪并不表示真实业务启用。容器 healthcheck 只调用 `/api/health`，`healthy` 标签不代表 `/api/ready` 已就绪，更不代表融资条件满足。
 
-未就绪时暂停所有带入新材料或新资金的入口（`src/app/operationsRoutes.js` 的 `NEW_INTAKE_ROUTES`）：`POST /api/agent/ingest`、旧接口 `POST /api/ebl/upload`、复核重传 `POST /api/agent/jobs/:id/review`、认购 intent 与 Demo 认购，均返回 503 `operations_not_ready`。Agent 服务自身也检查同一就绪状态，后续新增的别名或 MCP 调用同样被拦下（Demo 场景回放只重放仓库内样例，不受影响）。读取、领取、退款、原交易附加与核对、钱包操作释放保持可用。
+未就绪时暂停所有带入新材料、新条款或新资金的入口，规则集中在 `src/ops/intakePolicy.js` 一处。按路由暂停（`NEW_INTAKE_ROUTES`）：`POST /api/agent/ingest`、旧接口 `POST /api/ebl/upload`、复核重传 `POST /api/agent/jobs/:id/review`、认购 intent 与 Demo 认购，以及 Rights 材料创建、证据创建、完整条款保存与绑定、发布和签名请求。按操作暂停：登记单证、质押、发行、同意条款和放款五类 Rights 钱包计划（`NEW_RISK_RIGHTS_OPERATIONS`）与认购（`NEW_RISK_CAPITAL_OPERATIONS`）；它们在准备草稿时检查一次，在广播检查点的读链前和提交前各再检查一次，所以就绪时保存的草稿在降级后不会再交给钱包。以上均返回 503 `operations_not_ready`。全局守卫、Rights 与受控资金路由（单独挂载时也一样）和 Agent 服务都按这一份规则检查，后续新增的别名或 MCP 调用同样被拦下（Demo 场景回放只重放仓库内样例，不受影响）。读取、领取、退款、回款与处置等退出、原交易附加与核对、钱包操作释放（含放弃未发送的草稿）保持可用。已经交给钱包的交易服务器无法收回；需要在链上强制停止新增风险时，由 GUARDIAN `setIntakeStopped(true)` 或 OPERATOR `FREEZE_POOL` 执行。
 
 就绪检查还看业务是否停滞，而不只看失败数和队列长度：`case_access` 在案例访问记录未加载成功时失败（新进件因此暂停，除公开样例外的私有案例一律不可读，接口返回 503 `case_access_unavailable`，恢复 `ingest-case-access.json` 后重启）；`event_flow` 在出现“已接收但不在队列”的事件，或最老未完成事件超过 `AGENTBL_MAX_EVENT_WAIT_MS` 时告警（Agent 每次巡检会把这类事件重新入队）；`intake_capacity` 在逻辑任务达到配额 90% 或复核余量不足 10% 时告警，观测值含待复核任务数、复核余量和已到期待回收字节。已到期的上传任务在启动时、每次 Agent 巡检和每次新上传前回收，不依赖再有一次成功上传。`persistence` 在事件索引或上传记录的最近一次写盘失败、尚未补写时告警（`runtime_records_unsaved`，观测值分别给出 `event_index` 和 `intake_records`）；Agent 巡检会重写它们，持续告警说明运行目录的磁盘或权限仍有问题。开始处理时写盘失败的事件不再停在“处理中”：它回到已接收，计入 `events_not_queued`，由巡检重新交出。`GET /api/ops/metrics` 另外导出 `agentbl_events_orphaned`、`agentbl_event_oldest_pending_ms`、`agentbl_unsaved_records{store=...}`、`agentbl_intake_held_jobs`、`agentbl_intake_review_headroom_jobs` 与 `agentbl_intake_reclaimable_bytes`。待复核任务占满容量时，所有者可在上传卡片上提交纠正，或撤回不再需要的任务（`POST /api/agent/jobs/:id/withdraw`，立即释放原始文件，记录与决策证据保留）；撤回不受进件暂停影响。
 
@@ -116,6 +116,6 @@ npm run runtime:backup -- restore --directory <新目标目录> --key-file <独�
 
 x402 付款取回只在 Live 生效。用户在报告页“付款记录与找回”中用付款钱包签署取回请求，或导出不含签名的付款记录供人工核对；运营方核对时以服务端 `x402` 回执历史和链上交易为准，不要求用户提供签名。
 
-运行告警写入对应 runtime 的 `ops-alerts.jsonl`。来源审查是全实例窗口（最长 24 小时），剩余不足 `AGENTBL_SCREENING_WARN_SECONDS`（默认 4 小时）或已过期时发出 `warning` 告警，写明由 `compliance` 角色执行 `refresh_screening`；它不改变服务就绪状态（过期时链上自会拒绝新认购和放款）。估值最长 30 天且不能续期，由各池的 `valuation_expired` 认购阻断原因显示，属于合约约束。可选 webhook 由操作者配置；自动 HTTP 接收测试不表示真实值班人员已经确认。日常维护保留上述能力，但不新增交付门槛。
+运行告警写入对应 runtime 的 `ops-alerts.jsonl`。来源审查是全实例窗口（最长 24 小时），剩余不足 `AGENTBL_SCREENING_WARN_SECONDS`（默认 4 小时）或已过期时发出 `warning` 告警，写明由 `compliance` 角色执行 `refresh_screening`；它不改变服务就绪状态（过期时链上自会拒绝新认购和放款）。签署这次审查的钱包失去 COMPLIANCE 角色时，审查期未满链上也同样拒绝全部新认购与放款：就绪检查发出 `screening_source_inactive` 警告，融资目录显示同名阻断原因，由当前持有合规角色的钱包重新执行 `refresh_screening`。估值最长 30 天且不能续期，由各池的 `valuation_expired` 认购阻断原因显示，属于合约约束。可选 webhook 由操作者配置；自动 HTTP 接收测试不表示真实值班人员已经确认。日常维护保留上述能力，但不新增交付门槛。
 
 执行产物使用忽略的 `artifacts/` 或 `test-results/`，不再建立阶段计划、日报、评审报告树。当前文档只维护 README、架构、合约、数据来源、运行说明与人工验收。

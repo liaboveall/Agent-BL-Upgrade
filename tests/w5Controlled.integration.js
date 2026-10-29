@@ -21,7 +21,9 @@ describe('W5 actual controlled capital HTTP, wallet and crash recovery', () => {
     const packs = new Map(), disclosures = { financingDisclosure: async (hash) => { const pack = packs.get(hash); if (!pack) throw new Error('Missing fixture terms'); return pack; } };
     const contracts = { RWAOfferingPoolV5: await c.pool.getAddress(), ControlledRWAToken: await c.token.getAddress() };
     const routes = createControlledRoutes({ env: { AGENTBL_RUNTIME_DIR: dir }, chain: c.chain, disclosures, configuration: { chain_id: 31337, deployment_block: 0, contracts }, getMode: () => mode });
-    const app = await listen(http.createServer((req, res) => routes(req, res, new URL(req.url, 'http://local')).catch((error) => sendError(res, error, { logger: { warn() {}, error() {} } }))));
+    const server = http.createServer((req, res) => routes(req, res, new URL(req.url, 'http://local')).catch((error) => sendError(res, error, { logger: { warn() {}, error() {} } })));
+    const readiness = { ok: true }; server.operations = { readiness: () => ({ ...readiness }) };
+    const app = await listen(server);
     t.after(async () => { await app.close(); await routes.close(); await fs.rm(dir, { recursive: true, force: true }); });
     const get = async (route) => (await requestJson(app.base, 'GET', `/api/controlled/${route}`)).data;
     const post = async (route, body) => {
@@ -50,8 +52,25 @@ describe('W5 actual controlled capital HTTP, wallet and crash recovery', () => {
       beforeBroadcast: async (intent) => { latestIntent = (await post(`intents/${intent.intent_id}/broadcast`, {})).intent; return latestIntent; },
       attachIntent: async (id, hash) => (await post(`intents/${id}/transaction`, { tx_hash: hash })).intent };
     const action = (p, shares) => ({ shares, chain: { chain_id: 31337, contract: contracts.RWAOfferingPoolV5, pool_id: p.poolId, price_e6: '800000', quote_version: '1', settlement_asset: p.terms.settlementAsset } });
-    return { c, get, post, create, options, action, latestIntent: () => latestIntent, setMode: (value) => { mode = value; } };
+    return { c, get, post, create, options, action, latestIntent: () => latestIntent, setMode: (value) => { mode = value; }, setReady: (ok) => { readiness.ok = ok; } };
   };
+  it('F01 (v4 review) refuses a saved subscription at its broadcast checkpoint while degraded, and sends it once ready', async (t) => {
+    const f = await fixture(t), { c } = f, p = await f.create();
+    const reviewed = await f.get(`offerings/${p.poolId}/terms`);
+    const deadline = String(await c.now() + 600n);
+    const { intent } = await f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '10', max_unit_price: '800000',
+      expected_quote_version: '1', deadline, reviewed_disclosure_hash: reviewed.disclosure_hash });
+    f.setReady(false);
+    await assert.rejects(f.post(`intents/${intent.intent_id}/broadcast`, {}), { code: 'operations_not_ready' });
+    await assert.rejects(f.post('subscription-intents', { wallet: c.investor.address, chain_pool_id: p.poolId, shares: '1' }), { code: 'operations_not_ready' });
+    assert.equal(await c.pool.escrowed(p.poolId, p.terms.settlementAsset), 0n);
+    // Reading the saved operation stays available while degraded.
+    assert.equal((await f.get(`intents/${intent.intent_id}`)).intent.intent_id, intent.intent_id);
+    f.setReady(true);
+    // The checkpoint's preflight runs the subscription itself, so the wallet's token approval comes first, as in the adapter.
+    await c.send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), 8000000n));
+    assert.equal((await f.post(`intents/${intent.intent_id}/broadcast`, {})).intent.status, 'broadcast_prepared');
+  });
   it('uses the production wallet adapter for actual escrow, fixed exporter, multiple late repayments and a separate confirmed claim', async (t) => {
     const f = await fixture(t), { c } = f, p = await f.create();
     const listing = await f.get('offerings'); assert.equal(listing.offerings[0].state, 'Open'); assert.equal(listing.offerings[0].subscription_open, true);

@@ -228,7 +228,7 @@ export class IngestService {
     // 'unloaded' | 'loading' | 'ready' | 'failed'. Until the access records are loaded, nobody's case is known to be
     // public except a curated sample: an unknown visibility is never read as public.
     this.accessState = dir ? 'unloaded' : 'ready';
-    this.casesLoaded = false;
+    this.casesLoading = null; // one load of the saved cases, shared by every caller that needs them all
     this.queue = createWriteQueue();
     this.commits = createWriteQueue(); // ownership, blobs, documents and jobs change together
     this.loading = null;
@@ -918,37 +918,49 @@ export class IngestService {
 
   // ---------------------------------------------------------------- cases built from documents
 
-  /** Persist a case an upload produced, so the market catalog can list it after a restart. */
+  /**
+   * Persist a case an upload produced, so the market catalog can list it after a restart. The asset-identity check, the
+   * case's place in memory and its file are one commit in the intake commit queue: two saves of one bill under
+   * different case IDs cannot both find no duplicate, and a failed write publishes nothing, so a retry works.
+   */
   async saveCase(caseData) {
     if (!caseData?.case_id || !CASE_ID_PATTERN.test(caseData.case_id)) return null;
     let titleHash;
     try { titleHash = cargoIdentityHashV2(caseData); } catch { /* incomplete/non-marine documents remain subject to intake review */ }
-    if (titleHash) {
-      for (const other of await this.listCases()) {
-        if (other.case_id === caseData.case_id) continue;
-        let otherHash;
-        try { otherHash = cargoIdentityHashV2(other); } catch { continue; }
-        if (otherHash === titleHash) throw new IngestError('duplicate_asset_identity', 'This bill already belongs to another case; amendments must be reviewed under its original asset identity', 409);
+    await this.init();
+    return this.commits(async () => {
+      await this.#loadCases();
+      if (titleHash) {
+        for (const other of this.cases.values()) {
+          if (other.case_id === caseData.case_id) continue;
+          let otherHash;
+          try { otherHash = cargoIdentityHashV2(other); } catch { continue; }
+          if (otherHash === titleHash) throw new IngestError('duplicate_asset_identity', 'This bill already belongs to another case; amendments must be reviewed under its original asset identity', 409);
+        }
       }
-    }
-    const access = this.access.get(caseData.case_id);
-    const visibility = access?.visibility === 'public-demo' ? 'public-demo' : 'private';
-    const privateCase = { ...caseData, visibility, title_identity_hash: titleHash ?? null, workspace_owner_id: this.caseOwner(caseData.case_id),
-      ...(access?.source_case_id ? { source_case_id: access.source_case_id } : {}), mode: this.getMode() };
-    this.cases.set(caseData.case_id, structuredClone(privateCase));
-    if (this.dir) await writeJsonAtomic(path.join(this.dir, 'cases', `${caseData.case_id}.case.json`), privateCase, PRIVATE_FILE);
-    return caseData.case_id;
+      const access = this.access.get(caseData.case_id);
+      const visibility = access?.visibility === 'public-demo' ? 'public-demo' : 'private';
+      const privateCase = { ...caseData, visibility, title_identity_hash: titleHash ?? null, workspace_owner_id: this.caseOwner(caseData.case_id),
+        ...(access?.source_case_id ? { source_case_id: access.source_case_id } : {}), mode: this.getMode() };
+      if (this.dir) await writeJsonAtomic(path.join(this.dir, 'cases', `${caseData.case_id}.case.json`), privateCase, PRIVATE_FILE);
+      // Readers do not hold the commit queue: publish only after the file commits, so they never see a failed save.
+      this.cases.set(caseData.case_id, structuredClone(privateCase));
+      return caseData.case_id;
+    });
   }
 
-  async #loadCases() {
-    if (!this.dir || this.casesLoaded) return;
-    this.casesLoaded = true;
-    const folder = path.join(this.dir, 'cases');
-    const names = await fs.readdir(folder).catch(() => []);
-    for (const name of names.filter((file) => file.endsWith('.case.json'))) {
-      const data = await readJson(path.join(folder, name), null).catch(() => null);
-      if (data?.case_id && !this.cases.has(data.case_id)) this.cases.set(data.case_id, data);
-    }
+  /** Load the saved cases once; a caller arriving while they load waits for all of them rather than seeing a part. */
+  #loadCases() {
+    if (!this.dir) return Promise.resolve();
+    this.casesLoading ??= (async () => {
+      const folder = path.join(this.dir, 'cases');
+      const names = await fs.readdir(folder).catch(() => []);
+      for (const name of names.filter((file) => file.endsWith('.case.json'))) {
+        const data = await readJson(path.join(folder, name), null).catch(() => null);
+        if (data?.case_id && !this.cases.has(data.case_id)) this.cases.set(data.case_id, data);
+      }
+    })();
+    return this.casesLoading;
   }
 
   /** Cases produced from uploads: those held in memory plus any saved by an earlier run. */

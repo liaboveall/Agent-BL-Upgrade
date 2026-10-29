@@ -83,9 +83,12 @@ import { createControlledRoutes } from './controlledRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
-const handleRightsRoute = createRightsRoutes({ getMode: () => demoModeController.snapshot().mode, getGeneration: () => demoModeController.snapshot().generation, getVersion: () => getAgentService().anchoring?.version?.version_id });
+// Both financing route sets apply the shared intake policy (src/ops/intakePolicy.js) through the serving server's readiness.
+const handleRightsRoute = createRightsRoutes({ getMode: () => demoModeController.snapshot().mode, getGeneration: () => demoModeController.snapshot().generation, getVersion: () => getAgentService().anchoring?.version?.version_id,
+  intakeGate: () => intakeReadiness() });
 const handleEvidenceRoute = createEvidenceRoutes({ getAnchoring: () => getAgentService().anchoring });
-const handleControlledRoute = createControlledRoutes({ getMode: () => demoModeController.snapshot().mode, getGeneration: () => demoModeController.snapshot().generation });
+const handleControlledRoute = createControlledRoutes({ getMode: () => demoModeController.snapshot().mode, getGeneration: () => demoModeController.snapshot().generation,
+  intakeGate: () => intakeReadiness() });
 const publicDir = path.join(rootDir, 'public');
 // The React dashboard is built into dist/ (npm run build); public/ keeps the static assets it uses.
 const distDir = path.join(rootDir, 'dist');

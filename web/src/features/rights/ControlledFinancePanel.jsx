@@ -23,6 +23,7 @@ const BLOCKERS = {
   legacy_instance: ['旧实例只退出', 'Legacy instance, exits only'], state_closed: ['当前状态不接受认购', 'State does not accept subscriptions'],
   deadline_passed: ['募集已截止', 'Subscription ended'], fully_subscribed: ['已募满', 'Fully subscribed'],
   intake_stopped: ['发行进件已暂停', 'Intake is stopped'], screening_expired: ['来源审查已过期', 'Screening has expired'],
+  screening_source_inactive: ['来源审查签发人已失去合规角色', 'The screening signer no longer holds the compliance role'],
   valuation_expired: ['估值已过期', 'Valuation has expired'], valuer_inactive: ['估值人权限已撤销', 'Valuer permission revoked'],
   title_inactive: ['单证已失效', 'Title is inactive'], asset_not_allowed: ['结算资产未获准', 'Settlement asset not allowed'],
   eligibility_unverified: ['认购条件未能核实', 'Subscription conditions could not be verified']
@@ -76,8 +77,9 @@ function stateGuidance(offer, zh) {
   if (offer.finalize_funding_available) return zh ? '募集期已结束且达到最低募集额：需先“关闭已达最低额的募集”（任一业务角色可在工作台操作，链上任何人可调用），之后才能放款。' : 'The raise ended above its minimum: it must be finalized first (any business role can do this in the workspace; anyone can on chain) before a draw.';
   if (offer.unsubscribed_exit_available) return zh ? '募集截止时无人认购。单证仍质押在资金池：融资方或任何参与方都可在工作台“到期发起退出”取消发行并取回单证，不必等待运营方。' : 'Nobody subscribed before the deadline. The title stays pledged: the borrower or any participant can start the exit in the workspace to cancel the offering and release the title, without waiting for the operator.';
   if (offer.empty_expired) return zh ? '募集截止时无人认购。单证仍质押在资金池，需运营方在工作台“取消无人认购的发行”后释放。' : 'Nobody subscribed before the deadline. The title stays pledged until the operator cancels the offering in the workspace.';
+  if (offer.undisbursed_exit_available) return zh ? `放款截止已过且从未放款：任何参与方可在工作台“发起退出”，按已结清关闭并释放单证，出资人随后在持仓中领取本金。${offer.state === 'Frozen' ? '冻结不阻止这一退出（v4 已部署规则）。' : ''}` : `The draw deadline passed and nothing was drawn: any participant can start the exit in the workspace, which closes the pool as repaid and releases the title; investors then claim their principal in their positions.${offer.state === 'Frozen' ? ' A freeze does not stop this exit (deployed v4 rule).' : ''}`;
   return ({ Funded: ['募集已完成，等待放款或回款。', 'Fully raised; awaiting the draw or repayment.'], InTransit: ['货物在途，等待回款与到货证明。', 'Cargo in transit; awaiting repayment and arrival evidence.'],
-    Paused: ['发行已暂停。已有持仓可按条件退款或等待恢复。', 'Paused. Existing positions may refund under the conditions or wait for resumption.'], Frozen: ['资金池已冻结，等待治理处理。', 'Frozen pending governance.'],
+    Paused: ['发行已暂停。已有持仓可按条件退款或等待恢复。', 'Paused. Existing positions may refund under the conditions or wait for resumption.'], Frozen: ['资金池已冻结：放款、无人认购的自行退出和到期现金足额关闭需延时治理先解冻；从未放款的本金在放款截止后仍可由任何人退回，到期仍欠款的池仍可进入违约处置。', 'Frozen: draws, the unsubscribed exit and the cash-covered close at maturity wait for delayed governance to unfreeze. Undrawn principal can still be returned by anyone after the draw deadline, and a pool that still owes at maturity can still go to default resolution.'],
     Repaid: ['已结清，出资人在下方持仓中领取。', 'Repaid. Investors claim in their positions below.'], Cancelled: ['已取消。仍有实付成本的出资人可在下方持仓中退款。', 'Cancelled. Investors with a remaining paid cost can refund in their positions below.'] })[offer.state]?.[zh ? 0 : 1] ?? null;
 }
 // Each wallet action says what it moves; a refund or claim must never read like a subscription.
@@ -109,33 +111,46 @@ function MyTasks({ zh, positions, pending, busy, demo, onOpen, onClaim, onReconc
     {pools.length > 0 && <p>{zh ? '持有份额的资金池' : 'Pools you hold'}: {pools.map((poolId) => <button key={poolId} type="button" className="finance-pool-link" disabled={busy} onClick={() => onOpen(poolId)}>#{poolId}</button>)}</p>}
   </section>;
 }
+const ATTENTION_FOLD = 3;
+// Whether the screening window itself lapsed at the snapshot; otherwise its signer lost the compliance role.
+const screeningLapsed = (listing) => listing?.availability?.screening_source_active !== false || listing?.availability?.screening_valid_until == null
+  || listing?.snapshot?.block_timestamp == null || Number(listing.availability.screening_valid_until) < Number(listing.snapshot.block_timestamp);
 /**
  * Why pools in view cannot move, grouped by cause, with who can unblock each and how (report 2026-10-29 §9.1). The
  * directory is paged, so this reads the pools on this page plus the instance-wide switches; Open on chain is not
  * shown as open when its window, valuation or source review has lapsed.
  */
 function PoolAttention({ zh, offers, listing, legacy, busy, onOpen }) {
+  const [expanded, setExpanded] = useState(false);
   const ids = (match) => offers.filter(match).map((offer) => offer.pool_id);
   const blocked = (code) => (offer) => SUBSCRIBABLE.includes(offer.state) && (offer.subscription_blockers ?? []).includes(code);
   const items = [
     legacy && { key: 'legacy', who: ['任何参与方', 'Any participant'], what: ['这是已被新控制版本取代的实例：只保留退款、领取、回款与处置等退出，不能新增认购或放款。', 'This instance is superseded by a newer control version: only refunds, claims, repayment and resolution exits remain; no new subscriptions or draws.'] },
     // A superseded instance takes no new risk anyway, so its instance-wide switches are not a task for anyone.
     !legacy && listing?.availability?.intake_stopped && { key: 'intake', who: ['延时治理', 'Delayed governance'], what: ['发行进件已暂停：所有池不接受新认购与放款，已有持仓的退出不受影响。', 'Intake is stopped: no pool takes new subscriptions or draws; existing exits are unaffected.'] },
-    !legacy && listing?.availability?.screening_valid === false && { key: 'screening', who: ['资格审查方', 'Compliance'], what: ['全局来源审查已过期：所有池同时停止新认购与放款。合规角色在工作台“更新来源审查”后恢复（不会延长已截止的募集）。', 'The instance-wide source screening has expired, so every pool stops new subscriptions and draws. Compliance refreshes it in the workspace (this does not reopen a closed subscription window).'] },
+    !legacy && listing?.availability?.screening_valid === false && (screeningLapsed(listing)
+      ? { key: 'screening', who: ['资格审查方', 'Compliance'], what: ['全局来源审查已过期：所有池同时停止新认购与放款。合规角色在工作台“更新来源审查”后恢复（不会延长已截止的募集）。', 'The instance-wide source screening has expired, so every pool stops new subscriptions and draws. Compliance refreshes it in the workspace (this does not reopen a closed subscription window).'] }
+      : { key: 'screening', who: ['资格审查方（当前有效的合规钱包）', 'Compliance (a wallet that holds the role now)'], what: ['全局来源审查的签发人已失去合规角色：审查期虽未结束，所有池仍同时停止新认购与放款。由当前持有合规角色的钱包在工作台“更新来源审查”后恢复；这不是某个出资人自身的资格问题。', 'The wallet that signed the instance-wide screening no longer holds the compliance role: although its window is open, every pool stops new subscriptions and draws. A wallet that holds the role now refreshes it in the workspace; this is not an individual investor’s eligibility.'] }),
     { key: 'unsubscribed', pools: ids((offer) => offer.unsubscribed_exit_available), who: ['融资方或任何参与方', 'The borrower or any participant'], what: ['募集已截止且无人认购：在工作台“发起退出”即取消发行并释放质押单证。', 'Subscription ended with nobody subscribed: start the exit in the workspace to cancel the offering and release the title.'] },
     { key: 'empty', pools: ids((offer) => offer.empty_expired && !offer.unsubscribed_exit_available), who: ['运营方', 'Operator'], what: ['募集已截止且无人认购：运营方在工作台“取消无人认购的发行”后释放质押单证。', 'Subscription ended with nobody subscribed: the operator cancels the offering in the workspace to release the title.'] },
+    { key: 'undisbursed', pools: ids((offer) => offer.undisbursed_exit_available), who: ['任何参与方', 'Any participant'], what: ['已过放款截止且从未放款：在工作台“发起退出”按已结清关闭、释放单证，出资人随后领取本金（冻结中的池同样适用）。', 'Past the draw deadline with nothing drawn: start the exit in the workspace to close the pool as repaid and release the title; investors then claim their principal (frozen pools too).'] },
     { key: 'finalize', pools: ids((offer) => offer.finalize_funding_available), who: ['任一业务角色', 'Any business role'], what: ['已达最低募集额，需先“关闭已达最低额的募集”才能放款。', 'The raise met its minimum; finalize it before any draw.'] },
     { key: 'valuation', pools: ids(blocked('valuation_expired')), who: ['发行方与估值方', 'Issuer and valuer'], what: ['估值已过期且不能续期：只能按重新同意的新条款另行发行。', 'The valuation has expired and cannot be extended: a new offering on newly agreed terms is required.'] },
     { key: 'resolution', pools: ids((offer) => ['Defaulted', 'Liquidation'].includes(offer.state) && !offer.resolution?.finalized), who: ['处置负责人、审核人；硬截止后任何人', 'Disposer and reviewer; anyone after the hard deadline'], what: ['处置未终局：按通知期、复核与硬截止推进，见池详情中的处置进度。', 'Resolution is not final: it moves by notice, review and hard deadline; see the resolution progress in the pool detail.'] }
   ].filter((item) => item && (!item.pools || item.pools.length));
   if (!items.length) return null;
+  // Tasks before warnings: the first few causes show, the rest fold behind one button so expired samples do not push the
+  // directory off a phone screen.
+  const shown = expanded ? items : items.slice(0, ATTENTION_FOLD);
   return <section className="finance-attention" aria-label={zh ? '需要处理的事项' : 'Needs attention'}>
     <h2>{zh ? '需要处理的事项' : 'Needs attention'}<small>{zh ? '本页资金池与实例开关' : 'Pools on this page and instance switches'}</small></h2>
-    <ul>{items.map((item) => <li key={item.key}>
+    <ul>{shown.map((item) => <li key={item.key}>
       <p>{item.what[zh ? 0 : 1]}</p>
       <p className="finance-attention-meta"><span>{zh ? '负责：' : 'Who: '}{item.who[zh ? 0 : 1]}</span>
         {item.pools && <span>{zh ? '资金池：' : 'Pools: '}{item.pools.slice(0, 8).map((poolId) => <button key={poolId} type="button" className="finance-pool-link" disabled={busy} onClick={() => onOpen(poolId)}>#{poolId}</button>)}{item.pools.length > 8 ? ` +${item.pools.length - 8}` : ''}</span>}</p>
     </li>)}</ul>
+    {items.length > ATTENTION_FOLD && <button type="button" className="finance-attention-more" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+      {expanded ? (zh ? '收起' : 'Show fewer') : (zh ? `还有 ${items.length - ATTENTION_FOLD} 项` : `${items.length - ATTENTION_FOLD} more`)}</button>}
   </section>;
 }
 

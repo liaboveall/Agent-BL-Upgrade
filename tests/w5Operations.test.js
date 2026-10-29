@@ -120,6 +120,18 @@ test('W5 an expiring source screening alerts its owner while the service stays r
   assert.equal(alerts.at(-1).severity, 'recovery'); assert.equal(alerts.length, 3);
 });
 
+test('W5 a screening whose signer lost COMPLIANCE alerts compliance even while its window is open', async (t) => {
+  const directory = await temporary(t), alerts = [];
+  let active = false;
+  const monitor = new OperationsMonitor({ directory, getAgentStatus: healthyAgent, probeStorage: async () => ({}), alertSink: async (alert) => { alerts.push(alert); },
+    probeControls: async () => ({ enabled: true, intake_stopped: false, screening_valid_until: String(1_000_000 + 86_000), block_timestamp: 1_000_000, screening_source_active: active }) });
+  await monitor.sample();
+  assert.equal(monitor.readiness().ok, true, 'the chain refuses what it blocks; other operations continue');
+  assert.deepEqual(alerts.at(-1), { ...alerts.at(-1), severity: 'warning', codes: ['screening_source_inactive'], action: 'refresh_screening', owners: ['compliance'] });
+  active = true; await monitor.sample();
+  assert.equal(alerts.at(-1).severity, 'recovery');
+});
+
 test('W5 low disk and failed atomic rename are observable without modifying existing runtime data', async (t) => {
   const dir = await temporary(t); await fs.writeFile(path.join(dir, 'preserved.json'), 'history');
   await assert.rejects(storageProbe(dir, 10, { ...fs, statfs: async () => ({ bavail: 0n, bsize: 4096n }) }), { code: 'storage_low' });

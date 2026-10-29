@@ -10,8 +10,12 @@
 //  - restart: events that were RECEIVED or PROCESSING when the process stopped are queued again. The
 //    handler is idempotent (decision log + executor reconciliation), so this cannot double-execute.
 //  - acceptance is a commit: an event becomes visible (and a duplicate of it is answered as one) only once its
-//    audit line and the index holding it are written and it is queued. A write that fails leaves nothing behind,
-//    so a retry records and queues it; a second submission of a key still being recorded waits for that outcome.
+//    audit line and the index holding it are written and it is queued. The commit point is the index write that
+//    first holds the entry: the acceptance makes that write itself, after its audit line, and marks the entry
+//    committed inside the same write job. Every other snapshot is built when its own write runs and holds committed
+//    entries only, so an event whose audit line or index write failed is in no index on disk, never runs after a
+//    restart, and every indexed event has its audit line. A write that fails leaves nothing behind, so a retry records
+//    and queues it; a second submission of a key still being recorded waits for that outcome.
 //  - every unfinished event has exactly one place: queued, running (a run holds it), or orphaned. Orphaned covers an
 //    event no queue or run holds, RECEIVED or PROCESSING; a retry of its key and the agent's tick hand it over again,
 //    never while a run still holds it. When writing PROCESSING fails before the handler starts, the event goes back
@@ -157,7 +161,7 @@ export class EventBus {
       updated_at: receivedAt,
       event
     };
-    // Staged before the first write starts, so every index snapshot taken from here on holds it.
+    // Staged so that a second submission of the key waits for this outcome; only this acceptance writes it.
     const staged = { entry, done: null };
     this.staging.set(key, staged);
     staged.done = this.#accept(entry, receivedAt);
@@ -166,11 +170,12 @@ export class EventBus {
     return { accepted: true, duplicate: false, event_id: event.event_id, idempotency_key: key, status: EVENT_STATUS.RECEIVED };
   }
 
-  /** Audit line, then the index that holds the entry, then the queue. Nothing of a failed attempt stays in memory. */
+  /** Audit line, then the index write that commits the entry, then the queue. Nothing of a failed attempt stays anywhere. */
   async #accept(entry, receivedAt) {
     if (this.eventsFile) await this.enqueueWrite(() => appendJsonl(this.eventsFile, sanitizeAudit({ received_at: receivedAt, event: entry.event })));
-    await this.flush(); // the snapshot includes staged entries
-    this.entries.set(entry.idempotency_key, entry);
+    const commit = () => this.entries.set(entry.idempotency_key, entry);
+    if (this.indexFile) await this.#writeIndex(entry, commit);
+    else commit();
     this.queue.push(entry.idempotency_key);
     this.#pump();
   }
@@ -407,23 +412,34 @@ export class EventBus {
       this.flushing = (async () => {
         while (this.dirty) {
           this.dirty = false;
-          // An event whose acceptance is being written is in the index before it is visible: on a restart it runs.
-          const staged = [...this.staging.values()].map(({ entry }) => entry).filter((entry) => !this.entries.has(entry.idempotency_key));
-          const snapshot = {
-            version: 1,
-            last_occurred: Object.fromEntries(this.lastOccurred),
-            entries: [...this.entries.values(), ...staged]
-          };
-          try {
-            await this.enqueueWrite(() => writePrivateJson(this.indexFile, snapshot));
-          } catch (error) {
-            this.unsaved = { at: this.now().toISOString(), message: String(error?.message ?? error).slice(0, 200) };
-            throw error;
-          }
-          this.unsaved = null; // every snapshot holds the whole state
+          await this.#writeIndex();
         }
       })().finally(() => { this.flushing = null; });
     }
     return this.flushing;
+  }
+
+  /**
+   * One index write in the shared write queue. The snapshot is built when the write runs, from committed entries only
+   * (plus `accepting`, the entry whose acceptance this write commits), so writes reach the disk in queue order and a
+   * later one never drops an entry an earlier one committed. `commit` runs inside the job right after the write
+   * succeeds, before any later job builds its snapshot.
+   */
+  #writeIndex(accepting = null, commit = null) {
+    return this.enqueueWrite(async () => {
+      const snapshot = {
+        version: 1,
+        last_occurred: Object.fromEntries(this.lastOccurred),
+        entries: [...this.entries.values(), ...(accepting ? [accepting] : [])]
+      };
+      try {
+        await writePrivateJson(this.indexFile, snapshot);
+      } catch (error) {
+        this.unsaved = { at: this.now().toISOString(), message: String(error?.message ?? error).slice(0, 200) };
+        throw error;
+      }
+      this.unsaved = null; // every snapshot holds the whole committed state
+      commit?.();
+    });
   }
 }

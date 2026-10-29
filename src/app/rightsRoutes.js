@@ -2,19 +2,24 @@ import { RightsService } from '../rights/service.js';
 import { loadRightsChain } from '../rights/chain.js';
 import { checkAdminToken } from './security.js';
 import { HttpError, readJsonBody, sendJson } from './http.js';
+import { assertIntakeOpen, isNewIntake, requestReadiness } from '../ops/intakePolicy.js';
 
 const tokenFor = (request) => String(request.headers['x-rights-session'] ?? '');
 function requireAdmin(request, env) {
   const admin = checkAdminToken(request, env);
   if (!admin.configured || !admin.authorized) throw new HttpError(401, 'admin_token_required', 'Configured administrator authorization is required');
 }
-export function createRightsRoutes({ env = process.env, getVersion = null, getMode = null, getGeneration = () => 0, service = new RightsService({ env, getVersion, getMode, getGeneration }), streamInterval = 1000 } = {}) {
+export function createRightsRoutes({ env = process.env, getVersion = null, getMode = null, getGeneration = () => 0, intakeGate,
+  service = new RightsService({ env, getVersion, getMode, getGeneration, intakeGate }), streamInterval = 1000 } = {}) {
   let chainLoading;
   return async (request, response, url) => {
     if (!url.pathname.startsWith('/api/rights/')) return false;
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Vary', 'x-rights-session, authorization');
     const path = url.pathname.slice('/api/rights/'.length), method = request.method;
+    // The shared intake policy, also when these routes are mounted without the global guard in front of them.
+    const readiness = requestReadiness(request, () => service.intakeGate?.() ?? { ok: true });
+    if (isNewIntake(method, url.pathname)) assertIntakeOpen(readiness());
     const body = () => readJsonBody(request, { limit: 1_048_576 });
     const token = tokenFor(request);
     const match = /^materials\/([a-f0-9-]{36})(?:\/(download|review|publish|events|terms|financing-disclosure|financing-disclosure-preview|workflow|signing-request))?$/u.exec(path);
@@ -44,18 +49,12 @@ export function createRightsRoutes({ env = process.env, getVersion = null, getMo
     else if (/^evidence\/[a-f0-9-]{36}\/review$/u.test(path) && method === 'POST') result = await service.requestEvidenceReview(token, path.split('/')[1], await body());
     else if (/^evidence-reviews\/[a-f0-9-]{36}\/resolve$/u.test(path) && method === 'POST') result = await service.resolveEvidenceReview(token, path.split('/')[1], await body());
     else if (/^transaction-plans\/[a-f0-9-]{36}$/u.test(path) && method === 'GET') result = await service.getPlan(token, path.split('/')[1]);
-    else if (/^transaction-plans\/[a-f0-9-]{36}\/broadcast$/u.test(path) && method === 'POST') result = await service.checkpointPlan(token, path.split('/')[1]);
+    else if (/^transaction-plans\/[a-f0-9-]{36}\/broadcast$/u.test(path) && method === 'POST') result = await service.checkpointPlan(token, path.split('/')[1], { readiness });
     else if (/^transaction-plans\/[a-f0-9-]{36}\/transaction$/u.test(path) && method === 'POST') result = await service.attachTransaction(token, path.split('/')[1], (await body())?.tx_hash);
     else if (/^transaction-plans\/[a-f0-9-]{36}\/release$/u.test(path) && method === 'POST') result = await service.releasePlan(token, path.split('/')[1]);
     else if (/^publications\/[a-f0-9-]{36}$/u.test(path) && method === 'GET') result = await service.publication(path.split('/')[1]);
-    else if (path === 'transaction-plans' && method === 'POST') {
-      const input = await body();
-      if (['register_title', 'pledge', 'create_offering', 'acknowledge_terms', 'disburse'].includes(input?.operation)
-        && request.socket.server?.operations && !request.socket.server.operations.readiness().ok) {
-        throw new HttpError(503, 'operations_not_ready', 'New rights intake is paused pending operational reconciliation');
-      }
-      result = await service.prepareTransaction(token, input);
-    } else if (match) {
+    else if (path === 'transaction-plans' && method === 'POST') result = await service.prepareTransaction(token, await body(), { readiness });
+    else if (match) {
       const [, materialId, action] = match;
       if (method === 'GET' && action === 'workflow') { sendJson(response, 200, await service.workflow(token, materialId)); return true; }
       if (method === 'GET' && action === 'events') {

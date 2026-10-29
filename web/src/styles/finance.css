@@ -60,6 +60,7 @@
 .finance-attention li p { margin: 0; font-size: var(--fs-13); }
 .finance-attention .finance-attention-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 4px; color: var(--text-2); font-size: var(--fs-12); }
 .finance-attention .finance-pool-link { margin-left: 4px; }
+.controlled-panel .finance-attention button.finance-attention-more { margin-top: 10px; background: transparent; color: var(--accent); border: 1px solid var(--warn-line); }
 .controlled-panel .finance-identity > button { min-height: 32px; padding: 4px 12px; }
 .controlled-panel .finance-amount-note { margin: 8px 28px 0; }
 .controlled-panel .finance-alert .finance-alert-funds { display: block; margin-top: 6px; color: var(--text-2); font-size: var(--fs-12); }

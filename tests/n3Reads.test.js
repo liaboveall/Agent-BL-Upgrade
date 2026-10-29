@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { RpcReadPool, readPage } from '../src/rights/reads.js';
 import { readOfferings } from '../src/rights/offerings.js';
 import { CONTROL_VERSION } from '../src/rights/typedData.js';
+import { SCREENING_ATTESTOR_SLOT } from '../src/rights/screening.js';
+import { id } from 'ethers';
 
 test('N3 bounds shared RPC work, queue and timeouts even while the transport is stuck', async () => {
   const pool = new RpcReadPool({ concurrency: 2, queueLimit: 2, timeoutMs: 25 });
@@ -71,15 +73,21 @@ test('N3 directory filters scan forward on one snapshot, report unreadable pools
   assert.throws(() => readPage(new URLSearchParams('status=mine')), { code: 'invalid_pagination' });
 });
 
-test('N3 a current pool opens only when screening, valuation, valuer, title, asset and intake allow every investor', async () => {
+test('N3 a current pool opens only when screening, its signer, valuation, valuer, title, asset and intake allow every investor', async () => {
   const block = { number: 50, hash: `0x${'ab'.repeat(32)}`, timestamp: 1_000_000 }, ZERO = `0x${'0'.repeat(40)}`, CONTROLLER = `0x${'c0'.repeat(20)}`;
+  const ATTESTOR = `0x${'5e'.repeat(20)}`, COMPLIANCE = id('COMPLIANCE');
   const s = {};
-  const reset = () => Object.assign(s, { screening: block.timestamp + 100, valuation: block.timestamp + 100, valuer: true, title: true, asset: true, intake: false,
+  const reset = () => Object.assign(s, { screening: block.timestamp + 100, source: true, valuation: block.timestamp + 100, valuer: true, title: true, asset: true, intake: false,
     state: 2n, subscribed: 0n, deadline: block.timestamp + 100, finalized: false, resolution: { proposer: ZERO, reviewer: ZERO } });
-  const chain = { provider: { getBlock: async () => block }, verify: async () => ({}),
+  // The screening signer is private in the controller: it is read from its storage slot at the snapshot block.
+  const chain = { provider: { getBlock: async () => block, getStorage: async (address, slot, tag) => {
+    assert.deepEqual([address, slot, tag], [CONTROLLER, SCREENING_ATTESTOR_SLOT[CONTROL_VERSION], block.number]);
+    return `0x${'00'.repeat(12)}${ATTESTOR.slice(2)}`;
+  } }, verify: async () => ({}),
     controller: { getAddress: async () => CONTROLLER, termsHash: async () => 'commitment', terms: async () => ({ eblId: 7n, disburseUntil: 5000, policyHash: 'p', disclosureHash: 'd' }),
       intakeStopped: async () => s.intake, screeningValidUntil: async () => s.screening, valuations: async () => ({ validUntil: s.valuation }),
-      valuer: async () => `0x${'11'.repeat(20)}`, roles: async () => s.valuer, testAsset: async () => s.asset, resolutions: async () => s.resolution },
+      valuer: async () => `0x${'11'.repeat(20)}`, roles: async (role, account) => role === COMPLIANCE ? account.toLowerCase() === ATTESTOR && s.source : s.valuer,
+      testAsset: async () => s.asset, resolutions: async () => s.resolution },
     registry: { isActive: async () => s.title },
     pool: { nextPoolId: async () => 2, quoteVersion: async () => 1, subscriptionDeadline: async () => s.deadline, maturityAt: async () => block.timestamp + 1000,
       disbursedAtomic: async () => 0n, recoveredAtomic: async () => 0n, escrowed: async () => 0n, fundingFinalized: async () => s.finalized,
@@ -87,7 +95,12 @@ test('N3 a current pool opens only when screening, valuation, valuer, title, ass
         settlementAsset: 'asset', raisedAtomic: s.subscribed * 800000n, minRaise: 4000000n }) } };
   const read = async () => { const page = await readOfferings(chain, { controlVersion: CONTROL_VERSION }, new RpcReadPool(), { from: 1, limit: 10 }); return { ...page.offerings[0], availability: page.availability }; };
   reset(); let offer = await read();
-  assert.deepEqual([offer.subscription_open, offer.subscription_blockers, offer.availability.screening_valid], [true, [], true]);
+  assert.deepEqual([offer.subscription_open, offer.subscription_blockers, offer.availability.screening_valid, offer.availability.screening_source_active], [true, [], true, true]);
+  // Revoking the screening signer's COMPLIANCE role closes every pool at once, as isEligible() does, with its own reason.
+  reset(); s.source = false; offer = await read();
+  assert.deepEqual([offer.subscription_open, offer.subscription_blockers, offer.availability.screening_valid, offer.availability.screening_source_active],
+    [false, ['screening_source_inactive'], false, false]);
+  reset(); Object.assign(s, { source: false, screening: block.timestamp - 1 }); assert.deepEqual((await read()).subscription_blockers, ['screening_expired'], 'one refresh clears both');
   for (const [change, code] of [[{ screening: block.timestamp - 1 }, 'screening_expired'], [{ valuation: block.timestamp - 1 }, 'valuation_expired'],
     [{ valuer: false }, 'valuer_inactive'], [{ title: false }, 'title_inactive'], [{ asset: false }, 'asset_not_allowed'], [{ intake: true }, 'intake_stopped']]) {
     reset(); Object.assign(s, change); offer = await read();
@@ -96,6 +109,10 @@ test('N3 a current pool opens only when screening, valuation, valuer, title, ass
   // A raise above its minimum but short of the supply must be finalized before anyone can draw it.
   reset(); Object.assign(s, { subscribed: 6n, deadline: block.timestamp - 1 }); offer = await read();
   assert.deepEqual([offer.finalize_funding_available, offer.empty_expired, offer.subscription_blockers], [true, false, ['deadline_passed']]);
+  // Past the draw deadline (5000) with nothing drawn, anyone can also return the principal; a frozen pool (8) too.
+  assert.equal(offer.undisbursed_exit_available, true);
+  s.state = 8n; assert.equal((await read()).undisbursed_exit_available, true); s.state = 2n;
+  reset(); assert.equal((await read()).undisbursed_exit_available, false, 'nobody subscribed');
   s.finalized = true; assert.equal((await read()).finalize_funding_available, false);
   reset(); s.deadline = block.timestamp - 1; offer = await read();
   assert.deepEqual([offer.empty_expired, offer.finalize_funding_available], [true, false]);
@@ -106,4 +123,9 @@ test('N3 a current pool opens only when screening, valuation, valuer, title, ass
   // A current-version reader that cannot read the eligibility switches never reports the pool as open.
   reset(); delete chain.controller.screeningValidUntil; offer = await read();
   assert.deepEqual([offer.subscription_open, offer.subscription_blockers], [false, ['eligibility_unverified']]);
+  // Nor one whose screening signer cannot be read.
+  const { getStorage } = chain.provider; chain.controller.screeningValidUntil = async () => s.screening;
+  chain.provider.getStorage = async () => { throw new Error('storage unavailable'); }; offer = await read();
+  assert.deepEqual([offer.subscription_open, offer.subscription_blockers, offer.availability.screening_valid], [false, ['eligibility_unverified'], null]);
+  chain.provider.getStorage = getStorage;
 });

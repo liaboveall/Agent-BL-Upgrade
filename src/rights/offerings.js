@@ -5,6 +5,7 @@ import { assertSnapshot, mapReads, readSnapshot, snapshotInfo } from './reads.js
 import { CONTROL_VERSION } from './typedData.js';
 import { verifyChain } from './chain.js';
 import { multicallFor, multicallViews } from '../chain/multicall.js';
+import { readScreening } from './screening.js';
 
 // Read in this order per pool: [offering, termsHash, quoteVersion, subscriptionDeadline, maturityAt, disbursedAtomic, recoveredAtomic, terms].
 const VIEWS = [['pool', 'offerings'], ['controller', 'termsHash'], ['pool', 'quoteVersion'], ['pool', 'subscriptionDeadline'],
@@ -16,6 +17,7 @@ const VALUER = id('VALUER');
 const ZERO = /^0x0{40}$/iu;
 const SUBSCRIBABLE = [2, 3, 6];
 const CANCELLABLE_EMPTY = [2, 6, 7, 8, 11];
+const ENDED_STATES = [9, 12, 14]; // Repaid, Cancelled, LossSettled
 
 const supports = (chain, [name, method]) => typeof chain[name]?.[method] === 'function';
 const viewsFor = (chain) => [...VIEWS, ...EXTRA_VIEWS.filter((view) => supports(chain, view))];
@@ -50,11 +52,13 @@ function subscriptionBlockers(config, block, instance, value, second) {
   if (Number(value.subscriptionDeadline) < block.timestamp) blockers.push('deadline_passed');
   if (BigInt(offer.subscribed) >= BigInt(offer.tokenSupply)) blockers.push('fully_subscribed');
   if (config.controlVersion !== CONTROL_VERSION) return blockers;
-  const unknown = instance.intake_stopped == null || instance.screening_valid_until == null || value.valuations == null
+  const unknown = instance.intake_stopped == null || instance.screening_valid_until == null || instance.screening_source_active == null || value.valuations == null
     || second.valuer_role == null || second.title_active == null || second.asset_allowed == null;
   if (unknown) { blockers.push('eligibility_unverified'); return blockers; }
   if (instance.intake_stopped) blockers.push('intake_stopped');
+  // One refresh by a current compliance wallet clears either; an expired window is the one reported when both apply.
   if (Number(instance.screening_valid_until) < block.timestamp) blockers.push('screening_expired');
+  else if (!instance.screening_source_active) blockers.push('screening_source_inactive');
   if (Number(value.valuations.validUntil) < block.timestamp) blockers.push('valuation_expired');
   if (!second.valuer_role) blockers.push('valuer_inactive');
   if (!second.title_active) blockers.push('title_inactive');
@@ -82,6 +86,11 @@ function offeringRow(config, block, instance, value, second) {
     // anyone's startExit does too unless the pool is frozen.
     empty_expired: BigInt(offer.subscribed) === 0n && expired && CANCELLABLE_EMPTY.includes(state),
     unsubscribed_exit_available: config.controlVersion >= 4 && BigInt(offer.subscribed) === 0n && expired && CANCELLABLE_EMPTY.includes(state) && state !== 8,
+    // A raise that met its minimum and was never drawn: past the draw deadline anyone's startExit (closeUndisbursed) closes
+    // it as repaid, releases the title and leaves the principal for the investors to claim. This holds for a frozen pool
+    // too, the one exit a freeze does not stop (docs/contracts.md, freeze matrix).
+    undisbursed_exit_available: config.controlVersion >= 2 && BigInt(offer.subscribed) > 0n && BigInt(disbursed) === 0n && !ENDED_STATES.includes(state)
+      && offer.minRaise != null && BigInt(offer.raisedAtomic) >= BigInt(offer.minRaise) && terms.disburseUntil != null && block.timestamp >= Number(terms.disburseUntil),
     resolution: resolutionOf(value.resolutions, instance.controller),
     subscription_blockers: blockers, subscription_open: blockers.length === 0 } };
 }
@@ -122,12 +131,21 @@ function singleRows(chain, config, instance, ids, block, read) {
   });
 }
 
-/** Instance-wide switches the controller applies to every subscription and draw, read once per snapshot. */
-async function instanceAvailability(chain, read, at) {
+/**
+ * Instance-wide switches the controller applies to every subscription and draw, read once per snapshot: intake, the
+ * screening window and whether the wallet that signed that screening still holds COMPLIANCE.
+ */
+async function instanceAvailability(chain, config, read, at) {
   const optional = (method) => supports(chain, ['controller', method]) ? read(() => chain.controller[method](at)).catch(() => null) : Promise.resolve(null);
-  const [intake, screening, controller] = await Promise.all([optional('intakeStopped'), optional('screeningValidUntil'),
+  const [intake, screening, controller] = await Promise.all([optional('intakeStopped'), readScreening(chain, config.controlVersion, read, at),
     typeof chain.controller?.getAddress === 'function' ? chain.controller.getAddress() : null]);
-  return { intake_stopped: intake == null ? null : Boolean(intake), screening_valid_until: screening == null ? null : String(screening), controller };
+  return { intake_stopped: intake == null ? null : Boolean(intake), screening_valid_until: screening.valid_until, screening_source_active: screening.attestor_active, controller };
+}
+/** The screening is valid for everyone only while its window is open and its signer still holds COMPLIANCE; null when unknown. */
+function screeningValid(config, instance, block) {
+  if (instance.screening_valid_until == null) return null;
+  if (Number(instance.screening_valid_until) < block.timestamp || instance.screening_source_active === false) return false;
+  return instance.screening_source_active === true || config.controlVersion !== CONTROL_VERSION ? true : null;
 }
 
 // Directory filters. `open` takes new money; `active` still holds money (escrow, or subscribers in a pool that has not
@@ -151,7 +169,7 @@ export async function readOfferings(chain, config, pool, query = {}) {
   const filter = !query.pool_id && query.status && query.status !== 'all' ? query.status : null;
   if (query.pool_id && from >= next) throw new HttpError(404, 'controlled_pool_not_found', 'Funding pool not found in this instance');
   const range = (start, count) => Array.from({ length: Math.max(0, Math.min(next - start, count)) }, (_, index) => start + index);
-  const instance = await instanceAvailability(chain, read, at);
+  const instance = await instanceAvailability(chain, config, read, at);
   // A failed batch (an RPC that rejects large calls, say) falls back to the per-view reads rather than failing the page.
   const multicall = next > from ? await multicallFor(chain.provider, read) : null;
   const readRows = async (ids) => (multicall && await batchedRows(chain, config, instance, multicall, ids, block, read).catch(() => null)) || singleRows(chain, config, instance, ids, block, read);
@@ -174,6 +192,6 @@ export async function readOfferings(chain, config, pool, query = {}) {
   const { controller: _controller, ...availability } = instance;
   return { offerings: rows.flatMap((row) => row.offering ? [row.offering] : []), failures: failed, complete: failed.length === 0,
     total_pools: next - 1, from, limit, status: filter ?? 'all', next_cursor: cursor < next ? cursor : null,
-    availability: { ...availability, screening_valid: availability.screening_valid_until == null ? null : Number(availability.screening_valid_until) >= block.timestamp },
+    availability: { ...availability, screening_valid: screeningValid(config, instance, block) },
     snapshot: snapshotInfo(block), read_metrics: budget.stats, scope: 'research_test_assets_only', config };
 }

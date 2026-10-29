@@ -12,6 +12,7 @@ import { HttpError, readJsonBody, sendJson } from './http.js';
 import { RightsService } from '../rights/service.js';
 import { financingReview } from '../rights/financingReview.js';
 import { CONTROL_VERSION } from '../rights/typedData.js';
+import { assertIntakeOpen, isNewIntake, requestReadiness } from '../ops/intakePolicy.js';
 
 export function controlledCapitalConfig(configuration) {
   return { protocolVersion: 5, controlVersion: configuration.control_version, chainIdDecimal: Number(configuration.chain_id), confirmations: Number(configuration.chain_id) === 31337 ? 1 : 3, explorerBase: 'https://testnet.blockscout.injective.network',
@@ -20,7 +21,7 @@ export function controlledCapitalConfig(configuration) {
     deployments: { RWAOfferingPool: { blockNumber: configuration.deployment_block } } };
 }
 /** An explicit W3 instance and its own ledger. Legacy numbered pools are never reinterpreted. */
-export function createControlledRoutes({ env = process.env, getMode = () => 'demo', chain: suppliedChain, configuration: suppliedConfig, getGeneration = () => 0, readPool = suppliedChain?.readPool ?? new RpcReadPool(),
+export function createControlledRoutes({ env = process.env, getMode = () => 'demo', chain: suppliedChain, configuration: suppliedConfig, getGeneration = () => 0, readPool = suppliedChain?.readPool ?? new RpcReadPool(), intakeGate = () => ({ ok: true }),
   disclosures = new RightsService({ directory: path.join(runtimeDir(env), 'rights'), env }) } = {}) {
   let context, loading;
   const load = async () => {
@@ -43,6 +44,9 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Vary', 'x-rights-session');
     const route = url.pathname.slice('/api/controlled/'.length), method = request.method;
+    // The shared intake policy (src/ops/intakePolicy.js), also when mounted without the global guard in front.
+    const readiness = requestReadiness(request, intakeGate);
+    if (isNewIntake(method, url.pathname)) assertIntakeOpen(readiness(), 'Controlled intake is paused');
     if (route === 'status' && method === 'GET' && !suppliedConfig && !env.AGENTBL_RIGHTS_CONFIG) {
       sendJson(response, 200, { active: false, scope: 'research_test_assets_only', business_enabled: false }); return true;
     }
@@ -75,7 +79,6 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
       const wallet = url.searchParams.get('wallet'); if (!isAddress(wallet)) throw new HttpError(400, 'invalid_wallet', 'A valid EVM wallet is required');
       result = await capital.list(wallet, [], readPage(url.searchParams));
     } else if (route === 'subscription-intents' && method === 'POST') {
-      if (request.socket.server?.operations && !request.socket.server.operations.readiness().ok) throw new HttpError(503, 'operations_not_ready', 'Controlled intake is paused');
       const body = await readJsonBody(request);
       const authorization = await authorizeWallet(body?.wallet);
       if (getMode() !== 'live') throw new HttpError(409, 'live_mode_required', 'Switch to Live before preparing a wallet transaction');
@@ -84,7 +87,7 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
       if (body.reviewed_disclosure_hash !== reviewed.disclosure_hash || String(body.expected_quote_version) !== reviewed.quote_version) {
         throw new HttpError(409, 'financing_review_required', 'Review the current complete disclosure and quote before subscription');
       }
-      result = { intent: await capital.prepareSubscription({ ...body, ...authorization }) };
+      result = { intent: await capital.prepareSubscription({ ...body, ...authorization }, { readiness }) };
     } else if (['claim-intents', 'refund-intents'].includes(route) && method === 'POST') {
       const body = await readJsonBody(request), authorization = await authorizeWallet(body?.wallet, null, false, true);
       result = { intent: await capital[route === 'claim-intents' ? 'prepareClaim' : 'prepareRefund']({ ...body, ...authorization }) };
@@ -97,7 +100,7 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
         const reviewed = await financingReview(chain, disclosures, intent.chain_pool_id);
         if (intent.reviewed_disclosure_hash !== reviewed.disclosure_hash || intent.reviewed_quote_version !== reviewed.quote_version) throw new HttpError(409, 'financing_review_required', 'Saved review changed; do not broadcast');
       }
-      result = { intent: await capital.checkpointBroadcast(route.split('/')[1]) };
+      result = { intent: await capital.checkpointBroadcast(route.split('/')[1], { readiness }) };
     }
     else if (/^intents\/[a-f0-9-]{36}\/transaction$/u.test(route) && method === 'POST') {
       const intent = await capital.ledger.getIntent(route.split('/')[1]);

@@ -70,6 +70,11 @@ export class OperationsMonitor {
           warn('screening_window', remaining > positive(this.env.AGENTBL_SCREENING_WARN_SECONDS, 4 * 3600), remaining <= 0 ? 'screening_expired' : 'screening_expiring',
             { observation: { valid_until: String(value.screening_valid_until), remaining_seconds: remaining, owner: 'compliance', action: 'refresh_screening' } });
         }
+        // The wallet that signed the screening lost COMPLIANCE: the window still looks open, but the controller already
+        // refuses every new subscription and draw until a current compliance wallet refreshes it.
+        if (name === 'control_plane' && value?.screening_source_active != null) {
+          warn('screening_source', value.screening_source_active, 'screening_source_inactive', { observation: { owner: 'compliance', action: 'refresh_screening' } });
+        }
       } catch (error) { check(name, false, name === 'storage' && error.code === 'storage_low' ? 'storage_low' : `${name}_unavailable`); }
     }
     // A stopped-service backup reads the whole runtime directory into one envelope (src/ops/backup.js): warn the operator

@@ -28,7 +28,7 @@
 
 ## 验收结果（2026-10-23）
 
-- **版本与网络**：应用提交 `7d9ce32cb650e53c7c54f39f1b019dd62de9d7d0`（建池工具在 `5a5e412` 引入）；Injective EVM 测试网，chain ID 1439；实例 `n5-v2-20261019`（RWAOfferingPoolV5 `0x53d65a42Df5431157922fE85ab72C2C7abB7AC99`，RightsController `0xdfF4E824764c6Ff858CAF28d74F026D9E97624aF`），完整地址见该提交冻结的 [rights-instance.json](https://github.com/liaboveall/Agent-BL-Upgrade/blob/7d9ce32cb650e53c7c54f39f1b019dd62de9d7d0/public/rights-instance.json)。仓库当前的 `public/rights-instance.json` 已指向 v3 实例，不能用来核对本记录。
+- **版本与网络**：应用提交 `7d9ce32cb650e53c7c54f39f1b019dd62de9d7d0`（建池工具在 `5a5e412` 引入）；Injective EVM 测试网，chain ID 1439；实例 `n5-v2-20261019`（RWAOfferingPoolV5 `0x53d65a42Df5431157922fE85ab72C2C7abB7AC99`，RightsController `0xdfF4E824764c6Ff858CAF28d74F026D9E97624aF`），完整地址见该提交冻结的 [rights-instance.json](https://github.com/liaboveall/Agent-BL-Upgrade/blob/7d9ce32cb650e53c7c54f39f1b019dd62de9d7d0/public/rights-instance.json)。（历史记录）此后仓库的 `public/rights-instance.json` 先后改指 v3、v4 实例（当前为 v4 `n5-v4-20261029`），不能用来核对本记录。
 - **准备**：用 `npm run testnet -- acceptance n5-v2-20261019` 新建两个研究池：#26（正常兑付）和 #27（失败募集，认购截止 2026-10-23 11:30 SGT）。管理员登记了两个验收钱包的出资身份，并发放资格、测试代币和 gas。
 - **第 1–2 步**：验收者完整阅读并核对了 #26 的条款。第一次同意条款时在钱包中拒签，链上 nonce 与余额均未变化，页面没有显示成功回执。
 - **第 3 步**：两个钱包各认购 #26 的 5 份（各 4.000000）。运营方放款 8.000000，holder 回款 10.000000 后结清。两个钱包各自领取 5.000000，#26 的 escrow 归零。

@@ -178,6 +178,45 @@ describe('control version 4', () => {
     });
   });
 
+  // The deployed version 4 freeze policy, one row per funding state (docs/contracts.md "冻结、暂停与退出"). A freeze
+  // stops draws, the unsubscribed cancellation and the cash-covered close until governance unfreezes; it does not hold
+  // back principal that was never drawn, nor a real shortfall's default. Changing a row needs a new control version.
+  describe('freeze policy matrix of the deployed version', () => {
+    const freeze = (c, p) => send(c.controller.connect(c.operator).applyPricingAction(p.poolId, 0, ACTION.FREEZE_POOL, uniqueHash(), uniqueHash()));
+    const funded = async (c) => { const p = await c.create(); await c.eligible(p); await send(c.pool.connect(c.investor).subscribe(p.poolId, 10)); return p; };
+
+    it('stops draws while frozen and keeps undrawn principal in escrow until the draw deadline', async () => {
+      const c = await deployRights(), p = await funded(c);
+      await freeze(c, p);
+      await expect(c.controller.connect(c.operator).disburse(p.poolId, 8_000_000n, uniqueHash())).to.be.revertedWithCustomError(c.pool, 'NotFunded');
+      await expect(c.controller.connect(c.outsider).startExit(p.poolId)).to.be.revertedWithCustomError(c.pool, 'BadState');
+      expect(await c.pool.stateOf(p.poolId)).to.equal(STATE.Frozen);
+      expect(await c.registry.pledgedTo(p.eblId)).to.equal(await c.pool.getAddress());
+    });
+
+    it('exception: after the draw deadline anyone returns undrawn principal of a frozen pool, which ends Repaid and releases the title', async () => {
+      const c = await deployRights(), p = await funded(c);
+      await freeze(c, p);
+      await c.advance(BigInt(p.terms.disburseUntil) + 1n);
+      await send(c.controller.connect(c.outsider).startExit(p.poolId));
+      expect(await c.pool.stateOf(p.poolId)).to.equal(STATE.Repaid);
+      expect(await c.pool.disbursedAtomic(p.poolId)).to.equal(0n);
+      expect(await c.registry.pledgedTo(p.eblId)).to.equal(ethers.ZeroAddress);
+      const before = await c.usdc.balanceOf(c.investor.address);
+      await send(c.pool.connect(c.investor).claim(p.poolId));
+      expect(await c.usdc.balanceOf(c.investor.address) - before).to.equal(8_000_000n);
+    });
+
+    it('defaults a frozen drawn pool that still owes at maturity, like an active one', async () => {
+      const c = await deployRights(), p = await drawn(c);
+      await freeze(c, p);
+      await c.advance(BigInt(p.terms.maturity));
+      await send(c.controller.connect(c.outsider).startExit(p.poolId));
+      expect(await c.pool.stateOf(p.poolId)).to.equal(STATE.Defaulted);
+      expect((await c.controller.resolutions(p.poolId)).proposer).to.equal(await c.controller.getAddress());
+    });
+  });
+
   describe('F07: cancelling an approved operation takes two members, like approving it', () => {
     it('ignores one member alone, cancels on a second member, and lets an approver withdraw an unapproved proposal', async () => {
       const c = await deployRights();

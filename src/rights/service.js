@@ -22,6 +22,7 @@ import { RpcReadPool } from './reads.js';
 import { verifyChain } from './chain.js';
 import { SHIPPED_DISCLOSURES, readPublicDisclosure, savePublicDisclosure } from './public-disclosures.js';
 import { MATERIAL_ARCHIVE_MS, SETTLED_PLAN, initialRetention, materialPhase, materialRetention } from './retention.js';
+import { NEW_RISK_RIGHTS_OPERATIONS, assertOperationOpen } from '../ops/intakePolicy.js';
 
 const VAULT_AAD = 'agentbl-rights-vault-v1';
 // The research case whose cargo and route match the disclosure scenario (copper, Singapore -> Shanghai).
@@ -102,8 +103,10 @@ export class RightsService {
   #queue = { queued: 0, completed: 0, last_wait_ms: 0, max_wait_ms: 0, rejected: 0 };
   #lookups = new Map();
   constructor({ env = process.env, directory = runtimePath('rights', env), clock = () => Date.now(), chain = null, getVersion = null, getMode = null, getGeneration = () => 0, readPool = chain?.readPool ?? new RpcReadPool(),
-    queueLimit = VAULT_QUEUE_LIMIT, waitMs = VAULT_WAIT_MS, quoteCase = quoteScenarioCase } = {}) {
+    queueLimit = VAULT_QUEUE_LIMIT, waitMs = VAULT_WAIT_MS, quoteCase = quoteScenarioCase, intakeGate = () => ({ ok: true }) } = {}) {
     this.directory = directory; this.env = env; this.clock = clock; this.chain = chain; this.quoteCase = quoteCase;
+    // Operational readiness for callers that do not pass their own (src/ops/intakePolicy.js).
+    this.intakeGate = intakeGate;
     this.getVersion = getVersion; this.getMode = getMode; this.getGeneration = getGeneration; this.readPool = readPool;
     this.queueLimit = queueLimit; this.waitMs = waitMs;
     this.publicDisclosureDirectory = path.join(directory, 'public-disclosures');
@@ -563,8 +566,16 @@ export class RightsService {
     });
     return materialWorkflow(this.chain, principal, input.record, input.pack, input.published, input.approvals, this.readPool);
   }
-  async checkpointPlan(token, planId) {
+  /**
+   * The last server check before the wallet sees a saved operation. A new-risk operation is re-checked against operational
+   * readiness here, before the chain reads and again at the commit: a draft saved while ready never reaches the wallet
+   * after readiness drops. Exits and reconciliation pass (src/ops/intakePolicy.js).
+   */
+  async checkpointPlan(token, planId, { readiness = this.intakeGate } = {}) {
+    const paused = 'New rights intake is paused pending operational reconciliation; this saved operation cannot be sent now';
     const draft = await this.#transaction((state, ctx) => structuredClone(this.#ownedPlan(state, token, planId, ctx.now).plan));
+    // Fail before the chain reads; a plan past its draft gets its own answer (reconcile) from the checks below.
+    if (['draft', 'released'].includes(draft.status)) assertOperationOpen(NEW_RISK_RIGHTS_OPERATIONS, draft.operation, readiness, paused);
     if (draft.operation === 'acknowledge_terms') {
       const reviewed = await financingReview(this.chain, this, draft.plan_input.pool_id);
       if (draft.plan_input.reviewed_disclosure_hash !== reviewed.disclosure_hash || String(draft.plan_input.quote_version) !== reviewed.quote_version) throw new HttpError(409, 'financing_review_required', 'Review current complete terms before wallet submission');
@@ -575,6 +586,7 @@ export class RightsService {
     const context = (state, plan, principal) => {
       // A released plan is the same reviewed operation with its reserved nonce, so it may be sent again.
       if (!['draft', 'released'].includes(plan.status)) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the original operation before another wallet send');
+      assertOperationOpen(NEW_RISK_RIGHTS_OPERATIONS, plan.operation, readiness, paused);
       if (this.getMode && this.getMode() !== 'live' || plan.execution_generation !== this.getGeneration() || plan.session_id !== principal.session_id
         || plan.material_id && plan.material_revision !== state.materials[plan.material_id]?.revision) throw new HttpError(409, 'execution_context_changed', 'Session, mode or material changed; prepare a new review');
       if (!this.chain) throw new HttpError(503, 'rights_chain_not_configured', 'Verified chain unavailable');
@@ -619,7 +631,9 @@ export class RightsService {
       }
     });
   }
-  async prepareTransaction(token, input) {
+  async prepareTransaction(token, input, { readiness = this.intakeGate } = {}) {
+    const paused = 'New rights intake is paused pending operational reconciliation';
+    assertOperationOpen(NEW_RISK_RIGHTS_OPERATIONS, input?.operation, readiness, paused);
     const principal = await this.principal(token);
     if (this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'live_mode_required', 'Switch to Live before preparing a wallet action');
     const generation = this.getGeneration();
@@ -638,6 +652,7 @@ export class RightsService {
           || input.operation === 'pledge' && input.terms_hash !== material.public_summary.terms_hash) throw new HttpError(409, 'rights_material_changed', 'Material commitment and operation must match');
       }
       if (generation !== this.getGeneration() || this.getMode && this.getMode() !== 'live') throw new HttpError(409, 'execution_context_changed', 'Mode changed while preparing the action');
+      assertOperationOpen(NEW_RISK_RIGHTS_OPERATIONS, input.operation, readiness, paused);
       if (input.operation === 'create_offering') {
         const record = this.#material(state, current, input.material_id, ctx.now), published = state.publications[input.material_id];
         const reviews = record.reviews.filter((review) => !state.subjects[review.subject_id]?.revoked && state.subjects[review.subject_id]?.roles.includes('reviewer')

@@ -256,3 +256,66 @@ test('bus: submit refuses an event that was not normalised', async () => {
   await assert.rejects(bus.submit({ type: 'RISK_CLEARED', case_id: 'C1' }), /idempotency_key/u);
   assert.throws(() => new EventBus({}), /handler/u);
 });
+
+// F02 (comprehensive review 2026-10-29, v4): an acceptance commits through its own index write. An event whose audit line
+// or index write failed is in no index on disk, so a restart never runs what its submitter was told was refused, even
+// when another event's acceptance was being written at the same time.
+async function occupiedBus(t) {
+  const files = await tempFiles();
+  t.after(() => fs.rm(files.dir, { recursive: true, force: true }));
+  let release, started;
+  const gate = new Promise((resolve) => { release = resolve; }), running = new Promise((resolve) => { started = resolve; });
+  const bus = new EventBus({ ...files, concurrency: 1, handler: async (event) => { if (event.case_id === 'WARMUP') { started(); await gate; } } });
+  await bus.init(); bus.start();
+  await bus.submit(risk({ event_id: 'warmup', case_id: 'WARMUP' }));
+  await running; // the only worker is held, so nothing but the acceptances below writes the index
+  t.after(async () => { bus.started = false; release(); await bus.stop(); });
+  return { files, bus };
+}
+async function restartRuns(files) {
+  const ran = [];
+  const restarted = new EventBus({ ...files, handler: async (event) => { ran.push(event.event_id); } });
+  await restarted.init(); restarted.start(); await restarted.idle(); await restarted.stop();
+  return ran;
+}
+
+test('F02 an event whose audit line failed is never indexed by a concurrent acceptance, and never runs after a restart', async (t) => {
+  const { files, bus } = await occupiedBus(t);
+  const open = fs.open;
+  let appends = 0;
+  fs.open = async (file, flags, ...rest) => {
+    if (file === files.eventsFile && flags === 'a' && ++appends === 2) throw Object.assign(new Error('synthetic full disk'), { code: 'ENOSPC' });
+    return open(file, flags, ...rest);
+  };
+  let results;
+  try { results = await Promise.allSettled([bus.submit(risk({ event_id: 'a', case_id: 'A' })), bus.submit(risk({ event_id: 'b', case_id: 'B' }))]); }
+  finally { fs.open = open; }
+  assert.deepEqual(results.map((result) => result.status), ['fulfilled', 'rejected']);
+  // The disk as a crash right now would leave it: the committed index, before any later write.
+  const onDisk = (await readPrivateJson(files.indexFile)).entries.map((entry) => entry.event_id);
+  assert.deepEqual(onDisk.sort(), ['a', 'warmup']);
+  const audited = (await fs.readFile(files.eventsFile, 'utf8')).trim().split('\n').map((line) => JSON.parse(line).event.event_id);
+  for (const id of onDisk) assert.ok(audited.includes(id), `${id} has its audit line`);
+  const ran = await restartRuns(files);
+  assert.ok(ran.includes('a')); assert.equal(ran.includes('b'), false, 'the refused event does not run');
+});
+
+test('F02 an event whose own index write failed is refused, is not in the index, and its retry is accepted once', async (t) => {
+  const { files, bus } = await occupiedBus(t);
+  const rename = fs.rename, writes = [];
+  // Acceptances write in queue order: A's index write, then B's. B's write fails on every retry.
+  fs.rename = async (from, to, ...rest) => {
+    if (to === files.indexFile) { if (!writes.includes(from)) writes.push(from); if (writes.indexOf(from) === 1) throw Object.assign(new Error('synthetic rename failure'), { code: 'EIO' }); }
+    return rename(from, to, ...rest);
+  };
+  let results;
+  try { results = await Promise.allSettled([bus.submit(risk({ event_id: 'a', case_id: 'A' })), bus.submit(risk({ event_id: 'b', case_id: 'B' }))]); }
+  finally { fs.rename = rename; }
+  assert.deepEqual(results.map((result) => result.status), ['fulfilled', 'rejected']);
+  assert.equal(bus.get('event:b'), null);
+  assert.deepEqual((await readPrivateJson(files.indexFile)).entries.map((entry) => entry.event_id).sort(), ['a', 'warmup']);
+  assert.equal((await restartRuns(files)).includes('b'), false);
+  const retried = await bus.submit(risk({ event_id: 'b', case_id: 'B' }));
+  assert.deepEqual([retried.accepted, retried.duplicate], [true, false]);
+  assert.ok((await readPrivateJson(files.indexFile)).entries.some((entry) => entry.event_id === 'b'));
+});

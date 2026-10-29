@@ -4,6 +4,7 @@ import { OperationsMonitor } from './monitor.js';
 import { readJson, writeJsonAtomic } from '../lib/jsonStore.js';
 import { rightsKey, unseal } from '../rights/vault.js';
 import { loadRightsChain, verifyChain } from '../rights/chain.js';
+import { readScreening } from '../rights/screening.js';
 
 /** Read-only verification. No key generation, charging, transaction signing or automatic repair. */
 export async function verifyRuntimeMaterials(directory, env = {}) {
@@ -54,9 +55,10 @@ export function createRuntimeMonitor({ directory, env, getAgentStatus, getCapita
       if (!env.AGENTBL_RIGHTS_CONFIG) return { enabled: false };
       chain ??= await loadRightsChain(env.AGENTBL_RIGHTS_CONFIG);
       try {
-        const [binding, intake, screening, block] = await Promise.all([verifyChain(chain), chain.controller.intakeStopped(),
-          typeof chain.controller.screeningValidUntil === 'function' ? chain.controller.screeningValidUntil().catch(() => null) : null, chain.provider.getBlock('latest')]);
-        return { enabled: true, ...binding, intake_stopped: intake, ...(screening == null ? {} : { screening_valid_until: String(screening), block_timestamp: block.timestamp }),
+        const [binding, intake, block] = await Promise.all([verifyChain(chain), chain.controller.intakeStopped(), chain.provider.getBlock('latest')]);
+        const screening = await readScreening(chain, binding.control_version, undefined, { blockTag: block.number });
+        return { enabled: true, ...binding, intake_stopped: intake, ...(screening.valid_until == null ? {} : { screening_valid_until: screening.valid_until, block_timestamp: block.timestamp }),
+          ...(screening.attestor_active == null ? {} : { screening_source_active: screening.attestor_active }),
           ...(getCapitalHealth ? await getCapitalHealth() : {}) };
       }
       catch (error) { await chain.provider.destroy(); chain = null; throw error; }

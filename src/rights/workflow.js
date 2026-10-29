@@ -2,6 +2,8 @@ import { id } from 'ethers';
 import { chainStateName } from '../agent/runtime/poolRules.js';
 import { RpcReadPool, assertSnapshot, snapshotInfo } from './reads.js';
 import { verifyChain } from './chain.js';
+import { readScreening } from './screening.js';
+import { CONTROL_VERSION } from './typedData.js';
 
 export const WORKFLOW_STEPS = [
   { id: 'document', roles: ['issuer'], next: 'create_material' },
@@ -28,7 +30,7 @@ export async function materialWorkflow(chain, principal, record, pack, published
   const { read, stats } = readPool.budget(120);
   try {
     const block = await read(() => chain.provider.getBlock('latest')), at = { blockTag: block.number };
-    await verifyChain(chain, { read, readAt: at });
+    const binding = await verifyChain(chain, { read, readAt: at });
     const eblId = await read(() => chain.registry.eblForAsset(pack.terms.assetKey, at));
     const [title, pledge, pledgeTerms, poolId] = eblId > 0n ? await Promise.all([
       read(() => chain.registry.titles(eblId, at)), read(() => chain.registry.pledgedTo(eblId, at)), read(() => chain.registry.pledgeTerms(eblId, at)), read(() => chain.controller.latestPoolForEbl(eblId, at)) ]) : [null, null, null, 0n];
@@ -40,10 +42,13 @@ export async function materialWorkflow(chain, principal, record, pack, published
       result.steps[3].status = 'complete';
       const [offer, disbursed, recovery, screening, finalized, deadline] = await Promise.all([
         read(() => chain.pool.offerings(poolId, at)), read(() => chain.pool.disbursedAtomic(poolId, at)),
-        read(() => chain.pool.recoveredAtomic(poolId, at)), read(() => chain.controller.screeningValidUntil(at)),
+        read(() => chain.pool.recoveredAtomic(poolId, at)), readScreening(chain, binding?.control_version, read, at),
         read(() => chain.pool.fundingFinalized(poolId, at)), read(() => chain.pool.subscriptionDeadline(poolId, at)) ]);
       result.pool_id = Number(poolId); result.state = chainStateName(offer.state); result.funding_finalized = Boolean(finalized);
-      result.steps[5].status = Number(screening) >= block.timestamp ? 'check_each_investor' : 'pending';
+      // Eligibility also needs the screening's signer to still hold COMPLIANCE (the controller's isEligible()).
+      result.steps[5].status = screening.valid_until == null || binding?.control_version === CONTROL_VERSION && screening.attestor_active == null
+        ? 'unknown' : Number(screening.valid_until) >= block.timestamp && screening.attestor_active !== false ? 'check_each_investor' : 'pending';
+      if (screening.attestor_active === false && Number(screening.valid_until) >= block.timestamp) result.steps[5].blocker = 'screening_source_inactive';
       // Reaching the minimum is not funding: a partial raise is closed by finalizeFunding() after the deadline, and only
       // a finalized raise can be drawn. A full raise finalizes itself on its last subscription.
       const closable = !finalized && offer.subscribed > 0n && offer.raisedAtomic >= BigInt(pack.terms.minRaise)

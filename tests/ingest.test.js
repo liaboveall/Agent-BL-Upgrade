@@ -288,3 +288,57 @@ test('preferences: nonsense is refused with the offending field named', () => {
   bad({ min_acceptable_price: 0.8 }, /min_acceptable_price|Unrecognized/iu);
   bad('0.8', /preferences/u);
 });
+
+// F03 (comprehensive review 2026-10-29, v4): the asset-identity check and the case write are one commit.
+test('cases: one bill saved concurrently under two case IDs is stored once, stays unique after a restart, and a failed write can be retried', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-case-identity-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const read = async (name) => JSON.parse(await fs.readFile(new URL(`../data/cases/${name}.case.json`, import.meta.url), 'utf8'));
+  const copper = await read('copper-sg-shanghai'), rubber = await read('rubber-bkk-qd');
+  const service = new IngestService({ dir });
+  await service.init();
+  const results = await Promise.allSettled(['F03-SAME-A', 'F03-SAME-B'].map((case_id) => service.saveCase({ ...copper, case_id })));
+  assert.deepEqual(results.map((result) => result.status).sort(), ['fulfilled', 'rejected']);
+  assert.equal(results.find((result) => result.status === 'rejected').reason.code, 'duplicate_asset_identity');
+  const kept = results.find((result) => result.status === 'fulfilled').value;
+  assert.deepEqual((await service.listCases()).map((item) => item.case_id), [kept]);
+  // Different bills are never refused for each other, also when saved at the same time.
+  await Promise.all([service.saveCase({ ...rubber, case_id: 'F03-OTHER' }), service.saveCase({ ...copper, case_id: kept })]);
+  const restarted = new IngestService({ dir });
+  assert.deepEqual((await restarted.listCases()).map((item) => item.case_id).sort(), [kept, 'F03-OTHER'].sort());
+  await rejects(restarted.saveCase({ ...copper, case_id: 'F03-SAME-C' }), 'duplicate_asset_identity');
+
+  // A write that fails reserves nothing: the same bill can then be saved, by this or another case ID.
+  const fresh = new IngestService({ dir: await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-case-write-')) });
+  t.after(() => fs.rm(fresh.dir, { recursive: true, force: true }));
+  const rename = fs.rename;
+  fs.rename = async (from, to, ...rest) => { if (String(to).endsWith('F03-FAIL.case.json')) throw Object.assign(new Error('synthetic write failure'), { code: 'EIO' }); return rename(from, to, ...rest); };
+  try { await assert.rejects(fresh.saveCase({ ...copper, case_id: 'F03-FAIL' }), { code: 'EIO' }); }
+  finally { fs.rename = rename; }
+  assert.deepEqual(await fresh.listCases(), []);
+  assert.equal(await fresh.saveCase({ ...copper, case_id: 'F03-RETRY' }), 'F03-RETRY');
+});
+
+test('cases: readers retain the committed case while a replacement file is pending or fails', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentbl-case-visible-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const service = new IngestService({ dir });
+  await service.saveCase({ case_id: 'F03-VISIBLE', marker: 'committed' });
+  let reached, release;
+  const waiting = new Promise((resolve) => { reached = resolve; });
+  const gate = new Promise((resolve) => { release = resolve; });
+  const rename = fs.rename;
+  fs.rename = async (from, to, ...rest) => {
+    if (String(to).endsWith('F03-VISIBLE.case.json')) {
+      reached(); await gate; throw Object.assign(new Error('synthetic write failure'), { code: 'EIO' });
+    }
+    return rename(from, to, ...rest);
+  };
+  const saved = service.saveCase({ case_id: 'F03-VISIBLE', marker: 'uncommitted' });
+  const rejected = assert.rejects(saved, { code: 'EIO' });
+  try {
+    await waiting;
+    assert.equal((await service.listCases())[0].marker, 'committed');
+  } finally { release(); await rejected; fs.rename = rename; }
+  assert.equal((await service.listCases())[0].marker, 'committed');
+});

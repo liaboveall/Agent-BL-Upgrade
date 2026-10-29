@@ -7,14 +7,17 @@ import { chainStateName } from '../agent/runtime/poolRules.js';
 import { RpcReadPool, mapReads, assertSnapshot, snapshotInfo, boundedProvider } from '../rights/reads.js';
 import { CONTROL_VERSION } from '../rights/typedData.js';
 import { findNonceTransaction } from '../chain/nonceLookup.js';
+import { NEW_RISK_CAPITAL_OPERATIONS, assertOperationOpen } from '../ops/intakePolicy.js';
 
 const fail = (code, message, status = 409) => { throw Object.assign(new Error(message), { code, status, expose: true }); };
 const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 
 /** Provider-only ledger integration. Signing stays in the user's wallet. */
 export class CapitalLedgerService {
-  constructor({ ledger, chainConfig, getContext, getMode = () => 'demo', getGeneration = () => 0, readPool = new RpcReadPool(), confirmations = 1 }) {
-    Object.assign(this, { ledger, chainConfig, getContext, getMode, getGeneration, readPool, confirmations });
+  constructor({ ledger, chainConfig, getContext, getMode = () => 'demo', getGeneration = () => 0, readPool = new RpcReadPool(), confirmations = 1,
+    intakeGate = () => ({ ok: true }) }) {
+    // intakeGate: operational readiness for callers that do not pass their own (src/ops/intakePolicy.js).
+    Object.assign(this, { ledger, chainConfig, getContext, getMode, getGeneration, readPool, confirmations, intakeGate });
     this.rebuilder = new ChainEventRebuilder(ledger);
   }
 
@@ -88,7 +91,8 @@ export class CapitalLedgerService {
       ...(syncError || failures.length ? { warning: syncError ?? 'partial_position_reads' } : {}) };
   }
 
-  async prepareSubscription({ wallet, chain_pool_id: poolId, shares, max_unit_price: maxPrice, expected_quote_version: expectedVersion, deadline, reviewed_disclosure_hash: disclosureHash, authorization_subject, authorization_session }) {
+  async prepareSubscription({ wallet, chain_pool_id: poolId, shares, max_unit_price: maxPrice, expected_quote_version: expectedVersion, deadline, reviewed_disclosure_hash: disclosureHash, authorization_subject, authorization_session }, { readiness = this.intakeGate } = {}) {
+    assertOperationOpen(NEW_RISK_CAPITAL_OPERATIONS, 'SUBSCRIBE', readiness, 'Controlled intake is paused');
     const generation = this.getGeneration();
     if (this.chainConfig?.controlVersion != null && this.chainConfig.controlVersion < CONTROL_VERSION) fail('legacy_exit_only', 'This instance accepts existing exits only');
     if (this.getMode() !== 'live') fail('live_mode_required', 'Switch to Live before preparing a wallet transaction');
@@ -104,6 +108,7 @@ export class CapitalLedgerService {
     if (until < BigInt(block.timestamp) || until > BigInt(block.timestamp) + 900n) fail('invalid_deadline', 'Subscription deadline expired or exceeds 15 minutes');
     const calldata = ctx.pool.interface.encodeFunctionData('subscribeWithTerms', [poolId, BigInt(shares), offering.issuePrice, version, until]);
     if (generation !== this.getGeneration() || this.getMode() !== 'live') fail('execution_context_changed', 'Execution context changed while preparing; review again');
+    assertOperationOpen(NEW_RISK_CAPITAL_OPERATIONS, 'SUBSCRIBE', readiness, 'Controlled intake is paused');
     return this.ledger.recordIntent({ protocol_instance: { chain_id: Number(cfg.chainIdDecimal), pool_address: cfg.contracts.RWAOfferingPool.toLowerCase(), protocol_version: 5 },
       chain_pool_id: Number(poolId), operation: 'SUBSCRIBE', execution_generation: generation, authorization_subject, authorization_session, created_block: (await ctx.provider.getBlockNumber()) + 1, investor: wallet, asset: offering.settlementAsset, amount_atomic: String(offering.issuePrice * BigInt(shares)), shares: String(shares), calldata,
       ...(disclosureHash ? { reviewed_disclosure_hash: disclosureHash, reviewed_quote_version: String(version) } : {}) });
@@ -177,9 +182,13 @@ export class CapitalLedgerService {
       shares: String(await token.balanceOf(poolId, wallet)), calldata: ctx.pool.interface.encodeFunctionData('refundInvestor', [poolId, wallet]) });
   }
 
-  async checkpointBroadcast(intentId) {
+  /** The last check before the wallet sees a saved intent; new money is re-checked against readiness before and after the chain reads. */
+  async checkpointBroadcast(intentId, { readiness = this.intakeGate } = {}) {
+    const paused = 'Controlled intake is paused; this saved subscription cannot be sent now';
     if (this.getMode() !== 'live') fail('live_mode_required', 'Switch to Live before preparing a wallet transaction');
-    const intent = await this.ledger.getIntent(intentId), ctx = await this.context();
+    const intent = await this.ledger.getIntent(intentId);
+    assertOperationOpen(NEW_RISK_CAPITAL_OPERATIONS, intent?.operation, readiness, paused);
+    const ctx = await this.context();
     if (!intent || !same(intent.protocol_instance.pool_address, this.chainConfig.contracts.RWAOfferingPool)
       || Number(intent.protocol_instance.chain_id) !== Number(this.chainConfig.chainIdDecimal)) fail('invalid_intent', 'Intent belongs to another protocol');
     if (intent.execution_generation !== undefined && intent.execution_generation !== this.getGeneration()) fail('execution_context_changed', 'Execution mode changed; prepare and review a new draft');
@@ -190,6 +199,7 @@ export class CapitalLedgerService {
     if (reserved !== null && Number(pending) > reserved) fail('wallet_nonce_pending', 'A pending wallet transaction uses the saved nonce. Wait until it is mined, then reconcile before sending again');
     const nonce = reserved ?? Number(pending);
     if (intent.execution_generation !== undefined && intent.execution_generation !== this.getGeneration() || this.getMode() !== 'live') fail('execution_context_changed', 'Execution context changed before broadcast');
+    assertOperationOpen(NEW_RISK_CAPITAL_OPERATIONS, intent.operation, readiness, paused);
     return this.ledger.checkpointBroadcast(intentId, { nonce, block });
   }
 

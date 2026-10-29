@@ -17,17 +17,21 @@ import { loadRightsChain } from '../src/rights/chain.js';
 import { prepareRightsCandidate, writeRightsCandidate } from '../scripts/prepare-rights-candidate.mjs';
 import { Contract, ContractFactory, TypedDataEncoder } from 'ethers';
 import { titleDomain, rightsDomain, ISSUANCE_TYPES, PLEDGE_TYPES, TERMS_TYPES, VALUATION_TYPES } from '../src/rights/typedData.js';
+import { SCREENING_ATTESTOR_SLOT } from '../src/rights/screening.js';
+import { CONTROL_VERSION } from '../src/rights/typedData.js';
 
-async function backend(c, t) {
+async function backend(c, t, { operations = null } = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'w3-cross-')), env = { AGENTBL_RIGHTS_KEY: randomBytes(32).toString('hex'), AGENTBL_ADMIN_TOKEN: 'synthetic-cross-layer-admin-w3' };
   const service = new RightsService({ directory, env, chain: c.chain });
   const route = createRightsRoutes({ service, env });
   const controlled = createControlledRoutes({ env: { ...env, AGENTBL_RUNTIME_DIR: directory }, chain: c.chain, disclosures: service, getMode: () => 'live',
     configuration: { chain_id: Number(c.chainId), deployment_block: 0, contracts: { RWAOfferingPoolV5: await c.pool.getAddress(), ControlledRWAToken: await c.token.getAddress() } } });
-  const app = await listen(http.createServer((req, res) => (async () => {
+  const server = http.createServer((req, res) => (async () => {
     const url = new URL(req.url, 'http://local');
     if (!await route(req, res, url)) await controlled(req, res, url);
-  })().catch((error) => sendError(res, error, { logger: { warn() {}, error() {} } }))));
+  })().catch((error) => sendError(res, error, { logger: { warn() {}, error() {} } })));
+  server.operations = operations;
+  const app = await listen(server);
   t.after(async () => { await app.close(); await fs.rm(directory, { recursive: true, force: true }); });
   const post = async (url, body, token, admin = false) => {
     const result = await requestJson(app.base, 'POST', `/api/rights/${url}`, body, { ...(token ? { 'x-rights-session': token } : {}), ...(admin ? { Authorization: `Bearer ${env.AGENTBL_ADMIN_TOKEN}` } : {}) });
@@ -44,6 +48,24 @@ async function backend(c, t) {
   const execute = (session, prepared) => sendRightsPlan(prepared, { session: { signer: session.wallet, address: session.wallet.address },
     attachTransaction: (planId, txHash) => post(`transaction-plans/${planId}/transaction`, { tx_hash: txHash }, session.token) });
   return { directory, env, service, app, post, login, plan, execute };
+}
+
+// A pool raised on chain without the HTTP layer: screening refreshed by `screener`, the investor admitted by `admitter`,
+// and (unless `subscribe` is false) all 10 shares bought, so the raise of 8,000,000 is final.
+async function chainPool(c, { screener = c.compliance, admitter = c.compliance, subscribe = true } = {}) {
+  const issue = await c.issuance(); await c.send(c.registry.registerTitle(issue.issuance, issue.signature));
+  const eblId = await c.registry.nextEblId() - 1n, offer = await c.offering(eblId, issue.issuance);
+  await c.send(c.registry.connect(c.holder).pledge(eblId, await c.pool.getAddress(), offer.hash, offer.terms.subscribeUntil, '0x'));
+  await c.send(c.controller.connect(c.issuer).createControlledOffering(offer.terms, offer.valuation, offer.valuer, offer.signature));
+  const poolId = String(await c.pool.nextPoolId() - 1n), time = await c.now();
+  await c.send(c.controller.connect(admitter).setEligibility(c.investor.address, c.fresh(), c.fresh(), time + 100000n));
+  await c.send(c.controller.connect(screener).refreshScreening(time + 80000n, c.fresh()));
+  await c.send(c.controller.connect(c.investor).acknowledgeTerms(poolId, offer.hash, 1n, offer.terms.subscribeUntil));
+  if (subscribe) {
+    await c.send(c.usdc.mint(c.investor.address, 8000000n)); await c.send(c.usdc.connect(c.investor).approve(await c.pool.getAddress(), 8000000n));
+    await c.send(c.pool.connect(c.investor).subscribe(poolId, 10n));
+  }
+  return { ...offer, poolId, eblId };
 }
 
 // A superseded version ran under the governance code of its time: its test deploys that governance and a hub it owns.
@@ -168,6 +190,53 @@ describe('W3 actual EVM + business-session HTTP + wallet plans', { skip: process
     const third = await app.plan(compliance, { ...input, evidence_hash: c.fresh() });
     assert.equal(third.nonce, second.nonce + 1);
     assert.equal((await checkpoint(third)).status, 'broadcast_prepared');
+  });
+  it('F01 (v4 review) refuses a saved draw at its checkpoint and new material while degraded, keeps recovery, and draws once ready', async (t) => {
+    const c = await deployRightsRpc(node, t);
+    let ready = true;
+    const app = await backend(c, t, { operations: { readiness: () => ({ ok: ready, status: ready ? 'ready' : 'degraded' }) } });
+    const operator = await app.login(c.operator, ['operator']), holder = await app.login(c.holder, ['holder']);
+    const p = await chainPool(c);
+    const drawInput = () => ({ operation: 'disburse', pool_id: p.poolId, amount_atomic: '8000000', evidence_hash: c.fresh() });
+    const saved = await app.plan(operator, drawInput());
+    ready = false;
+    await assert.rejects(app.post(`transaction-plans/${saved.plan_id}/broadcast`, {}, operator.token), { status: 503, code: 'operations_not_ready' });
+    await assert.rejects(app.plan(operator, drawInput()), { status: 503, code: 'operations_not_ready' });
+    await assert.rejects(app.post('materials', { material: { synthetic: true }, public_summary: { asset_class: 'copper', settlement: 'TEST_USDC', tenor_days: 30,
+      terms_hash: c.fresh(), risk_flags: ['simulated_title'] } }, holder.token), { status: 503, code: 'operations_not_ready' });
+    assert.equal(await c.pool.disbursedAtomic(p.poolId), 0n);
+    // Reading and dismissing the saved draw stay available, so the operator's wallet is never stuck behind it.
+    const read = await requestJson(app.app.base, 'GET', `/api/rights/transaction-plans/${saved.plan_id}`, undefined, { 'x-rights-session': operator.token });
+    assert.equal(read.data.status, 'draft');
+    assert.equal((await app.post(`transaction-plans/${saved.plan_id}/release`, {}, operator.token)).status, 'abandoned');
+    ready = true;
+    const draw = await app.plan(operator, drawInput());
+    const checked = await app.post(`transaction-plans/${draw.plan_id}/broadcast`, {}, operator.token);
+    assert.equal(checked.status, 'broadcast_prepared');
+    await c.send(c.operator.sendTransaction({ to: checked.to, data: checked.calldata, nonce: checked.nonce }));
+    assert.equal(await c.pool.disbursedAtomic(p.poolId), 8000000n);
+  });
+  it('F05 (v4 review) lists pools closed once the screening signer loses COMPLIANCE, as isEligible() does, and open after a current signer refreshes', async (t) => {
+    const c = await deployRightsRpc(node, t), app = await backend(c, t);
+    const COMPLIANCE = await c.controller.COMPLIANCE();
+    await c.govern(c.controller, 'setRole', [COMPLIANCE, c.outsider.address, true]);
+    const p = await chainPool(c, { admitter: c.outsider, subscribe: false });
+    // The controller keeps the screening signer private; the catalog reads its storage slot, checked here against a deployment.
+    const word = await c.provider.getStorage(await c.controller.getAddress(), SCREENING_ATTESTOR_SLOT[CONTROL_VERSION]);
+    assert.equal(`0x${word.slice(-40)}`, c.compliance.address.toLowerCase());
+    const listing = async () => (await requestJson(app.app.base, 'GET', `/api/controlled/offerings/${p.poolId}`)).data;
+    let page = await listing();
+    assert.deepEqual([page.offerings[0].subscription_open, page.availability.screening_source_active], [true, true]);
+    assert.equal(await c.controller.isEligible(c.investor.address, p.poolId), true);
+    await c.govern(c.controller, 'setRole', [COMPLIANCE, c.compliance.address, false]);
+    page = await listing();
+    assert.equal(await c.controller.isEligible(c.investor.address, p.poolId), false);
+    assert.deepEqual([page.offerings[0].subscription_open, page.offerings[0].subscription_blockers, page.availability.screening_valid, page.availability.screening_source_active],
+      [false, ['screening_source_inactive'], false, false]);
+    await c.send(c.controller.connect(c.outsider).refreshScreening(await c.now() + 70000n, c.fresh()));
+    page = await listing();
+    assert.deepEqual([page.offerings[0].subscription_open, page.offerings[0].subscription_blockers], [true, []]);
+    assert.equal(await c.controller.isEligible(c.investor.address, p.poolId), true);
   });
   it('verifies manifest artifacts, refuses code/network tampering, and preserves receipt reorg failures', async (t) => {
     const c = await deployRightsRpc(node, t), app = await backend(c, t), issuer = await app.login(c.issuer, ['issuer']);

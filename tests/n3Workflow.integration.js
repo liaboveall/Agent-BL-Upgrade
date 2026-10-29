@@ -235,6 +235,8 @@ describe('N3 actual EVM, authenticated HTTP, enrolled roles and wallet adapters'
     const batched = await page();
     assert.deepEqual(rows(batched), rows(before));
     assert.equal(batched.complete, true);
-    assert.ok(batched.read_metrics.calls < 12 && before.read_metrics.calls > 80, `${batched.read_metrics.calls} vs ${before.read_metrics.calls} reads`);
+    // Instance-wide reads stay outside the batch: intake, the screening window, and (F05) the screening signer's storage
+    // slot and its COMPLIANCE role, read once per page whatever its size.
+    assert.ok(batched.read_metrics.calls < 14 && before.read_metrics.calls > 80, `${batched.read_metrics.calls} vs ${before.read_metrics.calls} reads`);
   });
 });
