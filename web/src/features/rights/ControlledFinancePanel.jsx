@@ -11,6 +11,7 @@ import { describeFinanceError } from '../../lib/finance-errors.js';
 import { ReadableTerms } from './ReadableTerms.jsx';
 import { RoleWorkspace } from './RoleWorkspace.jsx';
 import { ChainTime } from './ChainTime.jsx';
+import { fundsBreakdown } from '../../lib/pool-funds.js';
 
 const amount = (v) => v == null ? '—' : `${BigInt(v) / 1000000n}.${(BigInt(v) % 1000000n).toString().padStart(6, '0')}`;
 // The directory table drops trailing zeros (at least two decimals stay); the exact six decimals are in its title and
@@ -71,6 +72,21 @@ function ResolutionStatus({ offer, zh }) {
       ? (zh ? '这是到期现金退出：硬截止后任何人可终局，按实际回收金额分配。' : 'This is a cash-only exit at maturity: anyone can finalize it after the hard deadline, distributing what was actually recovered.')
       : (zh ? '处置负责人提出、独立审查人复核且无异议时，通知期结束后可终局；否则硬截止后任何人可终局。通知期内持有份额者可在角色工作台提出一次异议。' : 'With the disposer’s notice reviewed and undisputed, it can be finalized when the notice ends; otherwise anyone can finalize it after the hard deadline. Shareholders can raise one dispute in the role workspace during the notice.')}</p>}
     {r.finalized && <p>{zh ? '已按实际回收结算，出资人在下方持仓中领取；迟到回款仍可再次领取。' : 'Settled on actual recovery. Investors claim below; later recoveries remain claimable.'}</p>}</div>;
+}
+function FundsBreakdown({ offer, zh }) {
+  const funds = fundsBreakdown(offer);
+  if (!funds) return null;
+  const rows = [
+    [['募集本金', 'Principal raised'], funds.raised], [['已放款', 'Drawn'], funds.drawn], [['未放款（仍在托管）', 'Undrawn (still in escrow)'], funds.undrawn],
+    [['已回收', 'Recovered'], funds.recovered], [['已领取（按托管余额推算）', 'Claimed (from escrow accounting)'], funds.claimed], [['托管余额', 'Escrow balance'], funds.escrow],
+    [['目标总分配', 'Target total distribution'], funds.target],
+    // After a loss settlement the gap is a realized loss that later recoveries can still reduce; before it, debt still owed.
+    [offer.state === 'LossSettled' ? ['未覆盖部分（迟到回款仍可领取）', 'Uncovered (later recoveries remain claimable)'] : ['尚欠（目标减回收与未放款本金）', 'Still owed (target less recoveries and undrawn principal)'], funds.outstanding]
+  ];
+  return <div className="finance-funds" role="group" aria-label={zh ? '资金构成' : 'Where the money is'}>
+    <dl>{rows.map(([label, value]) => <div key={label[1]}><dt>{label[zh ? 0 : 1]}</dt><dd>{value == null ? '—' : `${amount(value)} TEST_USDC`}</dd></div>)}</dl>
+    <p className="small muted">{zh ? '目标总分配按实际放款比例计算：本金 + ⌈(全部份额目标兑付 − 本金) × 已放款 / 本金⌉；未放出的本金仍在托管中，只退回本金。这是合约规则，不是收益预测或付款保证。' : 'The target scales with what was drawn: principal + ⌈(all shares’ target − principal) × drawn / principal⌉; undrawn principal stays in escrow and returns as principal only. These are contract rules, not a return forecast or a payment guarantee.'}</p>
+  </div>;
 }
 /** What the pool needs next when it is not taking subscriptions. */
 function stateGuidance(offer, zh) {
@@ -159,7 +175,7 @@ function PoolAttention({ zh, offers, listing, legacy, busy, onOpen }) {
  * network, a live business session (with the organization and roles it carries), and the chain's own eligibility
  * check. Shown before anything fails, with the next step.
  */
-function IdentityStatus({ zh, wallet, network, busy, onConnect, onVerify }) {
+function IdentityStatus({ zh, wallet, network, busy, onConnect, onVerify, onOpenWorkspace }) {
   const [, rerender] = useState(0);
   useEffect(() => {
     const update = () => rerender((n) => n + 1);
@@ -175,8 +191,10 @@ function IdentityStatus({ zh, wallet, network, busy, onConnect, onVerify }) {
       ? <>{session.organization ? `${session.organization} · ` : ''}{session.roles?.length ? `${session.roles.join(' / ')} · ` : ''}{session.exit_only ? (zh ? '仅退出 · ' : 'Exits only · ') : ''}{zh ? '有效至 ' : 'until '}<ChainTime value={Math.floor(session.expires_at / 1000)} zh={zh} /></>
       : (zh ? '未验证或已过期' : 'Not verified or expired')}</span>
     <span><strong>{zh ? '链上资格' : 'Chain eligibility'}</strong>{zh ? '每次认购由合约核验' : 'Checked by the contract on each subscription'}</span>
-    {!wallet ? <button type="button" disabled={busy} onClick={onConnect}>{zh ? '连接钱包' : 'Connect wallet'}</button>
-      : !session.active && <button type="button" disabled={busy} onClick={onVerify}>{zh ? '验证业务身份' : 'Verify business identity'}</button>}
+    {/* The workspace is one step away from the first screen whatever the state; the state-specific step comes first. */}
+    {!wallet && <button type="button" disabled={busy} onClick={onConnect}>{zh ? '连接钱包' : 'Connect wallet'}</button>}
+    {wallet && !session.active ? <button type="button" disabled={busy} onClick={onVerify}>{zh ? '验证业务身份' : 'Verify business identity'}</button>
+      : <button type="button" className="finance-identity-workspace" onClick={onOpenWorkspace}>{zh ? '进入我的工作台' : 'Go to my workspace'}</button>}
     <small>{zh ? '出资人与融资方相同：认购、退款和领取都需要已登记的钱包和有效的业务会话。' : 'Investors too: subscriptions, refunds and claims need the enrolled wallet and a live business session.'}</small>
   </div>;
 }
@@ -427,6 +445,7 @@ export function ControlledFinancePanel({ primary = false }) {
     setShowRoles(true);
     requestAnimationFrame(() => document.getElementById('financing-role-entry')?.scrollIntoView({ block: 'start' }));
   };
+  const roleEntry = <div className="role-entry"><div className="finance-role-callout"><div><strong>{zh ? '身份验证与角色工作台' : 'Identity and role workspace'}</strong><p>{zh ? '所有角色（含出资人）在此用钱包验证业务身份；融资方与审查人在此管理单证、材料审核与融资流程。' : 'Every role, investors included, verifies its business identity here with the wallet. Borrowers and reviewers also manage documents, reviews and financing here.'}</p></div><button type="button" aria-label={`${rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')}${zh ? '：身份验证与角色待办' : ': identity and role responsibilities'}`} aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')} <span aria-hidden="true">{rolesOpen ? '−' : '↓'}</span></button></div><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>;
   // A pool detail has its own address (#/finance/pool/7), so a reload or a shared link opens the same pool.
   useEffect(() => {
     const match = /^#\/finance\/pool\/([1-9]\d{0,8})$/u.exec(window.location.hash);
@@ -463,6 +482,16 @@ export function ControlledFinancePanel({ primary = false }) {
           ))}
         </div>
       </div>) : <>
+        <IdentityStatus zh={zh} wallet={wallet} network={networkName} busy={busy} onConnect={connect} onVerify={verifyIdentity} onOpenWorkspace={verifyIdentity} />
+        <h2 className="positions-heading">{zh ? '我的持仓与退出' : 'My positions and exits'}</h2>
+        {!wallet && <p>{zh ? '连接钱包后读取自己的持仓和退出权利。' : 'Connect your wallet to read your positions and exits.'}</p>}
+        {wallet && !loading && !positionError && !positions.length && <p>{zh ? '此钱包在当前实例没有已发现的持仓。' : 'No positions were found for this wallet in this instance.'}</p>}
+        {positionError && <p role="alert">{pick(positionError)}</p>}
+        {positions.map((position) => <div key={position.position_id} className="controlled-position"><p>#{position.chain_pool_id} · {stateLabel(position.chain_state ?? position.status)} · {zh ? '持有' : 'Shares'} {position.shares} · {zh ? '可领取' : 'Claimable'} {amount(position.claimable_atomic)} TEST_USDC · {position.reconciled ? (zh ? '已对账' : 'Reconciled') : (zh ? '对账中' : 'Reconciling')}</p>
+          <p>{zh ? '实付 / 已领取 / 已退款' : 'Paid / claimed / refunded'}: {amount(position.cost_atomic)} / {amount(position.claimed_atomic)} / {amount(position.refunded_atomic)} TEST_USDC</p>
+          {position.recovery_rights_retained && <p>{zh ? '份额销毁后仍保留后续回款受益权；有新增回款时可再次领取。' : 'Recovery rights survive share redemption. You can claim again when later payments arrive.'}</p>}
+          <button type="button" disabled={busy || demo || Boolean(pending) || !position.reconciled || (BigInt(position.shares) === 0n && BigInt(position.claimable_atomic ?? 0) === 0n) || !CLAIMABLE_STATES.includes(position.chain_state)} onClick={() => setReview({ kind: 'claim', position })}>{zh ? '审阅领取' : 'Review claim'}</button>
+          <button type="button" disabled={busy || demo || Boolean(pending) || !position.reconciled || BigInt(position.shares) === 0n || !REFUNDABLE_STATES.includes(position.chain_state)} onClick={() => setReview({ kind: 'refund', position })}>{zh ? '审阅退款资格' : 'Review refund eligibility'}</button></div>)}
         <div className="finance-overview" aria-label={zh ? '当前融资概览' : 'Current financing overview'}>
           <div><span>{zh ? '资金池总数' : 'Funding pools'}</span><strong>{listing?.total_pools ?? '—'}</strong><small>{zh ? '当前协议实例' : 'In this protocol instance'}</small></div>
           <div><span>{zh ? '当前浏览' : 'Showing'}</span><strong>{!listing ? '—' : !listing.total_pools ? '0' : page.pool_id ? `#${page.pool_id}` : `${page.from}–${Math.min(page.from + 9, listing.total_pools)}`}</strong><small>{listing?.snapshot ? `${zh ? '区块' : 'Block'} #${listing.snapshot.block_number} · ${snapshotAge(listing.snapshot.block_timestamp, zh)}` : (zh ? '固定区块快照' : 'One consistent snapshot')}</small></div>
@@ -470,8 +499,9 @@ export function ControlledFinancePanel({ primary = false }) {
         </div>
         {wallet && !loading && (pending || positions.length > 0) && <MyTasks zh={zh} positions={positions} pending={pending} busy={busy} demo={demo} onOpen={openPool}
           onClaim={(position) => setReview({ kind: 'claim', position })} onReconcile={reconcile} />}
-        <IdentityStatus zh={zh} wallet={wallet} network={networkName} busy={busy} onConnect={connect} onVerify={verifyIdentity} />
         {!loading && <PoolAttention zh={zh} offers={offers} listing={listing} legacy={status.exit_only === true} busy={busy} onOpen={openPool} />}
+        {/* The workspace comes before the directory: identity and role tasks gate every action, the directory is exploration. */}
+        {roleEntry}
         <div className="finance-directory-toolbar">
           <div><h2>{zh ? '浏览资金池' : 'Explore funding pools'}</h2><p>{zh ? '查看状态、资金流转与每个池的完整条款。' : 'Review each pool’s status, cash movements, and terms.'}</p></div>
           <form className="finance-pool-lookup" onSubmit={(event) => { event.preventDefault(); if (!busy && /^[1-9]\d{0,8}$/u.test(lookup)) { setReview(null); setPage({ from: Number(lookup), pool_id: Number(lookup) }); } }}>
@@ -499,6 +529,7 @@ export function ControlledFinancePanel({ primary = false }) {
             <div><dt>{zh ? '进度' : 'Progress'}</dt><dd>{progressText(offer, zh)} {zh ? '份；实收与回款见下表。' : 'shares; actual cash amounts appear in the table.'}</dd></div>
             <div><dt>{zh ? '退出责任' : 'Cash exit'}</dt><dd>{zh ? '出资人自行退款或领取；融资方实际回款。处置与异议按已签条款执行。' : 'Investors refund or claim for themselves; the borrower sends actual repayments. Resolution and disputes follow the signed terms.'}</dd></div></dl>
           <p>{zh ? '目标兑付不是预测收益；可能损失本金。公开条款在每次钱包授权前独立核验。' : 'Target redemption is not a return forecast; principal may be lost. Full terms are independently checked before wallet authorization.'}</p>
+          <FundsBreakdown offer={offer} zh={zh} />
           <ResolutionStatus offer={offer} zh={zh} />
           {!SUBSCRIBABLE.includes(offer.state) || offer.finalize_funding_available || offer.empty_expired ? stateGuidance(offer, zh) && <p className="finance-next-step" role="note">{stateGuidance(offer, zh)}</p> : <>
           <div className="finance-detail-actions">
@@ -510,10 +541,10 @@ export function ControlledFinancePanel({ primary = false }) {
           {problem?.scope === offer.pool_id && error && <p role="alert" className="finance-alert finance-alert-inline">{error}{shownProblem.funds && <small className="finance-alert-funds">{shownProblem.funds}</small>}</p>}
           {publicTerms?.pool_id === offer.pool_id && <ReadableTerms pack={publicTerms.pack} zh={zh} />}
         </section>)}
-        <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池表格，可横向滚动' : 'Funding pool table, scroll horizontally'} tabIndex={0}><table><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead><tr><th>{zh ? '池与状态' : 'Pool and state'}</th><th>{zh ? '每份实付 / 目标兑付' : 'Paid / target redemption per share'}</th><th>{zh ? '实际募集 / 放款 / 回收' : 'Actual raised / disbursed / recovered'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead>
-          <tbody>{offers.map((offer) => <tr key={offer.pool_id}><td>#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{progressText(offer, zh)}<br />{zh ? '到期 ' : 'Maturity '}<ChainTime value={offer.maturity} zh={zh} dateOnly /></td>
-            <td><Amount value={offer.issue_price_atomic} /> / <Amount value={offer.redemption_per_share_atomic} /> TEST_USDC</td><td><Amount value={offer.raised_atomic} /> / <Amount value={offer.disbursed_atomic} /> / <Amount value={offer.recovered_atomic} /></td>
-            <td><button type="button" className="finance-pool-link" aria-label={`${zh ? '查看详情' : 'View details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">{selectedPool === offer.pool_id ? '−' : '↑'}</span></button></td></tr>)}</tbody></table></div>
+        <div className="controlled-table-wrap" role="region" aria-label={zh ? '资金池列表（宽屏为表格，可横向滚动；手机为卡片）' : 'Funding pool list (a scrollable table on wide screens, cards on a phone)'} tabIndex={0}><table className="finance-pool-table" role="table"><caption className="sr-only">{zh ? '链上资金池' : 'On-chain funding pools'}</caption><thead role="rowgroup"><tr role="row"><th role="columnheader">{zh ? '池与状态' : 'Pool and state'}</th><th role="columnheader">{zh ? '每份实付 / 目标兑付' : 'Paid / target redemption per share'}</th><th role="columnheader">{zh ? '实际募集 / 放款 / 回收' : 'Actual raised / disbursed / recovered'}</th><th role="columnheader">{zh ? '操作' : 'Actions'}</th></tr></thead>
+          <tbody role="rowgroup">{offers.map((offer) => <tr role="row" key={offer.pool_id}><td role="cell" className="finance-pool-title">#{offer.pool_id} · <span className={`finance-state finance-state-${closedLabel(offer) ? 'closed' : String(offer.state).toLowerCase()}`}>{offerLabel(offer)}</span><br />{progressText(offer, zh)}<br />{zh ? '到期 ' : 'Maturity '}<ChainTime value={offer.maturity} zh={zh} dateOnly /></td>
+            <td role="cell" data-label={zh ? '每份实付 / 目标兑付' : 'Paid / target per share'}><Amount value={offer.issue_price_atomic} /> / <Amount value={offer.redemption_per_share_atomic} /> TEST_USDC</td><td role="cell" data-label={zh ? '实际募集 / 放款 / 回收' : 'Raised / disbursed / recovered'}><Amount value={offer.raised_atomic} /> / <Amount value={offer.disbursed_atomic} /> / <Amount value={offer.recovered_atomic} /></td>
+            <td role="cell"><button type="button" className="finance-pool-link" aria-label={`${zh ? '查看详情' : 'View details'} #${offer.pool_id}`} aria-expanded={selectedPool === offer.pool_id} aria-controls="funding-pool-detail" onClick={() => { detailOpener.current = document.activeElement; setSelectedPool(selectedPool === offer.pool_id ? null : offer.pool_id); }}>{zh ? '查看详情' : 'View details'} <span aria-hidden="true">{selectedPool === offer.pool_id ? '−' : '↑'}</span></button></td></tr>)}</tbody></table></div>
         {offers.length > 0 && <p className="small muted finance-amount-note">{zh ? '表中金额省略末尾的 0（悬停可看完整 6 位小数）；确认、持仓与对账始终显示完整金额。' : 'Table amounts drop trailing zeros (hover for all six decimals); confirmations, positions and reconciliation always show the full amount.'}</p>}
         {!offers.length && listing && listing.complete !== false && <p>{filter === 'all' ? (zh ? '此实例尚无发行。' : 'This instance has no offerings.')
           : listing.next_cursor ? (zh ? `扫描到 #${listing.next_cursor - 1} 仍未找到符合筛选的池，可继续下一页。` : `No matching pool up to #${listing.next_cursor - 1}; continue with the next page.`)
@@ -528,17 +559,6 @@ export function ControlledFinancePanel({ primary = false }) {
         <div className="finance-data-context"><p>{zh ? '上一页、下一页和末页沿用同一个区块快照，金额和状态彼此一致；“首页”和上方“获取最新数据”读取最新区块并保留当前筛选，新增的资金池在那里出现。' : 'Previous, next and last page keep one block snapshot, so amounts and states agree. “First page” and “Get latest data” above read the latest block and keep the filter; new pools appear there.'}</p></div>
         <div className="finance-instance-meta"><p className="controlled-instance">{zh ? '协议实例' : 'Protocol instance'} <code>{status.config.chainIdDecimal}:{status.config.contracts.RWAOfferingPool}</code></p>
         {listing?.snapshot && <p className="controlled-snapshot" role="status">{zh ? '快照区块 / 总池数' : 'Snapshot block / total pools'}: #{listing.snapshot.block_number} / {listing.total_pools} · <ChainTime value={listing.snapshot.block_timestamp} zh={zh} /> · {snapshotAge(listing.snapshot.block_timestamp, zh)}{page.block_number ? (zh ? '（翻页沿用的快照）' : ' (kept for paging)') : ''} · <code>{listing.snapshot.block_hash}</code></p>}</div>
-        <h2 className="positions-heading">{zh ? '我的持仓与退出' : 'My positions and exits'}</h2>
-        {!wallet && <p>{zh ? '连接钱包后读取自己的持仓和退出权利。' : 'Connect your wallet to read your positions and exits.'}</p>}
-        {wallet && !loading && !positionError && !positions.length && <p>{zh ? '此钱包在当前实例没有已发现的持仓。' : 'No positions were found for this wallet in this instance.'}</p>}
-        {positionError && <p role="alert">{pick(positionError)}</p>}
-        {positions.map((position) => <div key={position.position_id} className="controlled-position"><p>#{position.chain_pool_id} · {stateLabel(position.chain_state ?? position.status)} · {zh ? '持有' : 'Shares'} {position.shares} · {zh ? '可领取' : 'Claimable'} {amount(position.claimable_atomic)} TEST_USDC · {position.reconciled ? (zh ? '已对账' : 'Reconciled') : (zh ? '对账中' : 'Reconciling')}</p>
-          <p>{zh ? '实付 / 已领取 / 已退款' : 'Paid / claimed / refunded'}: {amount(position.cost_atomic)} / {amount(position.claimed_atomic)} / {amount(position.refunded_atomic)} TEST_USDC</p>
-          {position.recovery_rights_retained && <p>{zh ? '份额销毁后仍保留后续回款受益权；有新增回款时可再次领取。' : 'Recovery rights survive share redemption. You can claim again when later payments arrive.'}</p>}
-          <button type="button" disabled={busy || demo || Boolean(pending) || !position.reconciled || (BigInt(position.shares) === 0n && BigInt(position.claimable_atomic ?? 0) === 0n) || !CLAIMABLE_STATES.includes(position.chain_state)} onClick={() => setReview({ kind: 'claim', position })}>{zh ? '审阅领取' : 'Review claim'}</button>
-          <button type="button" disabled={busy || demo || Boolean(pending) || !position.reconciled || BigInt(position.shares) === 0n || !REFUNDABLE_STATES.includes(position.chain_state)} onClick={() => setReview({ kind: 'refund', position })}>{zh ? '审阅退款资格' : 'Review refund eligibility'}</button></div>)}
-        {/* Borrowers and reviewers work here; an investor's pools, tasks and positions come before it. */}
-        <div className="role-entry"><div className="finance-role-callout"><div><strong>{zh ? '身份验证与角色工作台' : 'Identity and role workspace'}</strong><p>{zh ? '所有角色（含出资人）在此用钱包验证业务身份；融资方与审查人在此管理单证、材料审核与融资流程。' : 'Every role, investors included, verifies its business identity here with the wallet. Borrowers and reviewers also manage documents, reviews and financing here.'}</p></div><button type="button" aria-label={`${rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')}${zh ? '：身份验证与角色待办' : ': identity and role responsibilities'}`} aria-expanded={rolesOpen} aria-controls="financing-role-entry" onClick={() => setShowRoles(!rolesOpen)}>{rolesOpen ? (zh ? '收起工作台' : 'Close workspace') : (zh ? '打开工作台' : 'Open workspace')} <span aria-hidden="true">{rolesOpen ? '−' : '↓'}</span></button></div><div id="financing-role-entry" hidden={!rolesOpen}><RoleWorkspace zh={zh} status={status} wallet={wallet} /></div></div>
         {review && <section ref={confirmation} tabIndex={-1} onKeyDown={(event) => { if (event.key === 'Escape' && !busy) setReview(null); }} className="controlled-confirm" aria-label={zh ? '钱包操作确认' : 'Wallet action confirmation'}><p>{zh ? '操作' : 'Action'}: {({ acknowledge: zh ? '同意条款' : 'Accept terms', subscribe: zh ? '认购' : 'Subscribe', claim: zh ? '领取' : 'Claim', refund: zh ? '退款' : 'Refund' })[review.kind]} · #{review.offer?.pool_id ?? review.position.chain_pool_id}</p>
           {review.offer && <><p>{zh ? '条款承诺' : 'Terms commitment'}: <code>{review.offer.terms_hash}</code></p><p>{zh ? '报价版本' : 'Quote version'}: {review.offer.quote_version}</p></>}
           {review.pack && <><ReadableTerms pack={review.pack} zh={zh} /><label><input type="checkbox" checked={termsRead} onChange={(event) => setTermsRead(event.target.checked)} />{zh ? '我已核对责任主体、截止、零费、损失及退出条款' : 'I reviewed the parties, deadlines, zero fees, losses and exit terms'}</label></>}
