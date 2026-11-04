@@ -50,6 +50,8 @@ test('F05 the role workflow names a revoked screening signer instead of reportin
   assert.deepEqual([eligibility(await workflowWith()).status, eligibility(await workflowWith()).blocker], ['check_each_investor', undefined]);
   const revoked = eligibility(await workflowWith({ active: false }));
   assert.deepEqual([revoked.status, revoked.blocker], ['pending', 'screening_source_inactive']);
-  assert.deepEqual([eligibility(await workflowWith({ validUntil: 10 })).status, eligibility(await workflowWith({ validUntil: 10 })).blocker], ['pending', undefined]);
+  // A lapsed window names itself too (assessment 2026-11-04 F05), so the step is compliance's task with a reason.
+  const lapsed = eligibility(await workflowWith({ validUntil: 10 }));
+  assert.deepEqual([lapsed.status, lapsed.blocker, lapsed.phase], ['pending', 'screening_expired', 'actionable']);
   assert.equal(eligibility(await workflowWith({ storage: false })).status, 'unknown');
 });
