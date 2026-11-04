@@ -30,7 +30,8 @@ export async function rightsRequest(route, body) {
   const response = await fetch(`/api/rights/${route}`, { ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
     headers: { 'content-type': 'application/json', ...(token ? { 'x-rights-session': token } : {}) } });
   const result = await response.json();
-  if (!response.ok) throw Object.assign(new Error(result.error ?? 'Role workspace unavailable'), { code: result.code });
+  // `details` carries what a conflict names (for example the saved operations that block this wallet's next send).
+  if (!response.ok) throw Object.assign(new Error(result.error ?? 'Role workspace unavailable'), { code: result.code, status: response.status, ...(result.details ? { details: result.details } : {}) });
   return result;
 }
 /** The business identities enrolled for the connected wallet, found by one lookup signature (no funds, no session). */

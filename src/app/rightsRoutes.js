@@ -24,7 +24,8 @@ export function createRightsRoutes({ env = process.env, getVersion = null, getMo
     const token = tokenFor(request);
     const match = /^materials\/([a-f0-9-]{36})(?:\/(download|review|publish|events|terms|financing-disclosure|financing-disclosure-preview|workflow|signing-request))?$/u.exec(path);
     if (!service.chain && env.AGENTBL_RIGHTS_CONFIG && (path === 'status' || path.startsWith('transaction-plans') || path.endsWith('/workflow') || path.endsWith('/signing-request'))) {
-      if (path !== 'status') await service.principal(token);
+      // Exit-only sessions reconcile and release their own saved operations, so they may load the chain for those routes.
+      if (path !== 'status') await service.principal(token, { allowExitOnly: path.startsWith('transaction-plans') });
       chainLoading ??= loadRightsChain(env.AGENTBL_RIGHTS_CONFIG).catch(() => { chainLoading = null; throw new HttpError(503, 'rights_chain_unavailable', 'W3 instance verification failed'); });
       service.chain = await chainLoading; service.readPool = service.chain.readPool;
     }
@@ -48,6 +49,7 @@ export function createRightsRoutes({ env = process.env, getVersion = null, getMo
     }
     else if (/^evidence\/[a-f0-9-]{36}\/review$/u.test(path) && method === 'POST') result = await service.requestEvidenceReview(token, path.split('/')[1], await body());
     else if (/^evidence-reviews\/[a-f0-9-]{36}\/resolve$/u.test(path) && method === 'POST') result = await service.resolveEvidenceReview(token, path.split('/')[1], await body());
+    else if (path === 'transaction-plans' && method === 'GET') result = await service.listPendingPlans(token);
     else if (/^transaction-plans\/[a-f0-9-]{36}$/u.test(path) && method === 'GET') result = await service.getPlan(token, path.split('/')[1]);
     else if (/^transaction-plans\/[a-f0-9-]{36}\/broadcast$/u.test(path) && method === 'POST') result = await service.checkpointPlan(token, path.split('/')[1], { readiness });
     else if (/^transaction-plans\/[a-f0-9-]{36}\/transaction$/u.test(path) && method === 'POST') result = await service.attachTransaction(token, path.split('/')[1], (await body())?.tx_hash);

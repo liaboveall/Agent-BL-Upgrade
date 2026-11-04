@@ -88,6 +88,35 @@ function supersede(plan, observed, ctx) {
     superseded_block_number: observed.block_number, superseded_block_hash: observed.block_hash, superseded_at: ctx.now });
   delete plan.released_at; ctx.dirty = true;
 }
+// What recovery shows of a saved wallet operation: enough to find, reconcile and release it, nothing of what it carried
+// (evidence, investor wallets, terms, material). Discovery lists only this, and an exit-only session reads only this, so a
+// revoked identity can settle its old operations without reading their arguments or regaining any role.
+const PLAN_SUMMARY = ['plan_id', 'status', 'operation', 'chain_id', 'pool', 'controller', 'control_version', 'nonce', 'tx_hash', 'prepared_at', 'checkpoint_at',
+  'block_number', 'block_hash', 'released_at', 'superseded_by_tx_hash', 'confirmation_pending', 'nonce_used_by_tx_hash'];
+const sameAddress = (a, b) => String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase();
+export function planSummary(plan, binding = null) {
+  const summary = Object.fromEntries(PLAN_SUMMARY.filter((key) => plan[key] !== undefined).map((key) => [key, plan[key]]));
+  // An operation prepared on an earlier instance of the same chain still holds the wallet's nonce; it is reconciled
+  // against its own saved transaction, never re-sent.
+  if (binding) summary.current_instance = String(plan.chain_id) === String(binding.chain_id) && sameAddress(plan.pool, binding.pool) && sameAddress(plan.controller, binding.controller);
+  return summary;
+}
+/**
+ * Unsettled plans of `principal`'s wallet split by who prepared them: the caller's own identity, and other identities
+ * enrolled for the same wallet (another organization, or a revoked enrollment). Every session proved the wallet when it
+ * opened and the wallet's signed identity lookup lists the same identities, so naming them tells the caller nothing new;
+ * each identity still reconciles its own plans in its own session.
+ */
+function plansHeld(state, plans, principal, project) {
+  const own = [], others = new Map();
+  for (const plan of plans) {
+    if (plan.subject_id === principal.subject_id) { own.push(project(plan)); continue; }
+    const subject = state.subjects[plan.subject_id];
+    const entry = others.get(plan.subject_id) ?? { subject_id: plan.subject_id, organization: subject?.organization ?? plan.organization ?? null, revoked: Boolean(subject?.revoked), plans: [] };
+    entry.plans.push(project(plan)); others.set(plan.subject_id, entry);
+  }
+  return { own, others: [...others.values()] };
+}
 // A wallet finds the identities enrolled for it by signing a lookup challenge, so nobody else learns which organizations
 // enrolled a public address. Lookups live in memory (a restart only means asking again), are shared per wallet while they
 // leave time to sign, and are spent only by the wallet's valid signature, like sign-in challenges.
@@ -164,8 +193,8 @@ export class RightsService {
     return result;
   }
   /** The caller's own saved plan, re-resolved from the current session. */
-  #ownedPlan(state, token, planId, now) {
-    const principal = this.#principal(state, token, now), plan = state.plans[planId];
+  #ownedPlan(state, token, planId, now, { allowExitOnly = false } = {}) {
+    const principal = this.#principal(state, token, now, { allowExitOnly }), plan = state.plans[planId];
     if (!plan || plan.subject_id !== principal.subject_id) throw new HttpError(404, 'rights_plan_not_found', 'Transaction plan not found');
     return { principal, plan };
   }
@@ -174,16 +203,16 @@ export class RightsService {
    * the one that was read. A slow or retrying RPC therefore delays only this request, never another
    * organization's identity or material reads, and the commit still re-checks session and plan state.
    */
-  async #planWithChain(token, planId, { check = () => {}, read, apply }) {
+  async #planWithChain(token, planId, { check = () => {}, read, apply, allowExitOnly = false }) {
     for (let attempt = 0; attempt < 3; attempt++) {
       const draft = await this.#transaction((state, ctx) => {
-        const owned = this.#ownedPlan(state, token, planId, ctx.now);
+        const owned = this.#ownedPlan(state, token, planId, ctx.now, { allowExitOnly });
         check(state, owned.plan, owned.principal, ctx);
         return { principal: owned.principal, plan: structuredClone(owned.plan) };
       });
       const observed = await read(draft.plan, draft.principal);
       const result = await this.#transaction((state, ctx) => {
-        const owned = this.#ownedPlan(state, token, planId, ctx.now);
+        const owned = this.#ownedPlan(state, token, planId, ctx.now, { allowExitOnly });
         if (canonicalJson(owned.plan) !== canonicalJson(draft.plan)) return STALE;
         check(state, owned.plan, owned.principal, ctx);
         return apply(state, owned.plan, observed, ctx, owned.principal);
@@ -624,8 +653,15 @@ export class RightsService {
             if (valid.length < 2 || state.publications[plan.material_id]?.revision !== material.revision) throw new HttpError(409, 'rights_approved_disclosure_required', 'Current independent reviews are required');
           }
         }
-        if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
-          && !SETTLED_PLAN.includes(other.status))) throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send');
+        const blocking = Object.values(state.plans).filter((other) => other.plan_id !== planId && other.from === plan.from && other.chain_id === plan.chain_id
+          && !SETTLED_PLAN.includes(other.status));
+        if (blocking.length) {
+          // Every blocker of this wallet is named: the caller's own by ID, another identity's (another organization or a
+          // revoked enrollment of the same wallet) by that identity, which reconciles it in its own session.
+          const held = plansHeld(state, blocking, principal, (other) => other.plan_id);
+          throw new HttpError(409, 'rights_plan_reconcile_required', 'Reconcile the saved wallet operation before another send',
+            { plan_ids: held.own, other_identities: held.others.map(({ plans, ...identity }) => ({ ...identity, plan_ids: plans })) });
+        }
         if (plan.status === 'released') { delete plan.released_at; plan.resent = (plan.resent ?? 0) + 1; }
         plan.status = 'broadcast_prepared'; plan.checkpoint_at = ctx.now; ctx.dirty = true; return plan;
       }
@@ -674,41 +710,70 @@ export class RightsService {
       state.plans[plan_id] = saved; ctx.dirty = true; return saved;
     });
   }
+  /**
+   * The saved operations that still hold this wallet's nonce on the configured chain, wherever they were prepared. The
+   * listing covers exactly what blocks this wallet's next send (checkpointPlan): an operation from an earlier instance on
+   * the same chain is listed with `current_instance: false` and reconciled against its own saved transaction. The caller's
+   * own operations come with what recovery needs; ones another identity of the same wallet prepared are named with that
+   * identity. Exit-only sessions see the same summaries: recovering an operation adds no risk.
+   */
+  async listPendingPlans(token) {
+    // Authenticate before RPC and again under the vault lock.
+    await this.principal(token, { allowExitOnly: true });
+    const binding = this.chain?.verify ? await verifyChain(this.chain) : null;
+    return this.#transaction((state, ctx) => {
+      const principal = this.#principal(state, token, ctx.now, { allowExitOnly: true });
+      const holding = Object.values(state.plans).filter((plan) => sameAddress(plan.from, principal.wallet) && !SETTLED_PLAN.includes(plan.status)
+        && (!binding || String(plan.chain_id) === String(binding.chain_id))).sort((a, b) => a.prepared_at - b.prepared_at);
+      const held = plansHeld(state, holding, principal, (plan) => planSummary(plan, binding));
+      return { chain_id: binding ? String(binding.chain_id) : null, plans: held.own, other_identities: held.others };
+    });
+  }
+  /** A plan is reconciled on its own network only: another chain's nonces say nothing about it. */
+  #sameNetwork(plan) {
+    if (this.chain?.chainId != null && String(plan.chain_id) !== String(this.chain.chainId)) {
+      throw new HttpError(409, 'rights_plan_other_network', 'This operation belongs to another network; reconcile it where that network is configured');
+    }
+  }
   async getPlan(token, planId) {
-    if (!this.chain) return this.#transaction((state, ctx) => this.#ownedPlan(state, token, planId, ctx.now).plan);
+    const view = (plan, principal) => principal.exit_only ? planSummary(plan) : plan;
+    if (!this.chain) return this.#transaction((state, ctx) => { const owned = this.#ownedPlan(state, token, planId, ctx.now, { allowExitOnly: true }); return view(owned.plan, owned.principal); });
     return this.#planWithChain(token, planId, {
+      allowExitOnly: true,
       read: async (plan) => {
         // A draft can still have been sent by a client that skips the checkpoint, so it is looked up like any other.
         if (plan.status === 'abandoned') return null;
+        this.#sameNetwork(plan);
         // Superseded holds only while the transaction that took the nonce is still canonical and deep.
         if (plan.status === 'superseded') return { superseding: await this.chain.recoverTransaction({ ...plan, tx_hash: undefined }) };
         return plan.tx_hash ? this.chain.verifyTransaction(plan, plan.tx_hash) : this.chain.recoverTransaction(plan);
       },
-      apply: (state, plan, observed, ctx) => {
-        if (observed && 'superseding' in observed) {
-          const still = observed.superseding;
-          if (still?.status === 'nonce_consumed_by_other_transaction' && still.settled && still.observed_tx_hash?.toLowerCase() === plan.superseded_by_tx_hash?.toLowerCase()) return plan;
-          plan.supersede_history = [...plan.supersede_history ?? [], { by_tx_hash: plan.superseded_by_tx_hash, block_hash: plan.superseded_block_hash, reopened_at: ctx.now }];
-          plan.status = plan.superseded_from ?? 'broadcast_prepared';
-          for (const key of ['superseded_by_tx_hash', 'superseded_block_hash', 'superseded_block_number', 'superseded_from', 'superseded_at']) delete plan[key];
-          ctx.dirty = true; return plan;
-        }
-        if (observed?.status === 'nonce_consumed_by_other_transaction') {
-          // Another transaction took the nonce: final once canonical and deep, until then the plan keeps its status.
-          if (!observed.settled) return { ...plan, nonce_used_by_tx_hash: observed.observed_tx_hash, confirmation_pending: true };
-          supersede(plan, observed, ctx); return plan;
-        }
-        if (observed?.tx_hash && Object.values(state.plans).some((other) => other.plan_id !== planId && other.tx_hash?.toLowerCase() === observed.tx_hash.toLowerCase())) {
-          throw new HttpError(409, 'rights_transaction_reused', 'Transaction is already bound to another plan');
-        }
-        if (observed?.status === 'reconciling' && plan.block_hash) {
-          plan.receipt_history ??= [];
-          plan.receipt_history.push({ tx_hash: plan.tx_hash, block_number: plan.block_number, block_hash: plan.block_hash, status: plan.status, invalidated_at: ctx.now });
-        }
-        if (observed) { Object.assign(plan, observed); delete plan.released_at; ctx.dirty = true; }
-        return plan;
-      }
+      apply: (state, plan, observed, ctx, principal) => view(this.#observePlan(state, plan, observed, ctx, planId), principal)
     });
+  }
+  #observePlan(state, plan, observed, ctx, planId) {
+    if (observed && 'superseding' in observed) {
+      const still = observed.superseding;
+      if (still?.status === 'nonce_consumed_by_other_transaction' && still.settled && still.observed_tx_hash?.toLowerCase() === plan.superseded_by_tx_hash?.toLowerCase()) return plan;
+      plan.supersede_history = [...plan.supersede_history ?? [], { by_tx_hash: plan.superseded_by_tx_hash, block_hash: plan.superseded_block_hash, reopened_at: ctx.now }];
+      plan.status = plan.superseded_from ?? 'broadcast_prepared';
+      for (const key of ['superseded_by_tx_hash', 'superseded_block_hash', 'superseded_block_number', 'superseded_from', 'superseded_at']) delete plan[key];
+      ctx.dirty = true; return plan;
+    }
+    if (observed?.status === 'nonce_consumed_by_other_transaction') {
+      // Another transaction took the nonce: final once canonical and deep, until then the plan keeps its status.
+      if (!observed.settled) return { ...plan, nonce_used_by_tx_hash: observed.observed_tx_hash, confirmation_pending: true };
+      supersede(plan, observed, ctx); return plan;
+    }
+    if (observed?.tx_hash && Object.values(state.plans).some((other) => other.plan_id !== planId && other.tx_hash?.toLowerCase() === observed.tx_hash.toLowerCase())) {
+      throw new HttpError(409, 'rights_transaction_reused', 'Transaction is already bound to another plan');
+    }
+    if (observed?.status === 'reconciling' && plan.block_hash) {
+      plan.receipt_history ??= [];
+      plan.receipt_history.push({ tx_hash: plan.tx_hash, block_number: plan.block_number, block_hash: plan.block_hash, status: plan.status, invalidated_at: ctx.now });
+    }
+    if (observed) { Object.assign(plan, observed); delete plan.released_at; ctx.dirty = true; }
+    return plan;
   }
   /**
    * The wallet reported that it did not send a checkpointed operation. Nothing here trusts that report alone: a
@@ -719,31 +784,37 @@ export class RightsService {
   async releasePlan(token, planId) {
     if (!this.chain) throw new HttpError(409, 'rights_chain_not_configured', 'No verified W3 protocol instance is configured');
     return this.#planWithChain(token, planId, {
-      read: (plan) => plan.status === 'draft' || !SETTLED_PLAN.includes(plan.status) ? this.chain.releaseObservation(plan) : null,
-      apply: (state, plan, observed, ctx) => {
-        if (plan.status !== 'draft' && SETTLED_PLAN.includes(plan.status)) return plan;
-        // A draft whose nonce is unused, or was taken by another transaction, can be dropped; one that was sent is bound.
-        if (plan.status === 'draft' && ['unused', 'other'].includes(observed.state)) { plan.status = 'abandoned'; plan.abandoned_at = ctx.now; ctx.dirty = true; return plan; }
-        if (observed.state === 'pending') throw new HttpError(409, 'rights_transaction_pending', 'A wallet transaction with this nonce is still pending. Speed it up or cancel it in the wallet, then reconcile');
-        if (observed.state === 'own') { Object.assign(plan, observed.observed); ctx.dirty = true; return plan; }
-        if (observed.state === 'other') {
-          if (!observed.settled) return { ...plan, nonce_used_by_tx_hash: observed.observed_tx_hash, confirmation_pending: true };
-          supersede(plan, observed, ctx); return plan;
-        }
-        plan.status = 'released'; plan.released_at = ctx.now; ctx.dirty = true; return plan;
+      allowExitOnly: true,
+      read: (plan) => { this.#sameNetwork(plan); return plan.status === 'draft' || !SETTLED_PLAN.includes(plan.status) ? this.chain.releaseObservation(plan) : null; },
+      apply: (state, plan, observed, ctx, principal) => {
+        const result = this.#release(plan, observed, ctx);
+        return principal.exit_only ? planSummary(result) : result;
       }
     });
+  }
+  #release(plan, observed, ctx) {
+    if (plan.status !== 'draft' && SETTLED_PLAN.includes(plan.status)) return plan;
+    // A draft whose nonce is unused, or was taken by another transaction, can be dropped; one that was sent is bound.
+    if (plan.status === 'draft' && ['unused', 'other'].includes(observed.state)) { plan.status = 'abandoned'; plan.abandoned_at = ctx.now; ctx.dirty = true; return plan; }
+    if (observed.state === 'pending') throw new HttpError(409, 'rights_transaction_pending', 'A wallet transaction with this nonce is still pending. Speed it up or cancel it in the wallet, then reconcile');
+    if (observed.state === 'own') { Object.assign(plan, observed.observed); ctx.dirty = true; return plan; }
+    if (observed.state === 'other') {
+      if (!observed.settled) return { ...plan, nonce_used_by_tx_hash: observed.observed_tx_hash, confirmation_pending: true };
+      supersede(plan, observed, ctx); return plan;
+    }
+    plan.status = 'released'; plan.released_at = ctx.now; ctx.dirty = true; return plan;
   }
   async attachTransaction(token, planId, txHash) {
     if (!/^0x[a-fA-F0-9]{64}$/u.test(txHash ?? '')) throw new HttpError(400, 'rights_tx_hash_invalid', 'A transaction hash is required');
     if (!this.chain) throw new HttpError(409, 'rights_chain_not_configured', 'No verified W3 protocol instance is configured');
     return this.#planWithChain(token, planId, {
+      allowExitOnly: true,
       check: (state, plan) => {
         if (plan.tx_hash && plan.tx_hash.toLowerCase() !== txHash.toLowerCase()) throw new HttpError(409, 'rights_plan_already_bound', 'Plan already has a different transaction; reconcile it first');
         if (Object.values(state.plans).some((other) => other.plan_id !== planId && other.tx_hash?.toLowerCase() === txHash.toLowerCase())) throw new HttpError(409, 'rights_transaction_reused', 'Transaction is already bound to another plan');
       },
-      read: (plan) => this.chain.verifyTransaction(plan, txHash),
-      apply: (state, plan, observed, ctx) => { Object.assign(plan, observed); ctx.dirty = true; return plan; }
+      read: (plan) => { this.#sameNetwork(plan); return this.chain.verifyTransaction(plan, txHash); },
+      apply: (state, plan, observed, ctx, principal) => { Object.assign(plan, observed); ctx.dirty = true; return principal.exit_only ? planSummary(plan) : plan; }
     });
   }
 }

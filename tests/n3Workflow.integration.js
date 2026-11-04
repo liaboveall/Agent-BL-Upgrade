@@ -239,4 +239,25 @@ describe('N3 actual EVM, authenticated HTTP, enrolled roles and wallet adapters'
     // slot and its COMPLIANCE role, read once per page whatever its size.
     assert.ok(batched.read_metrics.calls < 14 && before.read_metrics.calls > 80, `${batched.read_metrics.calls} vs ${before.read_metrics.calls} reads`);
   });
+  it('investor without private materials exits an empty pool; terminal tasks stop and pending plans are discoverable', async () => {
+    const p = await create();
+    assert.deepEqual((await request('rights/materials', undefined, sessions.second)).materials, []);
+    const saved = await request('rights/transaction-plans', { operation: 'refresh_screening', valid_until: String(await c.now() + 70000n), evidence_hash: c.fresh() }, sessions.compliance);
+    await request('rights/transaction-plans/' + saved.plan_id + '/broadcast', {}, sessions.compliance);
+    const challenge = await service.createChallenge(sessions.compliance.subject.subject_id);
+    const fresh = await service.openSession({ challenge_id: challenge.challenge_id, signature: await c.compliance.signTypedData(challenge.domain, challenge.types, challenge.message) });
+    const found = await request('rights/transaction-plans', undefined, fresh);
+    assert.deepEqual(found.plans.map(plan => plan.plan_id), [saved.plan_id]);
+    assert.deepEqual((await request('rights/transaction-plans', undefined, sessions.second)).plans, []);
+    await request('rights/transaction-plans/' + found.plans[0].plan_id + '/release', {}, fresh);
+    assert.deepEqual((await request('rights/transaction-plans', undefined, fresh)).plans, []);
+    await c.advance(BigInt(p.terms.subscribeUntil) + 1n);
+    await execute(sessions.second, { operation: 'start_exit', pool_id: p.poolId });
+    const flow = await request('rights/materials/' + p.material_id + '/workflow', undefined, sessions.holder);
+    assert.equal(flow.state, 'Cancelled');
+    for (const id of ['eligibility', 'fund', 'draw', 'repay']) assert.equal(flow.steps.find(step => step.id === id).status, 'not_applicable');
+    assert.equal(flow.steps.find(step => step.id === 'exit').status, 'complete');
+    assert.equal(await c.registry.pledgedTo(p.terms.eblId), ethers.ZeroAddress);
+  });
+
 });
