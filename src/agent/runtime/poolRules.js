@@ -1,9 +1,5 @@
-// Legal offering-state transitions for each agent action. One table, used by the Demo executor (to
-// change the offchain pool), by the chain executor (to refuse a transaction that would only revert)
-// and by the owner-CLI plan builder, so a Demo run and a Live run agree on what is allowed.
-//
-// The rules mirror hardhat/contracts/RWAOfferingPool.sol. If a rule here is wrong the contract is
-// still the final authority: the chain executor also runs a staticCall before it sends anything.
+// Version-aware transition prechecks for research simulations and chain plans.
+// RWAOfferingPoolV5 and RightsController remain authoritative; prechecks do not replace staticCall.
 
 /** RWAOfferingPool.OfferingState, in the contract's enum order (index = on-chain value). */
 export const CHAIN_STATE_NAMES = Object.freeze([
@@ -43,6 +39,7 @@ export function planTransition(action, pool) {
     case 'OPEN_WITH_WARNING':
       return isActive(from) ? ok(from, false) : no('the offering is not active');
     case 'REPRICE':
+      if (pool.controlVersion >= 4) return no('signed v4 terms are immutable; prepare a new offering', 'immutable_terms');
       return isActive(from) ? ok(from, false) : no('the offering is not active');
     case 'PAUSE':
       return isActive(from) ? ok('Paused') : no('only an active offering can be paused');
@@ -58,6 +55,7 @@ export function planTransition(action, pool) {
       return ['Open', 'Repriced', 'Paused', 'Frozen', 'Liquidation'].includes(from)
         ? ok('Cancelled') : no('only an unsubscribed open, repriced, paused, frozen or liquidating offering can be cancelled');
     case 'MARK_IN_TRANSIT':
+      if (pool.controlVersion >= 4 && (from !== 'Funded' || pool.fundingFinalized !== true)) return no('funding must be finalized before departure', 'funding_not_finalized');
       return from === 'Funded' || from === 'Subscribed' ? ok('InTransit') : no('the offering is not funded');
     case 'RECORD_PAYMENT':
       if (!isSettleable(from)) return no('the offering is not in a settleable state');

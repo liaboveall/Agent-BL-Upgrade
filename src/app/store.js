@@ -31,6 +31,10 @@ export function createPool(poolId, caseData, quote, options = {}) {
     ?? 'Open';
   pools.set(poolId, {
     poolId,
+    // Market scenarios study hypothetical prices; they are separate from signed controlled offerings.
+    controlVersion: options.controlVersion ?? null,
+    simulationPolicy: options.controlVersion ? 'controlled_terms' : 'hypothetical_repricing',
+    fundingFinalized: false,
     caseData,
     quote,
     status,
@@ -87,6 +91,7 @@ export function subscribeToPool(walletAddress, poolId, amountUsd, options = {}) 
 
   if (pool.subscribedShares >= pool.tokenSupply) {
     pool.status = 'Funded';
+    pool.fundingFinalized = true;
   }
 
   // A mock subscription has no transaction. The reference is a deterministic, clearly

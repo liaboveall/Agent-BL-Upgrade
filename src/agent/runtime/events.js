@@ -23,7 +23,9 @@ export const SOURCE_MODES = Object.freeze(['live', 'fixture', 'demo']);
 const HASH_RE = /^0x[0-9a-f]{64}$/u;
 const isoDate = z.string().refine((value) => Number.isFinite(Date.parse(value)), 'must be an ISO date-time');
 const proof = z.string().min(1).max(300);
-const repayment = z.union([z.number().positive().finite(), z.string().max(85).regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,6})?$/u)]);
+// One rule for both spellings: a positive amount with at most six decimals. "0", "0.0" and "0.000000" are zero, not a payment.
+const repayment = z.union([z.number().positive().finite(),
+  z.string().max(85).regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,6})?$/u).refine((value) => /[1-9]/u.test(value), 'must be greater than zero')]);
 const looseData = (shape = {}) => z.looseObject(shape);
 
 // Per-type payloads. Unknown extra keys are kept (loose) but the keys the pipelines rely on are checked.

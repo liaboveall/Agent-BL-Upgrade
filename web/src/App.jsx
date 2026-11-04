@@ -47,6 +47,7 @@ export function App() {
   const lang = useLang();
   const view = useApp((state) => state.view);
   const busy = useApp((state) => state.busy);
+  const demo = useApp((state) => state.demoMode);
 
   useEffect(() => {
     document.title = t('document_title');
@@ -61,6 +62,9 @@ export function App() {
         <div className={`busy-bar${busy ? ' is-busy' : ''}`} aria-hidden="true" />
       </div>
       <main id="main-content" className="page" tabIndex={-1} aria-busy={busy || undefined}>
+        {demo && ['agent', 'market', 'mint'].includes(view) && <p className="small muted" role="note">{lang === 'zh'
+          ? '研究情景模拟：Agent 可调整假设报价。v4 融资的已签条款价格固定，变价需要新条款与新发行；模拟发运不证明链上募集已完成。'
+          : 'Research scenarios let the Agent change hypothetical quotes. Signed v4 prices are fixed: a price change requires new terms and a new offering. Simulated departure does not establish finalized on-chain funding.'}</p>}
         {VIEWS.map((name) => {
           const Page = PAGES[name];
           return (

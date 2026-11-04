@@ -21,6 +21,8 @@ export function demoReference(decisionId) {
 
 function stateOf(pool) {
   return {
+    controlVersion: pool.controlVersion ?? (pool.simulationPolicy === 'hypothetical_repricing' ? 0 : 4),
+    fundingFinalized: pool.fundingFinalized === true,
     // The offchain store keeps `Open` until the pool is full; the contract reports `Subscribed` as
     // soon as anyone has subscribed, and the transition rules are written against the contract.
     state: pool.status === 'Open' && pool.subscribedUsd > 0 ? 'Subscribed' : pool.status,
@@ -55,7 +57,7 @@ export class SimExecutor {
     if (earlier) return { ...structuredClone(earlier), duplicate: true };
 
     const poolId = cmd.pool_id ?? cmd.case_id;
-    let pool = this.store.pools.get(poolId);
+    let pool = this.store.pools.get(poolId), created = false;
     const at = this.now().toISOString();
     const params = cmd.params ?? {};
     if (['OPEN', 'OPEN_WITH_WARNING', 'REPRICE'].includes(cmd.action)
@@ -64,7 +66,9 @@ export class SimExecutor {
     }
 
     if (!pool && (cmd.action === 'OPEN' || cmd.action === 'OPEN_WITH_WARNING') && params.case_data && params.quote) {
-      pool = createPool(poolId, params.case_data, params.quote, { createdAt: at, store: this.store });
+      // Built aside and stored only once the action succeeds, so a refused OPEN leaves no pool behind.
+      pool = createPool(poolId, params.case_data, params.quote, { createdAt: at, store: { pools: new Map() } });
+      created = true;
     }
     if (!pool && (cmd.action === 'HOLD_FOR_REVIEW' || cmd.action === 'REJECT')) {
       // A case that was held or rejected before any pool existed: nothing to change, the record is the result.
@@ -83,62 +87,68 @@ export class SimExecutor {
     if (!pool) throw new SimExecutionError('pool_not_found', `No offchain pool ${String(poolId)} to apply ${cmd.action} to`);
 
     const view = stateOf(pool);
+    if (view.controlVersion >= 4 && ['OPEN', 'OPEN_WITH_WARNING'].includes(cmd.action) && params.quote
+        && ['final_issue_price_usd', 'recommended_token_supply', 'target_redemption_value_usd'].some(field => params.quote[field] !== pool.quote?.[field])) {
+      throw new SimExecutionError('immutable_terms', 'Opening an existing controlled offering cannot replace its signed price, supply or redemption target');
+    }
     const before = { state: view.state, issue_price_usd: pool.quote?.final_issue_price_usd ?? null };
     const plan = planTransition(cmd.action, view);
     if (!plan.ok) throw new SimExecutionError(plan.code, plan.message);
 
+    // Every change is computed and checked first and applied at once: a refused action leaves the pool exactly as it
+    // was, so a corrected retry is judged on the real state, not on half of the failed attempt.
+    const changes = {};
     switch (cmd.action) {
       case 'OPEN':
       case 'OPEN_WITH_WARNING':
-        if (params.quote) { pool.quote = params.quote; pool.quoteUpdatedAt = at; }
+        if (params.quote) Object.assign(changes, { quote: params.quote, quoteUpdatedAt: at });
         break;
       case 'REPRICE':
         if (!params.quote) throw new SimExecutionError('quote_required', 'REPRICE needs the re-priced quote');
-        pool.quote = params.quote;
-        pool.quoteUpdatedAt = at;
-        pool.quoteVersion = (pool.quoteVersion ?? 1) + 1;
+        Object.assign(changes, { quote: params.quote, quoteUpdatedAt: at, quoteVersion: (pool.quoteVersion ?? 1) + 1 });
         break;
       case 'PAUSE':
-        pool.statusBeforePause = pool.status;
+        changes.statusBeforePause = pool.status;
         break;
-      case 'RECORD_PAYMENT':
-        pool.settlement = {
-          ...pool.settlement,
-          payment_proof: String(params.payment_proof ?? '').slice(0, PROOF_MAX),
-          repayment_amount: Number(params.repayment_amount),
-          payment_recorded_at: at
-        };
-        if (!pool.settlement.payment_proof || !(pool.settlement.repayment_amount > 0)) {
+      case 'RECORD_PAYMENT': {
+        const proof = String(params.payment_proof ?? '').slice(0, PROOF_MAX), amount = Number(params.repayment_amount);
+        if (!proof || !Number.isFinite(amount) || !(amount > 0)) {
           throw new SimExecutionError('proof_required', 'RECORD_PAYMENT needs payment_proof and a positive repayment_amount');
         }
+        changes.settlement = { ...pool.settlement, payment_proof: proof, repayment_amount: amount, payment_recorded_at: at };
         break;
-      case 'RECORD_ARRIVAL':
-        pool.settlement = {
-          ...pool.settlement,
-          arrival_proof: String(params.arrival_proof ?? '').slice(0, PROOF_MAX),
-          arrival_recorded_at: at
-        };
-        if (!pool.settlement.arrival_proof) throw new SimExecutionError('proof_required', 'RECORD_ARRIVAL needs arrival_proof');
+      }
+      case 'RECORD_ARRIVAL': {
+        const proof = String(params.arrival_proof ?? '').slice(0, PROOF_MAX);
+        if (!proof) throw new SimExecutionError('proof_required', 'RECORD_ARRIVAL needs arrival_proof');
+        changes.settlement = { ...pool.settlement, arrival_proof: proof, arrival_recorded_at: at };
         break;
+      }
       case 'SETTLE':
-        pool.settlement = { ...pool.settlement, settled_at: at };
+        changes.settlement = { ...pool.settlement, settled_at: at };
         break;
       case 'MARK_IN_TRANSIT':
-        pool.departure_proof = String(params.departure_proof ?? '').slice(0, PROOF_MAX) || null;
+        changes.departure_proof = String(params.departure_proof ?? '').slice(0, PROOF_MAX) || null;
         break;
       case 'WARNING':
-        pool.warnings = [...(pool.warnings ?? []), { at, decision_id: cmd.decision_id, warning: params.warning ?? 'WARNING' }].slice(-20);
+        changes.warnings = [...(pool.warnings ?? []), { at, decision_id: cmd.decision_id, warning: params.warning ?? 'WARNING' }].slice(-20);
         break;
       default:
         break;
     }
-    if (plan.changesState) pool.status = plan.to;
+    if (plan.changesState) changes.status = plan.to;
     // From here the agent's decision, not a later market re-quote, owns this pool's state and price.
-    if (plan.changesState || ['OPEN', 'OPEN_WITH_WARNING', 'REPRICE'].includes(cmd.action)) pool.statusSource = 'agent';
+    if (plan.changesState || ['OPEN', 'OPEN_WITH_WARNING', 'REPRICE'].includes(cmd.action)) changes.statusSource = 'agent';
+    Object.assign(pool, changes);
+    if (created) this.store.pools.set(poolId, pool);
 
     const result = {
       success: true,
       mode: 'demo',
+      simulation_policy: pool.simulationPolicy ?? 'controlled_terms',
+      note: pool.simulationPolicy === 'hypothetical_repricing'
+        ? 'Hypothetical research scenario. Repricing and simulated lifecycle changes do not represent executable v4 instructions; signed v4 terms require a new offering to change price.'
+        : 'Controlled terms simulation; contract preflight and wallet approval are still required for Live execution.',
       reference: demoReference(cmd.decision_id),
       signer_role: null,
       attempts: 1,

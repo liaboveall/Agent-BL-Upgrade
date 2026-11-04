@@ -997,6 +997,7 @@ export class AgentService {
   #executionRecord(result, attempts, started) {
     return {
       mode: result.mode,
+      ...(result.simulation_policy ? { simulation_policy: result.simulation_policy } : {}),
       signer_role: result.signer_role ?? null,
       reference: result.reference ?? null,
       ...(result.tx_hash ? {
