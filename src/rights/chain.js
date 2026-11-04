@@ -1,10 +1,11 @@
 import path from 'node:path';
-import { Contract, Interface, JsonRpcProvider, FetchRequest, id } from 'ethers';
+import { AbiCoder, Contract, Interface, JsonRpcProvider, FetchRequest, id } from 'ethers';
 import { readJson } from '../lib/jsonStore.js';
 import { HttpError } from '../app/http.js';
 import { RpcReadPool } from './reads.js';
 import { CONTROL_VERSION } from './typedData.js';
 import { findNonceTransaction } from '../chain/nonceLookup.js';
+import { RIGHTS_OPERATIONS, rightsCallMatches } from './operations.js';
 
 export const RIGHTS_CONTROLLER_ABI = [
   'function governance() view returns (address)', 'function registry() view returns (address)', 'function token() view returns (address)',
@@ -143,38 +144,46 @@ export class RightsChainService {
     const binding = await this.verify();
     requireThat(!binding.exit_only || LEGACY_OPERATIONS[binding.control_version].includes(input?.operation), 'rights_legacy_exit_only');
     requireThat(input && Object.keys(input).every((key) => ['operation', 'pool_id', 'terms_hash', 'quote_version', 'valid_until', 'amount_atomic', 'evidence_hash', 'distribution_hash', 'payload', 'material_id', 'reviewed_disclosure_hash'].includes(key)), 'rights_plan_invalid');
+    // Who may prepare each operation and its arguments; where it is sent and which function it calls come from the table
+    // the browser checks too (src/rights/operations.js). Lifecycle arguments are the inner pool call's.
     const operations = {
-      register_title: { roles: ['issuer'], contract: this.registry, method: 'registerTitle', args: () => [input.payload?.issuance, input.payload?.signature] },
-      pledge: { roles: ['holder'], contract: this.registry, method: 'pledge', args: () => [uint(input.payload?.ebl_id), binding.pool, input.terms_hash, uint(input.valid_until), input.payload?.signature ?? '0x'] },
-      create_offering: { roles: ['issuer'], method: 'createControlledOffering', args: () => [input.payload?.terms, input.payload?.valuation, input.payload?.valuer, input.payload?.signature] },
-      repay: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator'], contract: this.pool, method: 'repay', args: () => [uint(input.pool_id), uint(input.amount_atomic)] },
-      set_eligibility: { roles: ['compliance'], method: 'setEligibility', args: () => [input.payload?.wallet, input.payload?.subject_hash, input.evidence_hash, uint(input.valid_until)] },
-      refresh_screening: { roles: ['compliance'], method: 'refreshScreening', args: () => [uint(input.valid_until), input.evidence_hash] },
-      mark_in_transit: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('markInTransit', [uint(input.pool_id), input.evidence_hash])] },
-      mark_default: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('markDefault', [uint(input.pool_id)])] },
-      record_arrival: { roles: ['attestor'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('recordCargoArrival', [uint(input.pool_id), input.evidence_hash])] },
-      record_payment: { roles: ['attestor'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('recordImporterPayment', [uint(input.pool_id), input.evidence_hash, uint(input.amount_atomic)])] },
-      settle: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('settle', [uint(input.pool_id), uint(input.amount_atomic)])] },
-      acknowledge_terms: { roles: ['investor'], method: 'acknowledgeTerms', args: () => [uint(input.pool_id), input.terms_hash, uint(input.quote_version), uint(input.valid_until)] },
-      disburse: { roles: ['issuer', 'custodian', 'operator'], method: 'disburse', args: () => [uint(input.pool_id), uint(input.amount_atomic), input.evidence_hash] },
-      notify_resolution: { roles: ['custodian', 'disposer'], method: 'notifyResolution', args: () => [uint(input.pool_id), input.evidence_hash, input.distribution_hash, uint(input.amount_atomic)] },
-      review_resolution: { roles: ['reviewer'], method: 'reviewResolution', args: () => [uint(input.pool_id), input.evidence_hash] },
-      finalize_resolution: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'finalizeResolution', args: () => [uint(input.pool_id)] },
-      start_exit: { roles: ['custodian', 'holder', 'investor', 'reviewer'], method: 'startExit', args: () => [uint(input.pool_id)] },
-      dispute_resolution: { roles: ['holder', 'investor', 'reviewer'], method: 'disputeResolution', args: () => [uint(input.pool_id), input.evidence_hash] },
-      retry_collateral_release: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator', 'reviewer'], contract: this.pool, method: 'retryCollateralRelease', args: () => [uint(input.pool_id)] },
+      register_title: { roles: ['issuer'], args: () => [input.payload?.issuance, input.payload?.signature] },
+      pledge: { roles: ['holder'], args: () => [uint(input.payload?.ebl_id), binding.pool, input.terms_hash, uint(input.valid_until), input.payload?.signature ?? '0x'] },
+      create_offering: { roles: ['issuer'], args: () => [input.payload?.terms, input.payload?.valuation, input.payload?.valuer, input.payload?.signature] },
+      repay: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator'], args: () => [uint(input.pool_id), uint(input.amount_atomic)] },
+      set_eligibility: { roles: ['compliance'], args: () => [input.payload?.wallet, input.payload?.subject_hash, input.evidence_hash, uint(input.valid_until)] },
+      refresh_screening: { roles: ['compliance'], args: () => [uint(input.valid_until), input.evidence_hash] },
+      mark_in_transit: { roles: ['operator', 'custodian'], args: () => [uint(input.pool_id), input.evidence_hash] },
+      mark_default: { roles: ['operator', 'custodian'], args: () => [uint(input.pool_id)] },
+      record_arrival: { roles: ['attestor'], args: () => [uint(input.pool_id), input.evidence_hash] },
+      record_payment: { roles: ['attestor'], args: () => [uint(input.pool_id), input.evidence_hash, uint(input.amount_atomic)] },
+      settle: { roles: ['operator', 'custodian'], args: () => [uint(input.pool_id), uint(input.amount_atomic)] },
+      acknowledge_terms: { roles: ['investor'], args: () => [uint(input.pool_id), input.terms_hash, uint(input.quote_version), uint(input.valid_until)] },
+      disburse: { roles: ['issuer', 'custodian', 'operator'], args: () => [uint(input.pool_id), uint(input.amount_atomic), input.evidence_hash] },
+      notify_resolution: { roles: ['custodian', 'disposer'], args: () => [uint(input.pool_id), input.evidence_hash, input.distribution_hash, uint(input.amount_atomic)] },
+      review_resolution: { roles: ['reviewer'], args: () => [uint(input.pool_id), input.evidence_hash] },
+      finalize_resolution: { roles: ['custodian', 'holder', 'investor', 'reviewer'], args: () => [uint(input.pool_id)] },
+      start_exit: { roles: ['custodian', 'holder', 'investor', 'reviewer'], args: () => [uint(input.pool_id)] },
+      dispute_resolution: { roles: ['holder', 'investor', 'reviewer'], args: () => [uint(input.pool_id), input.evidence_hash] },
+      retry_collateral_release: { roles: ['holder', 'issuer', 'investor', 'custodian', 'operator', 'reviewer'], args: () => [uint(input.pool_id)] },
       // Anyone may close a raise that reached its minimum once subscriptions end; only then can the draw happen.
-      finalize_funding: { roles: ['operator', 'custodian', 'issuer', 'holder', 'investor'], contract: this.pool, method: 'finalizeFunding', args: () => [uint(input.pool_id)] },
+      finalize_funding: { roles: ['operator', 'custodian', 'issuer', 'holder', 'investor'], args: () => [uint(input.pool_id)] },
       // An offering nobody subscribed is cancelled by the operator, which releases the pledged title.
-      cancel_offering: { roles: ['operator', 'custodian'], method: 'executeLifecycle', args: () => [this.pool.interface.encodeFunctionData('cancelOffering', [uint(input.pool_id), input.evidence_hash])] }
+      cancel_offering: { roles: ['operator', 'custodian'], args: () => [uint(input.pool_id), input.evidence_hash] }
     };
-    const operation = operations[input.operation];
-    if (!operation) throw new HttpError(400, 'rights_plan_operation_unknown', 'Unsupported rights transaction plan');
+    const operation = Object.hasOwn(operations, input.operation) ? operations[input.operation] : null;
+    const spec = operation && RIGHTS_OPERATIONS[input.operation];
+    if (!operation || !spec) throw new HttpError(400, 'rights_plan_operation_unknown', 'Unsupported rights transaction plan');
     if (!principal.roles.some((role) => operation.roles.includes(role))) throw new HttpError(403, 'rights_role_required', 'Business role does not allow this transaction');
-    const target = operation.contract ?? this.controller;
+    const target = { controller: this.controller, registry: this.registry, pool: this.pool }[spec.target];
     let data;
-    try { data = target.interface.encodeFunctionData(operation.method, operation.args()); }
-    catch (error) { if (error instanceof HttpError) throw error; throw new HttpError(400, 'rights_plan_invalid', 'Transaction arguments are invalid'); }
+    try {
+      data = spec.lifecycle
+        ? target.interface.encodeFunctionData(spec.method, [this.pool.interface.encodeFunctionData(spec.lifecycle.method, operation.args())])
+        : target.interface.encodeFunctionData(spec.method, operation.args());
+    } catch (error) { if (error instanceof HttpError) throw error; throw new HttpError(400, 'rights_plan_invalid', 'Transaction arguments are invalid'); }
+    // The instance's ABI must produce exactly the call the browser will accept; a drifted ABI fails here, not in the wallet.
+    requireThat(rightsCallMatches(input.operation, data, (hex) => AbiCoder.defaultAbiCoder().decode(['bytes'], hex)[0]), 'rights_protocol_mismatch');
     const transaction = { from: principal.wallet, to: await target.getAddress(), data };
     try { await this.provider.call(transaction); }
     catch { throw new HttpError(409, 'rights_preflight_failed', 'Current chain state or on-chain permissions reject this plan'); }
