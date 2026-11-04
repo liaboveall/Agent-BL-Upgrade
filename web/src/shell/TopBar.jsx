@@ -30,7 +30,8 @@ export function TopBar() {
               role="tab"
               aria-selected={view === name}
               aria-controls={`view-${name}`}
-              className={`nav-tab${view === name ? ' is-active' : ''}`}
+              className={`nav-tab${view === name ? ' is-active' : ''}${name === 'discover' ? ' is-research' : ''}`}
+              title={name === 'discover' ? t('nav_discover_hint') : undefined}
               onClick={() => setView(name)}
               {...choiceProps(name, index)}
             >

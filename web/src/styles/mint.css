@@ -131,3 +131,24 @@
 .mint-start-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .case-load-error { display: grid; gap: var(--s-2); justify-items: start; margin-bottom: var(--s-5); }
 .mint-panel.is-unavailable { padding: var(--s-5); }
+/* The order of work on the page: documents, value and risk, quote, then formal terms on the financing page. */
+.mint-steps { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 var(--s-4); padding: 0; list-style: none; counter-reset: none; }
+.mint-steps button { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--text-2); font-size: var(--fs-12); font-weight: 600; cursor: pointer; }
+.mint-steps button:hover:not(:disabled) { border-color: var(--accent-line); color: var(--accent); }
+.mint-steps button:disabled { cursor: default; opacity: .6; }
+.mint-step-n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-variant-numeric: tabular-nums; }
+/* On a phone, the full pricing basis and the preferences fold behind one summary each. */
+.mint-fold { border: 1px solid var(--card-edge); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
+.mint-fold > summary { min-height: 48px; padding: 14px 16px; color: var(--text); font-size: var(--fs-14); font-weight: 600; cursor: pointer; }
+.mint-fold[open] > summary { border-bottom: 1px solid var(--line); }
+.mint-fold > .card, .mint-fold > .mint-secondary > .card { border: 0; box-shadow: none; }
+.mint-fold-secondary { margin-top: var(--s-5); }
+.mint-fold-secondary > .mint-secondary { margin-top: 0; }
+/* Value bases: declared, benchmark, rule estimate and independent disposal value, each with what it is not. */
+.value-bases dl { display: grid; gap: 10px; margin: 0; }
+.value-bases dl > div { display: grid; grid-template-columns: minmax(96px, 150px) minmax(0, 1fr); gap: 12px; }
+.value-bases dt { color: var(--muted); font-size: var(--fs-12); font-weight: 600; }
+.value-bases dd { margin: 0; color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.value-bases dd small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-12); font-weight: 400; }
+@media (max-width: 600px) { .value-bases dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }

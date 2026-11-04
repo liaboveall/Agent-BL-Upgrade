@@ -6,10 +6,10 @@ import * as f from '../../lib/format.js';
 import { caseOptionLabel, cargoQuantity } from '../../lib/market.js';
 import { scrollBehavior } from '../../lib/accessibility.js';
 import { useStickyFit } from '../../hooks/useStickyFit.js';
-import { retryCaseLoad, selectCase } from '../../state/controller.js';
+import { retryCaseLoad, selectCase, setView } from '../../state/controller.js';
+import { PHONE, useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { Button, Card, Empty } from '../../components/ui.jsx';
 import { PageIntro } from '../../components/PageIntro.jsx';
-import { PHONE, useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { Valuation } from './Valuation.jsx';
 import { Waterfall } from './Waterfall.jsx';
 import { MintPanel } from './MintPanel.jsx';
@@ -28,10 +28,13 @@ export function MintPage() {
   const focusRequest = state.focusRequest;
   const aside = useRef(null);
   useStickyFit(aside);
-  // On a phone the case summary scrolls sideways, so keyboard users must be able to reach it.
+  // On a phone the page shows the work in order (documents, value and risk, quote) and folds the full pricing basis,
+  // preferences and commitments behind one summary each; a wide screen keeps everything open side by side.
   const phone = useMediaQuery(PHONE);
   useEffect(() => {
     if (focusRequest?.target !== 'mint') return;
+    const fold = document.getElementById('mint-basis');
+    if (fold) fold.open = true;
     const node = document.getElementById('waterfall');
     node?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
     node?.focus({ preventScroll: true });
@@ -43,7 +46,8 @@ export function MintPage() {
   const strip = [
     [t('ds_route'), bl.port_of_loading && bl.port_of_discharge ? `${tData(bl.port_of_loading)} → ${tData(bl.port_of_discharge)}` : '—'],
     [t('ds_cargo'), bl.cargo ? `${tData(bl.cargo)}${qty ? ` · ${qty}` : ''}` : '—'],
-    [t('ds_ebl'), bl.bl_id ? `${bl.bl_id}${bl.ebl_platform ? ` · ${bl.ebl_platform}` : ''}` : '—'],
+    // The identifier is long and must be read whole: it gets a full row on a phone and wraps instead of being cut off.
+    [t('ds_ebl'), bl.bl_id ? `${bl.bl_id}${bl.ebl_platform ? ` · ${bl.ebl_platform}` : ''}` : '—', 'is-id'],
     [t('ds_declared'), bl.declared_value_usd ? f.usd(bl.declared_value_usd) : '—'],
     [t('ds_collateral'), quote ? `${f.usd(quote.ai_verified_collateral_value_usd)}${staleMaterial ? ` · ${t('ds_collateral_stale')}` : ''}` : '—']
   ];
@@ -73,10 +77,11 @@ export function MintPage() {
       </header>
 
       <StartBar selected={selected} />
+      <MintSteps quoted={Boolean(quote)} />
 
-      <dl className="deal-strip" aria-label={t('mint_strip_label')} {...(phone ? { tabIndex: 0 } : {})}>
-        {strip.map(([label, value]) => (
-          <div key={label} className="deal-strip-item"><dt>{label}</dt><dd>{value}</dd></div>
+      <dl className="deal-strip" aria-label={t('mint_strip_label')}>
+        {strip.map(([label, value, variant]) => (
+          <div key={label} className={`deal-strip-item${variant ? ` ${variant}` : ''}`}><dt>{label}</dt><dd>{value}</dd></div>
         ))}
       </dl>
 
@@ -88,7 +93,8 @@ export function MintPage() {
           {quote ? (
             <>
               <Valuation quote={quote} />
-              <Waterfall quote={quote} />
+              {phone ? <details className="mint-fold" id="mint-basis"><summary>{t('mint_fold_basis')}</summary><Waterfall quote={quote} /></details>
+                : <Waterfall quote={quote} />}
             </>
           ) : null}
         </div>
@@ -96,11 +102,35 @@ export function MintPage() {
           {quote ? <MintPanel quote={quote} /> : <QuotePending />}
         </aside>
       </div>
-      <div className="mint-secondary">
-        <Preferences />
-        {quote ? <ProtocolEvidence quote={quote} /> : null}
-      </div>
+      {phone ? (
+        <details className="mint-fold mint-fold-secondary" id="mint-more"><summary>{t('mint_fold_more')}</summary>
+          <div className="mint-secondary"><Preferences />{quote ? <ProtocolEvidence quote={quote} /> : null}</div>
+        </details>
+      ) : (
+        <div className="mint-secondary">
+          <Preferences />
+          {quote ? <ProtocolEvidence quote={quote} /> : null}
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * The order of work on this page, from documents to formal terms. Each step moves to its section; the last one is not
+ * here at all: formal terms are signed in the role workspace of the financing page.
+ */
+function MintSteps({ quoted }) {
+  const jump = (id) => document.getElementById(id)?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+  const steps = [['ebl-documents', 'mint_step_documents', true], ['valuation-panel', 'mint_step_review', quoted], ['mint-panel', 'mint_step_quote', quoted]];
+  return (
+    <ol className="mint-steps" aria-label={t('mint_steps_label')}>
+      {steps.map(([id, key, ready], index) => (
+        <li key={id}><button type="button" disabled={!ready} title={ready ? undefined : t('mint_step_missing')} onClick={() => jump(id)}>
+          <span className="mint-step-n" aria-hidden="true">{index + 1}</span>{t(key)}</button></li>
+      ))}
+      <li><button type="button" title={t('mint_step_terms_hint')} onClick={() => setView('finance')}><span className="mint-step-n" aria-hidden="true">4</span>{t('mint_step_terms')}</button></li>
+    </ol>
   );
 }
 

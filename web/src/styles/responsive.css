@@ -122,8 +122,11 @@
   .page-intro[open] > summary { margin-bottom: 6px; }
   .mint .page-head { gap: 12px; margin-bottom: 12px; }
   .mint .page-head-text h1 { font-size: var(--fs-22); }
-  /* The case summary is one sideways row on a phone rather than three rows above the documents. */
-  .mint .deal-strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(140px, max-content); overflow-x: auto; margin-bottom: var(--s-4); overscroll-behavior-x: contain; }
+  /* The case summary on a phone: two compact columns, with the eBL identifier on a row of its own so it wraps and is
+     read whole (it used to scroll sideways and was cut off at the edge). */
+  .mint .deal-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: var(--s-4); }
+  .mint .deal-strip-item { padding: 8px 12px; }
+  .mint .deal-strip-item.is-id { grid-column: 1 / -1; }
   .mint .deal-strip-item:last-child:nth-child(odd) { grid-column: auto; }
   .toolbar { gap: 8px; margin-bottom: 12px; }
   .chip-group { flex-wrap: nowrap; flex-basis: 100%; overflow-x: auto; padding: 2px 2px 4px; margin-inline: -2px; scrollbar-width: none; overscroll-behavior-x: contain; }

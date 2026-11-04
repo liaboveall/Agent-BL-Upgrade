@@ -45,6 +45,10 @@
 .nav-tab:hover { background: var(--fill); color: var(--text); }
 .nav-tab:active { transform: scale(0.96); }
 .nav-tab.is-active { background: var(--lens); color: var(--lens-accent); font-weight: 600; box-shadow: var(--lens-shadow); }
+/* The research tool sits apart from the financing tasks: a hairline before it and a quieter label. */
+.nav-tab.is-research { position: relative; margin-left: 8px; color: var(--muted); font-weight: 500; }
+.nav-tab.is-research::before { content: ''; position: absolute; left: -5px; top: 9px; bottom: 9px; width: 1px; background: var(--line-strong); }
+.nav-tab.is-research.is-active { color: var(--lens-accent); font-weight: 600; }
 
 .topbar-right { display: flex; align-items: center; gap: var(--s-2); margin-left: auto; }
 .network-select { max-width: 230px; }

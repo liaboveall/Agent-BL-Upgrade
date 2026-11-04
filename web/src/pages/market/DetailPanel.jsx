@@ -3,7 +3,7 @@ import { selectedQuote } from '../../state/app-store.js';
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import {
-  PAUSED_ACTIONS, annualYieldText, defaultMarketSubscription, marketClock, marketDataSource, marketView, marketVoyageNote,
+  PAUSED_ACTIONS, annualYieldText, defaultMarketSubscription, financingScope, marketClock, marketDataSource, marketView, marketVoyageNote,
   marketVoyageProgress, potentialYieldText, routeText, shortCargoName
 } from '../../lib/market.js';
 import { evidenceFor, openDeal, resetMarketFilters, setSubscriptionAmount, setView, subscribeSelected } from '../../state/controller.js';
@@ -64,6 +64,7 @@ export function DetailPanel({ now, noMatches = false, selectionVisible = true })
         <p className="eyebrow">{t('market_detail_label')}</p>
         <h2 className="detail-title">{shortCargoName(cargo)}</h2>
         <p className="muted">{routeText(bl)}</p>
+        <p className={`detail-scope is-${financingScope(entry)}`}>{t(`market_scope_${financingScope(entry)}_hint`)}</p>
       </header>
 
       <div className="detail-actions">

@@ -1,7 +1,7 @@
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import {
-  annualYieldText, cargoImage, documentTypeLabel, marketClock, marketFunding, marketSourceShort, marketView, marketVoyageProgress, potentialYieldText, registryTag, routeText,
+  annualYieldText, cargoImage, documentTypeLabel, financingScope, marketClock, marketFunding, marketSourceShort, marketView, marketVoyageProgress, potentialYieldText, registryTag, routeText,
   shortCargoName, shortRoute
 } from '../../lib/market.js';
 import { selectCase } from '../../state/controller.js';
@@ -57,6 +57,7 @@ export function ProjectCard({ entry, state, now, tagged = false }) {
       </span>
       {/* What the figures below rest on, visible while comparing cards rather than only in the detail. */}
       <span className="deal-meta">
+        <span className={`deal-scope is-${financingScope(entry)}`} title={t(`market_scope_${financingScope(entry)}_hint`)}>{t(`market_scope_${financingScope(entry)}`)}</span>
         <span>{documentTypeLabel(entry)}</span>
         <span className={`tone-text-${source.tone}`}>{source.text}</span>
       </span>

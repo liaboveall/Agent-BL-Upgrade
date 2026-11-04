@@ -166,6 +166,12 @@ export function marketSourceShort(entry) {
   return { tone: 'muted', text: t('src_short_none') };
 }
 
+// The one research case whose deterministic quote can generate controlled financing terms (src/rights/service.js
+// TERMS_QUOTE_CASE). Every other case, workspace copies of it included, is research pricing only.
+export const CONTROLLED_TERMS_CASE = 'CASE-EBL-CU-SIN-SHA';
+/** 'controlled' when the case can enter the current controlled financing, else 'research'. */
+export function financingScope(entry) { return entry?.case_id === CONTROLLED_TERMS_CASE ? 'controlled' : 'research'; }
+
 /** The trade document behind a case: an electronic bill of lading or a warehouse receipt. */
 export function documentTypeLabel(entry) {
   const type = entry.case?.bill_of_lading?.bl_type ?? '';

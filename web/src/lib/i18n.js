@@ -677,6 +677,12 @@ const DICT = {
 
     // valuation
     val_declared: '申报货值', val_insured: '投保金额', val_safe_exposure: '安全兑付敞口', val_supply: '建议 token 供给',
+    // Four different values that are easy to mix up; each says what it is and what it is not.
+    vb_summary: '价值口径：申报值、基准价、规则估值与独立处置估值', vb_declared: '申报值', vb_declared_note: '单证上的申报金额，未经独立核实。',
+    vb_benchmark: '基准价', vb_benchmark_note: '到岸价 = {benchmark} 参考价 {price} + 地区升贴水 {premium}（USD/{unit}）· 截至 {asof} · 来源：{source} · 状态：{status}',
+    vb_benchmark_none: '此案例没有可用的基准价数据。', vb_rule: '规则估值', vb_rule_note: '按申报值、基准价与航线风险的确定性规则估算，用于研究定价；不是可实现的货物处置价值。',
+    vb_disposal: '独立处置估值', vb_disposal_note: '未提供。本研究原型没有独立估值方或处置报价；条款中的估值签名是研究估值人的签名，不代表可变现价格。',
+    vb_quality: '品质与地区：{grade} · {route}',
     risk_cite_head: '风险折价援引 RAG 情报:',
     src_rag: 'RAG 情报', src_market: '市场基准', src_valuation: '货值估算', src_docs: '单据核验',
     src_valuation_detail: '落地价 × 数量，经波动率 haircut，并按 {cov}% 兑付覆盖率封顶安全敞口',
@@ -1529,6 +1535,11 @@ const DICT = {
 
     // valuation
     val_declared: 'Declared value', val_insured: 'Insured value', val_safe_exposure: 'Safe redemption exposure', val_supply: 'Suggested token supply',
+    vb_summary: 'Value bases: declared, benchmark, rule estimate and independent disposal value', vb_declared: 'Declared value', vb_declared_note: 'The amount declared on the documents; not independently verified.',
+    vb_benchmark: 'Benchmark price', vb_benchmark_note: 'Landed = {benchmark} reference {price} + regional premium {premium} (USD/{unit}) · as of {asof} · source: {source} · status: {status}',
+    vb_benchmark_none: 'No benchmark price data is available for this case.', vb_rule: 'Rule estimate', vb_rule_note: 'A deterministic estimate from the declared value, the benchmark and route risk, used for research pricing; not a realizable cargo disposal value.',
+    vb_disposal: 'Independent disposal value', vb_disposal_note: 'Not provided. This research prototype has no independent valuer or disposal quote; the valuation signature in the terms is a research valuer’s, not a realizable price.',
+    vb_quality: 'Grade and region: {grade} · {route}',
     risk_cite_head: 'Risk discount cites RAG intel:',
     src_rag: 'RAG intel', src_market: 'Market benchmark', src_valuation: 'Valuation', src_docs: 'Document check',
     src_valuation_detail: 'Landed price × quantity, after a volatility haircut, capped at {cov}% redemption coverage',

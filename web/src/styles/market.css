@@ -94,3 +94,8 @@
 .holding { display: grid; gap: 6px; padding: var(--s-4); border: 1px solid var(--card-edge); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-sm); }
 .holding-head { display: flex; justify-content: space-between; gap: var(--s-3); }
 .holding-actions { display: flex; flex-wrap: wrap; gap: var(--s-3); }
+/* Whether a case can enter the current controlled financing or is research pricing only. */
+.deal-scope { font-weight: 600; }
+.deal-scope.is-controlled, .detail-scope.is-controlled { color: var(--ok-ink); }
+.deal-scope.is-research, .detail-scope.is-research { color: var(--muted); }
+.detail-scope { margin: 4px 0 0; font-size: var(--fs-12); }

@@ -1,7 +1,31 @@
 import { useApp } from '../../state/hooks.js';
-import { t } from '../../lib/i18n.js';
+import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import { Badge, Card, CardHead, Disclosure, KV } from '../../components/ui.jsx';
+
+/**
+ * The four values a reader can confuse, kept apart: what the documents declare, the market benchmark (with its unit,
+ * date, grade, region and source status), the rule estimate this page prices from, and the independent disposal value
+ * the research prototype does not have.
+ */
+function ValueBases({ quote, caseData }) {
+  const bl = caseData.bill_of_lading ?? {}, market = caseData.market ?? null, status = quote.field_sources?.market?.status ?? '—';
+  const usdPer = (value) => value == null ? '—' : f.usd(value);
+  return (
+    <Disclosure summary={t('vb_summary')} className="value-bases">
+      <dl>
+        <div><dt>{t('vb_declared')}</dt><dd>{bl.declared_value_usd ? f.usd(bl.declared_value_usd) : '—'}<small>{t('vb_declared_note')}</small></dd></div>
+        <div><dt>{t('vb_benchmark')}</dt><dd>{market ? <>{usdPer(market.landed_price_usd_per_mt ?? market.reference_price_usd_per_mt)} / {(market.price_unit ?? 'USD/MT').replace(/^USD\//u, '')}<small>{t('vb_benchmark_note', {
+          benchmark: market.benchmark ?? market.commodity ?? '—', price: usdPer(market.reference_price_usd_per_mt), unit: (market.price_unit ?? 'USD/MT').replace(/^USD\//u, ''),
+          premium: usdPer(market.regional_premium_usd_per_mt), asof: market.as_of ?? '—', source: market.source ?? '—', status })}</small>
+          <small>{t('vb_quality', { grade: caseData.cargo?.grade ?? bl.cargo ?? '—', route: bl.port_of_loading && bl.port_of_discharge ? `${tData(bl.port_of_loading)} → ${tData(bl.port_of_discharge)}` : '—' })}</small></>
+          : <small>{t('vb_benchmark_none')}</small>}</dd></div>
+        <div><dt>{t('vb_rule')}</dt><dd>{f.usd(quote.ai_verified_collateral_value_usd)}<small>{t('vb_rule_note')}</small></dd></div>
+        <div><dt>{t('vb_disposal')}</dt><dd>—<small>{t('vb_disposal_note')}</small></dd></div>
+      </dl>
+    </Disclosure>
+  );
+}
 
 /** AI-verified collateral value, the route-risk dimensions behind the discount, and where the data came from. */
 export function Valuation({ quote }) {
@@ -43,6 +67,7 @@ export function Valuation({ quote }) {
           </ul>
         </div>
       </div>
+      <ValueBases quote={quote} caseData={caseData} />
       <Disclosure summary={t('sources_head_count', { n: sources.length + cites.length })}>
         {cites.length ? (
           <div className="cites">
