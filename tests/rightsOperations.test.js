@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { AbiCoder, Interface, id } from 'ethers';
 import { RIGHTS_OPERATIONS, rightsCallMatches, rightsTarget } from '../src/rights/operations.js';
@@ -11,6 +12,9 @@ import { LEGACY_OPERATIONS, FROZEN_ARTIFACTS } from '../src/rights/chain.js';
 
 const CONTRACT = { controller: 'RightsController', registry: 'CommittedEBLRegistry', pool: 'RWAOfferingPoolV5' };
 const decodeBytes = (hex) => AbiCoder.defaultAbiCoder().decode(['bytes'], hex)[0];
+// The current build's artifacts are git-ignored: where contracts are not compiled (the CI app job) the current-ABI check
+// is skipped; npm run test:rights compiles them and runs this file in full.
+const COMPILED = existsSync(path.resolve('hardhat/artifacts/contracts/RightsController.sol/RightsController.json'));
 const current = async (name) => new Interface(JSON.parse(await fs.readFile(path.resolve('hardhat/artifacts/contracts', `${name}.sol`, `${name}.json`), 'utf8')).abi);
 const frozen = async (version) => {
   const { contracts } = JSON.parse(await fs.readFile(path.resolve('scripts/config', FROZEN_ARTIFACTS[version]), 'utf8'));
@@ -25,15 +29,14 @@ function encode(abis, operation) {
   return target.encodeFunctionData(spec.method, [pool.encodeFunctionData(inner, zeros(inner))]);
 }
 
-test('every operation names a function of its contract with the pinned selector, in the current build', async () => {
+test('every operation names a function of its contract with the pinned selector, in the current build',
+  { skip: COMPILED ? false : 'contracts are not compiled here; npm run test:rights compiles them and runs this test' }, async () => {
   const abis = Object.fromEntries(await Promise.all(Object.values(CONTRACT).map(async (name) => [name, await current(name)])));
   for (const [operation, spec] of Object.entries(RIGHTS_OPERATIONS)) {
     assert.equal(abis[CONTRACT[spec.target]].getFunction(spec.method).selector, spec.selector, operation);
     if (spec.lifecycle) assert.equal(abis.RWAOfferingPoolV5.getFunction(spec.lifecycle.method).selector, spec.lifecycle.selector, `${operation} inner call`);
     assert.equal(rightsCallMatches(operation, encode(abis, operation), decodeBytes), true, operation);
   }
-  // Pool operations really are pool functions: the browser used to accept only repay there.
-  assert.deepEqual(Object.entries(RIGHTS_OPERATIONS).filter(([, spec]) => spec.target === 'pool').map(([name]) => name).sort(), ['finalize_funding', 'repay', 'retry_collateral_release']);
 });
 
 test('superseded instances keep the same selectors for every exit they still allow', async () => {
@@ -49,8 +52,11 @@ test('superseded instances keep the same selectors for every exit they still all
 });
 
 test('a call that is not the operation\'s own function never matches', async () => {
-  const abis = Object.fromEntries(await Promise.all(Object.values(CONTRACT).map(async (name) => [name, await current(name)])));
+  // The frozen v3 ABI is committed and has every function used here, with the same selectors as the current build.
+  const abis = await frozen(3);
   const pool = abis.RWAOfferingPoolV5, controller = abis.RightsController;
+  // Pool operations really are pool functions: the browser used to accept only repay there.
+  assert.deepEqual(Object.entries(RIGHTS_OPERATIONS).filter(([, spec]) => spec.target === 'pool').map(([name]) => name).sort(), ['finalize_funding', 'repay', 'retry_collateral_release']);
   assert.equal(rightsCallMatches('finalize_funding', pool.encodeFunctionData('retryCollateralRelease', [1]), decodeBytes), false);
   assert.equal(rightsCallMatches('repay', pool.encodeFunctionData('finalizeFunding', [1]), decodeBytes), false);
   // A lifecycle call whose inner function is another lifecycle step, or not a pool function at all.

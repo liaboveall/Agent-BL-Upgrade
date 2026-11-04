@@ -3,7 +3,8 @@ import { spawn } from 'node:child_process';
 
 const suites = {
   capital: { env: { AGENTBL_W2_INTEGRATION: '1' }, files: ['tests/w2CrossLayer.test.js'] },
-  rights: { env: { AGENTBL_W2_INTEGRATION: '1', AGENTBL_W3_INTEGRATION: '1' }, files: ['tests/w3CrossLayer.test.js'] },
+  // rightsOperations also runs in npm test, where its current-ABI check is skipped unless the contracts are compiled.
+  rights: { env: { AGENTBL_W2_INTEGRATION: '1', AGENTBL_W3_INTEGRATION: '1' }, files: ['tests/w3CrossLayer.test.js', 'tests/rightsOperations.test.js'] },
   evidence: { env: { AGENTBL_W2_INTEGRATION: '1', AGENTBL_W4_INTEGRATION: '1' }, files: [
     'tests/w4Evidence.test.js', 'tests/w4Provenance.test.js', 'tests/w4Payments.test.js', 'tests/w4BrowserRecovery.test.js', 'tests/w4CrossLayer.test.js'
   ] },
