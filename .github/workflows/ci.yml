@@ -186,6 +186,7 @@ jobs:
       - run: npm ci
       - run: npm --prefix hardhat ci
       - run: npm run compile:contracts
+      - run: npm run check:contract-budget
       - run: npm run build:clean -- test-results/clean-build
       - uses: actions/upload-artifact@v6
         if: always()
@@ -264,5 +265,5 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: npm audit --omit=dev --audit-level=high
-      - run: npm --prefix hardhat audit --audit-level=high
+      - run: npm audit --audit-level=moderate
+      - run: npm --prefix hardhat audit --audit-level=moderate

@@ -60,7 +60,9 @@
     "test:finance": "node scripts/test-integration.mjs finance",
     "install:release": "node scripts/install-release-deps.mjs",
     "verify:release": "node scripts/verify-release.mjs",
-    "testnet": "node scripts/testnet.mjs"
+    "testnet": "node scripts/testnet.mjs",
+    "ops:review": "node scripts/operations-review.mjs",
+    "check:contract-budget": "node scripts/contract-budget.mjs"
   },
   "engines": {
     "node": ">=22.13"
@@ -83,7 +85,9 @@
   },
   "overrides": {
     "ws": "8.21.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "minimatch": "11.0.1",
+    "glob": "14.0.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

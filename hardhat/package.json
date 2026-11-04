@@ -27,6 +27,8 @@
     "esbuild": false
   },
   "overrides": {
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "minimatch": "11.0.1",
+    "glob": "14.0.2"
   }
 }
