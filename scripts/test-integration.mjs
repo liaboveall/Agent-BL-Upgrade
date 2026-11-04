@@ -8,7 +8,7 @@ const suites = {
     'tests/w4Evidence.test.js', 'tests/w4Provenance.test.js', 'tests/w4Payments.test.js', 'tests/w4BrowserRecovery.test.js', 'tests/w4CrossLayer.test.js'
   ] },
   operations: { env: { AGENTBL_W2_INTEGRATION: '1' }, files: ['tests/w5Operations.test.js', 'tests/w5Controlled.integration.js'] },
-  finance: { env: {}, files: ['tests/n3Workflow.integration.js'] }
+  finance: { env: {}, files: ['tests/n3Workflow.integration.js', 'tests/rightsRecovery.integration.js'] }
 };
 const name = process.argv[2], suite = Object.hasOwn(suites, name ?? '') ? suites[name] : null;
 if (!suite || process.argv.length !== 3) throw new Error('Choose one integration suite: ' + Object.keys(suites).join(', '));
