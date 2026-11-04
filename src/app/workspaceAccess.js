@@ -5,16 +5,30 @@
 // from the bounded job list. Results produced from an upload are private unless their case was published.
 import { randomBytes, createHash } from 'node:crypto';
 import { checkAdminToken } from './security.js';
-import { HttpError } from './http.js';
+import { HttpError, trustedHops } from './http.js';
 const COOKIE = 'agentbl_workspace';
 const UPLOAD_EVENTS = new Set(['DOCUMENTS_INGESTED', 'REVIEW_RESOLVED']);
-export function workspaceOwner(request, response) {
+/**
+ * Whether the browser reached this service over HTTPS, so the workspace cookie must carry Secure. A TLS socket says so
+ * itself. Behind an HTTPS-terminating reverse proxy the socket is plain HTTP: AGENTBL_COOKIE_SECURE=true states that every
+ * visitor arrives over HTTPS, or a proxy declared with TRUST_PROXY reports the scheme in X-Forwarded-Proto. That header is
+ * read only from a declared proxy (the hop it appended, like X-Forwarded-For in clientIp), because any client can send it.
+ */
+export function secureTransport(request, env = process.env) {
+  if (request.socket?.encrypted) return true;
+  if (String(env.AGENTBL_COOKIE_SECURE ?? '').toLowerCase() === 'true') return true;
+  const hops = trustedHops(env.TRUST_PROXY);
+  if (hops === 0) return false;
+  const schemes = String(request.headers?.['x-forwarded-proto'] ?? '').split(',').map((part) => part.trim().toLowerCase()).filter(Boolean);
+  return schemes[Math.max(0, schemes.length - hops)] === 'https';
+}
+export function workspaceOwner(request, response, env = process.env) {
   let value = String(request.headers.cookie ?? '').split(';').map((part) => part.trim())
     .find((part) => part.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
   if (!/^[a-f0-9]{48}$/u.test(value ?? '')) {
     if (!response) return null;
     value = randomBytes(24).toString('hex');
-    response.setHeader('Set-Cookie', `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict${request.socket?.encrypted ? '; Secure' : ''}`);
+    response.setHeader('Set-Cookie', `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict${secureTransport(request, env) ? '; Secure' : ''}`);
   }
   return createHash('sha256').update(value).digest('hex');
 }
