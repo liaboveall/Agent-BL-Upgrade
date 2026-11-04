@@ -1,5 +1,17 @@
 # 架构
 
+2026-11-04 更新：角色工作台按私有材料、全局资格/筛查、公开资金池三类上下文准备动作。池级动作不要求出资人访问私有材料，预览读取公开完整条款。`GET /api/rights/transaction-plans` 的发现范围与发送阻塞范围一致：同一钱包、同一条链上所有未结计划，不论来自哪个实例。本人计划带 `current_instance` 标明是否属于当前实例（旧实例计划按它自己保存的交易核对，从不发往当前实例）；同钱包其他业务身份（另一组织或已撤销的登记）持有的计划只给出身份、组织与最小摘要，由该身份在自己的会话中核对。登录后自动发现，恢复仍须核对链上 nonce/交易，不能删除检查点绕过未知交易。该机制独立于已有 controlled intents 恢复与浏览器 cookie 私有研究工作区。
+
+角色交易的“操作 → 合约 → 函数选择器”只有一张表：`src/rights/operations.js`。服务端按它编码计划并在编码后自检，浏览器发送适配器在钱包看到任何请求前按同一张表核对目标合约（控制器、登记处或资金池）与函数选择器（生命周期操作还核对内层资金池调用），并核对页面显示的实例。`tests/rightsOperations.test.js` 用当前与已冻结的 v2/v3 ABI 校验表中每个选择器。
+
+业务身份撤销后，仅退出会话可以列出、核对、附加原交易哈希并释放**自己的**旧计划，只能读到最小摘要（状态、操作、实例、nonce、交易哈希），不能准备、发送、读取私有材料或恢复任何角色。核对一个计划只在它自己的网络上进行，配置了其他网络的服务返回 `rights_plan_other_network`。
+
+工作流每一步带 `phase`：`actionable`（其角色现在可做）、`waiting`（等待前序步骤、其他角色或日期）、`blocked`（池状态或全实例条件阻止，`blocker` 写明原因，如 `state_frozen`、`minimum_not_reached`、`funding_not_finalized`、`draw_deadline_passed`、`not_disbursed`、`screening_expired`、`intake_stopped`、`valuation_expired`）、`complete`、`not_applicable`、`unknown`。工作台“你现在可做”只列 `actionable` 且分配给本人的步骤；冻结池额外给出 `state_notice`。阶段按冻结矩阵（docs/contracts.md）从同一区块的链上读数推出，仍只是提示，每次钱包操作照常预执行。
+
+终态工作流按当前钱包的剩余实付成本或可领取额给出下一步；已取消、未放款关闭或已结清的池不再要求新募集/放款/不存在的债务。后续回款仍按实际 claimable 显示。读取失败保留 unknown，不把未知余额展示成零。
+
+研究市场的 `hypothetical_repricing` 模拟与受控条款模拟明确区分；页面及执行记录展示其适用范围。未声明研究策略的输入默认使用 v4 限制，v4 不允许重定价（包括以 OPEN 替换旧报价），发运要求已完成募集。研究假设不用于证明当前部署合约能执行同一动作。
+
 ```mermaid
 flowchart LR
   UI[双语页面与参与者钱包] --> API[Node HTTP API]

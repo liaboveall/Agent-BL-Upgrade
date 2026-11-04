@@ -105,7 +105,7 @@ v3 及更早的共享治理为"任意 2 名成员批准、任一成员可单独�
 1. **冻结 v3**：`scripts/config/rights-v3-artifacts.json`；`src/rights/chain.js` 用它核验已部署的 v3 实例，v3 只保留退出。回归 `loads frozen v3 code after the version 4 edits` 在本地链部署冻结的 v3 产物，证明它仍可核验、只保留退出，且旧规则（单人取消治理提案）仍在。
 2. **v4 合约测试**：`hardhat/test/controlV4.test.js` 把综合评估 R1–R5 反例改写为反向断言（旧池重试不能释放新质押、拒绝任何改价、足额回款按 Repaid 结清、一原子欠款仍违约、无人认购可自行取消、两人取消），原有用例按新规则更新。
 3. **披露与工具**：`FINANCE_POLICY`（`agentbl-cash-rights-v4`）写明新规则；`prepare-rights-candidate.mjs` 先部署实例自己的治理，`n5-deployment.mjs` 让 Hub 登记走 Hub 的治理、其余 12 项走新治理。
-4. **部署与激活**：v4 以独立实例 `n5-v4-20261029` 从提交 598490c（CI 40820752122，16/16 作业）部署：`prepare` 34 笔（自有治理、Registry、Token、Pool、Controller、绑定，以及 13 项治理提案与批准；Hub 登记走原治理 `0x1Df0…E2e5`，其余 12 项走新治理 `0x8878…9609`），1 小时延时后 `activate` 执行 13 项，链上核验为 control version 4、非只退出。资金路径验证：正常回款（池 #3）与失败募集退款（池 #2）已通过；损失路径（池 #1）已违约、公告并独立复核，1 天通知期满后（2026-10-30 06:42 UTC 之后）再运行一次 `npm run testnet -- funding n5-v4-20261029 --execute` 完成终局与迟到回款领取。之后两份公开配置同时切换到 v4，25 个池的公开条款写入 `data/disclosures/`。
+4. **部署与激活**：v4 以独立实例 `n5-v4-20261029` 从提交 598490c（CI 40820752122，16/16 作业）部署：`prepare` 34 笔（自有治理、Registry、Token、Pool、Controller、绑定，以及 13 项治理提案与批准；Hub 登记走原治理 `0x1Df0…E2e5`，其余 12 项走新治理 `0x8878…9609`），1 小时延时后 `activate` 执行 13 项，链上核验为 control version 4、非只退出。资金路径验证：正常回款（池 #3）与失败募集退款（池 #2）已通过；损失路径（池 #1）在 2026-11-04 的只读快照中已为 LossSettled，处置已复核且已终结，托管余额为 0。当前全部旧池窗口和全局筛查均已过期；使用 `npm run ops:review` 查看当时需要的维护，不应盲目重复旧的资金执行命令。之后两份公开配置同时切换到 v4，25 个池的公开条款写入 `data/disclosures/`。
 
 | v4 合约 | 地址 |
 | --- | --- |
