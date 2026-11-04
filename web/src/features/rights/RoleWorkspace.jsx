@@ -25,7 +25,7 @@ const labels = {
   document: ['建立私有单证', 'Create private title'], title: ['签发与登记', 'Issue and register'], terms: ['完整条款与独立审核', 'Terms and independent review'], consent: ['持有人同意质押', 'Holder consent'],
   issue: ['发行融资', 'Create offering'], eligibility: ['资格与来源核验', 'Eligibility and screening'], fund: ['审阅、同意与认购', 'Review, accept and subscribe'], draw: ['固定收款人放款', 'Disburse to fixed borrower'],
   repay: ['回款或有界处置', 'Repayment or bounded resolution'], exit: ['退款 / 独立领取', 'Refund / independent claim'],
-  complete: ['已完成', 'Complete'], pending: ['待处理', 'Pending'], unknown: ['尚未核验', 'Not verified'], check_each_investor: ['逐位核对资格', 'Check each investor'], claim_available: ['可独立领取', 'Claim available'], check_refund_or_wait: ['核对退款条件或等待结清', 'Check refund conditions or wait'],
+  not_applicable: ['不适用', 'Not applicable'], refund_available: ['有本金可退', 'Refund available'], complete: ['已完成', 'Complete'], pending: ['待处理', 'Pending'], unknown: ['尚未核验', 'Not verified'], check_each_investor: ['逐位核对资格', 'Check each investor'], claim_available: ['可独立领取', 'Claim available'], check_refund_or_wait: ['核对退款条件或等待结清', 'Check refund conditions or wait'],
   screening_source_inactive: ['来源审查签发人已失去合规角色，需由当前合规钱包重新“更新来源审查”', 'The screening signer lost the compliance role; a current compliance wallet must refresh the screening'],
   create_material: ['保存研究单证', 'Save research title'], disclosure: ['导入完整条款', 'Import complete terms'], review_material: ['批准当前单证与条款', 'Approve current title and terms'], publish: ['发布已审条款', 'Publish approved terms'],
   register_title: ['登记已签单证', 'Register signed title'], pledge: ['同意本池质押', 'Consent to this pledge'], create_offering: ['发行已审融资', 'Create approved offering'],
@@ -36,9 +36,33 @@ const labels = {
   finalize_funding: ['关闭已达最低额的募集', 'Finalize a raise that met its minimum'], cancel_offering: ['取消无人认购的发行', 'Cancel an offering nobody subscribed'],
   retry_collateral_release: ['重试释放质押单证', 'Retry title release'], finalize_required: ['已达最低额，待关闭募集', 'Minimum reached; finalize the raise'],
   price_source: ['价格来源', 'Price source'], terms_from_file: ['导入文件中的价格与份额', 'Price and supply in the imported file'], terms_from_quote: ['研究定价引擎报价', 'Research pricing quote'],
-  speed_FAST: ['快速', 'Fast'], speed_BALANCED: ['均衡', 'Balanced'], speed_LOW_COST: ['低成本', 'Low cost'], quote_hash: ['报价承诺', 'Quote commitment']
+  speed_FAST: ['快速', 'Fast'], speed_BALANCED: ['均衡', 'Balanced'], speed_LOW_COST: ['低成本', 'Low cost'], quote_hash: ['报价承诺', 'Quote commitment'],
+  // Where each step stands for its roles (src/rights/workflow.js `phase`) and, when it cannot move, why.
+  phase_actionable: ['现在可做', 'Can be done now'], phase_waiting: ['等待中', 'Waiting'], phase_blocked: ['被状态阻塞', 'Blocked'], phase_complete: ['已完成', 'Complete'],
+  phase_not_applicable: ['不适用', 'Not applicable'], phase_unknown: ['尚未核验', 'Not verified'],
+  exit_available: ['可发起退出', 'Exit available'], resolution: ['处置进行中', 'Resolution in progress'], refund: ['退款', 'Refund'], claim: ['领取', 'Claim'],
+  acknowledge_terms: ['阅读并同意条款后认购', 'Accept the terms, then subscribe'],
+  state_frozen: ['资金池已冻结', 'The pool is frozen'], state_paused: ['发行已暂停', 'The offering is paused'],
+  minimum_not_reached: ['募集截止时未达最低额，出资人可退款', 'The raise ended below its minimum; investors can refund'],
+  no_subscribers: ['募集截止时无人认购', 'Nobody subscribed before the deadline'], funding_not_finalized: ['募集尚未关闭', 'The raise is not finalized yet'],
+  draw_deadline_passed: ['放款截止已过，不能再放款；未放款的本金经“发起退出”退回', 'The draw deadline passed, so nothing more can be drawn; undrawn principal returns through the exit'],
+  not_disbursed: ['尚未放款，还没有需要偿还的款项', 'Nothing has been drawn, so nothing is owed yet'], not_issued: ['融资尚未发行', 'The offering is not issued yet'],
+  title_not_registered: ['单证尚未登记', 'The title is not registered yet'], terms_unpublished: ['条款尚未经两位审查人批准并发布', 'The terms are not yet approved by two reviewers and published'],
+  pledge_missing: ['持有人尚未同意质押', 'The holder has not consented to the pledge yet'], screening_expired: ['全局来源审查已过期，需合规角色更新', 'The instance-wide screening expired; compliance must refresh it'],
+  intake_stopped: ['发行进件已暂停（延时治理开关）', 'Intake is stopped (a delayed-governance switch)'], valuation_expired: ['估值已过期，只能按新条款另行发行', 'The valuation expired; only a new offering on new terms can proceed'],
+  resolution_pending: ['处置尚未终局，终局后可领取', 'The resolution is not final yet; claims open once it is'],
+  notice_state_frozen: ['资金池已冻结：放款、无人认购池的自行退出和到期现金足额关闭，需延时治理先解冻；未达最低额的退款、放款截止后未放款本金的退出、到期仍欠款时的违约处置不受冻结影响。', 'The pool is frozen: draws, the unsubscribed exit and the cash-covered close at maturity wait for delayed governance to unfreeze it. Refunds of a raise below its minimum, the exit of undrawn principal after the draw deadline and default resolution of a debt still owed at maturity are not stopped by the freeze.'],
+  notice_state_paused: ['发行已暂停：不能认购或放款；已有持仓可按条件退款或等待恢复。', 'The offering is paused: no subscriptions or draws. Existing positions can refund under the conditions or wait for it to resume.']
 };
 const TERMS_QUOTE_CASE = 'CASE-EBL-CU-SIN-SHA';
+const MATERIAL_ACTIONS = ['disclosure', 'review_material', 'publish', 'sign_issuance', 'register_title', 'pledge', 'sign_valuation', 'create_offering'];
+const GLOBAL_ACTIONS = ['create_material', 'refresh_screening', 'set_eligibility'];
+// A step is this role's task only when its roles can act on it now (src/rights/workflow.js `phase`), never merely because
+// it is unfinished: a frozen draw or a draw that waits for the raise is shown with its reason instead.
+const needsTask = (step) => step.assigned_to_you && step.phase === 'actionable';
+const waitsOnOthers = (step) => step.phase === 'waiting' || step.phase === 'actionable' && !step.assigned_to_you;
+// Statuses that add something to the phase label in the step list.
+const PLAIN_STATUS = ['pending', 'complete', 'not_applicable', 'unknown'];
 const actions = [
   ['create_material', ['issuer']], ['disclosure', ['issuer']], ['review_material', ['reviewer']], ['publish', ['issuer']],
   ['sign_issuance', ['issuer']], ['register_title', ['issuer']], ['pledge', ['holder']], ['sign_valuation', ['valuer']], ['create_offering', ['issuer']],
@@ -51,10 +75,13 @@ const actions = [
 ];
 // The workspace actions that move each workflow step forward (src/rights/workflow.js), so the action list can lead
 // with what the material's current stage asks of this role.
+// The action each step names by default (src/rights/workflow.js WORKFLOW_STEPS); a step that names another one says so.
+const STEP_NEXT_DEFAULT = { document: 'create_material', title: 'register_title', terms: 'review_material', consent: 'pledge', issue: 'create_offering',
+  eligibility: 'set_eligibility', fund: 'acknowledge_terms', draw: 'disburse', repay: 'repay', exit: 'claim' };
 const STEP_ACTIONS = { document: ['create_material'], title: ['sign_issuance', 'register_title'], terms: ['disclosure', 'review_material', 'publish', 'sign_valuation'],
   consent: ['pledge'], issue: ['sign_valuation', 'create_offering'], eligibility: ['set_eligibility', 'refresh_screening'], fund: ['finalize_funding'], draw: ['disburse'],
   repay: ['approve_repayment', 'repay_action', 'mark_in_transit', 'record_payment', 'record_arrival', 'settle', 'notify_resolution', 'review_resolution', 'finalize_resolution', 'start_exit', 'dispute_resolution'],
-  exit: ['retry_collateral_release', 'cancel_offering'] };
+  exit: ['start_exit', 'retry_collateral_release', 'cancel_offering'] };
 // Where each imported file comes from; the JSON import stays the exact, advanced path.
 const FILE_HELP = {
   disclosure: ['完整公开条款 JSON：当事方、日期、来源与本材料的单证承诺一致；价格可改由研究报价生成。', 'The complete public terms JSON: parties, dates and sources, bound to this material’s title commitment; the price can come from the research quote instead.'],
@@ -62,7 +89,7 @@ const FILE_HELP = {
   register_title: ['签发方用“钱包签发单证”导出的 research-issuance-signed.json。', 'The research-issuance-signed.json the issuer exported with “Sign title issuance”.'],
   sign_valuation: ['待签估值字段 JSON（条款承诺、净值、覆盖率与有效期）；签署后导出 research-valuation-signed.json。', 'Unsigned valuation fields JSON (terms commitment, net value, coverage, validity); signing exports research-valuation-signed.json.'],
   create_offering: ['估值方用“钱包签署估值”导出的 research-valuation-signed.json；条款取自已发布的完整条款。', 'The research-valuation-signed.json the valuer exported with “Sign valuation”; the terms come from the published disclosure.'],
-  set_eligibility: ['资格审查文件 JSON，含出资主体的身份承诺 subject_hash；不上传身份原文。', 'The eligibility review JSON with the investor’s subject_hash commitment; no identity document is uploaded.']
+  set_eligibility: ['高级（可选）：导入含 subject_hash 的资格审查 JSON。通常直接在上方填写身份承诺，或由本地身份文件生成；身份原文不上传。', 'Advanced (optional): import an eligibility review JSON with subject_hash. Usually enter the identity commitment above, or compute it from a local identity file; the identity document is not uploaded.']
 };
 // Saved operations that can send nothing more; anything else still needs reconciling before this wallet sends again.
 const SETTLED_PLAN = ['confirmed', 'reverted', 'released', 'superseded', 'abandoned'];
@@ -107,22 +134,29 @@ function exportJson(value, name) {
 export function RoleWorkspace({ zh, status, wallet }) {
   const generation = useApp((s) => s.modeGeneration), demo = useApp((s) => s.demoMode), text = (key) => labels[key]?.[zh ? 0 : 1] ?? key;
   const [identities, setIdentities] = useState(null);
+  const [poolId, setPoolId] = useState(''), [recoverable, setRecoverable] = useState([]), [otherIdentities, setOtherIdentities] = useState([]), [switchTo, setSwitchTo] = useState(null);
   const [subjectId, setSubjectId] = useState(''), [principal, setPrincipal] = useState(null), [materials, setMaterials] = useState([]), [materialId, setMaterialId] = useState(''), [workflow, setWorkflow] = useState(null);
   const [operation, setOperation] = useState(''), [file, setFile] = useState(null), [documentText, setDocumentText] = useState(''), [amountText, setAmountText] = useState(''), [evidence, setEvidence] = useState(''), [distribution, setDistribution] = useState('');
-  const [investorWallet, setInvestorWallet] = useState(''), [validUntilLocal, setValidUntilLocal] = useState(''), [plan, setPlan] = useState(null), [pending, setPending] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
+  const [subjectHash, setSubjectHash] = useState(''), [investorWallet, setInvestorWallet] = useState(''), [validUntilLocal, setValidUntilLocal] = useState(''), [plan, setPlan] = useState(null), [pending, setPending] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false);
   const viewContext = useRef(null), selectedMaterial = useRef('');
   // People enter TEST_USDC and a local date-time; the exact atomic amount and Unix seconds are derived and shown.
   const amount = toAtomic(amountText), validUntil = toUnixSeconds(validUntilLocal);
   const [approved, setApproved] = useState(false), [originalHash, setOriginalHash] = useState('');
   // Terms can take their price, supply and minimum raise from the research pricing engine instead of the file.
   const [termsSource, setTermsSource] = useState('file'), [researchCash, setResearchCash] = useState('1000');
-  viewContext.current = { wallet, generation, materialId, operation, file, amount, evidence, distribution, investorWallet, validUntil, documentText, termsSource, researchCash };
+  viewContext.current = { wallet, generation, subjectId, chainId: status?.config?.chainIdDecimal, keyPool: status?.config?.contracts?.RWAOfferingPool, poolId, materialId, operation, file, amount, evidence, distribution, investorWallet, subjectHash, validUntil, documentText, termsSource, researchCash };
   const capture = () => { const saved = { ...viewContext.current }; return () => { if (!Object.entries(saved).every(([name, value]) => viewContext.current[name] === value)) throw new Error('Wallet, mode, material or action changed. Review again.'); }; };
+  // Recovery belongs to the wallet/identity/instance, independent of edits to the next action's form.
+  const captureIdentity = () => {
+    const saved = Object.fromEntries(['wallet', 'generation', 'subjectId', 'chainId', 'keyPool'].map(name => [name, viewContext.current[name]]));
+    return () => { if (!Object.entries(saved).every(([name, value]) => viewContext.current[name] === value)) throw new Error('Wallet, identity or instance changed. Sign in again.'); };
+  };
   const key = status?.active && wallet ? `agentbl.role-plan:${status.config.chainIdDecimal}:${status.config.contracts.RWAOfferingPool.toLowerCase()}:${wallet.toLowerCase()}` : null;
   // A new wallet, mode generation or protocol instance ends the business session and every preview built on it.
   // The display language is not part of that identity: switching it keeps the session, materials and inputs.
   useEffect(() => {
     selectedMaterial.current = ''; clearRightsSession(); setPrincipal(null); setMaterials([]); setWorkflow(null); setPlan(null); setApproved(false); setOperation(''); setFile(null);
+    setPoolId(''); setMaterialId(''); setRecoverable([]); setOtherIdentities([]); setSwitchTo(null);
     try { setPending(key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null); } catch { setPending({ invalid: true }); }
   }, [wallet, generation, key]);
   // A session that expired (or was replaced) must not keep reading as signed in while every request goes without a token.
@@ -156,29 +190,62 @@ export function RoleWorkspace({ zh, status, wallet }) {
     ? (zh ? '（另一笔交易已使用其 nonce，正在等待足够确认）' : ' (another transaction used its nonce; waiting for confirmations)') : ''} · ${result.tx_hash ?? result.superseded_by_tx_hash ?? '—'}`;
   const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(failure); } finally { setBusy(false); } };
   const reload = async () => { setMaterials((await rightsRequest('materials')).materials); if (materialId) setWorkflow(await rightsRequest(`materials/${materialId}/workflow`)); };
-  const login = (exitOnly = false) => run(async () => { const value = await openRightsSession(subjectId, { exitOnly }); setPrincipal(value);
-    try { localStorage.setItem(subjectKey(wallet), subjectId); } catch {} setMaterials(value.exit_only ? [] : (await rightsRequest('materials')).materials); });
+  const restorePending = async (assertCurrent = captureIdentity()) => {
+    const token = rightsSessionToken();
+    const result = await rightsRequest('transaction-plans'); assertCurrent();
+    if (!token || token !== rightsSessionToken()) throw new Error('Business session changed. Find pending operations again.');
+    const plans = result.plans ?? []; setRecoverable(plans); setOtherIdentities(result.other_identities ?? []);
+    if (plans.length) remember(plans[0]); else { setPending(null); try { localStorage.removeItem(key); } catch {} }
+  };
+  const login = (exitOnly = false) => run(async () => { const assertCurrent = captureIdentity(); const value = await openRightsSession(subjectId, { exitOnly }); assertCurrent();
+    // A new identity starts from nothing the previous one had open: no material, workflow or preview carries over.
+    selectedMaterial.current = ''; setMaterialId(''); setWorkflow(null); setPlan(null); setApproved(false); setPrincipal(value);
+    try { localStorage.setItem(subjectKey(wallet), subjectId); } catch {}
+    // Fail closed if discovery fails: do not offer a new send while an older operation is unknown. An exit-only session
+    // (a revoked identity included) finds and settles its own saved operations the same way; it never prepares new ones.
+    setPending({ invalid: true, discovery: true }); await restorePending(assertCurrent);
+    if (!value.exit_only) { const result = await rightsRequest('materials'); assertCurrent(); setMaterials(result.materials); }
+    else setMaterials([]); });
+  // Another identity of this wallet holds a saved operation: sign in as that identity (exit-only once it is revoked) to
+  // reconcile it. The switch waits for the identity field to show it, so the session is opened for what the page shows.
+  const loginRef = useRef(login); loginRef.current = login;
+  useEffect(() => {
+    if (!switchTo || subjectId !== switchTo.subject_id) return;
+    setSwitchTo(null); loginRef.current(switchTo.exitOnly);
+  }, [switchTo, subjectId]);
+  const switchIdentity = (identity) => { setPlan(null); setApproved(false); setSubjectId(identity.subject_id); setSwitchTo({ subject_id: identity.subject_id, exitOnly: Boolean(identity.revoked) }); };
   // One lookup signature lists the identities enrolled for this wallet, so nobody has to copy an ID from the administrator.
   const lookup = () => run(async () => { const found = await findRightsIdentities(); setIdentities(found); if (found.length === 1) setSubjectId(found[0].subject_id); });
-  const chooseMaterial = (id) => { selectedMaterial.current = id; setMaterialId(id); setWorkflow(null); setPlan(null); setApproved(false); if (id) run(async () => { const result = await rightsRequest(`materials/${id}/workflow`); if (selectedMaterial.current === id && rightsSessionToken()) setWorkflow(result); }); };
+  const chooseMaterial = (id) => { setPoolId(''); selectedMaterial.current = id; setMaterialId(id); setWorkflow(null); setPlan(null); setApproved(false); if (id) run(async () => { const result = await rightsRequest(`materials/${id}/workflow`); if (selectedMaterial.current === id && rightsSessionToken()) setWorkflow(result); }); };
   const pack = workflow?.disclosure;
   const inputFor = () => {
     if (['register_title', 'create_offering'].includes(operation)) {
       if (!file) throw new Error(zh ? '请导入对应的签署材料文件。' : 'Import the corresponding signed package.');
       return { operation, material_id: materialId, payload: operation === 'create_offering' ? { ...file, terms: pack?.terms } : file };
     }
-    if (!workflow) throw new Error(zh ? '请先选择材料。' : 'Choose a material first.');
+    if (MATERIAL_ACTIONS.includes(operation) && !workflow) throw new Error(zh ? '请先选择材料。' : 'Choose a material first.');
     if (operation === 'pledge') return { operation, material_id: materialId, terms_hash: workflow.terms_hash, valid_until: pack.terms.subscribeUntil, payload: { ebl_id: pack.terms.eblId } };
-    return { operation: operation === 'repay_action' ? 'repay' : operation, pool_id: String(workflow.pool_id ?? ''), material_id: materialId,
+    return { operation: operation === 'repay_action' ? 'repay' : operation,
+      ...(!GLOBAL_ACTIONS.includes(operation) ? { pool_id: String(poolId || workflow?.pool_id || '') } : {}),
       ...(['disburse', 'repay_action', 'settle', 'record_payment', 'notify_resolution'].includes(operation) ? { amount_atomic: amount } : {}),
       ...(evidence ? { evidence_hash: evidence } : {}), ...(distribution ? { distribution_hash: distribution } : {}),
       ...(['set_eligibility', 'refresh_screening'].includes(operation) ? { valid_until: validUntil } : {}),
-      ...(operation === 'set_eligibility' ? { payload: { wallet: investorWallet, subject_hash: file?.subject_hash } } : {}) };
+      // The identity commitment is a form field; an imported review file is the advanced path and fills it only when empty.
+      ...(operation === 'set_eligibility' ? { payload: { wallet: investorWallet, subject_hash: subjectHash || file?.subject_hash } } : {}) };
   };
   const prepare = () => run(async () => {
     const assertContext = capture();
     setPlan(null); setApproved(false);
     if (!rightsSessionToken()) throw new Error(zh ? '业务会话已失效，请重新验证角色。' : 'Business session expired. Verify your role again.');
+    let publicTerms = pack;
+    if (!MATERIAL_ACTIONS.includes(operation) && !GLOBAL_ACTIONS.includes(operation) && (!pack || poolId && String(workflow?.pool_id) !== poolId)) {
+      const selectedPool = String(poolId || workflow?.pool_id || '');
+      if (!/^[1-9]\d*$/u.test(selectedPool)) throw new Error(zh ? '请选择资金池。' : 'Choose a funding pool.');
+      const response = await fetch(`/api/controlled/offerings/${selectedPool}/terms`);
+      const value = await response.json(); assertContext();
+      if (!response.ok) throw new Error(value.error ?? 'Public financing terms unavailable');
+      publicTerms = value;
+    }
     if (operation === 'create_material') {
       if (!documentText.trim()) throw new Error(zh ? '请填写虚构研究单证。' : 'Enter a fictional research title.');
       setPlan({ local: operation, preview: { title_contents: documentText }, input: { material: { research_title: documentText }, public_summary: { asset_class: 'copper', settlement: 'TEST_USDC', tenor_days: 30, terms_hash: `0x${'00'.repeat(32)}`, risk_flags: ['simulated_title', 'test_asset', 'capital_at_risk'] } } }); return;
@@ -202,11 +269,11 @@ export function RoleWorkspace({ zh, status, wallet }) {
       assertContext(); setPlan({ signing, preview: signing.value }); return;
     }
     if (operation === 'approve_repayment') {
-      if (!pack || !/^[1-9]\d*$/u.test(amount)) throw new Error(zh ? '请核对测试资产和金额（最多 6 位小数）。' : 'Check the test asset and a positive amount (up to six decimals).');
-      setPlan({ allowance: true, preview: { asset: pack.terms.settlementAsset, spender: status.config.contracts.RWAOfferingPool, amount_atomic: amount } }); return;
+      if (!publicTerms || !/^[1-9]\d*$/u.test(amount)) throw new Error(zh ? '请核对测试资产和金额（最多 6 位小数）。' : 'Check the test asset and a positive amount (up to six decimals).');
+      setPlan({ allowance: true, disclosurePreview: publicTerms, preview: { pool_id: poolId || workflow?.pool_id, asset: publicTerms.terms.settlementAsset, spender: status.config.contracts.RWAOfferingPool, amount_atomic: amount } }); return;
     }
     const saved = await rightsRequest('transaction-plans', inputFor());
-    assertContext(); setPlan(saved); const recovery = { plan_id: saved.plan_id, status: 'draft' }; localStorage.setItem(key, JSON.stringify(recovery)); setPending(recovery);
+    assertContext(); setPlan({ ...saved, disclosurePreview: publicTerms }); remember(saved);
   });
   const confirm = () => run(async () => {
     const assertContext = capture();
@@ -233,6 +300,7 @@ export function RoleWorkspace({ zh, status, wallet }) {
       let checkpointed = false, result;
       try {
         result = await sendRightsPlan(selected, { session, ethersFn: loadEthers, assertCurrent,
+          instance: { chainId: status.config.chainIdDecimal, pool: status.config.contracts.RWAOfferingPool, controller: status.controller },
           beforeBroadcast: async (value) => { const checked = await rightsRequest(`transaction-plans/${value.plan_id}/broadcast`, {}); checkpointed = true; remember(checked); return checked; },
           attachTransaction: (id, hash) => rightsRequest(`transaction-plans/${id}/transaction`, { tx_hash: hash }) });
       } catch (failure) {
@@ -245,6 +313,9 @@ export function RoleWorkspace({ zh, status, wallet }) {
             ? (zh ? '钱包拒绝了交易，没有发出任何内容。操作已释放：可以再次确认同一预览，或关闭预览后准备其他操作。' : 'The wallet rejected the transaction and sent nothing. The operation is released: confirm the same preview again, or close it and prepare another action.')
             : `${zh ? '原操作状态' : 'Original operation status'}: ${describePlan(released)}`);
         }
+        // Another saved operation holds this wallet's nonce (an earlier instance, or another identity of this wallet):
+        // show it with its recovery actions instead of a bare "reconcile first".
+        if (failure?.code === 'rights_plan_reconcile_required') await restorePending().catch(() => {});
         throw failure;
       }
       setNotice(`${zh ? '原交易状态' : 'Original transaction status'}: ${describePlan(result)}`);
@@ -254,20 +325,28 @@ export function RoleWorkspace({ zh, status, wallet }) {
     setPlan(null); setApproved(false);
   });
   const recover = () => run(async () => {
+    const assertCurrent = captureIdentity();
     if (originalHash) await rightsRequest(`transaction-plans/${pending.plan_id}/transaction`, { tx_hash: originalHash });
     const result = await rightsRequest(`transaction-plans/${pending.plan_id}`);
+    assertCurrent();
     setNotice(`${zh ? '原交易状态' : 'Original transaction status'}: ${describePlan(result)}`);
     remember(result);
+    if (SETTLED_PLAN.includes(result.status)) await restorePending(assertCurrent);
   });
   // For an operation the wallet never sent (rejected, closed, or the page reloaded before it answered).
   const release = () => run(async () => {
+    const assertCurrent = captureIdentity();
     const result = await rightsRequest(`transaction-plans/${pending.plan_id}/release`, {});
+    assertCurrent();
     setNotice(`${zh ? '原操作状态' : 'Original operation status'}: ${describePlan(result)}`);
     remember(result);
+    if (SETTLED_PLAN.includes(result.status)) await restorePending(assertCurrent);
   });
   const dismissDraft = () => run(async () => {
-    try { await rightsRequest(`transaction-plans/${pending.plan_id}/release`, {}); } catch { /* an unsent draft blocks nothing on the server */ }
-    try { localStorage.removeItem(key); } catch {} setPending(null); setPlan(null);
+    const assertCurrent = captureIdentity();
+    const result = await rightsRequest(`transaction-plans/${pending.plan_id}/release`, {}); assertCurrent();
+    remember(result); setPlan(null);
+    if (SETTLED_PLAN.includes(result.status)) await restorePending(assertCurrent);
   });
   return <section className="role-workspace" aria-label={zh ? '融资角色工作台' : 'Financing role workspace'}>
     <h3>{zh ? '融资角色工作台' : 'Financing role workspace'}</h3>
@@ -279,28 +358,46 @@ export function RoleWorkspace({ zh, status, wallet }) {
           {identity.organization} · {identity.roles.map(text).join(' / ')}{identity.revoked ? (zh ? '（已撤销，只能验证既有退款与领取）' : ' (revoked: existing refunds and claims only)') : ''}</label>)}</fieldset>
         : <p role="status">{zh ? '此钱包没有登记的业务身份。请联系管理员登记，或换用已登记的钱包。' : 'No identity is enrolled for this wallet. Ask the administrator to enroll it, or use an enrolled wallet.'}</p>)}
       <label>{zh ? '或输入管理员发放的业务身份编号' : 'Or enter the enrolled business identity ID'} <input value={subjectId} onChange={(e) => setSubjectId(e.target.value)} /></label><button type="button" disabled={busy || !wallet || !/^[a-f0-9-]{36}$/u.test(subjectId)} onClick={() => login()}>{zh ? '用当前钱包验证角色' : 'Verify role with this wallet'}</button><button type="button" disabled={busy || !wallet || !/^[a-f0-9-]{36}$/u.test(subjectId)} onClick={() => login(true)}>{zh ? '仅验证既有退款与领取' : 'Verify existing refunds and claims only'}</button></> : <>
-      {principal.exit_only && <p role="status">{zh ? '仅退出会话：业务身份撤销不会取消已有退款与领取。请在下方持仓操作；本会话不能读取私有材料或增加风险。' : 'Exit-only session: revoked enrollment does not cancel existing refunds or claims. Use positions below; this session cannot read private material or add risk.'}</p>}
+      {principal.exit_only && <p role="status">{zh ? '仅退出会话：业务身份撤销不会取消已有退款与领取。请在上方持仓操作；本会话不能读取私有材料或增加风险。' : 'Exit-only session: revoked enrollment does not cancel existing refunds or claims. Use positions above; this session cannot read private material or add risk.'}</p>}
       <p>{principal.organization} · {principal.roles.map(text).join(' / ')} · <code>{principal.wallet}</code></p><button type="button" onClick={() => { clearRightsSession(); setPrincipal(null); setWorkflow(null); setMaterials([]); setPlan(null); }}>{zh ? '退出业务会话' : 'Sign out of business session'}</button>
       <label>{zh ? '本组织材料' : 'Organization materials'} <select value={materialId} onChange={(e) => chooseMaterial(e.target.value)}><option value="">{zh ? '选择材料' : 'Choose material'}</option>{materials.map((m) => <option key={m.material_id} value={m.material_id}>{m.material_id} · v{m.revision}</option>)}</select></label>
-      {workflow && <><p className="role-next" role="status">{zh ? '你的待办' : 'Your next steps'}: {workflow.steps.filter((step) => step.assigned_to_you && step.status !== 'complete').map((step) => text(step.id)).join(' → ') || (zh ? '当前没有分配给你的待办；可核对下方责任与条件。' : 'No action is currently assigned to you. Check responsibilities and conditions below.')}</p><p>{zh ? '当前独立审批' : 'Current independent approvals'}: {workflow.approvals ?? 0}/2 · {workflow.published ? (zh ? '已发布当前版本' : 'Current revision published') : (zh ? '当前版本尚未发布' : 'Current revision unpublished')}</p><ol>{workflow.steps.map((step) => <li key={step.id}><strong>{text(step.id)}</strong> · {step.roles.map(text).join(' / ')} · {text(step.status)}{step.blocker && ` · ${text(step.blocker)}`}{step.assigned_to_you && ` · ${zh ? '你的职责' : 'Your responsibility'}`}</li>)}</ol>
-        {workflow.warning && <p role="alert">{zh ? '流程信息不完整，请核对材料或重试链上查询。' : 'Workflow information is incomplete. Check the material or retry chain reads.'}</p>}
+      {workflow && <>{workflow.state_notice && <p className="role-state-notice" role="note">{text(`notice_${workflow.state_notice}`)}</p>}
+        <div className="role-tasks">
+          <p className="role-next" role="status"><strong>{zh ? '你现在可做' : 'You can do now'}</strong>{workflow.steps.filter(needsTask).map((step) => `${text(step.id)}${step.next && step.next !== STEP_NEXT_DEFAULT[step.id] ? `（${text(step.next)}）` : ''}`).join(' → ') || (zh ? '当前没有你现在可做的步骤；等待和阻塞的原因见下方。' : 'Nothing is yours to do right now; what is waiting or blocked, and why, is below.')}</p>
+          {workflow.steps.some(waitsOnOthers) && <p className="role-waiting"><strong>{zh ? '等待其他角色或条件' : 'Waiting for another role or a date'}</strong>{workflow.steps.filter(waitsOnOthers).map((step) => `${text(step.id)}（${step.roles.map(text).join(' / ')}${step.blocker ? `${zh ? '：' : ': '}${text(step.blocker)}` : ''}）`).join(zh ? '；' : '; ')}</p>}
+          {workflow.steps.some((step) => step.phase === 'blocked') && <div className="role-blocked" role="note"><strong>{zh ? '被状态阻塞' : 'Blocked by state'}</strong>
+            <ul>{workflow.steps.filter((step) => step.phase === 'blocked').map((step) => <li key={step.id}>{text(step.id)}{zh ? '：' : ': '}{text(step.blocker)}</li>)}</ul></div>}
+          <p className="role-done">{zh ? '已完成或不适用' : 'Done or not applicable'}: {workflow.steps.filter((step) => ['complete', 'not_applicable'].includes(step.phase)).length}/{workflow.steps.length}</p>
+        </div>
+        <p>{zh ? '当前独立审批' : 'Current independent approvals'}: {workflow.approvals ?? 0}/2 · {workflow.published ? (zh ? '已发布当前版本' : 'Current revision published') : (zh ? '当前版本尚未发布' : 'Current revision unpublished')}</p>
+        <details className="role-step-list"><summary>{zh ? '全部步骤与职责' : 'All steps and responsibilities'}</summary><ol>{workflow.steps.map((step) => <li key={step.id} className={`is-${step.phase ?? 'unknown'}`}><strong>{text(step.id)}</strong> · {step.roles.map(text).join(' / ')} · {text(`phase_${step.phase ?? 'unknown'}`)}{!PLAIN_STATUS.includes(step.status) && ` · ${text(step.status)}`}{step.blocker && ` · ${text(step.blocker)}`}{step.assigned_to_you && ` · ${zh ? '你的职责' : 'Your responsibility'}`}</li>)}</ol></details>
+        {workflow.warning === 'financing_disclosure_missing' ? <p role="status">{zh ? '这份材料还没有导入完整条款：签发方可在下方“导入完整条款”中导入文件，或由研究报价生成价格。' : 'This material has no complete terms yet: the issuer imports them below with “Import complete terms”, or takes the price from the research quote.'}</p>
+          : workflow.warning && <p role="alert">{zh ? '流程信息不完整，请核对材料或重试链上查询。' : 'Workflow information is incomplete. Check the material or retry chain reads.'}</p>}
         {workflow.snapshot && <p>{zh ? '规范区块' : 'Canonical block'} #{workflow.snapshot.block_number} · <code>{workflow.snapshot.block_hash}</code></p>}
         {pack && <ReadableTerms pack={{ ...pack, pool_id: workflow.pool_id }} zh={zh} />}</>}
-      <p>{zh ? '认购、退款和独立领取在下方资金池与持仓中办理。角色登记不替代链上权限；每项操作准备时会重新检查。' : 'Use the funding pools and positions below for subscriptions, refunds and independent claims. Enrolled roles also require current on-chain permission, checked when preparing each action.'}</p>
+      <p>{zh ? '认购在资金池目录办理；退款与独立领取在上方持仓办理。角色登记不替代链上权限；每项操作准备时会重新检查。' : 'Use the pool catalogue for subscriptions and positions above for refunds and independent claims. Enrolled roles also require current on-chain permission, checked when preparing each action.'}</p>
+      <button type="button" disabled={busy} onClick={() => run(() => restorePending())}>{zh ? '找回待处理操作' : 'Find pending operations'}</button>
+      {otherIdentities.length > 0 && <div className="role-other-identities" role="note"><p>{zh ? '此钱包在其他业务身份下还有未完成的操作。它们同样占用这个钱包的 nonce，需要先由对应身份核对或释放，之后才能发送新的操作：' : 'Other business identities of this wallet still have unfinished operations. They hold this wallet’s nonce too, so that identity reconciles or releases them before a new send:'}</p>
+        <ul>{otherIdentities.map((identity) => <li key={identity.subject_id}><span>{identity.organization ?? identity.subject_id}{identity.revoked ? (zh ? '（已撤销）' : ' (revoked)') : ''} · {identity.plans.map((item) => `${text(item.operation)}${item.current_instance === false ? (zh ? '（原实例）' : ' (earlier instance)') : ''}`).join(zh ? '、' : ', ')}</span>
+          <button type="button" disabled={busy} onClick={() => switchIdentity(identity)}>{identity.revoked ? (zh ? '以该身份仅验证退出并核对' : 'Sign in as that identity (exits only) to reconcile') : (zh ? '切换到该身份核对' : 'Switch to that identity to reconcile')}</button></li>)}</ul></div>}
+      {recoverable.length > 1 && <label>{zh ? '待核对操作' : 'Operation to reconcile'} <select value={pending?.plan_id ?? ''} onChange={(e) => { remember(recoverable.find((item) => item.plan_id === e.target.value)); setOriginalHash(''); setPlan(null); }}>{recoverable.map((item) => <option key={item.plan_id} value={item.plan_id}>{text(item.operation)}{item.current_instance === false ? (zh ? '（原实例）' : ' (earlier instance)') : ''} · {item.plan_id}</option>)}</select></label>}
       {pending && <div role="status" className="role-pending"><p>{zh ? '已保存操作，先核对原交易。' : 'Saved operation: reconcile the original transaction first.'} <code>{pending.plan_id}</code>{pending.status && ` · ${PLAN_STATUS[pending.status]?.[zh ? 0 : 1] ?? pending.status}`}</p>
+        {(() => { const listed = recoverable.find((item) => item.plan_id === pending.plan_id); return listed && <p className="role-exact">{text(listed.operation)} · nonce {listed.nonce}{listed.current_instance === false
+          ? <>{zh ? ' · 来自原协议实例（资金池 ' : ' · From an earlier protocol instance (pool '}<code>{listed.pool}</code>{zh ? '）：按它自己保存的交易核对，不会发送到当前实例。' : '): it is reconciled against its own saved transaction and never sent to the current instance.'}</> : null}</p>; })()}
         <label>{zh ? '原钱包交易哈希（可选）' : 'Original wallet hash (optional)'} <input value={originalHash} onChange={(e) => setOriginalHash(e.target.value)} /></label>
         <button type="button" disabled={busy || pending.invalid} onClick={recover}>{zh ? '核对原操作' : 'Reconcile original operation'}</button>
         {pending.status === 'draft' ? <button type="button" disabled={busy} onClick={dismissDraft}>{zh ? '取消未广播预览' : 'Dismiss unbroadcast preview'}</button>
           : !pending.invalid && <button type="button" disabled={busy} onClick={release}>{zh ? '钱包没有发出，释放记录' : 'The wallet sent nothing: release'}</button>}
         <small className="role-exact">{zh ? '释放前服务会在链上核对：钱包仍有同一 nonce 的待处理交易、或原交易已上链时不会释放；nonce 被另一笔已确认交易使用时，原操作标记为不会再上链。' : 'Before releasing, the service checks the chain: it does not release while a transaction with the same nonce is pending or once the original is mined; if another confirmed transaction used the nonce, the operation is marked as never to be mined.'}</small></div>}
-      <label>{zh ? '本次操作' : 'Next action'} <select value={operation} onChange={(e) => { setOperation(e.target.value); setPlan(null); setApproved(false); setFile(null); }}><option value="">{zh ? '选择操作' : 'Choose action'}</option>
+      <label>{zh ? '本次操作' : 'Next action'} <select value={operation} onChange={(e) => { setOperation(e.target.value); setPlan(null); setApproved(false); setFile(null); setSubjectHash(''); }}><option value="">{zh ? '选择操作' : 'Choose action'}</option>
         {(() => {
           const allowed = actions.filter(([, roles]) => roles.some((role) => principal.roles.includes(role))).map(([name]) => name);
-          const due = new Set((workflow?.steps ?? []).filter((step) => step.assigned_to_you && step.status !== 'complete').flatMap((step) => STEP_ACTIONS[step.id] ?? []));
+          const due = new Set((workflow?.steps ?? []).filter(needsTask).flatMap((step) => STEP_ACTIONS[step.id] ?? []));
           const first = allowed.filter((name) => due.has(name)), rest = allowed.filter((name) => !due.has(name));
           return first.length ? <><optgroup label={zh ? '当前阶段你的待办' : 'Due from you at this stage'}>{first.map((name) => <option key={name} value={name}>{text(name)}</option>)}</optgroup>
             <optgroup label={zh ? '其他可用操作' : 'Other actions'}>{rest.map((name) => <option key={name} value={name}>{text(name)}</option>)}</optgroup></> : rest.map((name) => <option key={name} value={name}>{text(name)}</option>);
         })()}</select></label>
+      {operation && !MATERIAL_ACTIONS.includes(operation) && !GLOBAL_ACTIONS.includes(operation) && <label>{zh ? '操作的资金池编号' : 'Action pool ID'} <input inputMode="numeric" value={poolId || String(workflow?.pool_id ?? '')} onChange={(e) => { setPoolId(e.target.value); selectedMaterial.current = ''; setMaterialId(''); setWorkflow(null); setPlan(null); setApproved(false); }} /><small>{zh ? '使用公开条款核对资金池，无需访问私有材料。' : 'Review the pool through public terms; private materials are not required.'}</small></label>}
       {operation === 'create_material' ? <label>{zh ? '虚构研究单证内容' : 'Fictional research title contents'} <textarea value={documentText} onChange={(e) => { setDocumentText(e.target.value); setPlan(null); }} /></label> : <>
         {operation === 'disclosure' && <><label>{text('price_source')} <select value={termsSource} onChange={(e) => { setTermsSource(e.target.value); setPlan(null); setApproved(false); }}>
           <option value="file">{text('terms_from_file')}</option>{['FAST', 'BALANCED', 'LOW_COST'].map((speed) => <option key={speed} value={speed}>{text('terms_from_quote')} · {text(`speed_${speed}`)}</option>)}</select></label>
@@ -312,18 +409,19 @@ export function RoleWorkspace({ zh, status, wallet }) {
           <small id="role-amount-exact" className="role-exact">{amount ? `= ${amount} ${zh ? '原子单位（链上精确值）' : 'atomic units (exact on-chain value)'}` : amountText ? (zh ? '请输入大于 0、最多 6 位小数的金额' : 'Enter an amount above 0 with at most six decimals') : (zh ? '1 TEST_USDC = 1,000,000 原子单位' : '1 TEST_USDC = 1,000,000 atomic units')}</small></>}
         {['disburse', 'mark_in_transit', 'record_payment', 'record_arrival', 'notify_resolution', 'review_resolution', 'dispute_resolution', 'set_eligibility', 'refresh_screening', 'cancel_offering'].includes(operation) && <CommitmentField zh={zh} id="role-evidence" label={zh ? '审查材料承诺' : 'Evidence commitment'} value={evidence} onChange={(value) => { setEvidence(value); setPlan(null); }} />}
         {operation === 'notify_resolution' && <CommitmentField zh={zh} id="role-distribution" label={zh ? '分配方案承诺' : 'Distribution commitment'} value={distribution} onChange={(value) => { setDistribution(value); setPlan(null); }} />}
-        {operation === 'set_eligibility' && <label>{zh ? '待审查出资钱包' : 'Investor wallet to approve'} <input value={investorWallet} onChange={(e) => { setInvestorWallet(e.target.value); setPlan(null); }} /></label>}
+        {operation === 'set_eligibility' && <><label>{zh ? '待审查出资钱包' : 'Investor wallet to approve'} <input value={investorWallet} onChange={(e) => { setInvestorWallet(e.target.value); setPlan(null); }} /></label>
+          <CommitmentField zh={zh} id="role-subject" label={zh ? '出资主体身份承诺' : 'Investor identity commitment'} value={subjectHash} onChange={(value) => { setSubjectHash(value); setPlan(null); }} /></>}
         {['set_eligibility', 'refresh_screening'].includes(operation) && <><label>{zh ? '有效截止（本地时间）' : 'Valid until (local time)'} <input type="datetime-local" aria-describedby="role-valid-exact" value={validUntilLocal} onChange={(e) => { setValidUntilLocal(e.target.value); setPlan(null); }} /></label>
           <small id="role-valid-exact" className="role-exact">{validUntil ? `= Unix ${validUntil} · ${new Date(Number(validUntil) * 1000).toISOString().replace('.000Z', 'Z')}` : (zh ? '链上以 Unix 秒记录' : 'Recorded on chain in Unix seconds')}</small></>}
       </>}
-      <button type="button" disabled={busy || demo || !operation || Boolean(pending) || operation !== 'create_material' && !materialId} onClick={prepare}>{zh ? '准备可读预览' : 'Prepare readable preview'}</button>
+      <button type="button" disabled={busy || demo || principal?.exit_only || !operation || Boolean(pending) || otherIdentities.length > 0 || MATERIAL_ACTIONS.includes(operation) && !materialId || !GLOBAL_ACTIONS.includes(operation) && !MATERIAL_ACTIONS.includes(operation) && !/^[1-9]\d*$/u.test(String(poolId || workflow?.pool_id || ''))} onClick={prepare}>{zh ? '准备可读预览' : 'Prepare readable preview'}</button>
       {plan && <section className="controlled-confirm" aria-label={zh ? '角色操作预览' : 'Role action preview'}><h4>{text(operation)}</h4>{plan.disclosurePreview && <ReadableTerms pack={plan.disclosurePreview} zh={zh} />}<dl>{Object.entries(plan.preview ?? {}).filter(([, value]) => value != null).map(([name, value]) => <div key={name}><dt>{text(name)}</dt><dd><code>{name === 'operation' ? text(value) : String(value)}</code></dd></div>)}</dl>
         {plan.preview?.amount_atomic && <p>{atomic(plan.preview.amount_atomic)} TEST_USDC</p>}
         <p>{zh ? '授权仅针对以上身份、实例、材料版本和本次操作。研究签名不证明真实货物或偿付能力。' : 'Authorization applies to the identity, instance, material revision and action above. Research signatures do not prove real cargo or repayment capacity.'}</p>
         <label><input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />{zh ? '我已核对本次预览' : 'I reviewed this action'}</label>
         <button type="button" disabled={busy || !approved || demo} onClick={confirm}>{zh ? '确认本次操作' : 'Confirm this action'}</button><button type="button" disabled={busy} onClick={() => setPlan(null)}>{zh ? '关闭预览' : 'Close preview'}</button></section>}
     </>}
-    {pending?.invalid && <p role="alert">{zh ? '原操作记录损坏，请保留钱包记录并人工核对。' : 'Saved operation is corrupt. Keep the wallet record for manual reconciliation.'}</p>}
+    {pending?.invalid && !busy && <p role="alert">{pending.discovery ? (zh ? '未能读取服务端待处理操作，请重试“找回待处理操作”后再准备新操作。' : 'Pending operations could not be read. Retry Find pending operations before preparing another action.') : (zh ? '原操作记录损坏，请重新验证身份并找回服务端记录。' : 'Saved operation is corrupt. Verify your identity and find the server record.')}</p>}
     {error && <p role="alert">{describeFinanceError(error, zh).message}</p>}{notice && <p role="status">{notice}</p>}{busy && <p role="status">{zh ? '正在核验…' : 'Verifying…'}</p>}
   </section>;
 }

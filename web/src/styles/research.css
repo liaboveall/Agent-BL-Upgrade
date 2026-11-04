@@ -153,6 +153,21 @@
 .role-workspace > button, .role-workspace .controlled-confirm button { justify-self: start; }
 .role-workspace label:has(> input[type="checkbox"]), .controlled-confirm label:has(> input[type="checkbox"]) { display: flex; align-items: center; gap: 8px; }
 .role-next { padding: var(--s-3) var(--s-4); border-radius: var(--r); background: var(--accent-soft); color: var(--text); }
+/* What each role can do now, what waits and what a pool state blocks (src/rights/workflow.js `phase`). */
+.role-tasks { display: grid; gap: var(--s-2); }
+.role-tasks strong { display: block; margin-bottom: 2px; color: var(--text); font-size: var(--fs-12); font-weight: 650; }
+.role-waiting, .role-done { padding: 0 var(--s-4); color: var(--muted); }
+.role-blocked { padding: var(--s-3) var(--s-4); border: 1px solid var(--warn-line); border-radius: var(--r); background: var(--warn-soft); color: var(--warn-ink); }
+.role-blocked ul { margin: 0; padding-inline-start: 1.25rem; }
+.role-blocked li { margin-block: 2px; }
+.role-state-notice { padding: var(--s-3) var(--s-4); border-left: 3px solid var(--warn); border-radius: var(--r); background: var(--warn-soft); color: var(--warn-ink); }
+.role-step-list > summary { cursor: pointer; color: var(--text-2); font-weight: 600; }
+.role-step-list li.is-blocked strong { color: var(--warn-ink); }
+.role-step-list li.is-actionable strong { color: var(--accent); }
+.role-other-identities { display: grid; gap: var(--s-2); padding: var(--s-3) var(--s-4); border: 1px solid var(--info-line); border-radius: var(--r); background: var(--info-soft); color: var(--info-ink); }
+.role-other-identities ul { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.role-other-identities li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); margin: 0; }
+.role-other-identities span { min-width: 0; overflow-wrap: anywhere; }
 
 @media (max-width: 600px) {
   .rights-panel dl > div, .evidence-panel dl > div, .operations-panel dl > div { grid-template-columns: 1fr; gap: 4px; }

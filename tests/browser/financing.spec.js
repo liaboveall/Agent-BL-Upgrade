@@ -40,7 +40,7 @@ for (const language of ['zh', 'en']) for (const width of [1280, 390, 768, 1440])
     else if (name === 'me') json = { organization: 'research-carrier', wallet, roles: exitLogin ? [] : ['operator'], exit_only: exitLogin };
     else if (name === 'materials') json = { materials: [{ material_id: materialId, revision: 2 }] };
     else if (name.endsWith('/workflow')) json = { material_id: materialId, revision: 2, pool_id: 25, terms_hash: pack.terms_hash, document_hash: pack.terms.documentHash, disclosure: pack, snapshot,
-      steps: [{ id: 'draw', roles: ['operator'], status: 'pending', assigned_to_you: true }] };
+      steps: [{ id: 'draw', roles: ['operator'], status: 'pending', phase: 'actionable', assigned_to_you: true }] };
     else if (name === 'transaction-plans') json = { plan_id: materialId, scope: 'research_test_assets_only', execution: 'unsigned_dry_run', status: 'draft',
       preview: { operation: 'disburse', pool_id: 25, wallet, destination: config.contracts.RWAOfferingPool, amount_atomic: '8000000', chain_id: '1439' } };
     else json = { error: 'Unexpected fixture request' };
