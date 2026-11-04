@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import assert from 'node:assert/strict';
 import { loadApplicationConfig } from '../src/chain/loadApplicationConfig.js';
 import { quoteFromCase } from '../src/core/pricingEngine.js';
@@ -37,6 +38,24 @@ for (const file of Object.values(FROZEN_ARTIFACTS)) {
   assert.ok(dockerfile.includes(`scripts/config/${file}`), `Dockerfile does not copy scripts/config/${file}`);
   await fs.access(`scripts/config/${file}`);
 }
+// The image builds the dashboard from a partial tree: every server module it bundles, directly or through another
+// one, must be copied into the Dockerfile's web stage, or only the Docker build finds out.
+const webStage = dockerfile.split(/^FROM /mu).find((stage) => /\bAS web\b/u.test(stage.split('\n')[0])) ?? '';
+const copied = [...webStage.matchAll(/^COPY (src\/\S+) /gmu)].map((match) => match[1].replace(/\/$/u, ''));
+const relativeImports = async (file) => [...(await fs.readFile(file, 'utf8')).matchAll(/\bfrom\s+['"](\.{1,2}\/[^'"]+)['"]/gu)]
+  .map((match) => path.posix.normalize(path.posix.join(path.posix.dirname(file), match[1])));
+const bundled = new Set(), pendingModules = [];
+for (const entry of await fs.readdir('web/src', { recursive: true })) {
+  if (/\.jsx?$/u.test(entry)) pendingModules.push(...(await relativeImports(path.posix.join('web/src', entry.replaceAll('\\', '/')))).filter((target) => target.startsWith('src/')));
+}
+while (pendingModules.length) {
+  const file = pendingModules.pop();
+  if (bundled.has(file)) continue;
+  bundled.add(file);
+  pendingModules.push(...(await relativeImports(file)).filter((target) => target.startsWith('src/')));
+}
+assert.ok(bundled.size > 0, 'No server module found in the dashboard imports; the scan is broken');
+for (const file of bundled) assert.ok(copied.some((source) => file === source || file.startsWith(`${source}/`)), `Dockerfile web stage does not copy ${file}, which the dashboard bundles`);
 // Shipped public terms are served when no vault is present, so each one must recompute to its file name.
 for (const name of (await fs.readdir('data/disclosures')).filter((entry) => entry.endsWith('.json'))) {
   const pack = JSON.parse(await fs.readFile(`data/disclosures/${name}`, 'utf8'));

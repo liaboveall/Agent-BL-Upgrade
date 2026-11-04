@@ -22,10 +22,12 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY web ./web
 COPY public ./public
-# The dashboard imports shared subscription rules and the wallet's protocol ABI.
+# The dashboard imports shared subscription rules, the wallet's protocol ABI and the role-operation table
+# (npm run check fails when a module it bundles is missing here).
 COPY src/core ./src/core
 COPY src/chain ./src/chain
 COPY src/rights/financePolicy.js ./src/rights/financePolicy.js
+COPY src/rights/operations.js ./src/rights/operations.js
 RUN npm run build
 
 FROM node:22-alpine
