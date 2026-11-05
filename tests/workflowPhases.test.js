@@ -11,25 +11,33 @@ import { CONTROL_VERSION } from '../src/rights/typedData.js';
 
 const STATE = { Open: 2n, Subscribed: 3n, Funded: 4n, InTransit: 5n, Paused: 7n, Frozen: 8n, Defaulted: 13n };
 const hash = `0x${'44'.repeat(32)}`, pool = `0x${'33'.repeat(20)}`, controller = `0x${'c0'.repeat(20)}`, signer = `0x${'5e'.repeat(20)}`;
+const valuerWallet = `0x${'7a'.repeat(20)}`, caller = `0x${'aa'.repeat(20)}`;
 const pack = { terms_hash: hash, terms: { assetKey: hash, eblId: '1', minRaise: '8000000', supply: '10', subscribeUntil: '1500', disburseUntil: '2000', maturity: '3000' } };
 const record = { material_id: 'm', revision: 1, document_hash: hash, public_summary: { terms_hash: hash } };
 
 /** A running pool at block time `now`: subscriptions close at `deadline`, the draw window at 2000 and maturity at 3000. */
 function chain({ now = 1000, state = 'Open', subscribed = 3n, raised = 2400000n, finalized = false, drawn = 0n, deadline = 1500n, screening = 5000n,
-  intakeStopped = false, valuationUntil = 5000n, outstanding = null } = {}) {
+  intakeStopped = false, valuationUntil = 5000n, outstanding = null, valuerActive = true, titleActive = true, assetAllowed = true, operatorRole = true } = {}) {
   return { verify: async () => ({ control_version: CONTROL_VERSION }),
     provider: { getBlock: async () => ({ number: 10, hash, timestamp: now }),
       getStorage: async (address, slot) => { assert.equal(slot, SCREENING_ATTESTOR_SLOT[CONTROL_VERSION]); return `0x${'00'.repeat(12)}${signer.slice(2)}`; } },
-    registry: { eblForAsset: async () => 1n, titles: async () => ({ documentHash: hash }), pledgedTo: async () => pool, pledgeTerms: async () => hash },
+    registry: { eblForAsset: async () => 1n, titles: async () => ({ documentHash: hash }), pledgedTo: async () => pool, pledgeTerms: async () => hash, isActive: async () => titleActive },
+    // The views disburse() and isEligible() read: the screening signer's and valuer's roles, the title, the asset, and the caller's own role.
     controller: { getAddress: async () => controller, latestPoolForEbl: async () => 1n, termsHash: async () => hash, screeningValidUntil: async () => screening,
-      roles: async (role, account) => role === id('COMPLIANCE') && account.toLowerCase() === signer, intakeStopped: async () => intakeStopped,
+      roles: async (role, account) => {
+        const who = account.toLowerCase();
+        if (role === id('COMPLIANCE')) return who === signer;
+        if (role === id('VALUER')) return who === valuerWallet && valuerActive;
+        if (role === id('OPERATOR')) return who === caller && operatorRole;
+        return false;
+      }, intakeStopped: async () => intakeStopped, valuer: async () => valuerWallet, testAsset: async () => assetAllowed,
       valuations: async () => ({ validUntil: valuationUntil }) },
     pool: { getAddress: async () => pool, offerings: async () => ({ state: STATE[state], subscribed, tokenSupply: 10n, minRaise: 8000000n, raisedAtomic: raised, settlementAsset: pool }),
       disbursedAtomic: async () => drawn, recoveredAtomic: async () => 0n, fundingFinalized: async () => finalized, subscriptionDeadline: async () => deadline,
       ...(outstanding == null ? {} : { outstandingDebt: async () => outstanding }) } };
 }
 const run = async (options, roles = ['operator', 'investor', 'compliance', 'holder']) => {
-  const result = await materialWorkflow(chain(options), { wallet: `0x${'aa'.repeat(20)}`, roles }, record, pack, true, 2);
+  const result = await materialWorkflow(chain(options), { wallet: caller, roles }, record, pack, true, 2);
   assert.equal(result.warning, undefined, JSON.stringify(result.warning));
   return Object.fromEntries(result.steps.map((step) => [step.id, step]));
 };
@@ -107,4 +115,91 @@ test('before issuance each step waits for the one it needs', async () => {
   assert.deepEqual([steps.title.phase, steps.consent.phase, steps.consent.blocker, steps.issue.blocker, steps.fund.blocker], ['actionable', 'waiting', 'title_not_registered', 'pledge_missing', 'not_issued']);
   const missing = await materialWorkflow(null, { wallet: `0x${'aa'.repeat(20)}`, roles: ['issuer'] }, record, null, false, 0);
   assert.deepEqual([missing.warning, missing.steps[2].phase], ['rights_chain_not_configured', 'actionable']);
+});
+
+// Assessment 2026-11-05 F02: a draw reads the same sources disburse() does, from the same block. The valuer's role, the
+// title and the settlement asset used to be ignored, so a pool whose valuer had been revoked still read "you can do this now"
+// while the controller refused the call. The directory (src/rights/offerings.js) names the same reasons for a subscription.
+const FUNDED = { state: 'Funded', finalized: true, raised: 8000000n, subscribed: 10n };
+test('F02 a draw is blocked by every source the controller reads, and says all of them', async () => {
+  assert.deepEqual(shape((await run(FUNDED, ['operator'])).draw), ['actionable', null, 'disburse']);
+  for (const [options, blocker] of [[{ valuerActive: false }, 'valuer_inactive'], [{ titleActive: false }, 'title_inactive'], [{ assetAllowed: false }, 'asset_not_allowed'],
+    [{ intakeStopped: true }, 'intake_stopped'], [{ screening: 500n }, 'screening_expired'], [{ valuationUntil: 500n }, 'valuation_expired']]) {
+    const steps = await run({ ...FUNDED, ...options }, ['operator']);
+    assert.deepEqual(shape(steps.draw), ['blocked', blocker, 'disburse'], blocker);
+    assert.deepEqual(steps.draw.blockers, [blocker]);
+  }
+  // Two reasons at once: the first is the headline (the order the directory uses), both are listed.
+  const both = (await run({ ...FUNDED, valuerActive: false, screening: 500n }, ['operator'])).draw;
+  assert.deepEqual([both.blocker, both.blockers], ['screening_expired', ['screening_expired', 'valuer_inactive']]);
+  // The same sources stop a new subscription with the same names, so the task list and the directory cannot disagree.
+  const open = await run({ valuerActive: false });
+  assert.deepEqual(shape(open.fund), ['blocked', 'valuer_inactive', 'acknowledge_terms']);
+  assert.deepEqual(shape((await run({ titleActive: false })).fund), ['blocked', 'title_inactive', 'acknowledge_terms']);
+  assert.deepEqual(shape((await run({ assetAllowed: false })).fund), ['blocked', 'asset_not_allowed', 'acknowledge_terms']);
+});
+
+test('F02 a source that cannot be read is unknown, never "you can do this now"', async () => {
+  const base = chain(FUNDED);
+  for (const [name, broken] of [['valuer', { ...base, controller: { ...base.controller, valuer: undefined } }], ['title', { ...base, registry: { ...base.registry, isActive: undefined } }],
+    ['asset', { ...base, controller: { ...base.controller, testAsset: undefined } }]]) {
+    const result = await materialWorkflow(broken, { wallet: caller, roles: ['operator'] }, record, pack, true, 2);
+    assert.equal(result.warning, undefined, name);
+    assert.equal(result.steps.find((step) => step.id === 'draw').phase, 'unknown', name);
+  }
+});
+
+test('F02 a subscription takes a valuation through its last second but a draw does not', async () => {
+  const lastSecond = { valuationUntil: 1000n };
+  assert.equal((await run(lastSecond)).fund.phase, 'actionable', 'isEligible() accepts validUntil == now');
+  assert.deepEqual(shape((await run({ ...FUNDED, ...lastSecond }, ['operator'])).draw), ['blocked', 'valuation_expired', 'disburse'], 'disburse() needs now < validUntil');
+  assert.deepEqual(shape((await run({ ...FUNDED, valuationUntil: 1001n }, ['operator'])).draw), ['actionable', null, 'disburse']);
+});
+
+test('F02 the wallet that acts needs the on-chain role too; enrollment alone makes the step nobody\'s task for that wallet', async () => {
+  const missing = await run({ ...FUNDED, operatorRole: false }, ['operator']);
+  assert.deepEqual([missing.draw.phase, missing.draw.assigned_to_you, missing.draw.caller_blocker, missing.draw.caller_role], ['actionable', true, 'caller_role_missing', 'operator']);
+  const held = await run(FUNDED, ['operator']);
+  assert.equal(held.draw.caller_blocker, undefined);
+  // Someone who is not enrolled for the step is not told their wallet lacks its role.
+  assert.equal((await run({ ...FUNDED, operatorRole: false }, ['investor'])).draw.caller_blocker, undefined);
+  // Compliance: the screening can only be refreshed by a wallet that holds COMPLIANCE on chain.
+  const compliance = await run({}, ['compliance']);
+  assert.equal(compliance.eligibility.caller_blocker, 'caller_role_missing');
+});
+
+// F03: the pool lets the raise be drawn in several calls until the draw deadline, so a first draw only starts the step.
+test('F03 a first draw leaves the step open while principal remains and the window is open', async () => {
+  const running = { state: 'InTransit', finalized: true, raised: 8000000n, subscribed: 10n };
+  const part = (await run({ ...running, drawn: 1000000n }, ['operator'])).draw;
+  assert.deepEqual([part.status, part.phase, part.next, part.drawn_atomic, part.remaining_atomic], ['partial', 'actionable', 'disburse', '1000000', '7000000']);
+  const whole = (await run({ ...running, drawn: 8000000n }, ['operator'])).draw;
+  assert.deepEqual([whole.status, whole.phase, whole.next, whole.remaining_atomic], ['complete', 'complete', null, '0']);
+  // The window closed with principal left: nothing more can be drawn, and the step says so instead of reading "pending".
+  const closed = (await run({ ...running, now: 2500, drawn: 1000000n }, ['operator'])).draw;
+  assert.deepEqual([closed.status, closed.phase, closed.next, closed.remaining_atomic], ['window_closed', 'complete', null, '7000000']);
+  // What stops a first draw stops the rest of the principal too.
+  assert.deepEqual(shape((await run({ ...running, drawn: 1000000n, valuerActive: false }, ['operator'])).draw), ['blocked', 'valuer_inactive', 'disburse']);
+  assert.deepEqual(shape((await run({ ...running, state: 'Frozen', drawn: 1000000n }, ['operator'])).draw), ['blocked', 'state_frozen', 'disburse']);
+  assert.deepEqual(shape((await run({ ...running, state: 'Paused', drawn: 1000000n }, ['operator'])).draw), ['blocked', 'state_paused', 'disburse']);
+  // A default or liquidation ends the window whatever is left.
+  assert.equal((await run({ ...running, state: 'Defaulted', drawn: 1000000n }, ['operator'])).draw.status, 'window_closed');
+  // Repayment is open from the first draw on.
+  assert.equal((await run({ ...running, drawn: 1000000n }, ['operator'])).repay.phase, 'actionable');
+  const view = await materialWorkflow(chain({ ...running, drawn: 1000000n }), { wallet: caller, roles: ['operator'] }, record, pack, true, 2);
+  assert.deepEqual([view.amounts.raised_atomic, view.amounts.disbursed_atomic, view.amounts.undrawn_atomic], ['8000000', '1000000', '7000000']);
+});
+
+// Assessment 2026-11-05: the task list and the directory drifted before because each kept its own copy of the controller's
+// conditions. They now derive them from src/rights/sources.js; this keeps a third copy from growing back.
+test('the directory and the workflow take the controller\'s source conditions from one module', async () => {
+  const fs = await import('node:fs'), path = await import('node:path');
+  const root = path.resolve(import.meta.dirname, '..');
+  for (const file of ['src/rights/offerings.js', 'src/rights/workflow.js']) {
+    const source = fs.readFileSync(path.join(root, file), 'utf8');
+    assert.match(source, /from '\.\/sources\.js'/u, `${file} reads the shared sources`);
+    for (const code of ['valuer_inactive', 'title_inactive', 'asset_not_allowed', 'screening_source_inactive', 'valuation_expired']) {
+      assert.ok(!source.includes(`'${code}'`), `${file} must not restate ${code}`);
+    }
+  }
 });

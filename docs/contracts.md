@@ -64,6 +64,14 @@ v4 新增五条规则（2026-10-29 综合评估的 F02/F03/F05/F06/F07）：
 
 `isEligible()` 与 `disburse()` 除检查全局审查有效期外，还要求最近一次执行 `refreshScreening` 的钱包（私有变量 `_screeningAttestor`）当前仍持有 COMPLIANCE。该钱包的角色被撤销后，即使审查期未满，所有池也同时停止新认购与放款，直到当前持有合规角色的钱包重新刷新。合约不公开这个地址，`ScreeningRefreshed` 事件也不记录它，应用因此在核验过运行时代码的实例上，于目录快照所在区块读取它的存储槽（v4 为槽 16，见 `src/rights/screening.js`，本地部署回归核对此槽），再读取其角色：融资目录给出阻断原因 `screening_source_inactive`，读不到时按“无法核实”处理，不显示为可认购。
 
+### 认购与放款共用的来源条件
+
+`isEligible()`（认购）与 `disburse()`（放款）除上面的审查窗口及其签发人外，还读取同一组来源：延时治理的进件开关未停止；该池的估值仍有效，且签署它的估值人仍持有 VALUER；被质押的单证在登记处仍然有效；结算资产仍在获准的测试资产名单内。放款另外要求调用钱包自己持有链上 OPERATOR 角色。两者只差一秒的算术：认购接受估值的最后一秒（`validUntil >= now`），放款要求估值严格在未来（`now < validUntil`）。
+
+应用把这些条件只写在 `src/rights/sources.js` 一处：融资目录（`subscription_blockers`）与角色工作流（放款步骤的 `blocker` / `blockers`）都从它推导，所以两处用同样的原因名：`intake_stopped`、`screening_expired`、`screening_source_inactive`、`valuation_expired`、`valuer_inactive`、`title_inactive`、`asset_not_allowed`。某个条件读不到时按“无法核实”处理，不显示成“现在可做”。调用钱包缺少链上角色在工作流里表现为 `caller_blocker: caller_role_missing`：业务登记不等于链上授权。这些仍是同一区块快照上的提示，每次钱包操作准备时合约预执行会重新检查。
+
+放款可以分多笔：只要募集已最终确认、放款截止（合约保证它早于到期）未到、池处于 Funded 或 InTransit，就可以继续放出剩余本金（`raised − disbursed`）。工作流因此区分：尚未放款；`partial`（已放一部分，仍可继续，并给出已放与剩余额）；`complete`（已全部放出）；`window_closed`（窗口已关闭，或池已进入违约、清算，剩余本金不能再放，经“发起退出”退回）。首笔放款只是里程碑，不等于整个放款步骤完成。
+
 ## 构建与旧实例
 
 Solidity 0.8.24、Paris、viaIR、optimizer 200 runs，依赖由锁文件固定；标准 EVM runtime 24,576 bytes 和 initcode 49,152 bytes 上限保持有效。

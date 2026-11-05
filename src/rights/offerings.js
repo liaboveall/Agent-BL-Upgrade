@@ -6,6 +6,7 @@ import { CONTROL_VERSION } from './typedData.js';
 import { verifyChain } from './chain.js';
 import { multicallFor, multicallViews } from '../chain/multicall.js';
 import { readScreening } from './screening.js';
+import { controllerSourceBlockers } from './sources.js';
 
 // Read in this order per pool: [offering, termsHash, quoteVersion, subscriptionDeadline, maturityAt, disbursedAtomic, recoveredAtomic, terms].
 const VIEWS = [['pool', 'offerings'], ['controller', 'termsHash'], ['pool', 'quoteVersion'], ['pool', 'subscriptionDeadline'],
@@ -52,17 +53,12 @@ function subscriptionBlockers(config, block, instance, value, second) {
   if (Number(value.subscriptionDeadline) < block.timestamp) blockers.push('deadline_passed');
   if (BigInt(offer.subscribed) >= BigInt(offer.tokenSupply)) blockers.push('fully_subscribed');
   if (config.controlVersion !== CONTROL_VERSION) return blockers;
-  const unknown = instance.intake_stopped == null || instance.screening_valid_until == null || instance.screening_source_active == null || value.valuations == null
-    || second.valuer_role == null || second.title_active == null || second.asset_allowed == null;
-  if (unknown) { blockers.push('eligibility_unverified'); return blockers; }
-  if (instance.intake_stopped) blockers.push('intake_stopped');
-  // One refresh by a current compliance wallet clears either; an expired window is the one reported when both apply.
-  if (Number(instance.screening_valid_until) < block.timestamp) blockers.push('screening_expired');
-  else if (!instance.screening_source_active) blockers.push('screening_source_inactive');
-  if (Number(value.valuations.validUntil) < block.timestamp) blockers.push('valuation_expired');
-  if (!second.valuer_role) blockers.push('valuer_inactive');
-  if (!second.title_active) blockers.push('title_inactive');
-  if (!second.asset_allowed) blockers.push('asset_not_allowed');
+  // The same sources the role workflow reads for a draw (src/rights/sources.js); here an unreadable one is "unverified".
+  const sources = controllerSourceBlockers({ now: block.timestamp, intakeStopped: instance.intake_stopped, screeningValidUntil: instance.screening_valid_until,
+    screeningActive: instance.screening_source_active, valuationValidUntil: value.valuations?.validUntil, valuerActive: second.valuer_role,
+    titleActive: second.title_active, assetAllowed: second.asset_allowed });
+  if (sources.unknown) { blockers.push('eligibility_unverified'); return blockers; }
+  blockers.push(...sources.blockers);
   return blockers;
 }
 

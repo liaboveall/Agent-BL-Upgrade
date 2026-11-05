@@ -50,6 +50,13 @@ const labels = {
   title_not_registered: ['单证尚未登记', 'The title is not registered yet'], terms_unpublished: ['条款尚未经两位审查人批准并发布', 'The terms are not yet approved by two reviewers and published'],
   pledge_missing: ['持有人尚未同意质押', 'The holder has not consented to the pledge yet'], screening_expired: ['全局来源审查已过期，需合规角色更新', 'The instance-wide screening expired; compliance must refresh it'],
   intake_stopped: ['发行进件已暂停（延时治理开关）', 'Intake is stopped (a delayed-governance switch)'], valuation_expired: ['估值已过期，只能按新条款另行发行', 'The valuation expired; only a new offering on new terms can proceed'],
+  // What the controller also reads before it accepts money or releases it (src/rights/sources.js), and the caller's own wallet.
+  valuer_inactive: ['估值人的链上角色已被撤销；需治理重新授予该估值人，否则只能按新条款另行发行', 'The valuer’s on-chain role was revoked; governance must grant it again, or a new offering on new terms is the only way on'],
+  title_inactive: ['质押的单证在登记处已不再有效', 'The pledged title is no longer active in the registry'],
+  asset_not_allowed: ['结算资产已不在获准的测试资产名单内', 'The settlement asset is no longer on the approved test-asset list'],
+  caller_role_missing: ['你登记了此角色，但当前钱包没有链上权限（业务登记不等于链上授权）；请联系治理，或改用持有该角色的钱包', 'You are enrolled for this role, but this wallet does not hold the on-chain permission (enrollment is not authorization); ask governance, or use a wallet that holds it'],
+  partial: ['已部分放款，剩余本金仍可放款', 'Partly drawn; the rest of the principal can still be drawn'],
+  window_closed: ['放款窗口已关闭，未放出的本金不能再放款，经“发起退出”退回', 'The draw window closed; undrawn principal can no longer be drawn and returns through the exit'],
   resolution_pending: ['处置尚未终局，终局后可领取', 'The resolution is not final yet; claims open once it is'],
   notice_state_frozen: ['资金池已冻结：放款、无人认购池的自行退出和到期现金足额关闭，需延时治理先解冻；未达最低额的退款、放款截止后未放款本金的退出、到期仍欠款时的违约处置不受冻结影响。', 'The pool is frozen: draws, the unsubscribed exit and the cash-covered close at maturity wait for delayed governance to unfreeze it. Refunds of a raise below its minimum, the exit of undrawn principal after the draw deadline and default resolution of a debt still owed at maturity are not stopped by the freeze.'],
   notice_state_paused: ['发行已暂停：不能认购或放款；已有持仓可按条件退款或等待恢复。', 'The offering is paused: no subscriptions or draws. Existing positions can refund under the conditions or wait for it to resume.']
@@ -59,8 +66,11 @@ const MATERIAL_ACTIONS = ['disclosure', 'review_material', 'publish', 'sign_issu
 const GLOBAL_ACTIONS = ['create_material', 'refresh_screening', 'set_eligibility'];
 // A step is this role's task only when its roles can act on it now (src/rights/workflow.js `phase`), never merely because
 // it is unfinished: a frozen draw or a draw that waits for the raise is shown with its reason instead.
-const needsTask = (step) => step.assigned_to_you && step.phase === 'actionable';
+// A step this wallet cannot act on for want of the on-chain role (`caller_blocker`) is listed with its reason, not as a task.
+const needsTask = (step) => step.assigned_to_you && step.phase === 'actionable' && !step.caller_blocker;
 const waitsOnOthers = (step) => step.phase === 'waiting' || step.phase === 'actionable' && !step.assigned_to_you;
+// A partly drawn step is a task while principal remains; say how much.
+const remainingNote = (step, zh) => step.status === 'partial' && step.remaining_atomic != null ? `${zh ? '，剩余 ' : ', '}${atomic(step.remaining_atomic)} TEST_USDC${zh ? '' : ' left'}` : '';
 // Statuses that add something to the phase label in the step list.
 const PLAIN_STATUS = ['pending', 'complete', 'not_applicable', 'unknown'];
 const actions = [
@@ -394,14 +404,15 @@ export function RoleWorkspace({ zh, status, wallet }) {
       <label>{zh ? '本组织材料' : 'Organization materials'} <select value={materialId} onChange={(e) => chooseMaterial(e.target.value)}><option value="">{zh ? '选择材料' : 'Choose material'}</option>{materials.map((m) => <option key={m.material_id} value={m.material_id}>{m.material_id} · v{m.revision}</option>)}</select></label>
       {workflow && <>{workflow.state_notice && <p className="role-state-notice" role="note">{text(`notice_${workflow.state_notice}`)}</p>}
         <div className="role-tasks">
-          <p className="role-next" role="status"><strong>{zh ? '你现在可做' : 'You can do now'}</strong>{workflow.steps.filter(needsTask).map((step) => `${text(step.id)}${step.next && step.next !== STEP_NEXT_DEFAULT[step.id] ? `（${text(step.next)}）` : ''}`).join(' → ') || (zh ? '当前没有你现在可做的步骤；等待和阻塞的原因见下方。' : 'Nothing is yours to do right now; what is waiting or blocked, and why, is below.')}</p>
+          <p className="role-next" role="status"><strong>{zh ? '你现在可做' : 'You can do now'}</strong>{workflow.steps.filter(needsTask).map((step) => `${text(step.id)}${step.next && step.next !== STEP_NEXT_DEFAULT[step.id] ? `（${text(step.next)}）` : ''}${remainingNote(step, zh)}`).join(' → ') || (zh ? '当前没有你现在可做的步骤；等待和阻塞的原因见下方。' : 'Nothing is yours to do right now; what is waiting or blocked, and why, is below.')}</p>
           {workflow.steps.some(waitsOnOthers) && <p className="role-waiting"><strong>{zh ? '等待其他角色或条件' : 'Waiting for another role or a date'}</strong>{workflow.steps.filter(waitsOnOthers).map((step) => `${text(step.id)}（${step.roles.map(text).join(' / ')}${step.blocker ? `${zh ? '：' : ': '}${text(step.blocker)}` : ''}）`).join(zh ? '；' : '; ')}</p>}
-          {workflow.steps.some((step) => step.phase === 'blocked') && <div className="role-blocked" role="note"><strong>{zh ? '被状态阻塞' : 'Blocked by state'}</strong>
-            <ul>{workflow.steps.filter((step) => step.phase === 'blocked').map((step) => <li key={step.id}>{text(step.id)}{zh ? '：' : ': '}{text(step.blocker)}</li>)}</ul></div>}
+          {workflow.steps.some((step) => step.phase === 'blocked' || step.caller_blocker) && <div className="role-blocked" role="note"><strong>{zh ? '被状态阻塞' : 'Blocked by state'}</strong>
+            <ul>{workflow.steps.filter((step) => step.phase === 'blocked').map((step) => <li key={step.id}>{text(step.id)}{remainingNote(step, zh)}{zh ? '：' : ': '}{(step.blockers?.length ? step.blockers : [step.blocker]).map(text).join(zh ? '；' : '; ')}</li>)}
+              {workflow.steps.filter((step) => step.caller_blocker).map((step) => <li key={`${step.id}-wallet`}>{text(step.id)}{remainingNote(step, zh)}{zh ? '：' : ': '}{text(step.caller_blocker)}{step.caller_role ? `（${text(step.caller_role)}）` : ''}</li>)}</ul></div>}
           <p className="role-done">{zh ? '已完成或不适用' : 'Done or not applicable'}: {workflow.steps.filter((step) => ['complete', 'not_applicable'].includes(step.phase)).length}/{workflow.steps.length}</p>
         </div>
         <p>{zh ? '当前独立审批' : 'Current independent approvals'}: {workflow.approvals ?? 0}/2 · {workflow.published ? (zh ? '已发布当前版本' : 'Current revision published') : (zh ? '当前版本尚未发布' : 'Current revision unpublished')}</p>
-        <details className="role-step-list"><summary>{zh ? '全部步骤与职责' : 'All steps and responsibilities'}</summary><ol>{workflow.steps.map((step) => <li key={step.id} className={`is-${step.phase ?? 'unknown'}`}><strong>{text(step.id)}</strong> · {step.roles.map(text).join(' / ')} · {text(`phase_${step.phase ?? 'unknown'}`)}{!PLAIN_STATUS.includes(step.status) && ` · ${text(step.status)}`}{step.blocker && ` · ${text(step.blocker)}`}{step.assigned_to_you && ` · ${zh ? '你的职责' : 'Your responsibility'}`}</li>)}</ol></details>
+        <details className="role-step-list"><summary>{zh ? '全部步骤与职责' : 'All steps and responsibilities'}</summary><ol>{workflow.steps.map((step) => <li key={step.id} className={`is-${step.phase ?? 'unknown'}`}><strong>{text(step.id)}</strong> · {step.roles.map(text).join(' / ')} · {text(`phase_${step.phase ?? 'unknown'}`)}{!PLAIN_STATUS.includes(step.status) && ` · ${text(step.status)}`}{remainingNote(step, zh)}{step.blocker && ` · ${(step.blockers?.length ? step.blockers : [step.blocker]).map(text).join(zh ? '；' : '; ')}`}{step.caller_blocker && ` · ${text(step.caller_blocker)}`}{step.assigned_to_you && ` · ${zh ? '你的职责' : 'Your responsibility'}`}</li>)}</ol></details>
         {workflow.warning === 'financing_disclosure_missing' ? <p role="status">{zh ? '这份材料还没有导入完整条款：签发方可在下方“导入完整条款”中导入文件，或由研究报价生成价格。' : 'This material has no complete terms yet: the issuer imports them below with “Import complete terms”, or takes the price from the research quote.'}</p>
           : workflow.warning && <p role="alert">{zh ? '流程信息不完整，请核对材料或重试链上查询。' : 'Workflow information is incomplete. Check the material or retry chain reads.'}</p>}
         {workflow.snapshot && <p>{zh ? '规范区块' : 'Canonical block'} #{workflow.snapshot.block_number} · <code>{workflow.snapshot.block_hash}</code></p>}
