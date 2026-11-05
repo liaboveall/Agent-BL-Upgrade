@@ -7,6 +7,7 @@ import { chainStateName } from '../agent/runtime/poolRules.js';
 import { RpcReadPool, mapReads, assertSnapshot, snapshotInfo, boundedProvider } from '../rights/reads.js';
 import { CONTROL_VERSION } from '../rights/typedData.js';
 import { findNonceTransaction } from '../chain/nonceLookup.js';
+import { hasSuccessors } from '../chain/finality.js';
 import { NEW_RISK_CAPITAL_OPERATIONS, assertOperationOpen } from '../ops/intakePolicy.js';
 
 const fail = (code, message, status = 409) => { throw Object.assign(new Error(message), { code, status, expose: true }); };
@@ -164,7 +165,8 @@ export class CapitalLedgerService {
   async #settled(receipt, ctx, read) {
     if (!receipt?.blockHash) return false;
     const [block, latest] = await Promise.all([read(() => ctx.provider.getBlock(receipt.blockNumber)), read(() => ctx.provider.getBlockNumber())]);
-    return Boolean(block?.hash) && same(block.hash, receipt.blockHash) && Number(latest) - Number(receipt.blockNumber) + 1 >= this.confirmations;
+    // The same arithmetic as the role plans (src/chain/finality.js): confirmations count the receipt's own block, so one fewer successor.
+    return Boolean(block?.hash) && same(block.hash, receipt.blockHash) && hasSuccessors(latest, receipt.blockNumber, this.confirmations - 1);
   }
 
   async prepareRefund({ wallet, chain_pool_id: poolId, authorization_subject, authorization_session }) {

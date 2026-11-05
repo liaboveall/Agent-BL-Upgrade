@@ -92,7 +92,7 @@ function supersede(plan, observed, ctx) {
 // (evidence, investor wallets, terms, material). Discovery lists only this, and an exit-only session reads only this, so a
 // revoked identity can settle its old operations without reading their arguments or regaining any role.
 const PLAN_SUMMARY = ['plan_id', 'status', 'operation', 'chain_id', 'pool', 'controller', 'control_version', 'nonce', 'tx_hash', 'prepared_at', 'checkpoint_at',
-  'block_number', 'block_hash', 'released_at', 'superseded_by_tx_hash', 'confirmation_pending', 'nonce_used_by_tx_hash'];
+  'receipt_status', 'block_number', 'block_hash', 'released_at', 'superseded_by_tx_hash', 'confirmation_pending', 'nonce_used_by_tx_hash'];
 const sameAddress = (a, b) => String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase();
 export function planSummary(plan, binding = null) {
   const summary = Object.fromEntries(PLAN_SUMMARY.filter((key) => plan[key] !== undefined).map((key) => [key, plan[key]]));

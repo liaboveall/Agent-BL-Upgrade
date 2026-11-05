@@ -99,6 +99,13 @@ const PLAN_STATUS = { draft: ['未广播预览', 'Unbroadcast preview'], broadca
   released: ['钱包未发出：已释放，可再次确认', 'The wallet sent nothing: released, you can confirm it again'],
   superseded: ['同一 nonce 已被另一笔已确认交易使用，原操作不会再上链', 'Another confirmed transaction used its nonce; the operation can never be mined'],
   abandoned: ['已放弃的预览', 'Abandoned preview'] };
+// A failed receipt is as provisional as a successful one (src/chain/finality.js): until enough blocks follow it the operation
+// is still open, still holds this wallet's next send, and may yet read differently. Only after that does it read "reverted".
+const planStatusText = (plan, zh) => plan?.status === 'confirming' && plan.receipt_status === 0
+  ? (zh ? '已打包，但回执显示失败；等待确认块，确认前不能发送新操作' : 'Mined with a failed receipt; waiting for confirmations. No new operation can be sent until it is final')
+  : (PLAN_STATUS[plan?.status]?.[zh ? 0 : 1] ?? plan?.status);
+// How often a mined operation that waits for its confirmation blocks is looked at again while it is on screen.
+const CONFIRMING_POLL_MS = 6000;
 const atomic = (value) => `${BigInt(value ?? 0) / 1000000n}.${(BigInt(value ?? 0) % 1000000n).toString().padStart(6, '0')}`;
 const subjectKey = (wallet) => `agentbl.rights-subject:${wallet.toLowerCase()}`;
 const COMMITMENT = /^0x[a-fA-F0-9]{64}$/u;
@@ -182,11 +189,11 @@ export function RoleWorkspace({ zh, status, wallet }) {
   // Keep the saved operation only while it still needs reconciling; settled ones free the wallet for the next send.
   const remember = (result) => {
     if (SETTLED_PLAN.includes(result?.status)) { try { localStorage.removeItem(key); } catch {} setPending(null); return; }
-    const saved = { plan_id: result.plan_id, status: result.status };
+    const saved = { plan_id: result.plan_id, status: result.status, ...(result.receipt_status != null ? { receipt_status: result.receipt_status } : {}) };
     try { localStorage.setItem(key, JSON.stringify(saved)); } catch {}
     setPending(saved);
   };
-  const describePlan = (result) => `${PLAN_STATUS[result.status]?.[zh ? 0 : 1] ?? result.status}${result.confirmation_pending
+  const describePlan = (result) => `${planStatusText(result, zh)}${result.confirmation_pending
     ? (zh ? '（另一笔交易已使用其 nonce，正在等待足够确认）' : ' (another transaction used its nonce; waiting for confirmations)') : ''} · ${result.tx_hash ?? result.superseded_by_tx_hash ?? '—'}`;
   const run = async (work) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch (failure) { setError(failure); } finally { setBusy(false); } };
   const reload = async () => { setMaterials((await rightsRequest('materials')).materials); if (materialId) setWorkflow(await rightsRequest(`materials/${materialId}/workflow`)); };
@@ -348,6 +355,30 @@ export function RoleWorkspace({ zh, status, wallet }) {
     remember(result); setPlan(null);
     if (SETTLED_PLAN.includes(result.status)) await restorePending(assertCurrent);
   });
+  // A mined operation that waits for its confirmation blocks (a failed receipt included) settles within a few blocks: ask
+  // again while it is on screen, so the page does not keep a stale "waiting" for an operation that is already final.
+  const pendingRef = useRef(null), poll = useRef(null);
+  pendingRef.current = pending;
+  poll.current = async () => {
+    const assertCurrent = captureIdentity(), planId = pendingRef.current?.plan_id;
+    if (!planId) return;
+    const result = await rightsRequest(`transaction-plans/${planId}`);
+    assertCurrent();
+    if (pendingRef.current?.plan_id !== planId) return;
+    remember(result);
+    if (SETTLED_PLAN.includes(result.status)) { setNotice(`${zh ? '原交易状态' : 'Original transaction status'}: ${describePlan(result)}`); await restorePending(assertCurrent); }
+  };
+  const waitingForBlocks = Boolean(principal) && ['confirming', 'reconciling'].includes(pending?.status);
+  useEffect(() => {
+    if (!waitingForBlocks) return undefined;
+    let running = false;
+    const timer = setInterval(async () => {
+      if (running) return;
+      running = true;
+      try { await poll.current(); } catch { /* the next look or the reconcile button asks again */ } finally { running = false; }
+    }, CONFIRMING_POLL_MS);
+    return () => clearInterval(timer);
+  }, [waitingForBlocks, pending?.plan_id]);
   return <section className="role-workspace" aria-label={zh ? '融资角色工作台' : 'Financing role workspace'}>
     <h3>{zh ? '融资角色工作台' : 'Financing role workspace'}</h3>
     <p>{zh ? '虚构铜货物 · 新加坡 → 上海 · 六位小数测试代币。先验证已登记业务角色，再逐项审阅与钱包授权。' : 'Fictional copper · Singapore → Shanghai · six-decimal test assets. Verify an enrolled role, then review each action and authorize it in your wallet.'}</p>
@@ -381,7 +412,7 @@ export function RoleWorkspace({ zh, status, wallet }) {
         <ul>{otherIdentities.map((identity) => <li key={identity.subject_id}><span>{identity.organization ?? identity.subject_id}{identity.revoked ? (zh ? '（已撤销）' : ' (revoked)') : ''} · {identity.plans.map((item) => `${text(item.operation)}${item.current_instance === false ? (zh ? '（原实例）' : ' (earlier instance)') : ''}`).join(zh ? '、' : ', ')}</span>
           <button type="button" disabled={busy} onClick={() => switchIdentity(identity)}>{identity.revoked ? (zh ? '以该身份仅验证退出并核对' : 'Sign in as that identity (exits only) to reconcile') : (zh ? '切换到该身份核对' : 'Switch to that identity to reconcile')}</button></li>)}</ul></div>}
       {recoverable.length > 1 && <label>{zh ? '待核对操作' : 'Operation to reconcile'} <select value={pending?.plan_id ?? ''} onChange={(e) => { remember(recoverable.find((item) => item.plan_id === e.target.value)); setOriginalHash(''); setPlan(null); }}>{recoverable.map((item) => <option key={item.plan_id} value={item.plan_id}>{text(item.operation)}{item.current_instance === false ? (zh ? '（原实例）' : ' (earlier instance)') : ''} · {item.plan_id}</option>)}</select></label>}
-      {pending && <div role="status" className="role-pending"><p>{zh ? '已保存操作，先核对原交易。' : 'Saved operation: reconcile the original transaction first.'} <code>{pending.plan_id}</code>{pending.status && ` · ${PLAN_STATUS[pending.status]?.[zh ? 0 : 1] ?? pending.status}`}</p>
+      {pending && <div role="status" className="role-pending"><p>{zh ? '已保存操作，先核对原交易。' : 'Saved operation: reconcile the original transaction first.'} <code>{pending.plan_id}</code>{pending.status && ` · ${planStatusText(pending, zh)}`}</p>
         {(() => { const listed = recoverable.find((item) => item.plan_id === pending.plan_id); return listed && <p className="role-exact">{text(listed.operation)} · nonce {listed.nonce}{listed.current_instance === false
           ? <>{zh ? ' · 来自原协议实例（资金池 ' : ' · From an earlier protocol instance (pool '}<code>{listed.pool}</code>{zh ? '）：按它自己保存的交易核对，不会发送到当前实例。' : '): it is reconciled against its own saved transaction and never sent to the current instance.'}</> : null}</p>; })()}
         <label>{zh ? '原钱包交易哈希（可选）' : 'Original wallet hash (optional)'} <input value={originalHash} onChange={(e) => setOriginalHash(e.target.value)} /></label>

@@ -13,9 +13,11 @@ import { RightsService } from '../rights/service.js';
 import { financingReview } from '../rights/financingReview.js';
 import { CONTROL_VERSION } from '../rights/typedData.js';
 import { assertIntakeOpen, isNewIntake, requestReadiness } from '../ops/intakePolicy.js';
+import { confirmationsFor } from '../chain/finality.js';
 
 export function controlledCapitalConfig(configuration) {
-  return { protocolVersion: 5, controlVersion: configuration.control_version, chainIdDecimal: Number(configuration.chain_id), confirmations: Number(configuration.chain_id) === 31337 ? 1 : 3, explorerBase: 'https://testnet.blockscout.injective.network',
+  // The capital ledger and the role-plan service share one finality rule (src/chain/finality.js).
+  return { protocolVersion: 5, controlVersion: configuration.control_version, chainIdDecimal: Number(configuration.chain_id), confirmations: confirmationsFor(configuration.chain_id), explorerBase: 'https://testnet.blockscout.injective.network',
     contracts: { RWAOfferingPool: configuration.contracts.RWAOfferingPoolV5, RWAToken: configuration.contracts.ControlledRWAToken },
     abis: { RWAOfferingPool: PROTOCOL_V5_ABI.RWAOfferingPool },
     deployments: { RWAOfferingPool: { blockNumber: configuration.deployment_block } } };
@@ -33,7 +35,7 @@ export function createControlledRoutes({ env = process.env, getMode = () => 'dem
       const chain = suppliedChain ?? await loadRightsChain(env.AGENTBL_RIGHTS_CONFIG); const binding = await chain.verify({ read: readPool.budget(100).read });
       const config = controlledCapitalConfig({ ...configuration, control_version: binding.control_version });
       const ledger = new Ledger({ baseDir: path.join(runtimeDir(env), `controlled-capital-${config.contracts.RWAOfferingPool.toLowerCase()}`) });
-      const capital = new CapitalLedgerService({ ledger, chainConfig: config, getMode, getGeneration, readPool, confirmations: Number(configuration.chain_id) === 31337 ? 1 : 3,
+      const capital = new CapitalLedgerService({ ledger, chainConfig: config, getMode, getGeneration, readPool, confirmations: config.confirmations,
         getContext: async () => { await verifyChain(chain, { read: readPool.budget(100).read }); return { provider: chain.provider }; } });
       context = { chain, config, capital, configuration }; return context;
     })().catch((error) => { loading = null; throw error; });

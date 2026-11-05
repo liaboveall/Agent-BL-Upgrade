@@ -5,6 +5,7 @@ import { HttpError } from '../app/http.js';
 import { RpcReadPool } from './reads.js';
 import { CONTROL_VERSION } from './typedData.js';
 import { findNonceTransaction } from '../chain/nonceLookup.js';
+import { hasSuccessors, successorBlocks } from '../chain/finality.js';
 import { RIGHTS_OPERATIONS, rightsCallMatches } from './operations.js';
 
 export const RIGHTS_CONTROLLER_ABI = [
@@ -205,21 +206,26 @@ export class RightsChainService {
   async verifyTransaction(plan, txHash) {
     await this.verify();
     const tx = await this.provider.getTransaction(txHash);
-    if (!tx && plan.tx_hash && equal(plan.tx_hash, txHash)) return { tx_hash: txHash, status: 'reconciling', block_number: null, block_hash: null };
+    // `receipt_status` is what the receipt says (1 succeeded, 0 failed) and is null while there is none; every answer sets it,
+    // so a plan that was once read as failed cannot keep that reading after the receipt changes or disappears.
+    if (!tx && plan.tx_hash && equal(plan.tx_hash, txHash)) return { tx_hash: txHash, status: 'reconciling', receipt_status: null, block_number: null, block_hash: null };
     requireThat(tx && equal(tx.from, plan.from) && equal(tx.to, plan.to) && equal(tx.data, plan.calldata)
       && tx.value === 0n && Number(tx.nonce) === plan.nonce && BigInt(tx.chainId) === BigInt(plan.chain_id), 'rights_transaction_mismatch');
     const receipt = await this.provider.getTransactionReceipt(txHash);
-    if (!receipt) return { tx_hash: txHash, status: plan.block_hash ? 'reconciling' : 'pending', block_number: null, block_hash: null };
+    if (!receipt) return { tx_hash: txHash, status: plan.block_hash ? 'reconciling' : 'pending', receipt_status: null, block_number: null, block_hash: null };
     const block = await this.provider.getBlock(receipt.blockNumber);
-    if (block?.hash !== receipt.blockHash) return { tx_hash: txHash, status: 'reconciling', block_number: null, block_hash: null };
+    if (block?.hash !== receipt.blockHash) return { tx_hash: txHash, status: 'reconciling', receipt_status: null, block_number: null, block_hash: null };
     const latest = await this.provider.getBlockNumber();
-    // Local chains confirm immediately; controlled testnet candidates require two successors.
-    const depth = this.confirmationDepth(plan.chain_id);
-    return { tx_hash: txHash, status: receipt.status === 0 ? 'reverted' : latest - receipt.blockNumber < depth ? 'confirming' : 'confirmed',
+    // One rule for every receipt (src/chain/finality.js): a failed receipt is as provisional as a successful one. Until enough
+    // blocks follow it the plan stays `confirming` (with receipt_status 0), so it is still listed, still holds the wallet's
+    // next send, and a retry cannot be checkpointed beside a transaction that might yet succeed on another branch.
+    const deep = hasSuccessors(latest, receipt.blockNumber, this.confirmationDepth(plan.chain_id));
+    const failed = receipt.status === 0;
+    return { tx_hash: txHash, status: !deep ? 'confirming' : failed ? 'reverted' : 'confirmed', receipt_status: failed ? 0 : 1,
       block_number: receipt.blockNumber, block_hash: receipt.blockHash };
   }
-  /** Blocks a receipt needs on top of it before a decision rests on it; local chains decide at once. */
-  confirmationDepth(chainId = this.chainId) { return BigInt(chainId) === 31337n ? 0 : 2; }
+  /** Blocks a receipt needs on top of it before a decision rests on it (src/chain/finality.js); local chains decide at once. */
+  confirmationDepth(chainId = this.chainId) { return successorBlocks(chainId); }
   /**
    * The transaction that used a saved plan's nonce, or null while the nonce is unused. Another transaction is
    * reported with `settled`: whether its receipt is canonical and deep enough for the plan to be superseded by it.
@@ -239,8 +245,7 @@ export class RightsChainService {
     if (equal(tx.to, plan.to) && equal(tx.data, plan.calldata) && tx.value === 0n) return this.verifyTransaction(plan, hash);
     const receipt = await read(() => this.provider.getTransactionReceipt(hash));
     const block = receipt && await read(() => this.provider.getBlock(receipt.blockNumber));
-    const settled = Boolean(block?.hash && equal(block.hash, receipt.blockHash)
-      && BigInt(latest) - BigInt(receipt.blockNumber) >= BigInt(this.confirmationDepth(plan.chain_id)));
+    const settled = Boolean(block?.hash && equal(block.hash, receipt.blockHash) && hasSuccessors(latest, receipt.blockNumber, this.confirmationDepth(plan.chain_id)));
     return { status: 'nonce_consumed_by_other_transaction', observed_tx_hash: hash, settled,
       block_number: receipt?.blockNumber ?? null, block_hash: receipt?.blockHash ?? null };
   }
