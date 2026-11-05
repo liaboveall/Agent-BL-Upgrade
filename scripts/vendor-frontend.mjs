@@ -26,6 +26,27 @@ const MANIFEST_SCHEMA = 'agentbl-vendor-manifest-v1';
 const sha256 = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex');
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 
+/**
+ * The packages esbuild put into a bundle, as sorted `name@version` strings, from its metafile and the lock it was built from.
+ * What ships to browsers is this list, not everything the lock installs: a dependency advisory matters to users only for a
+ * package in here (scripts/audit-vendor.mjs), and the licence table lists exactly these. Metafile inputs are paths such as
+ * `scripts/vendor/node_modules/elliptic/node_modules/bn.js/lib/bn.js`; the lock key is the part from the first `node_modules/`
+ * through the package directory after the last one.
+ */
+export function bundledPackages(metafile, lock) {
+  const found = new Set();
+  for (const input of Object.keys(metafile?.inputs ?? {})) {
+    const file = input.replaceAll('\\', '/'), first = file.indexOf('node_modules/');
+    if (first < 0) continue; // the entry file, the crypto stub and `(disabled):` modules
+    const rest = file.slice(first), last = rest.lastIndexOf('node_modules/') + 'node_modules/'.length;
+    const segments = rest.slice(last).split('/'), name = segments[0].startsWith('@') ? segments.slice(0, 2).join('/') : segments[0];
+    const entry = lock.packages?.[`${rest.slice(0, last)}${name}`];
+    if (!entry?.version) throw new Error(`bundled input ${input} has no entry in the vendor lock`);
+    found.add(`${name}@${entry.version}`);
+  }
+  return [...found].sort();
+}
+
 function rootDependencyVersion(name) {
   return readJson(path.join(root, 'package.json')).dependencies?.[name];
 }
@@ -63,6 +84,21 @@ export function verifyVendor() {
     if (!name.includes(entry.version)) problems.push(`${name}: file name must contain its version ${entry.version}`);
   }
 
+  // A bundle built from the vendor lock says which of the lock's packages it contains: that is what the dependency audit
+  // (scripts/audit-vendor.mjs) reasons about. Every listed package must still be exactly what the lock resolves.
+  const lock = fs.existsSync(path.join(buildDir, 'package-lock.json')) ? readJson(path.join(buildDir, 'package-lock.json')) : null;
+  for (const [name, entry] of Object.entries(manifest.files ?? {})) {
+    if (!/^scripts\/vendor\b/u.test(entry.source ?? '')) continue;
+    if (!Array.isArray(entry.bundled_packages) || entry.bundled_packages.length === 0) {
+      problems.push(`${name}: the manifest must list the packages bundled into it (bundled_packages); run npm run vendor:build`);
+      continue;
+    }
+    const locked = new Set(Object.entries(lock?.packages ?? {}).filter(([key]) => key.startsWith('node_modules/'))
+      .map(([key, pkg]) => `${key.replace(/^.*node_modules\//u, '')}@${pkg.version}`));
+    for (const item of entry.bundled_packages) if (!locked.has(item)) problems.push(`${name}: bundled package ${item} is not what scripts/vendor/package-lock.json resolves`);
+    if (entry.bundled_packages.join('\n') !== [...entry.bundled_packages].sort().join('\n')) problems.push(`${name}: bundled_packages must be sorted`);
+  }
+
   const ethers = Object.entries(manifest.files ?? {}).find(([, entry]) => entry.package === 'ethers');
   if (ethers && ethers[1].version !== rootDependencyVersion('ethers')) {
     problems.push(`vendored ethers ${ethers[1].version} differs from package.json (${rootDependencyVersion('ethers')}); run npm run vendor:build`);
@@ -90,7 +126,7 @@ function buildCosmjs() {
   const lock = readJson(path.join(buildDir, 'package-lock.json'));
   const version = lock.packages['node_modules/@cosmjs/stargate'].version;
   const name = `cosmjs-stargate-${version}.js`;
-  esbuild.buildSync({
+  const { metafile } = esbuild.buildSync({
     entryPoints: [path.join(buildDir, 'entry-cosmjs.js')],
     outfile: path.join(vendorDir, name),
     bundle: true,
@@ -99,6 +135,8 @@ function buildCosmjs() {
     target: 'es2022',
     minify: true,
     legalComments: 'none',
+    // Which packages end up inside the bundle (the metafile does not change the output bytes).
+    metafile: true,
     // @cosmjs/crypto only reaches for node:crypto when WebCrypto is missing (never in a browser).
     alias: { crypto: path.join(buildDir, 'node-crypto-stub.js') }
   });
@@ -107,16 +145,26 @@ function buildCosmjs() {
     package: '@cosmjs/stargate',
     version,
     license: lock.packages['node_modules/@cosmjs/stargate'].license ?? 'Apache-2.0',
-    source: `scripts/vendor (esbuild ${lock.packages['node_modules/esbuild'].version}, lockfile-pinned)`
+    source: `scripts/vendor (esbuild ${lock.packages['node_modules/esbuild'].version}, lockfile-pinned)`,
+    bundled_packages: bundledPackages(metafile, lock)
   };
 }
 
-function thirdPartyLicenses(ethersEntry) {
+/** Licence rows for exactly the packages in a bundle (`name@version` strings), taken from the lock they were resolved from. */
+export function licenseRows(bundled, lock) {
+  const byIdentity = new Map(Object.entries(lock.packages ?? {}).filter(([key]) => key.startsWith('node_modules/'))
+    .map(([key, pkg]) => [`${key.replace(/^.*node_modules\//u, '')}@${pkg.version}`, pkg]));
+  return bundled.map((identity) => {
+    const pkg = byIdentity.get(identity);
+    if (!pkg) throw new Error(`${identity} is not in the vendor lock`);
+    const at = identity.lastIndexOf('@');
+    return `| ${identity.slice(0, at)} | ${identity.slice(at + 1)} | ${pkg.license ?? 'see package'} |`;
+  }).sort();
+}
+
+export function thirdPartyLicenses(ethersEntry, cosmjsEntry) {
   const lock = readJson(path.join(buildDir, 'package-lock.json'));
-  const rows = Object.entries(lock.packages)
-    .filter(([key, pkg]) => key.startsWith('node_modules/') && !pkg.dev && !pkg.optional)
-    .map(([key, pkg]) => `| ${key.replace(/^.*node_modules\//u, '')} | ${pkg.version} | ${pkg.license ?? 'see package'} |`)
-    .sort();
+  const rows = licenseRows(cosmjsEntry.bundled_packages, lock);
   return [
     '# Third-party licenses (public/vendor)',
     '',
@@ -129,7 +177,8 @@ function thirdPartyLicenses(ethersEntry) {
     '',
     '## cosmjs-stargate bundle',
     '',
-    'Contains the following production packages (resolved from scripts/vendor/package-lock.json):',
+    'Contains exactly the following packages (the ones esbuild bundled, resolved from scripts/vendor/package-lock.json;',
+    'build tooling and dependencies the browser build leaves out are not listed):',
     '',
     '| Package | Version | License |',
     '| --- | --- | --- |',
@@ -149,11 +198,12 @@ function build() {
       version: entry.version,
       license: entry.license,
       source: entry.source,
+      ...(entry.bundled_packages ? { bundled_packages: entry.bundled_packages } : {}),
       sha256: sha256(fs.readFileSync(path.join(vendorDir, entry.name)))
     };
   }
   fs.writeFileSync(manifestPath, `${JSON.stringify({ schema: MANIFEST_SCHEMA, files }, null, 2)}\n`);
-  fs.writeFileSync(path.join(vendorDir, 'THIRD_PARTY_LICENSES.md'), thirdPartyLicenses(entries[0]));
+  fs.writeFileSync(path.join(vendorDir, 'THIRD_PARTY_LICENSES.md'), thirdPartyLicenses(entries[0], entries[1]));
   console.log(`vendor: rebuilt ${entries.map((entry) => entry.name).join(', ')}`);
 }
 

@@ -1,0 +1,14 @@
+{
+  "schema": "agentbl-vendor-audit-exceptions-v1",
+  "exceptions": [
+    {
+      "advisory": "GHSA-848j-6mx2-7j84",
+      "package": "elliptic",
+      "severity": "low",
+      "shipped_in_bundle": true,
+      "review_by": "2026-12-05",
+      "reason": "Shipped inside @cosmjs/crypto, but the application never signs with a key held in the page: Keplr and Leap sign through the wallet's OfflineSigner (web/src/lib/web3.js passes it to SigningStargateClient.connectWithSigner), and the entry exports only SigningStargateClient, GasPrice and calculateFee. The advisory concerns signing with a local key.",
+      "resolution": "Upgrade @cosmjs/stargate (2026-11-05 isolated trial with 0.39.0: same three exports, 29 packages instead of 38 with no elliptic, axios, bn.js or libsodium, a bundle of 1.38 MB instead of 2.56 MB, npm audit clean). It is a semver-major step on a wallet path, so ship it only after Keplr and Leap are checked in a real browser: connect, sign, reject, broadcast the 1 inj verification transfer and open the transaction (web3.js reads result.code, rawLog, transactionHash and height), then run npm run vendor:build and commit the new bundle, manifest and licence table."
+    }
+  ]
+}

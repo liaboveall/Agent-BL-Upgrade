@@ -148,3 +148,11 @@ x402 付款取回只在 Live 生效。用户在报告页“付款记录与找回
 部署后核验最终响应头，而不是只看配置：`curl -s -D - -o /dev/null https://<主机名>/api/agent/workspace/copies/CASE-EBL-CU-SIN-SHA | grep -i set-cookie` 应包含 `HttpOnly; SameSite=Strict; Secure`。
 
 `npm run check:contract-budget` 在编译后检查 Pool / Controller 的已审字节预算；增长需要模块与版本迁移审查。根项目和 Hardhat 工具链的 CI 依赖审计均以 moderate 为失败阈值。
+
+### 依赖审计：三套锁文件
+
+仓库有三套依赖锁：根目录（应用）、`hardhat/`（合约工具链）和 `scripts/vendor/`（构建浏览器里运行的 Keplr/Leap 钱包 bundle 的工具链）。CI 的 `audit` 作业与每周定时运行三者：前两套用 `npm audit --audit-level=moderate`，第三套用 `npm run audit:vendor`（`scripts/audit-vendor.mjs`）。
+
+第三套锁安装的包比 bundle 实际包含的多，所以按“这个包是否随 bundle 发给用户”来判断：`public/vendor/manifest.json` 的 `bundled_packages` 由 `npm run vendor:build` 从 esbuild 的 metafile 写入（`THIRD_PARTY_LICENSES.md` 也只列这些包），`verifyVendor()`（`npm run check`、`npm run vendor:check`）核对它们仍是锁里解析出的版本。规则：随 bundle 发出的包有 moderate 及以上公告 → 失败；不随 bundle 的构建工具有 high 及以上公告 → 失败；更低的只报告。公告服务不可达时审计失败，而不是通过。
+
+暂时无法修复的公告可在 `scripts/vendor/audit-exceptions.json` 里登记：写明公告编号、原因、是否随 bundle 发出（会与清单核对）和复查日期，过期后审计重新失败；公告消失后记录会提示删除。目前只有 elliptic 的一条 low 级公告（随 `@cosmjs/crypto` 进入 bundle，但页面从不用本地密钥签名，Keplr/Leap 通过钱包的 OfflineSigner 签名）；升级 `@cosmjs/stargate` 的评估与前提写在该条记录的 `resolution` 里：它是主版本升级且在钱包路径上，需先在真实浏览器里验证 Keplr 与 Leap 的连接、签名、拒签、广播和交易查看，再 `npm run vendor:build` 并提交新的 bundle、清单与许可证表。只更新锁文件而不重建已提交的 bundle，不算完成修复；重建后 bundle 的 SHA-256 不变，才说明被更新的包不在 bundle 里。

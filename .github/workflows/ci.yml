@@ -259,7 +259,9 @@ jobs:
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
-    # A controlled release requires both production and contract toolchain audits.
+    # A controlled release requires the production, contract toolchain and browser-bundle toolchain audits. The third lock
+    # (scripts/vendor) builds the Keplr/Leap bundle that runs in users' browsers; it is judged by which of its packages
+    # actually ship (scripts/audit-vendor.mjs, public/vendor/manifest.json). The weekly schedule above re-runs all three.
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -267,3 +269,4 @@ jobs:
           node-version: 24
       - run: npm audit --audit-level=moderate
       - run: npm --prefix hardhat audit --audit-level=moderate
+      - run: npm run audit:vendor

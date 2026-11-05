@@ -9,7 +9,8 @@ ethers 6.17.0 — MIT. Unmodified build from the npm package.
 
 ## cosmjs-stargate bundle
 
-Contains the following production packages (resolved from scripts/vendor/package-lock.json):
+Contains exactly the following packages (the ones esbuild bundled, resolved from scripts/vendor/package-lock.json;
+build tooling and dependencies the browser build leaves out are not listed):
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -25,55 +26,29 @@ Contains the following production packages (resolved from scripts/vendor/package
 | @cosmjs/tendermint-rpc | 0.33.1 | Apache-2.0 |
 | @cosmjs/utils | 0.33.1 | Apache-2.0 |
 | @noble/hashes | 1.8.0 | MIT |
-| agent-base | 6.0.2 | MIT |
-| asynckit | 0.4.0 | MIT |
 | axios | 1.20.0 | MIT |
 | base64-js | 1.5.1 | MIT |
 | bech32 | 1.1.4 | MIT |
 | bn.js | 4.12.5 | MIT |
 | bn.js | 5.2.5 | MIT |
 | brorand | 1.1.0 | MIT |
-| call-bind-apply-helpers | 1.0.2 | MIT |
-| combined-stream | 1.0.8 | MIT |
 | cosmjs-types | 0.9.0 | Apache-2.0 |
-| debug | 4.4.3 | MIT |
 | define-data-property | 1.1.4 | MIT |
 | define-properties | 1.2.1 | MIT |
-| delayed-stream | 1.0.0 | MIT |
-| dunder-proto | 1.0.1 | MIT |
 | elliptic | 6.6.1 | MIT |
 | es-define-property | 1.0.1 | MIT |
 | es-errors | 1.3.0 | MIT |
-| es-object-atoms | 1.1.2 | MIT |
-| es-set-tostringtag | 2.1.0 | MIT |
-| esbuild | 0.28.2 | MIT |
-| follow-redirects | 1.16.1 | MIT |
-| form-data | 4.0.6 | MIT |
-| function-bind | 1.1.2 | MIT |
-| get-intrinsic | 1.3.0 | MIT |
-| get-proto | 1.0.1 | MIT |
 | globalthis | 1.0.4 | MIT |
 | gopd | 1.2.0 | MIT |
 | has-property-descriptors | 1.0.2 | MIT |
-| has-symbols | 1.1.0 | MIT |
-| has-tostringtag | 1.0.2 | MIT |
 | hash.js | 1.1.7 | MIT |
-| hasown | 2.0.4 | MIT |
 | hmac-drbg | 1.0.1 | MIT |
-| https-proxy-agent | 5.0.1 | MIT |
 | inherits | 2.0.4 | ISC |
 | isomorphic-ws | 4.0.1 | MIT |
 | libsodium-sumo | 0.7.16 | ISC |
 | libsodium-wrappers-sumo | 0.7.16 | ISC |
-| math-intrinsics | 1.1.0 | MIT |
-| mime-db | 1.52.0 | MIT |
-| mime-types | 2.1.35 | MIT |
 | minimalistic-assert | 1.0.1 | ISC |
 | minimalistic-crypto-utils | 1.0.1 | MIT |
-| ms | 2.1.3 | MIT |
 | object-keys | 1.1.1 | MIT |
-| proxy-from-env | 2.1.0 | MIT |
-| readonly-date | 1.0.0 | Apache-2.0 |
 | symbol-observable | 2.0.3 | MIT |
-| ws | 7.5.13 | MIT |
 | xstream | 11.14.0 | MIT |

@@ -99,6 +99,7 @@ npm run dev
 | `npm run test:browser` | 双语界面、键盘和钱包上下文回归 |
 | `npm run build:clean` / `npm run verify:release` | 可复现构建与完整本地交付检查 |
 | `npm run install:release` | 按锁文件全新安装且不运行第三方安装脚本，再执行并核对已审查的 Hardhat 补丁 |
+| `npm run vendor:check` / `npm run audit:vendor` | 核对自托管的浏览器 bundle 与清单；按实际随 bundle 发出的包审计其构建工具链的锁文件 |
 | `npm run terms:verify -- <terms.json>` | 离线复算公开融资条款 |
 | `npm run disclosures:import -- <record.json>` | 导入与实例链上承诺一致的已批准条款 |
 | `npm run mcp:stdio` | MCP 标准输入输出接口 |

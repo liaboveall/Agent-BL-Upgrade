@@ -18,6 +18,7 @@
     "check": "node scripts/check.mjs",
     "vendor:check": "node scripts/vendor-frontend.mjs",
     "vendor:build": "node scripts/vendor-frontend.mjs --build",
+    "audit:vendor": "node scripts/audit-vendor.mjs",
     "smoke": "node scripts/smoke.mjs",
     "scenarios": "node scripts/scenarios.mjs",
     "price:scenarios": "node scripts/pricing-scenarios.mjs",
