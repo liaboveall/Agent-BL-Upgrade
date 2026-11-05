@@ -619,6 +619,9 @@ const DICT = {
     p1_h: '货值估算与航线风险',
     p1_sub: '按规则估算的抵押货值，以及这条航线各类风险的分数与<strong>数据来源</strong>。',
     collateral_label: '规则估算抵押货值',
+    // What a headline number stands on, shown beside it (components/BasisLine.jsx).
+    basis_collateral: '规则估算，不是可变现的处置价', basis_price: '研究定价：由上述估算和风险规则推出', basis_market: '基准价：{status}', basis_observed: '观察于 {date}', basis_scope: '仅用于研究与测试资产',
+    basis_status_live: '实时', basis_status_fixture: '研究样例', basis_status_stale: '已过期', basis_status_unavailable: '不可用',
     riskdims_h: '航线风险维度',
     sources_head: '📑 数据来源',
     p2_h: '定价台',
@@ -1477,6 +1480,9 @@ const DICT = {
     p1_h: 'Cargo valuation and route risk',
     p1_sub: 'The rule-based collateral estimate, plus this route\'s risk scores and <strong>data sources</strong>.',
     collateral_label: 'Estimated collateral value',
+    // What a headline number stands on, shown beside it (components/BasisLine.jsx).
+    basis_collateral: 'Rule estimate, not a realizable disposal value', basis_price: 'Research price from the estimate above and the risk rules', basis_market: 'Benchmark: {status}', basis_observed: 'observed {date}', basis_scope: 'research and test assets only',
+    basis_status_live: 'live', basis_status_fixture: 'research fixture', basis_status_stale: 'stale', basis_status_unavailable: 'unavailable',
     riskdims_h: 'Route risk dimensions',
     sources_head: '📑 Data sources',
     p2_h: 'Pricing console',

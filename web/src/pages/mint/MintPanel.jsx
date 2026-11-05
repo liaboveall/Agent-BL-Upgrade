@@ -7,6 +7,7 @@ import { mint, requote, selectSpeed, setFinancing, setView } from '../../state/c
 import { quoteCurrent, quoteStaleReason } from '../../state/app-store.js';
 import { Badge, Button, Card, Field, KV, cx, useRovingKeys } from '../../components/ui.jsx';
 import { RichT } from '../../components/RichText.jsx';
+import { BasisLine } from '../../components/BasisLine.jsx';
 
 const SPEEDS = ['FAST', 'BALANCED', 'LOW_COST'];
 
@@ -42,6 +43,7 @@ export function MintPanel({ quote }) {
         <div className="hero-price" id="hero-price">
           <span className="stat-label">{t('hp_label')}</span>
           <strong className="price-xxl">${f.price(quote.final_issue_price_usd)}</strong>
+          <BasisLine quote={quote} kind="price" />
           <div className="badge-row">
             <Badge tone={act.tone}>{`${act.icon} ${act.label}`}</Badge>
             <span className="small"><strong className="text-gain">{potentialYieldText(quote)}</strong> {t('hp_upside')}</span>

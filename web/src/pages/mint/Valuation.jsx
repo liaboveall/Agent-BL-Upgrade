@@ -2,6 +2,7 @@ import { useApp } from '../../state/hooks.js';
 import { t, tData } from '../../lib/i18n.js';
 import * as f from '../../lib/format.js';
 import { Badge, Card, CardHead, Disclosure, KV } from '../../components/ui.jsx';
+import { BasisLine } from '../../components/BasisLine.jsx';
 
 /**
  * The four values a reader can confuse, kept apart: what the documents declare, the market benchmark (with its unit,
@@ -44,6 +45,7 @@ export function Valuation({ quote }) {
         <div className="collateral">
           <span className="stat-label">{t('collateral_label')}</span>
           <strong className="price-xl" id="mint-collateral">{f.usd(quote.ai_verified_collateral_value_usd)}</strong>
+          <BasisLine quote={quote} kind="collateral" />
           <div className="kv-stack">
             <KV label={t('val_declared')}>{bl.declared_value_usd ? f.usd(bl.declared_value_usd) : '—'}</KV>
             <KV label={t('val_insured')}>{ins.insured_value_usd ? f.usd(ins.insured_value_usd) : '—'}</KV>

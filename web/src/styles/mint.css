@@ -17,6 +17,12 @@
 /* valuation */
 .valuation-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--s-6); margin-bottom: var(--s-4); }
 .collateral { display: grid; gap: var(--s-3); align-content: start; }
+/* What a headline number stands on, beside it: the kind of figure, the benchmark's status and day, and the scope. */
+.basis-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; }
+/* Plain bold text, not a filled badge: a muted badge on the quote's own tinted block measured 4.13:1 in the dark theme (AA needs 4.5). */
+.basis-status { font-weight: 600; color: var(--text-2); }
+.basis-status-live { color: var(--ok-ink); }
+.basis-status-warn { color: var(--warn-ink); }
 .risk-dims { display: grid; gap: var(--s-2); align-content: start; }
 .risk-dims ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
 .risk-dim { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--s-2); padding: 10px 12px; border: 1px solid transparent; border-radius: var(--r); background: var(--surface-2); transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease); }

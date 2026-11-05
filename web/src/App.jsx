@@ -13,6 +13,7 @@ import { RightsPanel } from './features/rights/RightsPanel.jsx';
 import { EvidencePanel } from './features/evidence/EvidencePanel.jsx';
 import { OperationsPanel } from './features/operations/OperationsPanel.jsx';
 import { ControlledFinancePanel } from './features/rights/ControlledFinancePanel.jsx';
+import { AssuranceLevels } from './components/AssuranceLevels.jsx';
 
 function FinanceIntro() {
   const zh = useLang() === 'zh';
@@ -30,6 +31,7 @@ function FinanceIntro() {
       </ol>
       <p className="small muted">{zh ? '报告服务的 x402 付款只购买报告，不进入融资池，也不取得融资份额。请使用桌面浏览器钱包签名。' : 'An x402 payment buys a report; it does not fund a pool or purchase shares. Sign with a desktop browser wallet.'}</p>
     </details>
+    <AssuranceLevels />
   </header>;
 }
 // Views other than the default finance page, and the deal dialog, load on first use.

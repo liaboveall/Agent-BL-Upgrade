@@ -62,12 +62,14 @@
 @media (max-width: 1199px) {
   .mint-layout, .mint-secondary, .agent-layout { grid-template-columns: minmax(0, 1fr); }
   .mint-aside { position: static; }
-  /* One column: the issuing panel follows the documents instead of the whole valuation and waterfall. */
+  /* One column, in the order the numbered steps above name: documents (1), value and risk (2), the quote (3). The long pricing
+     basis (the waterfall, folded on a phone) comes last, so the quote still never waits behind the whole of it. */
   .mint-layout { gap: var(--s-5); }
   .mint-main { display: contents; }
   .mint-main > .documents { order: 1; }
-  .mint-aside { order: 2; }
-  .mint-main > :not(.documents) { order: 3; }
+  .mint-main > #valuation-panel { order: 2; }
+  .mint-aside { order: 3; }
+  .mint-main > :not(.documents):not(#valuation-panel) { order: 4; }
   .page-head { flex-wrap: wrap; gap: 20px; }
   .page-head-stats { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
   .toolbar { flex-wrap: wrap; }

@@ -192,4 +192,7 @@
   .finance-pool-table td[data-label]::before { content: attr(data-label); display: inline-block; min-width: 9em; margin-right: 8px; color: var(--muted); font-size: var(--fs-11); font-weight: 600; }
   .controlled-panel .finance-pool-table td:last-child { padding-top: 8px; }
   .controlled-panel .finance-pool-table .finance-pool-link { width: 100%; min-height: 36px; padding: 6px 12px; justify-content: center; }
+  /* A pool that ended with nobody subscribed has nothing to read in its amount lines (all zero, same price as its siblings):
+     its card keeps the title, state and action, so a catalogue full of them is not a wall of identical cards. The amounts stay on its detail. */
+  .finance-pool-table tbody tr.is-idle td[data-label] { display: none; }
 }
